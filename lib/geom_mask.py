@@ -618,7 +618,7 @@ def nd_superellipsoid(
     shape : int N-tuple
         Shape of the generated mask.
     position : float N-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1]..
+        Relative position (to the lowest edge). Values are in the range [0, 1].
     semiaxes : float N-tuple
         Length of the semiaxes of the cuboid a_n
     indexes : float N-tuple
