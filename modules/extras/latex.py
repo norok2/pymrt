@@ -51,11 +51,11 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
+import mri_tools.modules.base as mrb
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
-# from mri_tools import _firstline
+# from mri_tools import get_first_line
 
 
 # ======================================================================

@@ -28,7 +28,7 @@ DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
 COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
 LICENSE = 'License GPLv3: GNU General Public License version 3'
 # first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
+DOCget_first_line = [line for line in __doc__.splitlines() if line][0]
 
 
 # ======================================================================
@@ -52,11 +52,11 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import mri_tools.lib.base as mrb
-# import mri_tools.lib.utils as mru
-# import mri_tools.lib.nifti as mrn
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+# import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
 
 
 # ======================================================================
@@ -102,7 +102,7 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+            __version__, DOCget_first_line, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',

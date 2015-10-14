@@ -42,7 +42,6 @@ import shutil  # High-level file operations
 import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-import collections  # High-performance container datatypes
 import argparse  # Parser for command-line options, arguments and subcommands
 # import itertools  # Functions creating iterators for efficient looping
 import subprocess  # Subprocess management
@@ -70,12 +69,11 @@ import subprocess  # Subprocess management
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
-import mri_tools.lib.utils as mru
-import mri_tools.lib.nifti as mrn
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
-import mri_tools.lib.jcampdx as jcampdx
+import mri_tools.modules.base as mrb
+import mri_tools.modules.utils as mru
+import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
 
 
 # ======================================================================
@@ -132,7 +130,7 @@ def postprocess_nii_mag(
     receiver_gain = params_ldr_dict['RG'] / 1000.0  # in Volts
     # correction factor
     factor = num_avgs * receiver_gain
-    mrn.img_filter(in_filepath, out_filepath, (lambda img: img / factor), [])
+    mrn.simple_filter(in_filepath, out_filepath, (lambda img: img / factor), [])
 
 
 # ======================================================================
@@ -173,12 +171,12 @@ def extract_nii(dirpath, extradir, force, verbose):
             os.makedirs(dest_dirpath)
         # extract info from protocol information files
         method_ldr_std_dict, method_ldr_user_dict, method_comments = \
-            jcampdx.read(method_filepath)
+            mri_tools.jcampdx.read(method_filepath)
         method_ldr_dict = dict(
             list(method_ldr_std_dict.items()) + \
             list(method_ldr_user_dict.items()))
         params_ldr_std_dict, params_ldr_user_dict, params_comments = \
-            jcampdx.read(params_filepath)
+            mri_tools.jcampdx.read(params_filepath)
         params_ldr_dict = dict(
             list(params_ldr_std_dict.items()) + \
             list(params_ldr_user_dict.items()))

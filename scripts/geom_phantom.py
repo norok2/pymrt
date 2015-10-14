@@ -15,35 +15,26 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-__version__ = '1.0.0.8'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 4, 'month': 'Feb', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
-
-
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Operating System facilities
-# import math  # Mathematical Functions
-import collections  # Collections of Items
-import argparse  # Python Standard Library: Argument Parsing
+# import os  # Miscellaneous operating system interfaces
+# import shutil  # High-level file operations
+# import math  # Mathematical functions
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
+# import operator  # Standard operators as functions
+# import collections  # High-performance container datatypes
+import argparse  # Parser for command-line options, arguments and subcommands
+# import itertools  # Functions creating iterators for efficient looping
+# import subprocess  # Subprocess management
+# import multiprocessing  # Process-based parallelism
+# import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
+# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
@@ -51,23 +42,39 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
-# :: Local Imports
-import mri_tools.lib.geom_mask as mrgm  # Generate masks of geometrical shapes
-import mri_tools.lib.nifti as mrn  # Custom-made Nifti1 utils
+# :: External Imports Submodules
+# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
+# import scipy.optimize  # SciPy: Optimization Algorithms
+# import scipy.integrate  # SciPy: Integrations facilities
+# import scipy.constants  # SciPy: Mathematal and Physical Constants
+# import scipy.ndimage  # SciPy: ND-image Manipulation
 
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
+# :: Local Imports
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+import mri_tools.modules.geometry as mrg
+# import mri_tools.modules.plot as mrp
+# import mri_tools.modules.registration as mrr
+# import mri_tools.modules.segmentation as mrs
+# import mri_tools.modules.computation as mrc
+# import mri_tools.modules.correlation as mrl
+import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.sequences as mrq
+# from mri_tools.modules.debug import dbg
+# from mri_tools.modules.sequences import mp2rage
+
+from mri_tools import INFO
+from mri_tools import VERB_LVL
+from mri_tools import D_VERB_LVL
+from mri_tools import get_first_line
 
 # ======================================================================
 # :: Custom defined constants
-APPEND_SUM = '+'
-APPEND_PROD = '*'
-PHANTOM_CUBOID = 'cuboid'
-PHANTOM_ELLIPSOID = 'ellipsoid'
-PHANTOM_RHOMBOID = 'rhomboid'
-PHANTOM_CYLINDER = 'cylinder'
+APPEND_MODE = {'sum': 'sum', 'prod': 'prod'}
+PHANTOMS = ('cuboid', 'ellipsoid', 'rhomboid', 'cylinder')
 
+# TODO: fix documentation
 
 # ======================================================================
 def make_phantom(
@@ -79,13 +86,16 @@ def make_phantom(
         lengths,
         fill,
         o_filepath,
-        verbose=VERB_LVL['none']):
+        verbose):
     """
-    Create a phantom using custom_lib/geom_mask package.
+    Create an image containing a simulated phantom with a geometric shape.
 
     Parameters
     ==========
-    None
+    i_filepath : str
+        Input filepath.
+    o_filepath : str
+        Output filepath.
 
     Returns
     =======
@@ -94,53 +104,54 @@ def make_phantom(
     """
     # :: determine starting image
     if i_filepath:
-        img = nib.load(i_filepath)
-        img_data = img.get_data()
-        img_affine = img.get_affine()
-        img_header = img.get_header()
-        shape = img_data.shape
+        nii = nib.load(i_filepath)
+        img = nii.get_data()
+        aff = nii.get_affine()
+        hdr = nii.get_header()
+        shape = img.shape
     else:
-        if append == APPEND_SUM:
-            img_data = np.zeros(shape)
-        elif append == APPEND_PROD:
-            img_data = np.ones(shape)
+        if append == APPEND_MODE['sum']:
+            img = np.zeros(shape)
+        elif append == APPEND_MODE['prod']:
+            img = np.ones(shape)
         else:
             raise ValueError
         # affine matrix should be of shape: (N_DIM + 1, N_DIM + 1)
-        img_affine = np.eye(len(shape) + 1)
-        img_header = None
+        aff = np.eye(len(shape) + 1)
+        hdr = None
     # :: position of the phantom center relative to the mask center
     position = position
     # :: create the mask
-    if phantom == PHANTOM_CUBOID:
-        mask = geom_mask.cuboid(shape, position, lengths)
-    elif phantom == PHANTOM_ELLIPSOID:
-        mask = geom_mask.ellipsoid(shape, position, lengths)
-    elif phantom == PHANTOM_RHOMBOID:
-        mask = geom_mask.rhomboid(shape, position, lengths)
-    elif phantom == PHANTOM_CYLINDER:
-        mask = geom_mask.cylinder(shape, position, lengths[0], lengths[1])
+    if phantom == PHANTOMS['cuboid']:
+        mask = mrg.cuboid(shape, position, lengths)
+    elif phantom == PHANTOMS['ellipsoid']:
+        mask = mrg.ellipsoid(shape, position, lengths)
+    elif phantom == PHANTOMS['rhomboid']:
+        mask = mrg.rhomboid(shape, position, lengths)
+    elif phantom == PHANTOMS['cylinder']:
+        mask = mrg.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
-    img_append = geom_mask.render(mask, fill)
-    if append == APPEND_SUM:
-        img_data += img_append
-    elif append == APPEND_PROD:
-        img_data *= img_append
+    img_append = mrg.render(mask, fill)
+    if append == APPEND_MODE['sum']:
+        img += img_append
+    elif append == APPEND_MODE['prod']:
+        img *= img_append
     else:
         raise ValueError
-    print(('Created a {}-sized {}' +
-        '\n- centered at position {}' +
-        '\n- inside a {} voxmap' +
-        '\n- with {} internal/external filling' +
-        '\n- appended (mode: \'{}\') to: \'{}\''
-        '\n- saving to: \'{}\'')
-        .format(lengths, phantom,
-                position,
-                shape,
-                fill,
-                append, i_filepath,
-                o_filepath))
-    nifti.img_maker(o_filepath, img_data, img_affine, img_header)
+    print(
+        ('Created a {}-sized {}' +
+         '\n- centered at position {}' +
+         '\n- inside a {} voxmap' +
+         '\n- with {} internal/external filling' +
+         '\n- appended (mode: \'{}\') to: \'{}\''
+         '\n- saving to: \'{}\'').format(
+            lengths, phantom,
+            position,
+            shape,
+            fill,
+            append, i_filepath,
+            o_filepath))
+    mrn.maker(o_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -148,29 +159,25 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define CHOICE values
-    c_phantom = (PHANTOM_CUBOID, PHANTOM_ELLIPSOID, PHANTOM_RHOMBOID,
-        PHANTOM_CYLINDER)
-    c_append = (APPEND_SUM, APPEND_PROD)
     # :: Define DEFAULT values
     # verbosity
-    d_verbose = VERB_LVL['none']
+    d_verbose = D_VERB_LVL
     # number of dimensions of the image
     d_dim = 3
     # size of the resulting image
-    d_sizes = tuple([geom_mask.D_SHAPE] * d_dim)
+    d_sizes = tuple([mrg.D_SHAPE] * d_dim)
     # phantom to create
-    d_phantom = c_phantom[0]
+    d_phantom = PHANTOMS[0]
     # proportional position of the center relative to the middle
     d_position = (0.0, 0.0, 0.0)
     # lengths of the resulting object
-    d_lengths = tuple([geom_mask.D_LENGTH_1] * d_dim)
+    d_lengths = tuple([mrg.D_LENGTH_1] * d_dim)
     # lengths of the resulting object
     d_angles = tuple([0.0] * d_dim)
     # intensity values (internal, external)
     d_intensities = (1.0, 0.0)
-    # appenging mode
-    d_append = c_append[0]
+    # appending mode
+    d_append = list(APPEND_MODE)[0]
     # input file
     d_infile = None
     # output file
@@ -178,14 +185,16 @@ def handle_arg():
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'], get_first_line(__doc__),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
@@ -200,14 +209,14 @@ def handle_arg():
     group_input.add_argument(
         '-i', '--infile', metavar='FILEPATH',
         default=d_infile,
-        help='set input file (overrides image creation) [%(default)s]',)
+        help='set input file (overrides image creation) [%(default)s]', )
     arg_parser.add_argument(
         '-a', '--append',
-        choices=c_append, default=d_append,
+        choices=APPEND_MODE, default=d_append,
         help='set appending mode [%(default)s]')
     arg_parser.add_argument(
         '-f', '--phantom',
-        choices=c_phantom, default=d_phantom,
+        choices=PHANTOMS, default=d_phantom,
         help='choose the phantom to create [%(default)s]')
     arg_parser.add_argument(
         '-p', '--position',
@@ -230,7 +239,7 @@ def handle_arg():
     arg_parser.add_argument(
         '-o', '--outfile', metavar='FILEPATH',
         default=d_outfile,
-        help='set output file [%(default)s]',)
+        help='set output file [%(default)s]', )
     return arg_parser
 
 
@@ -244,6 +253,7 @@ if __name__ == '__main__':
         ARG_PARSER.print_help()
         print()
         print('II:', 'Parsed Arguments:', ARGS)
+
     make_phantom(
         ARGS.infile, ARGS.sizes, ARGS.append, ARGS.phantom, ARGS.position,
         ARGS.lengths, ARGS.intensities, ARGS.outfile, ARGS.verbose)

@@ -67,11 +67,11 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.lib.base as mrb
-# import mri_tools.lib.utils as mru
-# import mri_tools.lib.nifti as mrn
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+# import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
 
 
 # ======================================================================
@@ -152,7 +152,7 @@ def read(filepath):
 
     Parameters
     ==========
-    filepath : string
+    filepath : str
         Path to file to parse.
 
     Returns
@@ -161,7 +161,7 @@ def read(filepath):
         Standard Labelled-Data-Records present.
     ldr_user : dictionary
         User-defined Labelled-Data-Records.
-    comments : string
+    comments : str
         Comment lines.
 
     """

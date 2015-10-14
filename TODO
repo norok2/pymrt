@@ -2,5 +2,8 @@
 TODO
 ====
 
+- create a way of having automatically selected function from the nifti submodule as scripts
+- port documentation to 'napoleon' / google style
 - include some tests in main.py
+- create proper unit tests
 - work out a proper setup.py

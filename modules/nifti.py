@@ -14,7 +14,7 @@ TODO:
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-#from __future__ import unicode_literals
+from __future__ import unicode_literals
 
 
 # ======================================================================
@@ -34,6 +34,7 @@ import os  # Miscellaneous operating system interfaces
 # import fractions  # Rational numbers
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+# import inspect  # Inspect live objects
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -55,11 +56,14 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
+import mri_tools.modules.base as mrb
+import mri_tools.modules.geometry as mrg
+import mri_tools.modules.plot as mrp
+import mri_tools.modules.segmentation as mrs
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
-# from mri_tools import _firstline
+# from mri_tools import get_first_line
 
 # ======================================================================
 # :: Custom defined constants
@@ -69,7 +73,7 @@ import mri_tools.lib.base as mrb
 EXT_UNCOMPRESSED = 'nii'
 EXT_COMPRESSED = 'nii.gz'
 D_EXT = EXT_COMPRESSED
-D_RANGE = (0.0, 4096.0)
+D_DICOM_RANGE = (0.0, 4096.0)
 
 
 # ======================================================================
@@ -79,12 +83,12 @@ def filename_noext(filename):
 
     Parameters
     ==========
-    filename : string
+    filename : str
         The filename from which the extension is to be removed.
 
     Returns
     =======
-    filename_noext : string
+    filename_noext : str
         The filename without the NIfTI-1 extension.
 
     """
@@ -108,12 +112,12 @@ def filename_addext(
 
     Parameters
     ==========
-    filename : string
+    filename : str
         The filename to which the extension is to be added.
 
     Returns
     =======
-    filename_noext : string
+    filename_noext : str
         The filename with the NIfTI-1 extension.
 
     """
@@ -125,9 +129,9 @@ def filename_addext(
 
 
 # ======================================================================
-def img_maker(
+def maker(
         out_filepath,
-        img,
+        image,
         affine=None,
         header=None):
     """
@@ -135,9 +139,9 @@ def img_maker(
 
     Parameters
     ==========
-    out_filepath : string
+    out_filepath : str
         Output file path
-    img : ndarray
+    image : ndarray
         Data to be stored.
     affine : ndarray (optional)
         Affine transformation.
@@ -151,12 +155,12 @@ def img_maker(
     """
     if affine is None:
         affine = np.eye(4)
-    img_nii = nib.Nifti1Image(img, affine, header)
-    img_nii.to_filename(out_filepath)
+    nii = nib.Nifti1Image(image, affine, header)
+    nii.to_filename(out_filepath)
 
 
 # ======================================================================
-def img_mask(
+def masking(
         in_filepath,
         mask_filepath,
         out_filepath,
@@ -166,11 +170,11 @@ def img_mask(
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    mask_filepath : string
+    mask_filepath : str
         Mask file path.
-    out_filepath : string
+    out_filepath : str
         Output file path.
     mask_val : int or float
         Value of masked out voxels.
@@ -186,157 +190,263 @@ def img_mask(
     mask = mask_nii.get_data()
     mask = mask.astype(bool)
     img[~mask] = mask_val
-    img_maker(out_filepath, img, img_nii.get_affine())
+    maker(out_filepath, img, img_nii.get_affine())
 
 
 # ======================================================================
-def img_filter(
+def filter(
         in_filepath,
         out_filepath,
-        calc_func,
-        calc_params):
+        func,
+        *args,
+        **kwargs):
     """
     Interface to NIfTI-1 generic filter:
     calculation(i_filepath) -> o_filepath
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    out_filepath : string
+    out_filepath : str
         Output file path.
-    calc_func : func
-        | Filtering function accepting and returning ndarrays:
-        | calc_func(i_img, calc_params...) -> o_img
-    calc_params : list (optional)
-        List of function parameters to be passed to calc_func.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
 
     Returns
     =======
     None.
 
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
-    img = calc_func(img, *calc_params)
-    img_maker(out_filepath, img, img_nii.get_affine())
+    nii = nib.load(in_filepath)
+    img, aff, hdr = func(
+        nii.get_data(), nii.get_affine(), nii.get_header(), *args, **kwargs)
+    maker(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
-def img_filter2(
-        in1_filepath,
-        in2_filepath,
-        out_filepath,
-        calc_func,
-        calc_params=None):
-    """
-    Interface to NIfTI-1 generic binary filter:
-    calculation(i_filepath1, i_filepath2) -> o_filepath
-
-    Parameters
-    ==========
-    in1_filepath : string
-        First input file path (affine is taken from this).
-    in2_filepath : string
-        Second input file path (affine is ignored).
-    out_filepath : string
-        Output file path.
-    calc_func : func
-        | Filering function accepting and returning ndarrays:
-        | calc_func(i1_img, i2_img, calc_params...) -> o_img
-    calc_params : list (optional)
-        List of function parameters to be passed to calc_func.
-
-    Returns
-    =======
-    None.
-
-    """
-    if calc_params is None:
-        calc_params = []
-    img1_nii = nib.load(in1_filepath)
-    img2_nii = nib.load(in2_filepath)
-    img1 = img1_nii.get_data()
-    img2 = img2_nii.get_data()
-    img1 = calc_func(img1, img2, *calc_params)
-    img_maker(out_filepath, img1, img1_nii.get_affine())
-
-
-# ======================================================================
-def img_filter_n(
+def filter_n(
         in_filepath_list,
         out_filepath,
-        calc_func,
-        calc_params=None):
+        func,
+        *args,
+        **kwargs):
     """
     Interface to NIfTI-1 generic filter:
     calculation(i_filepath_list) -> o_filepath
 
+    Note that only
+
     Parameters
     ==========
-    in_filepath_list : string list
+    in_filepath_list : str list
         List of input file paths (affine is taken from last item).
-    out_filepath : string
+    out_filepath : str
         Output file path.
-    calc_func : func
-        | Filering function accepting and returning ndarrays:
-        | calc_func(img_list, calc_params...) -> o_img
-    calc_params : list (optional)
-        List of function parameters to be passed to calc_func.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func((img, aff, hdr) list, *args, *kwargs) -> img, aff, hdr
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
 
     Returns
     =======
     None.
 
     """
-    if calc_params is None:
-        calc_params = []
-    img_list = []
+    input_list = []
     for in_filepath in in_filepath_list:
-        img_nii = nib.load(in_filepath)
-        img = img_nii.get_data()
-        img_list.append(img)
-    img = calc_func(img_list, *calc_params)
-    img_maker(out_filepath, img, img_nii.get_affine())
+        nii = nib.load(in_filepath)
+        input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
+    img, aff, hdr = func(input_list, *args, **kwargs)
+    maker(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
-def img_filter_n_n(
+def filter_n_m(
         in_filepath_list,
         out_filepath_list,
-        calc_func,
-        calc_params=None):
+        func,
+        *args,
+        **kwargs):
     """
     Interface to NIfTI-1 generic filter:
     calculation(i_filepath_list) -> o_filepath_list
 
     Parameters
     ==========
-    in_filepath_list : string list
+    in_filepath_list : str list
         List of input file paths (affine is taken from last item).
-    out_filepath_list : string
+    out_filepath_list : str
         List of output file paths.
-    calc_func : func
-        | Filering function accepting and returning ndarrays:
-        | calc_func(img_list, calc_params...) -> o_img_list
-    calc_params : list (optional)
-        List of function parameters to be passed to calc_func.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func((img, aff, hdr) list, *args, *kwargs) -> (img, aff, hdr) list
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
 
     Returns
     =======
     None.
 
     """
-    if calc_params is None:
-        calc_params = []
-    in_img_list = []
+    input_list = []
     for in_filepath in in_filepath_list:
-        img_nii = nib.load(in_filepath)
-        img = img_nii.get_data()
-        in_img_list.append(img)
-    out_img_list = calc_func(in_img_list, *calc_params)
-    for img, out_filepath in zip(out_img_list, out_filepath_list):
-        img_maker(out_filepath, img, img_nii.get_affine())
+        nii = nib.load(in_filepath)
+        input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
+    output_list = func(input_list, *args, **kwargs)
+    for (img, aff, hdr), out_filepath in zip(output_list, out_filepath_list):
+        maker(out_filepath, img, aff, hdr)
+
+
+# ======================================================================
+def filter_n_x(
+        in_filepath_list,
+        out_filepath_template,
+        func,
+        *args,
+        **kwargs):
+    # todo: implement
+    pass
+
+
+# ======================================================================
+def simple_filter(
+        in_filepath,
+        out_filepath,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified NIfTI-1 generic filter:
+    calculation(i_filepath) -> o_filepath
+
+    Affine is obtained from the input image.
+    The header is calculated automatically.
+
+    Parameters
+    ==========
+    in_filepath : str
+        Input file path.
+    out_filepath : str
+        Output file path.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
+
+    Returns
+    =======
+    None.
+
+    """
+    nii = nib.load(in_filepath)
+    img = func(nii.get_data(), *args, **kwargs)
+    aff = nii.get_affine()
+    maker(out_filepath, img, aff)
+
+
+# ======================================================================
+def simple_filter_n(
+        in_filepath_list,
+        out_filepath,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified NIfTI-1 generic filter:
+    calculation(i_filepath_list) -> o_filepath
+
+    Affine is obtained from the first input image.
+    The header is calculated automatically.
+
+    Parameters
+    ==========
+    in_filepath_list : str list
+        List of input file paths (affine is taken from last item).
+    out_filepath : str
+        Output file path.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func((img, aff, hdr) list, *args, *kwargs) -> img, aff, hdr
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
+
+    Returns
+    =======
+    None.
+
+    """
+    img_list = []
+    aff_list = []
+    for in_filepath in in_filepath_list:
+        nii = nib.load(in_filepath)
+        img_list.append(nii.get_data())
+        aff_list.append(nii.get_affine())
+    img = func(img_list, *args, **kwargs)
+    aff = aff_list[0]  # the affine of the first image
+    maker(out_filepath, img, aff)
+
+
+# ======================================================================
+def simple_filter_n_m(
+        in_filepath_list,
+        out_filepath_list,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified NIfTI-1 generic filter:
+    calculation(i_filepath_list) -> o_filepath_list
+
+    Parameters
+    ==========
+    in_filepath_list : str list
+        List of input file paths (affine is taken from last item).
+    out_filepath_list : str
+        List of output file paths.
+    func : function
+        | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
+        | func((img, aff, hdr) list, *args, *kwargs) -> (img, aff, hdr) list
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the filtering function.
+
+    Returns
+    =======
+    None.
+
+    """
+    i_img_list = []
+    aff_list = []
+    for in_filepath in in_filepath_list:
+        nii = nib.load(in_filepath)
+        i_img_list.append(nii.get_data())
+        aff_list.append(nii.get_affine())
+    o_img_list = func(i_img_list, *args, **kwargs)
+    aff = aff_list[0]  # the affine of the first image
+    for img, out_filepath in zip(o_img_list, out_filepath_list):
+        maker(out_filepath, img, aff)
+
+
+# ======================================================================
+def simple_filter_n_x(
+        in_filepath_list,
+        out_filepath_template,
+        func,
+        *args,
+        **kwargs):
+    # todo: implement
+    pass
 
 
 # ======================================================================
@@ -349,9 +459,9 @@ def img_join(
 
     Parameters
     ==========
-    in_filepath_list : string list
+    in_filepath_list : str list
         List of input file paths (affine is taken from last item).
-    out_filepath : string
+    out_filepath : str
         Output file path.
     axis : int [0,N] (optional)
         Orientation along which array is join in the N-dim space.
@@ -361,7 +471,7 @@ def img_join(
     None.
 
     """
-    img_filter_n(in_filepath_list, out_filepath, mrb.ndstack, [axis])
+    simple_filter_n(in_filepath_list, out_filepath, mrb.ndstack, axis)
 
 
 # ======================================================================
@@ -375,21 +485,22 @@ def img_split(
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path (affine is copied from input).
     axis : int [0,N] (optional)
         Orientation along which array is split in the N-dim space.
-    out_dirpath : string
+    out_dirpath : str
         Path to directory where to store results.
-    out_filename : string (optional)
+    out_filename : str (optional)
         Filename (without extension) where to store results.
 
     Returns
     =======
-    out_filepath_list : string list
+    out_filepath_list : str list
         Output file path list.
 
     """
+    # todo: reimplement using simple_filter_n_x
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
@@ -405,8 +516,8 @@ def img_split(
         out_filepath = os.path.join(
             out_dirpath,
             filename_addext(out_basename + '-' +
-            str(idx).zfill(len(str(len(img_list))))))
-        img_maker(out_filepath, image, img_nii.get_affine())
+                            str(idx).zfill(len(str(len(img_list))))))
+        maker(out_filepath, image, img_nii.get_affine())
         out_filepath_list.append(out_filepath)
     return out_filepath_list
 
@@ -417,16 +528,16 @@ def img_zoom(
         out_filepath,
         zoom=1.0,
         interpolation_order=1,
-        force_extra_dim=True,
-        autofill_dim=True):
+        extra_dim=True,
+        fill_dim=True):
     """
     Zoom the image with a specified magnification factor.
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    out_filepath : string
+    out_filepath : str
         Output file path.
     zoom : float or sequence
         The zoom factor along the axes.
@@ -441,27 +552,21 @@ def img_zoom(
     =======
     None.
 
+    See Also
+    ========
+    mri_tools.modules.geometry.
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
-    try:
-        iter(zoom)
-    except (IndexError):
-        zoom = [zoom] * len(img.shape)
-    else:
-        zoom = list(zoom)
-    if force_extra_dim:
-        expanded_shape = list(img.shape) + \
-            [1.0] * (len(zoom) - len(img.shape))
-        img = np.reshape(img, expanded_shape)
-    else:
-        zoom = zoom[:len(img.shape)]
-    if autofill_dim and len(zoom) < len(img.shape):
-        zoom[len(zoom):] = [1.0] * (len(img.shape) - len(zoom))
-    affine = img_nii.get_affine().dot(
-        np.diag(1.0 / np.array(zoom[:3] + [1.0])))
-    img = sp.ndimage.zoom(img, zoom=zoom, order=interpolation_order)
-    img_maker(out_filepath, img, affine)
+
+    def _zoom(array, zoom, interpolation_order, extra_dim, fill_dim):
+        zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        array = sp.ndimage.zoom(
+            array.reshape(shape), zoom, order=interpolation_order)
+        aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
+        return array, aff_transform
+
+    simple_filter(
+        in_filepath, out_filepath, _zoom,
+        zoom, interpolation_order, extra_dim, fill_dim)
 
 
 # ======================================================================
@@ -469,25 +574,26 @@ def img_resample(
         in_filepath,
         out_filepath,
         new_shape,
+        keep_ratio_method=None,
         interpolation_order=1,
-        force_extra_dim=True,
-        autofill_dim=True):
+        extra_dim=True,
+        fill_dim=True):
     """
-    Resample the image with a new shape (constant FOV, different voxel-size).
+    Resample the image to a new shape (different resolution / voxel size).
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    out_filepath : string
+    out_filepath : str
         Output file path.
-    new_shape : tuple of int
+    new_shape : int tuple
         New dimensions of the image.
     interpolation_order : int, optional
         Order of the spline interpolation. 0: nearest. Accepted range: [0, 5].
-    force_extra_dim : boolean, optional
+    extra_dim : bool, optional
         Force extra dimensions in the zoom parameters.
-    autofill_dim : boolean, optional
+    fill_dim : bool, optional
         Dimensions not specified are left untouched.
 
     Returns
@@ -495,84 +601,94 @@ def img_resample(
     None
 
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
-    if force_extra_dim:
-        expanded_shape = list(img.shape) + \
-            [1.0] * (len(new_shape) - len(img.shape))
-        img = np.reshape(img, expanded_shape)
-    zoom = [old / new for new, old in zip(img.shape, new_shape)]
-    if autofill_dim and len(zoom) < len(img.shape):
-        zoom[len(new_shape):] = [1.0] * (len(img.shape) - len(zoom))
-    affine = img_nii.get_affine().dot(
-        np.diag(1.0 / np.array(zoom[:3] + [1.0])))
-    img = sp.ndimage.zoom(img, zoom=zoom, order=interpolation_order)
-    img_maker(out_filepath, img, affine)
+
+    def _zoom(
+            array, new_shape, keep_ratio_method, interpolation_order,
+            extra_dim, fill_dim):
+        zoom = mrg.shape2zoom(array.shape, new_shape, keep_ratio_method)
+        zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        array = sp.ndimage.zoom(
+            array.reshape(shape), zoom, order=interpolation_order)
+        aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
+        return array, aff_transform
+
+    simple_filter(
+        in_filepath, out_filepath, _zoom,
+        new_shape, keep_ratio_method, extra_dim, fill_dim, interpolation_order)
 
 
 # ======================================================================
-def img_resize(
+def img_frame(
         in_filepath,
         out_filepath,
-        new_shape,
-        interpolation_order=1,
-        force_extra_dim=True,
-        autofill_dim=True):
+        border,
+        background=0,
+        use_longest=True):
     """
-    Resize the image into a new shape (constant voxel-size, different FOV).
-    TODO: write this function, right now it is a copy of resample
+    Add a border frame to the image (same resolution / voxel size).
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    out_filepath : string
+    out_filepath : str
         Output file path.
-    new_shape : tuple of int
-        New dimensions of the image.
-    interpolation_order : int, optional
-        Order of the spline interpolation. 0: nearest. Accepted range: [0, 5].
-    force_extra_dim : boolean, optional
-        Force extra dimensions in the zoom parameters.
-    autofill_dim : boolean, optional
-        Dimensions not specified are left untouched.
-
-    Returns
-    =======
-    None.
-
+    border : int or int tuple (optional)
+        The size of the border relative to the initial array shape.
+    background : int or float (optional)
+        The background value to be used for the frame.
+    use_longest : bool (optional)
+        Use longest dimension to get the border size.
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
-    if force_extra_dim:
-        expanded_shape = list(img.shape) + \
-            [1.0] * (len(new_shape) - len(img.shape))
-        img = np.reshape(img, expanded_shape)
-    zoom = [old / new for new, old in zip(img.shape, new_shape)]
-    if autofill_dim and len(zoom) < len(img.shape):
-        zoom[len(new_shape):] = [1.0] * (len(img.shape) - len(zoom))
-    affine = img_nii.get_affine().dot(
-        np.diag(1.0 / np.array(zoom[:3] + [1.0])))
-    img = sp.ndimage.zoom(img, zoom=zoom, order=interpolation_order)
-    img_maker(out_filepath, img, affine)
+    simple_filter(
+        in_filepath, out_filepath, mrg.frame, border, background, use_longest)
 
 
 # ======================================================================
-def img_common_shape(
+def img_reframe(
+        in_filepath,
+        out_filepath,
+        new_shape,
+        background=0):
+    """
+    Add a border frame to the image (same resolution / voxel size).
+
+    Parameters
+    ==========
+    in_filepath : str
+        Input file path.
+    out_filepath : str
+        Output file path.
+    new_shape : int tuple
+        New dimensions of the image.
+    background : int or float (optional)
+        The background value to be used for the frame.
+
+    """
+    simple_filter(
+        in_filepath, out_filepath, mrg.reframe, new_shape, background)
+
+
+# ======================================================================
+def img_common_sampling(
         in_filepath_list,
         out_filepath_list=None,
         new_shape=None,
         lossless=False,
-        ignore_extra_dim=False):
+        extra_dim=True,
+        fill_dim=True):
     """
-    Resample NIfTI-1 sizes and affines to a common shape
-    (without approximations and assuming identical field-of-view).
+    Resample images sizes and affine transformations to match the same shape.
+
+    Note that:
+    | - the sampling / resolution / voxel size will change
+    | - the support space / field-of-view will NOT change
 
     Parameters
     ==========
-    filepath_list : string list
+    filepath_list : str list
         List of input file paths (affine is taken from last item).
-    suffix : string
+    suffix : str
         Suffix to append to the output filenames. Empty string to overwrite.
 
     Returns
@@ -580,16 +696,15 @@ def img_common_shape(
     None.
 
     """
+
     def combine_shape(shape_list, lossless=lossless):
         new_shape = [1] * max([len(shape) for shape in shape_list])
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
         for idx, shape in enumerate(shape_list):
             shape_arr[idx, :len(shape)] = np.array(shape)
-        if lossless:
-            combiner = mrb.lcm
-        else:
-            combiner = max
-        new_shape = [combiner(*list(shape_arr[:, idx]))
+        combiner = mrb.lcm if lossless else max
+        new_shape = [
+            combiner(*list(shape_arr[:, idx]))
             for idx in range(len(new_shape))]
         return tuple(new_shape)
 
@@ -602,381 +717,157 @@ def img_common_shape(
         new_shape = combine_shape(shape_list)
 
     # resample images
-    if lossless:
-        interpolation_order = 0
-    else:
-        interpolation_order = 1
+    interpolation_order = 0 if lossless else 1
+
+    # when output files are not specified, modify inputs
+    if out_filepath_list is None:
+        out_filepath_list = in_filepath_list
+
     for in_filepath, out_filepath in zip(in_filepath_list, out_filepath_list):
-        img_zoom(in_filepath, out_filepath)
+        # ratio should not be kept: keep_ratio_method=None
         img_resample(
-            in_filepath, out_filepath, new_shape, interpolation_order,
-            ignore_extra_dim)
+            in_filepath, out_filepath, new_shape, None, interpolation_order,
+            extra_dim, fill_dim)
     return out_filepath_list
 
 
 # ======================================================================
-def calc_mask(
-        in_filepath,
-        out_filepath,
-        smoothing=1.0,
-        hist_dev_factor=4.0,
-        rel_threshold=0.01,
-        comparison='>',
-        erosion_iter=0):
+def img_common_support(
+        in_filepath_list,
+        out_filepath_list=None,
+        new_shape=None,
+        background=0):
     """
-    Extract a mask from an array.
-    | Workflow is:
-    * Gaussian filter (smoothing) with specified sigma
-    * histogram deviation reduction by a specified factor
-    * masking values using a relative threshold (and thresholding method)
-    * binary erosion(s) witha specified number of iterations.
+    Reframe images sizes (by adding border) to match the same shape.
+
+    Note that:
+    | - the sampling / resolution / voxel size will NOT change
+    | - the support space / field-of-view will change
 
     Parameters
     ==========
-    arr : nd-array
-        Array from which mask is created.
-    smoothing : float
-        Sigma to be used for Gaussian filtering. If zero, no filtering done.
-    hist_dev_factor : float
-        Histogram deviation reduction factor (in std-dev units):
-        values that are the specified number of standard deviations away from
-        the average are not used for the absolute thresholding calculation.
-    rel_threshold : (0,1)-float
-        Relative threshold for masking out values.
-    comparison : string
-        Comparison mode: [=|>|<|>=|<=|~]
-    erosion_iter : integer
-        Number of binary erosion iteration in mask post-processing.
-
-    Returns
-    =======
-    mask : nd-array
-        The extracted mask.
-
-    """
-    par_list = \
-        [smoothing, hist_dev_factor, rel_threshold, comparison, erosion_iter]
-    float_calc_mask = lambda array, par_list: \
-        mrb.calc_mask(array, *par_list).astype(np.double)
-    img_filter(in_filepath, out_filepath, float_calc_mask, [par_list])
-
-
-# ======================================================================
-def change_data_type(
-        in_filepath,
-        out_filepath,
-        data_type=complex):
-    """
-    Change NIfTI-1 image data type.
-
-    Parameters
-    ==========
-    in_filepath : string list
-        Input file path.
-    out_filepath : string
-        Output file path.
-    data_type : datatype (optional)
-        Orientation along which array is join in the N-dim space.
+    filepath_list : str list
+        List of input file paths (affine is taken from last item).
+    suffix : str
+        Suffix to append to the output filenames. Empty string to overwrite.
 
     Returns
     =======
     None.
 
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
-    img = img.astype(data_type)
-    img_maker(out_filepath, img, img_nii.get_affine())
+
+    def combine_shape(shape_list):
+        new_shape = [1] * max([len(shape) for shape in shape_list])
+        if any([len(shape) != len(new_shape) for shape in shape_list]):
+            raise IndexError('shape length must match')
+        shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
+        for idx, shape in enumerate(shape_list):
+            shape_arr[idx, :len(shape)] = np.array(shape)
+        new_shape = [
+            max(*list(shape_arr[:, idx]))
+            for idx in range(len(new_shape))]
+        return tuple(new_shape)
+
+    # calculate new shape
+    if new_shape is None:
+        shape_list = []
+        for in_filepath in in_filepath_list:
+            img_nii = nib.load(in_filepath)
+            shape_list.append(img_nii.get_data().shape)
+        new_shape = combine_shape(shape_list)
+
+    if out_filepath_list is None:
+        out_filepath_list = in_filepath_list
+
+    for in_filepath, out_filepath in zip(in_filepath_list, out_filepath_list):
+        img_reframe(in_filepath, out_filepath, new_shape, background)
+
+    return out_filepath_list
 
 
 # ======================================================================
-def plot_histogram1d(
+def img_mask_threshold(
         in_filepath,
-        mask_filepath=None,
-        bin_size=1,
-        hist_range=(0.01, 0.99),
-        bins=None,
-        array_range=None,
-        scale='linear',
-        title='Histogram',
-        labels=('Value', 'Value Frequency'),
-        style='-k',
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
+        out_filepath,
+        threshold=None,
+        comparison=None,
+        mode=None):
     """
-    Plot 1D histogram of NIfTI-1 image using MatPlotLib.
+    Extract a mask from an array using a threshold.
 
     Parameters
     ==========
-    in_filepath : string
+    in_filepath : str
         Input file path.
-    mask_filepath : string
-        Mask file path.
-    bin_size : int or float (optional)
-        The size of the bins.
-    hist_range : float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    title : string (optional)
-        The title of the plot.
-    labels : string 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    style : string (optional)
-        Plotting style string (as accepted by MatPlotLib).
-    use_new_figure : boolean (optional)
-        Plot the histogram in a new figure.
-    close_figure : boolean (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : string (optional)
-        The path to which the plot is to be saved. If unset, no output.
+    out_filepath : str
+        Output file path.
+    threshold : int, float or tuple or None (optional)
+        Value(s) to be used for determining the threshold.
+    comparison : str or None(optional)
+        A string representing the numeric relationship: [=, !=, >, <, >=, <=]
+    mode : str or None (optional)
+        Determines how to interpret / process the threshold value.
+        Available values are:
+        | 'absolute': use the absolute value
+        | 'relative': use a value relative to dynamic range
+        | 'percentile': use the value obtained from the percentiles
 
     Returns
     =======
-    hist : array
-        The calculated histogram.
+    None.
+
+    See Also
+    ========
+    mri_tools.modules.segmentation.mask_threshold
 
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data().astype(np.double)
-    if mask_filepath:
-        mask_nii = nib.load(mask_filepath)
-        mask = mask_nii.get_data().astype(bool)
-    else:
-        mask = slice(None)
-    hist, bin_edges = mrb.plot_histogram1d(
-        img[mask], bin_size, hist_range, bins, array_range, scale, title,
-        labels, style, use_new_figure, close_figure, save_path)
-    return hist, bin_edges
+
+    def _img_mask_threshold(array, *args, **kwargs):
+        return mrs.mask_threshold(array, *args, **kwargs).astype(float)
+
+    kw_params = mrb.set_keyword_parameters(mrs.mask_threshold, locals())
+    simple_filter(in_filepath, out_filepath, _img_mask_threshold, **kw_params)
 
 
 # ======================================================================
-def plot_histogram1d_list(
-        in_filepath_list,
-        mask_filepath=None,
-        bin_size=1,
-        hist_range=(0.01, 0.99),
-        bins=None,
-        array_range=None,
-        scale='linear',
-        title='Histogram',
-        labels=('Value', 'Value Frequency'),
-        legends=None,
-        styles=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
+def calc_labels(
+        in_filepath,
+        out_filepath,
+        *args,
+        **kwargs):
     """
-    Plot 1D overlapping histograms of NIfTI-1 images using MatPlotLib.
+    Extract labels using: mri_tools.modules.geometry.calc_labels
 
     Parameters
     ==========
-    in_filepath_list : string list
-        List of input file paths (affine is taken from last item).
-    mask_filepath : string
-        Mask file path.
-    bin_size : int or float (optional)
-        The size of the bins.
-    hist_range : float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    title : string (optional)
-        The title of the plot.
-    labels : string 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    legends : string list (optional)
-        Legend for each histogram. If None, no legend will be displayed.
-    styles : string list (optional)
-        MatPlotLib's plotting style strings. If None, uses color cyclying.
-    use_new_figure : boolean (optional)
-        Plot the histogram in a new figure.
-    close_figure : boolean (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : string (optional)
-        The path to which the plot is to be saved. If unset, no output.
-
-    Returns
-    =======
-    hist : array
-        The calculated histogram.
-    bin_edges : array
-        The bin edges of the calculated histogram.
-    plot : array
-        The plot for further manipulation of the figure.
-
-    """
-    if mask_filepath:
-        mask_nii = nib.load(mask_filepath)
-        mask = mask_nii.get_data().astype(bool)
-    else:
-        mask = slice(None)
-    img_list = []
-    for in_filepath in in_filepath_list:
-        img_nii = nib.load(in_filepath)
-        img = img_nii.get_data()
-        img_list.append(img[mask])
-    hist, bin_edges, plot = mrb.plot_histogram1d_list(
-        img_list, bin_size, hist_range, bins, array_range, scale, title,
-        labels, legends, styles, use_new_figure, close_figure, save_path)
-    return hist, bin_edges, plot
-
-
-# ======================================================================
-def plot_histogram2d(
-        in1_filepath,
-        in2_filepath,
-        mask1_filepath=None,
-        mask2_filepath=None,
-        bin_size=1,
-        hist_range=(0.0, 1.0),
-        bins=None,
-        array_range=None,
-        use_separate_range=False,
-        scale='linear',
-        interpolation='bicubic',
-        title='2D Histogram',
-        labels=('Array 1 Values', 'Array 2 Values'),
-        cmap=plt.cm.jet,
-        show_contour=False,
-        bisector=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
-    """
-    Plot 2D histogram of two arrays with MatPlotLib.
-
-    Parameters
-    ==========
-    in1_filepath : string
-        First input file path.
-    in2_filepath : string
-        Second input file path.
-    mask1_filepath : string
-        First mask file path.
-    mask2_filepath : string
-        Second mask file path.
-    bin_size : int or float | int 2-tuple (optional)
-        The size of the bins.
-    hist_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int | int 2-tuple (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    use_separate_range : boolean (optional)
-        Select if display ranges in each dimension are determined separately.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    interpolation : string (optional)
-        Interpolation method (see imshow()).
-    title : string (optional)
-        The title of the plot.
-    labels : string 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    cmap : MatPlotLib ColorMap (optional)
-        The colormap to be used for displaying the histogram.
-    bisector : string or None (optional)
-        If not None, show the first bisector using specified line style.
-    use_new_figure : boolean (optional)
-        Plot the histogram in a new figure.
-    close_figure : boolean (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : string (optional)
-        The path to which the plot is to be saved. If unset, no output.
-
-    Returns
-    =======
-    hist : array
-        The calculated 2D histogram.
-
-    """
-    img1_nii = nib.load(in1_filepath)
-    img2_nii = nib.load(in2_filepath)
-    img1 = img1_nii.get_data().astype(np.double)
-    img2 = img2_nii.get_data().astype(np.double)
-    if mask1_filepath:
-        mask1_nii = nib.load(mask1_filepath)
-        mask1 = mask1_nii.get_data().astype(bool)
-    else:
-        mask1 = slice(None)
-    if mask2_filepath:
-        mask2_nii = nib.load(mask2_filepath)
-        mask2 = mask2_nii.get_data().astype(bool)
-    else:
-        mask2 = slice(None)
-    hist = mrb.plot_histogram2d(
-        img1[mask1], img2[mask2], bin_size, hist_range, bins, array_range,
-        use_separate_range, scale, interpolation, title, labels, cmap,
-        bisector, use_new_figure, close_figure, save_path)
-    return hist
-
-
-# ======================================================================
-def plot_sample(
-        img_filepath,
-        axis=0,
-        index=None,
-        title=None,
-        val_range=None,
-        cmap=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
-    """
-    Plot a 2D sample image of a 3D NIfTI-1 image.
-
-    Parameters
-    ==========
-    img_filepath : string
+    in_filepath : str
         Input file path.
-    axis : int (optional)
-        The slicing axis.
-    index : int (optional)
-        The slicing index. If None, mid-value is taken.
-    title : string (optional)
-        The title of the plot.
-    val_range : 2-tuple (optional)
-        The (min, max) values range.
-    cmap : MatPlotLib ColorMap (optional)
-        The colormap to be used for displaying the histogram.
-    use_new_figure : boolean (optional)
-        Plot the histogram in a new figure.
-    close_figure : boolean (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : string (optional)
-        The path to which the plot is to be saved. If unset, no output.
+    out_filepath : str
+        Output file path.
+    args : tuple
+        arguments to be passed through
+    kwargs : dict
+        keyword arguments to be passed through
 
     Returns
     =======
-    sample : ndarray
-        The displayed image.
+    None.
+
+    See Also
+    ========
+    mri_tools.modules.geometry.calc_labels
 
     """
-    img_nii = nib.load(img_filepath)
-    img = img_nii.get_data()
-    if not cmap:
-        if val_range is None:
-            min_val, max_val = np.min(img), np.max(img)
-        else:
-            min_val, max_val = val_range
-        if min_val * max_val < 0:
-            cmap = plt.cm.bwr
-        else:
-            cmap = plt.cm.binary
-    sample = mrb.plot_sample2d(
-        img, axis, index, title, val_range, cmap, use_new_figure, close_figure,
-        save_path)
-    return sample
+    # todo: fixme
+
+    def _calc_labels(array, *params):
+        labels, masks = mrs.find_objects()
+        return
+
+    simple_filter(
+        in_filepath, out_filepath,
+        lambda x, p: (mrs.find_objects(x.astype(int), *p).astype(int)), *pars)
 
 
 # ======================================================================
@@ -995,11 +886,11 @@ def calc_stats(
 
     Parameters
     ==========
-    img_filepath : string
+    img_filepath : str
         Input file path.
-    mask_filepath : string (optional)
+    mask_filepath : str (optional)
         Mask file path.
-    save_path : string (optional)
+    save_path : str (optional)
         The path to which the plot is to be saved. If unset, no output.
     mask_nan : bool (optional)
         Mask NaN values.
@@ -1011,7 +902,7 @@ def calc_stats(
         Strip labels from return.
     printing : bool or None (optional)
         Force printing of results, even when result is saved to file.
-    title : string or None (optional)
+    title : str or None (optional)
         Title to be printed before results.
     compact : bool (optional)
         Use a compact format string for displaying results.
@@ -1047,6 +938,324 @@ def calc_stats(
         stats_dict = mrb.calc_stats(
             img[mask], mask_nan, mask_inf, mask_vals, save_path)
     return stats_dict
+
+
+# ======================================================================
+def change_data_type(
+        in_filepath,
+        out_filepath,
+        data_type=complex):
+    """
+    Change NIfTI-1 image data type.
+
+    Parameters
+    ==========
+    in_filepath : str list
+        Input file path.
+    out_filepath : str
+        Output file path.
+    data_type : datatype (optional)
+        Orientation along which array is join in the N-dim space.
+
+    Returns
+    =======
+    None.
+
+    """
+    img_nii = nib.load(in_filepath)
+    img = img_nii.get_data()
+    img = img.astype(data_type)
+    maker(out_filepath, img, img_nii.get_affine())
+
+
+# ======================================================================
+def plot_histogram1d(
+        in_filepath,
+        mask_filepath=None,
+        bin_size=1,
+        hist_range=(0.01, 0.99),
+        bins=None,
+        array_range=None,
+        scale='linear',
+        title='Histogram',
+        labels=('Value', 'Value Frequency'),
+        style='-k',
+        use_new_figure=True,
+        close_figure=False,
+        save_path=None):
+    """
+    Plot 1D histogram of NIfTI-1 image using MatPlotLib.
+
+    Parameters
+    ==========
+    in_filepath : str
+        Input file path.
+    mask_filepath : str
+        Mask file path.
+    bin_size : int or float (optional)
+        The size of the bins.
+    hist_range : float 2-tuple (optional)
+        The range of the histogram to display in percentage.
+    bins : int (optional)
+        The number of bins to use. If set, overrides bin_size parameter.
+    array_range : float 2-tuple (optional)
+        Theoretical range of values for the array. If unset, uses min and max.
+    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
+        The frequency value scaling.
+    title : str (optional)
+        The title of the plot.
+    labels : str 2-tuple (optional)
+        A 2-tuple of strings containing x-labels and y-labels.
+    style : str (optional)
+        Plotting style string (as accepted by MatPlotLib).
+    use_new_figure : bool (optional)
+        Plot the histogram in a new figure.
+    close_figure : bool (optional)
+        Close the figure after saving (useful for batch processing).
+    save_path : str (optional)
+        The path to which the plot is to be saved. If unset, no output.
+
+    Returns
+    =======
+    hist : array
+        The calculated histogram.
+
+    """
+    img_nii = nib.load(in_filepath)
+    img = img_nii.get_data().astype(np.double)
+    if mask_filepath:
+        mask_nii = nib.load(mask_filepath)
+        mask = mask_nii.get_data().astype(bool)
+    else:
+        mask = slice(None)
+    hist, bin_edges, plot = mrp.histogram1d(
+        img[mask], bin_size, hist_range, bins, array_range, scale, title,
+        labels, style, use_new_figure, close_figure, save_path)
+    return hist, bin_edges, plot
+
+
+# ======================================================================
+def plot_histogram1d_list(
+        in_filepath_list,
+        mask_filepath=None,
+        bin_size=1,
+        hist_range=(0.01, 0.99),
+        bins=None,
+        array_range=None,
+        scale='linear',
+        title='Histogram',
+        labels=('Value', 'Value Frequency'),
+        legends=None,
+        styles=None,
+        use_new_figure=True,
+        close_figure=False,
+        save_path=None):
+    """
+    Plot 1D overlapping histograms of NIfTI-1 images using MatPlotLib.
+
+    Parameters
+    ==========
+    in_filepath_list : str list
+        List of input file paths (affine is taken from last item).
+    mask_filepath : str
+        Mask file path.
+    bin_size : int or float (optional)
+        The size of the bins.
+    hist_range : float 2-tuple (optional)
+        The range of the histogram to display in percentage.
+    bins : int (optional)
+        The number of bins to use. If set, overrides bin_size parameter.
+    array_range : float 2-tuple (optional)
+        Theoretical range of values for the array. If unset, uses min and max.
+    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
+        The frequency value scaling.
+    title : str (optional)
+        The title of the plot.
+    labels : str 2-tuple (optional)
+        A 2-tuple of strings containing x-labels and y-labels.
+    legends : str list (optional)
+        Legend for each histogram. If None, no legend will be displayed.
+    styles : str list (optional)
+        MatPlotLib's plotting style strings. If None, uses color cycling.
+    use_new_figure : bool (optional)
+        Plot the histogram in a new figure.
+    close_figure : bool (optional)
+        Close the figure after saving (useful for batch processing).
+    save_path : str (optional)
+        The path to which the plot is to be saved. If unset, no output.
+
+    Returns
+    =======
+    hist : array
+        The calculated histogram.
+    bin_edges : array
+        The bin edges of the calculated histogram.
+    plot : array
+        The plot for further manipulation of the figure.
+
+    """
+    if mask_filepath:
+        mask_nii = nib.load(mask_filepath)
+        mask = mask_nii.get_data().astype(bool)
+    else:
+        mask = slice(None)
+    img_list = []
+    for in_filepath in in_filepath_list:
+        img_nii = nib.load(in_filepath)
+        img = img_nii.get_data()
+        img_list.append(img[mask])
+    hist, bin_edges, plot = mrp.histogram1d_list(
+        img_list, bin_size, hist_range, bins, array_range, scale, title,
+        labels, legends, styles, use_new_figure, close_figure, save_path)
+    return hist, bin_edges, plot
+
+
+# ======================================================================
+def plot_histogram2d(
+        in1_filepath,
+        in2_filepath,
+        mask1_filepath=None,
+        mask2_filepath=None,
+        bin_size=1,
+        hist_range=(0.0, 1.0),
+        bins=None,
+        array_range=None,
+        use_separate_range=False,
+        scale='linear',
+        interpolation='bicubic',
+        title='2D Histogram',
+        labels=('Array 1 Values', 'Array 2 Values'),
+        cmap=plt.cm.jet,
+        show_contour=False,
+        bisector=None,
+        use_new_figure=True,
+        close_figure=False,
+        save_path=None):
+    """
+    Plot 2D histogram of two arrays with MatPlotLib.
+
+    Parameters
+    ==========
+    in1_filepath : str
+        First input file path.
+    in2_filepath : str
+        Second input file path.
+    mask1_filepath : str
+        First mask file path.
+    mask2_filepath : str
+        Second mask file path.
+    bin_size : int or float | int 2-tuple (optional)
+        The size of the bins.
+    hist_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
+        The range of the histogram to display in percentage.
+    bins : int | int 2-tuple (optional)
+        The number of bins to use. If set, overrides bin_size parameter.
+    array_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
+        Theoretical range of values for the array. If unset, uses min and max.
+    use_separate_range : bool (optional)
+        Select if display ranges in each dimension are determined separately.
+    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
+        The frequency value scaling.
+    interpolation : str (optional)
+        Interpolation method (see imshow()).
+    title : str (optional)
+        The title of the plot.
+    labels : str 2-tuple (optional)
+        A 2-tuple of strings containing x-labels and y-labels.
+    cmap : MatPlotLib ColorMap (optional)
+        The colormap to be used for displaying the histogram.
+    bisector : str or None (optional)
+        If not None, show the first bisector using specified line style.
+    use_new_figure : bool (optional)
+        Plot the histogram in a new figure.
+    close_figure : bool (optional)
+        Close the figure after saving (useful for batch processing).
+    save_path : str (optional)
+        The path to which the plot is to be saved. If unset, no output.
+
+    Returns
+    =======
+    hist : array
+        The calculated 2D histogram.
+
+    """
+    img1_nii = nib.load(in1_filepath)
+    img2_nii = nib.load(in2_filepath)
+    img1 = img1_nii.get_data().astype(np.double)
+    img2 = img2_nii.get_data().astype(np.double)
+    if mask1_filepath:
+        mask1_nii = nib.load(mask1_filepath)
+        mask1 = mask1_nii.get_data().astype(bool)
+    else:
+        mask1 = slice(None)
+    if mask2_filepath:
+        mask2_nii = nib.load(mask2_filepath)
+        mask2 = mask2_nii.get_data().astype(bool)
+    else:
+        mask2 = slice(None)
+    hist, x_edges, y_edges, plot = mrp.histogram2d(
+        img1[mask1], img2[mask2], bin_size, hist_range, bins, array_range,
+        use_separate_range, scale, interpolation, title, labels, cmap,
+        bisector, use_new_figure, close_figure, save_path)
+    return hist, x_edges, y_edges, plot
+
+
+# ======================================================================
+def plot_sample(
+        img_filepath,
+        axis=0,
+        index=None,
+        title=None,
+        val_range=None,
+        cmap=None,
+        use_new_figure=True,
+        close_figure=False,
+        save_path=None):
+    """
+    Plot a 2D sample image of a 3D NIfTI-1 image.
+
+    Parameters
+    ==========
+    img_filepath : str
+        Input file path.
+    axis : int (optional)
+        The slicing axis.
+    index : int (optional)
+        The slicing index. If None, mid-value is taken.
+    title : str (optional)
+        The title of the plot.
+    val_range : 2-tuple (optional)
+        The (min, max) values range.
+    cmap : MatPlotLib ColorMap (optional)
+        The colormap to be used for displaying the histogram.
+    use_new_figure : bool (optional)
+        Plot the histogram in a new figure.
+    close_figure : bool (optional)
+        Close the figure after saving (useful for batch processing).
+    save_path : str (optional)
+        The path to which the plot is to be saved. If unset, no output.
+
+    Returns
+    =======
+    sample : ndarray
+        The displayed image.
+
+    """
+    img_nii = nib.load(img_filepath)
+    img = img_nii.get_data()
+    if not cmap:
+        if val_range is None:
+            min_val, max_val = np.min(img), np.max(img)
+        else:
+            min_val, max_val = val_range
+        if min_val * max_val < 0:
+            cmap = plt.cm.bwr
+        else:
+            cmap = plt.cm.binary
+    sample, plot = mrp.sample2d(
+        img, axis, index, title, val_range, cmap, use_new_figure, close_figure,
+        save_path)
+    return sample, plot
 
 
 # ======================================================================

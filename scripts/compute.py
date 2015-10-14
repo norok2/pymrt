@@ -8,7 +8,7 @@ appropriate combination of values in the 'options' command-line argument.
 Some computations, that are of particular interest in MRI, are readily
 available through the 'method' command-line argument.
 
-See also: mri_tools.lib.compute
+See also: mri_tools.modules.compute
 """
 
 
@@ -56,18 +56,19 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.lib.base as mrb
-# import mri_tools.lib.utils as mru
-# import mri_tools.lib.nifti as mrn
-import mri_tools.lib.compute as mrc
-# import mri_tools.lib.correlation as mrr
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
-import dcmpi.lib.common as dcmlib
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+# import mri_tools.modules.nifti as mrn
+import mri_tools.computation as mrc
+# import mri_tools.modules.correlate as mrr
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
+import common as dcmlib
+
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools import _firstline
+from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -100,7 +101,7 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'], _firstline(__doc__),
+            INFO['version'], get_first_line(__doc__),
             INFO['copyright'], ', '.join(INFO['authors']),
             INFO['notice']),
         action='version')
@@ -161,7 +162,7 @@ if __name__ == '__main__':
             ARGS.method,ARGS.options))
 
     if ARGS.method:
-        f_name = lambda label, name: '_'.join((label, name))
+        def f_name(label, name): return '_'.join((label, name))
         preset_func_name = f_name('preset', ARGS.method)
         sources_func_name = f_name('sources', ARGS.method)
         compute_func_name = f_name('compute', ARGS.method)
@@ -187,7 +188,7 @@ if __name__ == '__main__':
             print('II: Opts: {}'.format(json.dumps(opts)))
         # procede with computation on selected sources
         if opts != {}:
-            mrc.auto_compute(
+            mrc.compute(
                 sources_func, sources_params,
                 compute_func, compute_params,
                 ARGS.input, ARGS.output, ARGS.recursive,

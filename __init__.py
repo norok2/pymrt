@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mri_tools:
+mri_tools: collection of software for MRI analysis
 """
 
 
@@ -28,6 +28,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+# ======================================================================
+# :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
 
 # ======================================================================
 # :: Versioning
@@ -61,7 +64,7 @@ D_VERB_LVL = VERB_LVL['low']
 
 # ======================================================================
 # :: get first line (useful for documentation)
-def _firstline(text):
+def get_first_line(text):
     """
     Extract the first line from the text
 
@@ -80,9 +83,13 @@ def _firstline(text):
 
 
 # ======================================================================
+# :: export modules
+__path__.append(os.path.join(os.path.dirname(__file__), 'modules'))
+
+
+# ======================================================================
 # Greetings
-MY_GREETINGS = \
-"""
+MY_GREETINGS = """
                 _   _              _
  _ __ ___  _ __(_) | |_ ___   ___ | |___
 | '_ ` _ \| '__| | | __/ _ \ / _ \| / __|

@@ -20,31 +20,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-__version__ = '0.0.0.1'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
-
-
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-import shutil  # High-level file operations
 # import math  # Mathematical functions
 import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-import collections  # High-performance container datatypes
 import argparse  # Parser for command-line options, arguments and subcommands
 # import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
@@ -73,43 +55,19 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
-import mri_tools.lib.utils as mru
-import mri_tools.lib.nifti as mrn
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+# import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.computation as mrc
+import mri_tools.modules.correlation as mrl
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
+# import dcmpi.common as dcmlib
 
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-D_VERB_LVL = VERB_LVL['low']
-
-
-# ======================================================================
-def compute_mask(
-        in_filepath, out_filepath, bet_params, smoothing,
-        hist_dev_factor, rel_threshold, erosion_iter, force, verbose):
-    """
-    Sample function.
-
-    Parameters
-    ==========
-    my_param : type
-        Sample parameter.
-
-    Returns
-    =======
-    my_rr : rtype
-        Sample return.
-
-    """
-    if out_filepath and verbose >= VERB_LVL['none']:
-        out_dirpath = os.path.dirname(out_filepath)
-        print('OutDir:\t{}'.format(out_dirpath))
-    mru.compute_mask(
-        in_filepath, out_filepath, bet_params, smoothing, hist_dev_factor,
-        rel_threshold, erosion_iter, force, verbose)
+from mri_tools import INFO
+from mri_tools import VERB_LVL
+from mri_tools import D_VERB_LVL
+from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -129,22 +87,30 @@ def handle_arg():
     # smoothing
     d_smoothing = 0.0
     # histogram deviation factor
-    d_hist_dev_factor = 5.0
-    # relative threshold in the (0, 1) range
-    d_rel_threshold = 0.1
+    d_percentile_range = (0.0, 1.0)
+    # relative value threshold in the (0, 1) range
+    d_val_threshold = 0.1
+    # comparison method
+    d_comparison = '>'
+    # relative size threshold in the (0, 1) range
+    d_size_threshold = 0.02
     # number of erosion iterations
     d_erosion_iter = 0
+    # number of dilation iterations
+    d_dilation_iter = 0
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'], get_first_line(__doc__),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
@@ -172,17 +138,29 @@ def handle_arg():
         type=float, default=d_smoothing,
         help='value of Gaussian smoothing\'s sigma [%(default)s]')
     arg_parser.add_argument(
-        '-r', '--hist_dev_factor', metavar='X',
-        type=float, default=d_hist_dev_factor,
-        help='histogram deviation factor [%(default)s]')
+        '-r', '--percentile_range', metavar=('MIN', 'MAX'),
+        type=float, nargs=2, default=d_percentile_range,
+        help='percentiles to obtain values range for threshold [%(default)s]')
     arg_parser.add_argument(
-        '-t', '--rel_threshold', metavar='R',
-        type=float, default=d_rel_threshold,
-        help='relative thresholding value [%(default)s]')
+        '-a', '--val_threshold', metavar='R',
+        type=float, default=d_val_threshold,
+        help='value threshold (relative to values range) [%(default)s]')
+    arg_parser.add_argument(
+        '-c', '--comparison', metavar='STR',
+        default=d_comparison,
+        help='comparison directive [%(default)s]')
+    arg_parser.add_argument(
+        '-z', '--size_threshold', metavar='Z',
+        type=float, default=d_size_threshold,
+        help='size threshold (relative to matrix size) [%(default)s]')
     arg_parser.add_argument(
         '-e', '--erosion_iter', metavar='N',
         type=int, default=d_erosion_iter,
         help='number of postprocess binary erosion iterations [%(default)s]')
+    arg_parser.add_argument(
+        '-d', '--dilation_iter', metavar='N',
+        type=int, default=d_erosion_iter,
+        help='number of postprocess binary dilation iterations [%(default)s]')
     return arg_parser
 
 
@@ -199,16 +177,25 @@ if __name__ == '__main__':
     if ARGS.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
-    compute_mask(
+
+
+    if ARGS.output and ARGS.verbose >= VERB_LVL['none']:
+        ARGS.output = os.path.dirname(ARGS.output)
+        print('OutDir:\t{}'.format(ARGS.output))
+    mrl.calc_mask(
         ARGS.input,
         ARGS.output,
-        ARGS.bet_params,
+        ARGS.val_threshold,
+        ARGS.percentile_range,
+        ARGS.comparison,
         ARGS.smoothing,
-        ARGS.hist_dev_factor,
-        ARGS.rel_threshold,
+        ARGS.size_threshold,
         ARGS.erosion_iter,
+        ARGS.dilation_iter,
+        ARGS.bet_params,
         ARGS.force,
         ARGS.verbose)
+
     end_time = time.time()
     if ARGS.verbose > VERB_LVL['low']:
         print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: useful utilities for MRI data analysis.
+mri_tools.utils: useful utilities for MRI data analysis.
 """
 
 
@@ -11,22 +11,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
-
-__version__ = '0.2.0.350'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
 
 
 # ======================================================================
@@ -70,20 +54,23 @@ import re  # Regular expression operations
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
-import mri_tools.lib.nifti as mrn
+import mri_tools.modules.base as mrb
+import mri_tools.modules.nifti as mrn
+from mri_tools.modules.debug import dbg
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
-# from mri_tools import _firstline
+# from mri_tools import get_first_line
+
 
 # from dcmpi.lib.common import D_NUM_DIGITS
-D_NUM_DIGITS = 3
+D_NUM_DIGITS = 3  # synced with: dcmpi.lib.common.D_NUM_DIGITS
 
 
 # ======================================================================
 # :: parsing constants
 D_SEP = '_'
+PARAM_BASE_SEP = '_'
 PARAM_SEP = ','
 PARAM_KEY_VAL_SEP = '='
 INFO_SEP = '__'
@@ -96,19 +83,19 @@ SERIES_NUM_ID = 's'
 # ======================================================================
 def get_param_val(
         param_str,
-        param_lbl='',
+        param_key='',
         case_sensitive=False):
     """
     Extract numerical value from string information.
-    This expects an appropriate string, as retrieved by parse_filename().
+    This expects a string containing a single parameter.
 
     Parameters
     ==========
-    param_str : string
+    name : str
         The string containing the information.
-    param_lbl : string (optional)
+    param_key : str (optional)
         The string containing the label of the parameter.
-    case_sensitive : boolean (optional)
+    case_sensitive : bool (optional)
         Parsing of the string is case-sensitive.
 
     Returns
@@ -118,26 +105,22 @@ def get_param_val(
 
     See Also
     ========
-    set_param_val
+    set_param_val, parse_series_name
 
     """
     if param_str:
         if not case_sensitive:
             param_str = param_str.lower()
-            param_lbl = param_lbl.lower()
-        if param_str.startswith(param_lbl):
-            param_val = param_str[len(param_lbl):]
-        elif param_str.endswith(param_lbl):
-            param_val = param_str[:-len(param_lbl)]
+            param_key = param_key.lower()
+        if param_str.startswith(param_key):
+            param_val = param_str[len(param_key):]
+        elif param_str.endswith(param_key):
+            param_val = param_str[:-len(param_key)]
         else:
             param_val = None
-        try:
-            param_val = int(param_val)
-        except (ValueError, TypeError):
-            try:
-                param_val = float(param_val)
-            except (ValueError, TypeError):
-                param_val = None
+
+        if param_val:
+            param_val = mrb.auto_convert(param_val)
     else:
         param_val = None
     return param_val
@@ -146,8 +129,8 @@ def get_param_val(
 # ======================================================================
 def set_param_val(
         param_val,
-        param_lbl,
-        param_sep='',
+        param_key,
+        kv_sep=PARAM_KEY_VAL_SEP,
         case='lower'):
     """
     Extract numerical value from string information.
@@ -157,27 +140,27 @@ def set_param_val(
     ==========
     param_val : int or float
         The value of the parameter.
-    param_lbl : string
+    param_key : str
         The string containing the label of the parameter.
-    case : boolean (optional)
+    case : bool (optional)
         The text case of parameter label is set to this.
         Possible values are: None, 'lower', 'upper'
 
     Returns
     =======
-    param_str : string
+    param_str : str
         The string containing the information.
 
     See Also
     ========
-    get_param_val
+    get_param_val, to_series_name
 
     """
     if case == 'lower':
-        param_lbl = param_lbl.lower()
+        param_key = param_key.lower()
     elif case == 'upper':
-        param_lbl = param_lbl.upper()
-    param_str = '{}{}'.format(param_lbl, param_val)
+        param_key = param_key.upper()
+    param_str = kv_sep.join((param_key, str(param_val)))
     return param_str
 
 
@@ -189,7 +172,7 @@ def parse_filename(filepath):
 
     Parameters
     ==========
-    filepath : string
+    filepath : str
         Full path of the image filename.
 
     Returns
@@ -197,9 +180,9 @@ def parse_filename(filepath):
     info : dictionary
         Dictionary containing:
             | 'num' : int : identification number of the series.
-            | 'name' : string : series name.
+            | 'name' : str : series name.
             | 'seq' : int or None : sequential number of the series.
-            | 'type' : string : image type
+            | 'type' : str : image type
 
     See Also
     ========
@@ -246,17 +229,17 @@ def to_filename(
     info : dictionary
         Dictionary containing:
             | 'num' : int or None: Identification number of the scan.
-            | 'name' : string : Series name.
+            | 'name' : str : Series name.
             | 'seq' : int or None : Sequential number of the volume.
-            | 'type' : string or None: Image type
-    dirpath : string (optional)
+            | 'type' : str or None: Image type
+    dirpath : str (optional)
         The base directory path for the filename.
-    ext : string (optional)
+    ext : str (optional)
         Extension to append to the newly generated filename or filepath.
 
     Returns
     =======
-    filepath : string
+    filepath : str
         Full path of the image filename.
 
     See Also
@@ -281,18 +264,26 @@ def to_filename(
 
 
 # ======================================================================
-def parse_series_name(name, p_sep=PARAM_SEP, kv_sep=PARAM_KEY_VAL_SEP):
+def parse_series_name(
+        name,
+        p_sep=PARAM_SEP,
+        kv_sep=PARAM_KEY_VAL_SEP,
+        b_sep=PARAM_BASE_SEP):
     """
     Extract specific information from series name.
 
     Parameters
     ==========
-    name : string
+    name : str
         Full name of the image series.
+    p_sep : str (optional)
+        String separating parameters.
+    kv_sep : str (optional)
+        String separating key from value in parameters.
 
     Returns
     =======
-    base : string
+    base : str
         Base name of the series, i.e. without parsed parameters.
     params : (string, float or int) dictionary
         List of parameters in the (label, value) format.
@@ -302,23 +293,21 @@ def parse_series_name(name, p_sep=PARAM_SEP, kv_sep=PARAM_KEY_VAL_SEP):
     to_series_name
 
     """
-    params, base_list = {}, []
-    tokens = name.split(p_sep)
+    if p_sep != b_sep:
+        base, tokens = name.split(b_sep)
+        tokens = tokens.split(p_sep)
+    else:
+        tmp = name.split(p_sep)
+        base = tmp[0]
+        tokens = tmp[1:]
+    params = {}
     for token in tokens:
-        is_param = False
         if kv_sep and kv_sep in token:
-            param_val, param_id = token.split(kv_sep)
-            params[param_id] = param_val
-            is_param = True
+            param_id, param_val = token.split(kv_sep)
         else:
             param_id = re.findall('^[a-zA-Z]*', token)[0]
             param_val = get_param_val(token, param_id)
-            if param_val != None:
-                params[param_id] = param_val
-                is_param = True
-        if not is_param:
-            base_list.append(token)
-    base = p_sep.join(base_list)
+        params[param_id] = param_val
     return base, params
 
 
@@ -331,7 +320,7 @@ def to_series_name(
 
     Parameters
     ==========
-    base : string
+    base : str
         Base name of the series, i.e. without parsed parameters.
     params : (string, float or int) dictionary
         List of parameters in the (label, value) format.
@@ -340,7 +329,7 @@ def to_series_name(
 
     Returns
     =======
-    name : string
+    name : str
         Full name of the image series.
 
     See Also
@@ -348,73 +337,103 @@ def to_series_name(
     parse_series_name
 
     """
-    tokens = [base]
+    tokens = []
     params = sorted(params.items())
     tags = [key for key, val in params if not val]
     for key, val in params:
         if val:
             tokens.append(set_param_val(val, key))
     for tag in tags:
-        tokens.append(key)
-    name = PARAM_SEP.join(tokens)
+        tokens.append(tag)
+    params = PARAM_SEP.join(tokens)
+    name = PARAM_BASE_SEP.join((base, params))
     return name
 
 
 # ======================================================================
 def change_img_type(
         filepath,
-        new_type):
+        img_type):
     """
-    Change the image type of a given image file.
+    Change the image type of an image filename in a filepath.
 
     Parameters
     ==========
-    filepath : string
+    filepath : str
         The filepath of the base image.
-    new_type : string
+    img_type : str
         The new image type identifier.
 
     Returns
     =======
-    new_filepath : string
-        The filepath of the image with new type.
+    filepath : str
+        The filepath of the image with the new type.
 
     """
     dirpath = os.path.dirname(filepath)
     info = parse_filename(filepath)
-    info['img_type'] = new_type
-    new_filepath = to_filename(info, dirpath)
-    return new_filepath
+    info['type'] = img_type
+    filepath = to_filename(info, dirpath)
+    return filepath
 
 
 # ======================================================================
 def change_param_val(
         filepath,
-        param_lbl,
-        new_param_val):
+        param_key,
+        param_val):
     """
-    Change the parameter value of a given filepath.
+    Change the parameter value of an image filename in a filepath.
 
     Parameters
     ==========
-    filepath : string
+    filepath : str
         The filepath of the base image.
-    new_type : string
-        The new image type identifier.
+    param_key : str
+        The identifier of the parameter to change.
+    new_param_val : str
+        The new value of the parameter to change.
 
     Returns
     =======
-    new_name : string
+    new_name : str
         The filepath of the image with new type.
 
     """
     dirpath = os.path.dirname(filepath)
     info = parse_filename(filepath)
     base, params = parse_series_name(info['name'])
-    params[param_lbl] = new_param_val
+    params[param_key] = param_val
     info['name'] = to_series_name(base, params)
-    new_filepath = to_filename(info, dirpath)
-    return new_filepath
+    filepath = to_filename(info, dirpath)
+    return filepath
+
+
+# ======================================================================
+def extract_param_val(
+        filepath,
+        param_key):
+    """
+    Extract the parameter value of an image filename in a filepath.
+
+    Parameters
+    ==========
+    filepath : str
+        The filepath of the base image.
+    new_type : str
+        The new image type identifier.
+
+    Returns
+    =======
+    new_name : str
+        The filepath of the image with new type.
+
+    """
+    dirpath = os.path.dirname(filepath)
+    info = parse_filename(filepath)
+    base, params = parse_series_name(info['name'])
+    param_val = params[param_key] if param_key in params else None
+    return param_val
 
 
 # ======================================================================
@@ -430,13 +449,14 @@ def combine_filename(
 
     Returns
     =======
-    filename : string
+    filename : str
 
     """
+    # todo: fix doc
     filename = prefix
     for filenames in filename_list:
         filename += 2 * INFO_SEP + \
-            mrn.filename_noext(os.path.basename(filenames))
+                    mrn.filename_noext(os.path.basename(filenames))
     return filename
 
 
@@ -450,7 +470,7 @@ def filename2label(
 
     Parameters
     ==========
-    filepath : string
+    filepath : str
         Path fo the file from which a label is to be extracted.
     exclude_list : list of string (optional)
         List of string to exclude from filepath.
@@ -459,7 +479,7 @@ def filename2label(
 
     Returns
     =======
-    label : string
+    label : str
         The extracted label.
 
     """
@@ -474,8 +494,9 @@ def filename2label(
     return label
 
 
+'''
 ## ======================================================================
-#def calc_averages(
+# def calc_averages(
 #        filepath_list,
 #        out_dirpath,
 #        threshold=0.05,
@@ -493,8 +514,8 @@ def filename2label(
 #    ==========
 #    """
 #    def _compute_regmat(par):
-#        """Multiprocessing-friendly version of 'compute_regmat()'."""
-#        return compute_regmat(*par)
+#        """Multiprocessing-friendly version of 'compute_affine_fsl()'."""
+#        return compute_affine_fsl(*par)
 #
 #    tmp_dirpath = os.path.join(out_dirpath, 'tmp')
 #    if not os.path.exists(tmp_dirpath):
@@ -563,7 +584,7 @@ def filename2label(
 ##            for filepath in img_tuple:
 ##                out_filepath = os.path.join(
 ##                    tmp_dirpath, os.path.basename(filepath))
-##                apply_regmat(
+##                apply_affine_fsl(
 ##                    filepath, img_tuple_list[0][0], out_filepath, regmat)
 ##                reg_filepath_list.append(out_filepath)
 ##        # combine all registered images together
@@ -616,44 +637,44 @@ def filename2label(
 #
 #        img = mrb.ndstack(img_list, -1)
 #        img = np.mean(img, -1)
-#        mrn.img_maker(out_mag_filepath, np.abs(img), affine_nii)
-##        mrn.img_maker(out_phs_filepath, np.angle(img), affine_nii)
+#        mrn.maker(out_mag_filepath, np.abs(img), affine_nii)
+##        mrn.maker(out_phs_filepath, np.angle(img), affine_nii)
 #
 ##        fixed = np.abs(img_list[0])
 ##        for idx, img in enumerate(img_list):
 ##            affine = mrb.affine_registration(np.abs(img), fixed, 'rigid')
 ##            img_list[idx] = mrb.apply_affine(img_list[idx], affine)
-##        mrn.img_maker(out_filepath, np.abs(img), affine_nii)
+##        mrn.maker(out_filepath, np.abs(img), affine_nii)
 ##        print(img.shape, img.nbytes / 1024 / 1024)  # DEBUG
 ##        # calculate the Fourier transform
 ##        for img in img_list:
 ##            fft_list.append(np.fft.fftshift(np.fft.fftn(img)))
 ##        fixed = np.abs(img[:, :, :, 0])
-##        mrb.plot_sample2d(fixed, -1)
+##        mrb.sample2d(fixed, -1)
 ##        tmp = tmp * np.exp(1j*0.5)
 ##        moving = sp.ndimage.shift(fixed, [1.0, 5.0, 0.0])
-##        mrb.plot_sample2d(moving, -1)
+##        mrb.sample2d(moving, -1)
 #
 ##        print(linear, shift)
 ##        moved = sp.ndimage.affine_transform(moving, linear, offset=-shift)
-##        mrb.plot_sample2d(moved, -1)
-##        mrn.img_maker(out_filepath, moving, affine)
-##        mrn.img_maker(mag_filepath, fixed, affine)
-##        mrn.img_maker(phs_filepath, moved-fixed, affine)
+##        mrb.sample2d(moved, -1)
+##        mrn.maker(out_filepath, moving, affine)
+##        mrn.maker(mag_filepath, fixed, affine)
+##        mrn.maker(phs_filepath, moved-fixed, affine)
 ##        for idx in range(len(img_list)):
 ##            tmp_img = img[:, :, :, idx]
 ##            tmp_fft = fft[:, :, :, idx]
-##            mrb.plot_sample2d(np.real(tmp_fft), -1)
-##            mrb.plot_sample2d(np.imag(tmp_fft), -1)
-##            mrb.plot_sample2d(np.abs(img[:, :, :, idx]), -1)
-##            mrb.plot_sample2d(np.angle(img[:, :, :, idx]), -1)
+##            mrb.sample2d(np.real(tmp_fft), -1)
+##            mrb.sample2d(np.imag(tmp_fft), -1)
+##            mrb.sample2d(np.abs(img[:, :, :, idx]), -1)
+##            mrb.sample2d(np.angle(img[:, :, :, idx]), -1)
 #
 #        # calculate output
 #        if verbose > VERB_LVL['none']:
 #            print('Target:\t{}'.format(os.path.basename(out_mag_filepath)))
 #            print('Target:\t{}'.format(os.path.basename(out_phs_filepath)))
 #    return mag_filepath, phs_filepath
-
+'''
 
 # ======================================================================
 if __name__ == '__main__':

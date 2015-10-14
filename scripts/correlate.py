@@ -5,28 +5,12 @@ Check voxel-by-voxel correlation after registration and masking.
 """
 
 
-# ======================================================================#
+# ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 #from __future__ import unicode_literals
-
-
-__version__ = '0.9.0.50'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
 
 
 # ======================================================================
@@ -37,7 +21,6 @@ DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
 import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-import collections  # High-performance container datatypes
 import argparse  # Parser for command-line options, arguments and subcommands
 # import itertools  # Functions creating iterators for efficient looping
 # import subprocess  # Subprocess management
@@ -65,17 +48,19 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.lib.base as mrb
-import mri_tools.lib.utils as mru
-# import mri_tools.lib.nifti as mrn
-# import mri_tools.lib.geom_mask as mrgm
-# import mri_tools.lib.mp2rage as mp2rage
+# import mri_tools.modules.base as mrb
+# import mri_tools.modules.utils as mru
+# import mri_tools.modules.nifti as mrn
+# import mri_tools.modules.compute as mrc
+import mri_tools.modules.correlation as mrl
+# import mri_tools.modules.geometry as mrg
+# from mri_tools.modules.sequences import mp2rage
+# import dcmpi.lib.common as dcmlib
 
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-D_VERB_LVL = VERB_LVL['low']
+from mri_tools import INFO
+from mri_tools import VERB_LVL
+from mri_tools import D_VERB_LVL
+from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -97,9 +82,9 @@ def handle_arg():
     # mask file
     d_mask_file = None
     # registration reference extension
-    d_reg_ref_ext = '0_REG_REF'
+    d_reg_ref_ext = mrl.D_EXT['registration reference']
     # correlation reference extension
-    d_corr_ref_ext = '0_CORR_REF'
+    d_corr_ref_ext = mrl.D_EXT['correlation reference']
     # temporary dir
     d_tmp_dir = 'tmp'
     # registration dir
@@ -115,22 +100,16 @@ def handle_arg():
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
-            COPYRIGHT,
-            AUTHOR,
-            CONTACT, ),
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
-
-            COPYRIGHT,
-            AUTHOR,
-            CONTACT,
-            LICENSE, ),
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'], get_first_line(__doc__),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
@@ -212,7 +191,7 @@ if __name__ == '__main__':
     if ARGS.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
-    mru.check_correlation(
+    mrr.check_correlation(
         ARGS.dir, ARGS.type, ARGS.range, ARGS.units,
         ARGS.mask, ARGS.reg_ref_ext, ARGS.corr_ref_ext,
         ARGS.tmp_dir, ARGS.reg_dir, ARGS.msk_dir, ARGS.cmp_dir, ARGS.fig_dir,

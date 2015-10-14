@@ -315,4 +315,5 @@ def calc_tc(eff, num, tr_gre, tr_seq, ti1, ti2, a_1, a_2):
 
 # ======================================================================
 if __name__ == '__main__':
+    #todo: refresh this code (at some point)
     print(__doc__)

@@ -34,7 +34,6 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-# import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
@@ -49,18 +48,17 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import mri_tools.lib.base as mrb
-import mri_tools.lib.utils as mru
-import mri_tools.lib.nifti as mrn
+import mri_tools.modules.base as mrb
+import mri_tools.modules.utils as mru
+import mri_tools.modules.nifti as mrn
 # from dcmpi.lib.common import ID
 # from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-# from mri_tools import _firstline
+# from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -80,7 +78,7 @@ D_OPTS = {
     'types': [None],
     'mask': [None],
     'adapt_mask': True,
-    }
+}
 
 
 # ======================================================================
@@ -94,16 +92,16 @@ def preset_t1_mp2rage_builtin():
         'match': '.*MP2RAGE.*',
         'dtype': 'float',
         'mask': [[None], [None], [None], [0]],
-        }
+    }
     new_opts.update({
         'img_func': 'match_series',
         'img_params': (
             (
                 ('.*T1_Images.*', new_opts['types'][0]),
                 ('.*INV2(?!_PHS).*', new_opts['types'][1]),
-                ),
-            )
-        })
+            ),
+        )
+    })
     return new_opts
 
 
@@ -117,7 +115,7 @@ def preset_t2s_flash_builtin():
         'param_select': ['ProtocolName', '_series'],
         'match': '.*T2Star_Images.*',
         'dtype': 'float',
-        }
+    }
     return new_opts
 
 
@@ -134,7 +132,7 @@ def preset_t2s_multiecho_loglin():
         'multi_acq': False,
         'img_func': 'fit_monoexp_decay_loglin',
         'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
-        }
+    }
     return new_opts
 
 
@@ -151,7 +149,7 @@ def preset_t2s_multiecho_leasq():
         'multi_acq': False,
         'img_func': 'fit_monoexp_decay_leasq',
         'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
-        }
+    }
     return new_opts
 
 
@@ -201,10 +199,10 @@ def func_exp_decay(t_arr, tau, s_0, const=0.0):
     [s_0 > 0, tau > 0]
     """
     s_t_arr = s_0 * np.exp(-t_arr / tau) + const
-#    if s_0 > 0.0 and tau > 0.0:
-#        s_t_arr = s_0 * np.exp(-t_arr / tau) + const
-#    else:
-#        s_t_arr = np.tile(np.inf, len((t_arr)))
+    #    if s_0 > 0.0 and tau > 0.0:
+    #        s_t_arr = s_0 * np.exp(-t_arr / tau) + const
+    #    else:
+    #        s_t_arr = np.tile(np.inf, len((t_arr)))
     return s_t_arr
 
 
@@ -215,7 +213,7 @@ def func_flash(m0, fa, tr, t1, te, t2s):
     S = M0 sin(fa) exp(-TE/T2*) (1 - exp(-TR/T1)) / (1 - cos(fa) exp(-TR/T1))
     """
     return m0 * np.sin(fa) * np.exp(-te / t2s) * \
-        (1.0 - np.exp(-tr / t1)) / (1.0 - np.cos(fa) * np.exp(-tr / t1))
+           (1.0 - np.exp(-tr / t1)) / (1.0 - np.cos(fa) * np.exp(-tr / t1))
 
 
 # ======================================================================
@@ -250,6 +248,7 @@ def fit_monoexp_decay_loglin(
     """
     Fit monoexponential decay to images using the log-linear method.
     """
+
     def prepare(y_arr, factor=0):
         log_arr = np.zeros_like(y_arr)
         # calculate logarithm only of strictly positive values
@@ -327,8 +326,9 @@ def fit_ndarray(
             p_arr[idx] = par_opt
 
     elif method == 'linear':
-        # polifit requires to change matrix orientation using transpose
+        # polyfit requires to change matrix orientation using transpose
         p_arr = np.polyfit(x_arr, y_arr.transpose(), len(fit_params) - 1)
+        # transpose the results back
         p_arr = p_arr.transpose()
 
     else:
@@ -347,13 +347,13 @@ def fit_ndarray(
 
 
 # ======================================================================
-def match_series(images, params, matchings):
+def match_series(images, params, matches):
     """
     TODO: finish documentation
     """
     img_list, img_type_list = [], []
     for idx, series in enumerate(params['_series']):
-        for match, img_type in matchings:
+        for match, img_type in matches:
             if re.match(match, series):
                 img_list.append(images[idx])
                 img_type_list.append(img_type)
@@ -401,7 +401,9 @@ def sources_generic(
 
     See Also
     ========
-    compute.compute_generic, compute.auto_compute, compute.D_OPTS
+    mri_tools.modules.computation.compute_generic,
+    mri_tools.modules.computation.compute,
+    mri_tools.modules.computation.D_OPTS
 
     """
     sources_list = []
@@ -428,7 +430,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                        mrb.add_extsep(opts['meta_ext']))
+                                      mrb.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -456,9 +458,9 @@ def sources_generic(
                 if opts['use_meta']:
                     params.update(data_params)
                 else:
-                    for key, val in data_params.items:
+                    for key, val in data_params.items():
                         params[key] = (params[key] if key in params else []) \
-                            + [val]
+                                      + [val]
         if sources:
             sources_list.append(sources)
             params_list.append(params)
@@ -468,7 +470,7 @@ def sources_generic(
             grouped_sources, grouped_params = [], []
             for sources, params in zip(sources_list, params_list):
                 grouping = list(opts['groups']) * \
-                    int((len(sources) / sum(opts['groups'])) + 1)
+                           int((len(sources) / sum(opts['groups'])) + 1)
                 seps = mrb.accumulate(grouping) if grouping else []
                 for idx, source in enumerate(sources):
                     grouped_sources.append(source)
@@ -498,7 +500,7 @@ def compute_generic(
         force=False,
         verbose=D_VERB_LVL):
     """
-    Perform the speficified computation on source files.
+    Perform the specified computation on source files.
 
     Parameters
     ==========
@@ -534,7 +536,9 @@ def compute_generic(
 
     See Also
     ========
-    compute.sources_generic, compute.auto_compute, compute.D_OPTS
+    mri_tools.modules.computation.sources_generic,
+    mri_tools.modules.computation.compute,
+    mri_tools.modules.computation.D_OPTS
 
     """
     # get the num, name and seq from first source file
@@ -553,12 +557,12 @@ def compute_generic(
         if verbose > VERB_LVL['none']:
             print(
                 '{}:\t{}'.format(mrb.tty_colorify('Object', 'g'),
-                 os.path.basename(info['name'])))
+                                 os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
             print('Opts:\t{}'.format(json.dumps(opts)))
         images, affines = [], []
         mask = [(slice(*dim) if dim is not None else slice(None))
-            for dim in opts['mask']]
+                for dim in opts['mask']]
         for source in sources:
             if verbose > VERB_LVL['none']:
                 print('Source:\t{}'.format(os.path.basename(source)))
@@ -567,7 +571,7 @@ def compute_generic(
             nifti = nib.load(source)
             image = nifti.get_data()
             affine = nifti.get_affine()
-            # fix mask if shape is to
+            # fix mask if shapes are different
             if opts['adapt_mask']:
                 mask = [
                     (mask[i] if i < len(mask) else slice(None))
@@ -580,8 +584,9 @@ def compute_generic(
             img_list, img_type_list = img_func(images, params, *img_params)
         else:
             img_list, img_type_list = zip(*[(img, img_type)
-                for img, img_type
-                in zip(images, itertools.cycle(opts['types']))])
+                                            for img, img_type
+                                            in zip(images, itertools.cycle(
+                    opts['types']))])
         if 'aff_func' in opts:
             aff_func = globals()[opts['aff_func']]
             aff_params = opts['aff_params'] if 'aff_params' in opts else []
@@ -595,13 +600,13 @@ def compute_generic(
                         img = img.astype(opts['dtype'])
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
-                    mrn.img_maker(target, img, aff)
+                    mrn.maker(target, img, aff)
                     break
     return targets
 
 
 # ======================================================================
-def auto_compute(
+def compute(
         sources_func,
         sources_params,
         calc_func,
@@ -632,15 +637,15 @@ def auto_compute(
         | calc_func(source_list, out_dirpath, calc_params...) -> out_filepath
     calc_params : list
         Parameters to be passed to calc_func.
-    in_dirpath : string
+    in_dirpath : str
         Path to input directory.
-    out_dirpath : string
+    out_dirpath : str
         Path to output directory (updated at each iteration).
     recursive : boolean (optional)
         Force descending into subdirectories.
-    meta_subpath : string
+    meta_subpath : str
         Subdirectory appended (at each iteration) when searching for metadata.
-    data_subpath : string
+    data_subpath : str
         Subdirectory appended (at each iteration) when searching for data.
     verbose : int (optional)
         Set level of verbosity.
@@ -651,7 +656,9 @@ def auto_compute(
 
     See Also
     ========
-    compute.sources_generic, compute_generic, compute.D_OPTS
+    mri_tools.modules.computation.compute_generic,
+    mri_tools.modules.computation.source_generic,
+    mri_tools.modules.computation.D_OPTS
 
     """
     # handle extra subdirectories in input path
@@ -688,11 +695,11 @@ def auto_compute(
     if recursive:
         recursive = recursive or bool(sources_list)
         subdirs = [subdir for subdir in os.listdir(in_dirpath)
-            if os.path.isdir(os.path.join(in_dirpath, subdir))]
+                   if os.path.isdir(os.path.join(in_dirpath, subdir))]
         for subdir in subdirs:
             new_in_dirpath = os.path.join(in_dirpath, subdir)
             new_out_dirpath = os.path.join(out_dirpath, subdir)
-            auto_compute(
+            compute(
                 sources_func, sources_params,
                 calc_func, calc_params,
                 new_in_dirpath, new_out_dirpath, recursive,
