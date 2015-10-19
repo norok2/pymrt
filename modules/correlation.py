@@ -133,7 +133,7 @@ def get_ref_list(
         dirpath,
         target_list=None,
         subdir=None,
-        ref_ext='0ref'):
+        ref_ext=''):
     """
     Find reference NIfTI image files in a directory.
     If no reference file is found, use files from target list as reference.
@@ -221,7 +221,7 @@ def compute_affine_fsl(
             'in': in_filepath,
             'ref': ref_filepath,
             'omat': aff_filepath,
-            # 'refweight': msk_filepath if msk_filepath else '',
+            'refweight': msk_filepath if msk_filepath else '',
             'dof': dof,
             'cost': method,
             'searchrx': '-180 180',
@@ -1362,6 +1362,7 @@ def check_correlation(
                     if not os.path.exists(path):
                         os.makedirs(path)
             # :: ensure the presence of a reference file
+            # todo:
             if reg_dir or msk_dir:
                 ref = get_ref_list(dirpath, source_list, None, reg_ref_ext)[0]
             # ensure the presence of a mask

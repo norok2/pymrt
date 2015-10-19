@@ -51,6 +51,7 @@ import itertools  # Functions creating iterators for efficient looping
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -692,8 +693,8 @@ def nd_prism(
     # create the extra mask (height)
     extra_mask = np.abs(xxx) < semiheight
     # calculate mask shape
-    shape = base_mask.shape[:axis] + tuple([extra_shape]) + \
-            base_mask.shape[axis:]
+    shape = (
+        base_mask.shape[:axis] + tuple([extra_shape]) + base_mask.shape[axis:])
     # create indefinite prism
     mask = np.zeros(shape, dtype=bool)
     for idx in range(extra_shape):
@@ -869,10 +870,10 @@ def shape2zoom(
 
 
 # ======================================================================
-def apply_affine(
+def apply_to_complex(
         array,
-        affine,
-        *opts):
+        func,
+        *args, **kwargs):
     """
     Apply the specified affine transformation to the array.
 
@@ -891,15 +892,9 @@ def apply_affine(
         The transformed image.
 
     """
-    linear, shift = decompose_affine(affine)
-    if np.iscomplex(array).any():
-        real = scipy.ndimage.affine_transform(
-            np.real(array), linear, offset=shift)
-        imag = scipy.ndimage.affine_transform(
-            np.imag(array), linear, offset=shift)
-        array = mrb.cartesian2complex(real, imag)
-    else:
-        array = scipy.ndimage.affine_transform(array, linear, shift, *opts)
+    real = func(np.real(array), *args, **kwargs)
+    imag = func(np.imag(array), *args, **kwargs)
+    array = mrb.cartesian2complex(real, imag)
     return array
 
 
@@ -922,8 +917,8 @@ def decompose_affine(
         The array containing the shift along each axis.
 
     """
-    dims = affine.shape
-    linear = affine[:dims[0] - 1, :dims[1] - 1]
+    num_dim = affine.shape
+    linear = affine[:num_dim[0] - 1, :num_dim[1] - 1]
     shift = affine[:-1, -1]
     return linear, shift
 
@@ -948,11 +943,39 @@ def compose_affine(
         The n+1 square matrix describing the affine transformation.
 
     """
-    dims = linear.shape
-    affine = np.eye(dims[0] + 1)
-    affine[:dims[0], :dims[1]] = linear
+    num_dim = linear.shape
+    affine = np.eye(num_dim[0] + 1)
+    affine[:num_dim[0], :num_dim[1]] = linear
     affine[:-1, -1] = shift
     return affine
+
+
+# ======================================================================
+def num_angles_from_dim(num_dim):
+    """
+    Calculate the complete number of angles given the dimension.
+
+    Given the dimension of an array, calculate the number of all possible
+    cartesian orthogonal planes of rotations, using the formula:
+
+    N = n * (n - 1) / 2 [ = n! / 2! / (n - 2)! ]
+    (N: num of angles, n: num of dim)
+
+    Parameters
+    ==========
+    num_dim : int
+        The number of dimensions
+
+    Returns
+    =======
+    num_angles : int
+        The corresponding number of angles.
+
+    See Also
+    ========
+    mri_tools.geometry.angles2linear
+    """
+    return num_dim * (num_dim - 1.0) / 2.0
 
 
 # ======================================================================
@@ -968,12 +991,23 @@ def angles2linear(
     angles : float tuple
         The angles to be used for rotation.
     axes_list : list of int 2-tuple or None (optional)
-        For
+        The axes couples defining the plane of rotation for each angle.
+        If None, uses the output of `itertools.combinations(range(n_dim), 2)`.
+    use_degree : bool (optional)
+        If True, interpret angles in degree. Otherwise, use radians.
 
+    Returns
+    =======
+    linear : ndarray
+        The rotation matrix identified by the selected angles.
+
+    See Also
+    ========
+    mri_tools.geometry.num_angles_from_dim,
+    itertools.combinations
 
     """
-    # todo: fix doc
-    # solution to: n! / 2! / (n - 2)! = N  (N: num of angles, n: num of dim)
+    # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
     num_dim = ((1 + np.sqrt(1 + 8 * len(angles))) / 2)
     if np.modf(num_dim)[0] != 0.0:
         raise ValueError('cannot get the dimension from the number of angles')
@@ -991,12 +1025,12 @@ def angles2linear(
         rotation[axes[0], axes[1]] = -np.sin(angle)
         rotation[axes[1], axes[0]] = np.sin(angle)
         linear = np.dot(linear, rotation)
-    # check that this is a rotation matrix
-    try:
-        det = np.abs(np.linalg.det(linear))
-    except TypeError:
-        det = np.abs(np.linalg.det(linear.astype(np.double)))
-    assert (det - 1.0 < np.finfo(np.double).eps)
+    # :: check that this is a rotation matrix
+    det = np.linalg.det(linear)
+    tolerance = np.finfo(np.double).eps
+    if np.abs(det) - 1.0 > tolerance:
+        msg = 'rotation matrix may be inaccurate [det = {}]'.format(repr(det))
+        warnings.warn(msg)
     return linear
 
 
@@ -1008,11 +1042,52 @@ def linear2angles():
 
 
 # ======================================================================
-def covariance_mass(
+def affine_transform(
+        array,
+        linear,
+        shift,
+        origin=None,
+        *args, **kwargs):
+    """
+    Perform an affine transformation followed by a translation.
+
+    Parameters
+    ==========
+    array : ndarray
+        The array to operate with.
+    linear : ndarray
+        The linear transformation to apply.
+    shift : ndarray
+        The translation vector.
+    origin : ndarray (optional)
+        The offset at which the linear transformation is to be applied.
+        If None, uses the center of the array.
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the transformation function:
+        `scipy.ndimage.affine_transform()`
+
+    Returns
+    =======
+    array : ndarray
+        The transformed array.
+
+    """
+    # other parameters accepted by `scipy.ndimage.affine_transform` are:
+    #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
+    if origin is None:
+        origin = np.array(relative2coord([0.5] * array.ndim, array.shape))
+    offset = origin - np.dot(linear, origin + shift)
+    array = sp.ndimage.affine_transform(
+        array, linear, offset, *args, **kwargs)
+    return array
+
+
+# ======================================================================
+def weighted_center(
         array,
         labels=None,
-        index=None,
-        origin=None):
+        index=None):
     """
     Determine the covariance mass matrix with respect to the origin.
 
@@ -1031,7 +1106,7 @@ def covariance_mass(
          Labels for which to calculate centers-of-mass. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The origin to be used. If None, the center of mass is used.
+        The origin to be used. If None, the weighted center is used.
 
     Returns
     =======
@@ -1046,7 +1121,61 @@ def covariance_mass(
     mri_tools.geometry.realign
 
     """
-    # numpy.double to improve the accuracy of the norm and the center of mass
+    # numpy.double to improve the accuracy of the norm and the weighted center
+    array = array.astype(np.double)
+    norm = sp.ndimage.sum(array, labels, index)
+    grid = np.ogrid[[slice(0, idx) for idx in array.shape]]
+    # numpy.double to improve the accuracy of the result
+    center = np.zeros(array.ndim).astype(np.double)
+    for idx in range(array.ndim):
+        center[idx] = sp.ndimage.sum(array * grid[idx], labels, index) / norm
+    return center
+
+
+# ======================================================================
+def weighted_covariance(
+        array,
+        labels=None,
+        index=None,
+        origin=None):
+    """
+    Determine the weighted covariance matrix with respect to the origin.
+
+    \latex{\sum_i w_i (\vec{x}_i - \vec{o}) (\vec{x}_i - \vec{o})^T}
+
+    for i spanning through all support space, where:
+    o is the origin vector (
+    x_i is the coordinate vector of the point i
+    w_i is the weight, i.e. the value of the array at that coordinate
+
+
+    Parameters
+    ==========
+    array : ndarray
+        The input array.
+    labels : ndarray or None (optional)
+        Labels for objects in `array`, as generated by `ndimage.label`.
+        Only used with `index`.  Dimensions must be the same as `array`.
+    index : int, int tuple or None (optional)
+         Labels for which to calculate centers-of-mass. If not specified,
+         all labels greater than zero are used.  Only used with `labels`.
+    origin : ndarray or None (optional)
+        The origin to be used. If None, the weighted center is used.
+
+    Returns
+    =======
+    cov : ndarray
+        The covariance matrix.
+
+    See Also
+    ========
+    mri_tools.geometry.tensor_of_inertia,
+    mri_tools.geometry.rotation_axes,
+    mri_tools.geometry.auto_rotate,
+    mri_tools.geometry.realign
+
+    """
+    # numpy.double to improve the accuracy of the norm and the weighted center
     array = array.astype(np.double)
     norm = sp.ndimage.sum(array, labels, index)
     if origin is None:
@@ -1084,10 +1213,10 @@ def tensor_of_inertia(
         Labels for objects in `array`, as generated by `ndimage.label`.
         Only used with `index`.  Dimensions must be the same as `array`.
     index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
+         Labels for which to calculate the weighted center. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The origin to be used. If None, the center of mass is used.
+        The origin to be used. If None, the weighted center is used.
 
     Returns
     =======
@@ -1096,13 +1225,13 @@ def tensor_of_inertia(
 
     See Also
     ========
-    mri_tools.geometry.covariance_mass,
+    mri_tools.geometry.weighted_covariance,
     mri_tools.geometry.rotatio_axes,
     mri_tools.geometry.auto_rotate,
     mri_tools.geometry.realign
 
     """
-    cov = covariance_mass(array, labels, index, origin)
+    cov = weighted_covariance(array, labels, index, origin)
     inertia = np.eye(array.ndim) * np.trace(cov) - cov
     return inertia
 
@@ -1126,10 +1255,10 @@ def rotation_axes(
         Labels for objects in `array`, as generated by `ndimage.label`.
         Only used with `index`.  Dimensions must be the same as `array`.
     index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
+         Labels for which to calculate the weighted center. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The origin to be used. If None, the center of mass is used.
+        The origin to be used. If None, the weighted center is used.
     sort_by_shape : bool
         If True, sort by the array shape (optimizes rotation to fit array).
         Otherwise it is sorted by increasing eigenvalue.
@@ -1141,13 +1270,13 @@ def rotation_axes(
 
     See Also
     ========
-    mri_tools.geometry.covariance_mass,
+    mri_tools.geometry.weighted_covariance,
     mri_tools.geometry.tensor_of_inertia,
     mri_tools.geometry.auto_rotate,
     mri_tools.geometry.realign,
 
     """
-    # calculate the tensor of inertia with respect to the center of mass
+    # calculate the tensor of inertia with respect to the weighted center
     inertia = tensor_of_inertia(array, labels, index, None).astype(np.double)
     # numpy.linalg only supports up to numpy.double
     eigenvalues, eigenvectors = np.linalg.eigh(inertia)
@@ -1188,10 +1317,10 @@ def auto_rotate(
         Labels for objects in `array`, as generated by `ndimage.label`.
         Only used with `index`.  Dimensions must be the same as `array`.
     index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
+         Labels for which to calculate the weighted center. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The origin to be used. If None, the center of mass is used.
+        The origin to be used. If None, the weighted center is used.
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
@@ -1210,7 +1339,7 @@ def auto_rotate(
     ========
     scipy.ndimage.center_of_mass,
     scipy.ndimage.affine_transform,
-    mri_tools.covariance_mass,
+    mri_tools.weighted_covariance,
     mri_tools.tensor_of_inertia,
     mri_tools.rotation_axes,
     mri_tools.angles2linear,
@@ -1237,7 +1366,7 @@ def auto_shift(
         *args,
         **kwargs):
     """
-    Shift the array to have the center of mass in a convenient location.
+    Shift the array to have the weighted center in a convenient location.
 
     Parameters
     ==========
@@ -1247,10 +1376,10 @@ def auto_shift(
         Labels for objects in `array`, as generated by `ndimage.label`.
         Only used with `index`.  Dimensions must be the same as `array`.
     index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
+         Labels for which to calculate the weighted center. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The origin to be used. If None, the center of mass is used.
+        The origin to be used. If None, the weighted center is used.
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
@@ -1267,7 +1396,7 @@ def auto_shift(
     ========
     scipy.ndimage.center_of_mass,
     scipy.ndimage.affine_transform,
-    mri_tools.covariance_mass,
+    mri_tools.weighted_covariance,
     mri_tools.tensor_of_inertia,
     mri_tools.rotation_axes,
     mri_tools.angles2linear,
@@ -1297,7 +1426,7 @@ def realign(
     Shift and rotate the array for optimal grid alignment.
 
     Principal axis of rotation will be parallel to cartesian axes.
-    Center of mass will be at a given point (e.g. the middle of the support).
+    Weighted center will be at a given point (e.g. the middle of the support).
 
     Parameters
     ==========
@@ -1307,10 +1436,10 @@ def realign(
         Labels for objects in `array`, as generated by `ndimage.label`.
         Only used with `index`.  Dimensions must be the same as `array`.
     index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
+         Labels for which to calculate the weighted center. If not specified,
          all labels greater than zero are used.  Only used with `labels`.
     origin : ndarray or None (optional)
-        The final position of the center of mass. If None, set to the middle.
+        The final position of the weighted center. If None, set to the middle.
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
@@ -1329,7 +1458,7 @@ def realign(
     ========
     scipy.ndimage.center_of_mass,
     scipy.ndimage.affine_transform,
-    mri_tools.covariance_mass,
+    mri_tools.weighted_covariance,
     mri_tools.tensor_of_inertia,
     mri_tools.rotation_axes,
     mri_tools.angles2linear,

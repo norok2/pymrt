@@ -191,7 +191,7 @@ if __name__ == '__main__':
     if ARGS.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
-    mrr.check_correlation(
+    mrl.check_correlation(
         ARGS.dir, ARGS.type, ARGS.range, ARGS.units,
         ARGS.mask, ARGS.reg_ref_ext, ARGS.corr_ref_ext,
         ARGS.tmp_dir, ARGS.reg_dir, ARGS.msk_dir, ARGS.cmp_dir, ARGS.fig_dir,

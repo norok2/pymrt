@@ -122,6 +122,87 @@ def quick(array):
 
 
 # ======================================================================
+def quick_1d(array):
+    """
+    Quickly plot an array in 2D or 3D.
+
+    Parameters
+    ==========
+    mask : ndarray
+        The mask to plot.
+
+    Returns
+    =======
+    None
+
+    """
+    # todo: plot 1d projections (use Qt)
+    if array.ndim == 1:
+        # using Matplotlib
+        plt.figure()
+        plt.plot(np.arange(len(array)), array.astype(float))
+        plt.draw()
+        plt.show()
+    elif array.ndim == 2:
+        # # using Matplotlib
+        # fig = plt.subplots()
+        # plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        # plt.draw()
+
+        # using Mayavi2
+        mlab.figure()
+        mlab.imshow(array.astype(float))
+        mlab.draw()
+        mlab.show()
+    elif array.ndim == 3:
+        # # using Matplotlib
+        # fig = plt.subplots()
+        # ax = mpl3.Axes3D(fig)
+        # fig.colorbar(plot)
+
+        # using Mayavi2
+        mlab.figure()
+        mlab.contour3d(array.astype(float))
+        mlab.draw()
+        mlab.show()
+    else:
+        print('W: cannot plot more than 3 dimension.')
+
+
+# ======================================================================
+def quick_2d(array):
+    """
+    Quickly plot an array in 2D or 3D.
+
+    Parameters
+    ==========
+    mask : ndarray
+        The mask to plot.
+
+    Returns
+    =======
+    None
+
+    """
+    # todo: plot 2d projections (use Qt)
+    if array.ndim == 2:
+        # using Matplotlib
+        fig = plt.subplots()
+        plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        plt.draw()
+        plt.show()
+    elif 2 < array.ndim <= 4:
+        # using Matplotlib
+        nrows = 1
+        fig = plt.subplots()
+        plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        plt.draw()
+        plt.show()
+    else:
+        print('W: cannot plot current array with 2d projections.')
+
+
+# ======================================================================
 def sample2d(
         array,
         axis=0,

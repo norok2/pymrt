@@ -235,11 +235,36 @@ def set_keyword_parameters(
     kw_params = {}
     for key in inspected.args:
         if key in values:
-            value = values[key]
-            default = defaults[key]
-            kw_params[key] = value if value is not None else default
+            kw_params[key] = values[key]
+        elif key in defaults:
+            kw_params[key] = defaults[key]
     return kw_params
 
+
+def mdot(*array_list):
+    """
+    Cumulative application of `numpy.dot` operation.
+    """
+    #todo: fix doc
+    array = array_list[0]
+    for item in array_list[1:]:
+        array = np.dot(array, item)
+    return array
+
+
+def commutator(a, b):
+    """
+    Calculate the commutator of two arrays: [A,B] = AB - BA
+    """
+    #todo: fix doc
+    return a.dot(b) - b.dot(a)
+
+def anticommutator(a, b):
+    """
+    Calculate the anticommutator of two arrays: [A,B] = AB + BA
+    """
+    #todo: fix doc
+    return a.dot(b) + b.dot(a)
 
 # ======================================================================
 def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
