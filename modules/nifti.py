@@ -609,8 +609,8 @@ def img_resample(
         zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interpolation_order)
-        aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
-        return array, aff_transform
+        # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
+        return array
 
     simple_filter(
         in_filepath, out_filepath, _zoom,

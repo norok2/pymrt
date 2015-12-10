@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: MP2RAGE signal expression library.
+MP2RAGE signal expression library.
 
 Calculate the analytical expression of MP2RAGE signal.
 Two different set of parameters (direct and indirect) are accepted.
@@ -37,23 +37,7 @@ timing parameters are positive.
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-#from __future__ import unicode_literals
-
-
-__version__ = '0.0.0.0'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
+from __future__ import unicode_literals
 
 
 # ======================================================================
@@ -94,11 +78,6 @@ import sympy as sym  # SymPy (symbolic CAS library)
 
 
 # ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-
-
-# ======================================================================
 # :: Default values
 D_T1_RANGE = (400.0, 4000.0)
 D_EFF = 1.0
@@ -129,9 +108,7 @@ MZ_SS_ = sym.symbols('mz_ss')
 
 
 def mz_nrf(mz0, t_1, num, tr_gre, alpha, m_0):
-    """
-    Magnetization during the GRE block
-    """
+    """Magnetization during the GRE block"""
     return mz0 * (cos(alpha) * exp(-tr_gre / t_1)) ** num + \
         m_0 * (1 - exp(-tr_gre / t_1)) * \
         (1 - (cos(alpha) * exp(-tr_gre / t_1)) ** num) / \
@@ -146,9 +123,7 @@ def mz_0rf(mz0, t_1, time, m_0):
 
 
 def mz_i(mz0, eff):
-    """
-    Magnetization after adiabatic inversion pulse
-    """
+    """Magnetization after adiabatic inversion pulse"""
     return -eff * mz0
 
 
