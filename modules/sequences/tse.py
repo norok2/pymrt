@@ -175,10 +175,12 @@ def magnetization(
 if __name__ == '__main__':
     print(__doc__)
     ss = steady_state(evolution_tse, turbo_factor=6)
-    signal = sym.sqrt(sym.trigsimp(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1]))
     print('\nSteady-State before excitation:')
     print(ss[0])
     print('\nSteady-State after excitation:')
     print(ss[1])
+
+    # signal = sym.sqrt(sym.trigsimp(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1]))
+    signal = sym.sqrt(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1])
     print('\nSignal expression:')
     print(signal)
