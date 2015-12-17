@@ -4,15 +4,12 @@
 mr_lib: voxel-by-voxel correlation analysis for MRI data.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
-
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
@@ -50,13 +47,12 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
-
 # :: Local Imports
 import mri_tools.modules.base as mrb
 import mri_tools.modules.utils as mru
-# import mri_tools.modules.geometry as mrg
+import mri_tools.modules.geometry as mrg
 # import mri_tools.modules.plot as mrp
-# import mri_tools.modules.registration as mrr
+import mri_tools.modules.registration as mrr
 import mri_tools.modules.segmentation as mrs
 # import mri_tools.modules.computation as mrc
 # import mri_tools.modules.correlation as mrl
@@ -295,9 +291,6 @@ def register(
         in_filepath,
         ref_filepath,
         out_filepath,
-        aff_filepath,
-        ref_mask_filepath=None,
-        use_helper=None,
         force=False,
         verbose=D_VERB_LVL):
     """
@@ -314,10 +307,6 @@ def register(
     aff_filepath : str
         Path to registration matrix file.
     ref_mask_filepath : str
-    use_helper : boolean (optional)
-        | Use helper files for calculating registration matrix.
-        | Helper files have image type defined by SERVICE_ID['helper'] as
-        | retrieved from the parse_filename() function.
     force : boolean (optional)
         Force calculation of output.
     verbose : int (optional)
@@ -328,24 +317,34 @@ def register(
     None.
 
     """
-    if use_helper:
-        in_filepath_helper = mru.change_img_type(
-            in_filepath, SERVICE_ID['helper'])
-        ref_filepath_helper = mru.change_img_type(
-            ref_filepath, SERVICE_ID['helper'])
-        if not os.path.exists(in_filepath_helper):
-            in_filepath_helper = in_filepath
-        if not os.path.exists(ref_filepath_helper):
-            ref_filepath_helper = ref_filepath
-    else:
-        in_filepath_helper = in_filepath
-        ref_filepath_helper = ref_filepath
-    compute_affine_fsl(
-        in_filepath_helper, ref_filepath_helper, aff_filepath,
-        ref_mask_filepath, force=force, verbose=verbose)
-    apply_affine_fsl(
-        in_filepath, ref_filepath, out_filepath, aff_filepath,
-        force, verbose)
+
+    def _quick_reg(array_list, *args, **kwargs):
+        img = array_list[0]
+        ref = array_list[1]
+        # # at first translate...
+        # linear, shift = mrr.affine_registration(
+        #     img, ref, transform='translation',
+        #     init_guess=('weights', 'weights'))
+        # # print(shift)
+        # img = mrg.affine_transform(img, linear, shift)
+        # ... then reorient
+        linear, shift = mrr.affine_registration(
+            img, ref, transform='reflection_simple')
+        img = mrg.affine_transform(img, linear, shift)
+        # ... and finally perform finer registration
+        linear, shift = mrr.affine_registration(img, ref, *args, **kwargs)
+        img = mrg.affine_transform(img, linear, shift)
+        return img
+
+    mrn.simple_filter_n(
+        [in_filepath, ref_filepath], out_filepath, _quick_reg,
+        transform='rigid', interp_order=1, init_guess=('none', 'none'))
+
+
+
+
+    if verbose > VERB_LVL['none']:
+        print('Regstr:\t{}'.format(os.path.basename(out_filepath)))
 
 
 # ======================================================================
@@ -353,7 +352,7 @@ def apply_mask(
         in_filepath,
         mask_filepath,
         out_filepath,
-        mask_val=np.nan,
+        mask_val=0.0,
         force=False,
         verbose=D_VERB_LVL):
     """
@@ -379,10 +378,20 @@ def apply_mask(
     None.
 
     """
+    def _mask_reframe(arr_list, mask_val):
+            img, mask = arr_list
+            container = sp.ndimage.find_objects(mask.astype(int))[0]
+            img[~mask.astype(bool)] = mask_val
+            img = img[container]
+            img = mrg.frame(img, 0.1, 0.0)
+            return img
+
     if mrb.check_redo([in_filepath, mask_filepath], [out_filepath], force):
         if verbose > VERB_LVL['none']:
             print('RunMsk:\t{}'.format(os.path.basename(out_filepath)))
-        mrn.masking(in_filepath, mask_filepath, out_filepath, mask_val)
+        mrn.simple_filter_n(
+            [in_filepath, mask_filepath], out_filepath,
+            _mask_reframe, mask_val)
 
 
 # ======================================================================
@@ -411,11 +420,11 @@ def calc_mask(
     ==========
     in_filepath : str
         Path to image from which mask is to be extracted.
-    out_dirpath : str (optional)
+    out_filepath : str (optional)
         Path to directory where to store results.
     bet_params : str (optional)
         Parameters to be used with FSL's BET brain extraction algorithm.
-    val_threshold : (0,1)-float (optional)
+    threshold : (0,1)-float (optional)
         Value threshold relative to the range of the values.
     percentile_range : 2 tuple (0,1)-float (optional)
         Percentile values to be used as minimum and maximum for calculating
@@ -657,7 +666,7 @@ def calc_correlation(
              #             'thl-cof', 'thl-off',
              'N_eff', 'N_tot', 'N_ratio']
         with open(out_filepath, 'wb') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=mrb.CSV_DELIMITER)
+            csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             csvwriter.writerow([mrb.COMMENT_TOKEN + in2_filepath])
             csvwriter.writerow([mrb.COMMENT_TOKEN + in1_filepath])
             csvwriter.writerow(labels)
@@ -706,7 +715,7 @@ def combine_correlation(
     base_dir = ''
     for filepath in filepath_list:
         with open(filepath, 'rb') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=mrb.CSV_DELIMITER)
+            csvreader = csv.reader(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             for row in csvreader:
                 if row[0].startswith(mrb.COMMENT_TOKEN):
                     base_dir = os.path.dirname(os.path.commonprefix(
@@ -716,7 +725,7 @@ def combine_correlation(
     labels, rows, max_cols = [], [], []
     for filepath in filepath_list:
         with open(filepath, 'rb') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=mrb.CSV_DELIMITER)
+            csvreader = csv.reader(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             for row in csvreader:
                 if row[0].startswith(mrb.COMMENT_TOKEN):
                     sub_dir = os.path.dirname(row[0][len(base_dir):])
@@ -744,7 +753,7 @@ def combine_correlation(
         out_dirpath, out_filename + mrb.add_extsep(mrb.CSV_EXT))
     if mrb.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'wb') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=mrb.CSV_DELIMITER)
+            csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             if not selected_cols:
                 selected_cols = range(len(labels))
             csvwriter.writerow([base_dir])
@@ -798,9 +807,8 @@ def plot_correlation(
 
     """
     save_path = os.path.join(
-        out_dirpath, mru.combine_filename(corr_prefix,
-                                          (img1_filepath,
-                                           img2_filepath)) + mrb.add_extsep(
+        out_dirpath, mru.combine_filename(
+            corr_prefix, (img1_filepath, img2_filepath)) + mrb.add_extsep(
             mrb.PNG_EXT))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
@@ -820,8 +828,9 @@ def plot_correlation(
             img1_filepath, img2_filepath, mask_filepath, mask_filepath,
             hist_range=(0.0, 1.0), bins=512, array_range=data_range,
             scale='log10', title=title, cmap=plt.cm.hot_r,
-            labels=(x_lbl, y_lbl), bisector=':k', save_path=save_path,
-            close_figure=not plt.isinteractive())
+            labels=(x_lbl, y_lbl), bisector=':k',
+            colorbar_opts={},
+            save_path=save_path, close_figure=not plt.isinteractive())
 
 
 # ======================================================================
@@ -940,8 +949,9 @@ def plot_sample(
         plot_title = '{} / {} ({})'.format(
             data_type, data_units,
             mru.filename2label(img_filepath, max_length=32))
-        mrn.plot_sample(
-            img_filepath, axis, index, title=plot_title, val_range=data_range,
+        mrn.plot_sample2d(
+            img_filepath, axis, index, title=plot_title, array_range=data_range,
+            colorbar_opts={},
             close_figure=not plt.isinteractive(), save_path=save_path)
 
 
@@ -952,7 +962,6 @@ def registering(
         ref_mask_filepath=None,
         out_dirpath='coregistration',
         info_file='registration_info.txt',
-        use_helper=False,
         options=6,
         regmat_prefix='regmat',
         use_mp=True,
@@ -970,10 +979,6 @@ def registering(
         Path to reference image file. If not set, first input file is used.
     out_dirpath : str (optional)
         Path to directory where to store results.
-    use_helper : boolean (optional)
-        | Use helper files for calculating registration matrix.
-        | Helper files have image type defined by SERVICE_ID['helper'] as
-        | retrieved from the parse_filename() function.
     use_mp : boolean (optional)
         Use multiprocessing for faster computation.
     force : boolean (optional)
@@ -1019,14 +1024,12 @@ def registering(
                 # parallel
                 proc_result = pool.apply_async(
                     register,
-                    (in_filepath, ref_filepath, out_filepath, regmat,
-                     ref_mask_filepath, use_helper, force, verbose))
+                    (in_filepath, ref_filepath, out_filepath, force, verbose))
                 proc_result_list.append(proc_result)
             else:
                 # serial
                 register(
-                    in_filepath, ref_filepath, out_filepath, regmat,
-                    ref_mask_filepath, use_helper, force, verbose)
+                    in_filepath, ref_filepath, out_filepath, force, verbose)
         else:
             if mrb.check_redo([in_filepath], [out_filepath], force):
                 if verbose > VERB_LVL['none']:
@@ -1090,14 +1093,17 @@ def masking(
         out_filepath_list.append(out_filepath)
         if use_mp:
             # parallel
-            proc_result = pool.apply_async(
-                apply_mask, (in_filepath, mask_filepath, out_filepath,
-                             mask_val, force, verbose))
+            args = (
+                in_filepath, mask_filepath, out_filepath, mask_val,
+                force, verbose)
+            kwargs = {}
+            proc_result = pool.apply_async(apply_mask, args, kwargs)
             proc_result_list.append(proc_result)
         else:
             # serial
-            apply_mask(in_filepath, mask_filepath, out_filepath, mask_val,
-                       force, verbose)
+            apply_mask(
+                in_filepath, mask_filepath, out_filepath, mask_val,
+                force, verbose)
     if use_mp:
         res_list = []
         for proc_result in proc_result_list:
@@ -1219,7 +1225,7 @@ def comparing(
         proc_result_list = []
     cmp_list = get_comparing_list(
         in_filepath_list, ref_filepath_list, out_dirpath,
-        skip_equal=True, skip_symmetric=False,
+        skip_equal=True, skip_symmetric=True,
         diff_prefix='diff', corr_prefix='corr')
     for in_filepath, ref_filepath, diff_filepath, corr_filepath in cmp_list:
         if not mask_vals:
@@ -1256,7 +1262,7 @@ def comparing(
 # ======================================================================
 def check_correlation(
         dirpath,
-        img_type=None,
+        type=None,
         val_range=None,
         val_units=None,
         mask_filepath=None,
@@ -1267,72 +1273,46 @@ def check_correlation(
         msk_dir='msk',
         cmp_dir='cmp',
         fig_dir='fig',
-        use_helper=False,
-        bet_params='',
         force=False,
         verbose=D_VERB_LVL):
     """
-    Check the voxel correlation for a single subject data.
+    Check the voxel correlation for a list of homogeneous images.
 
-    Parameters
-    ==========
-    dirpath : str
-        Path to directory to process.
-    data_type : str
-        Name of the data to be processed.
-    data_range : float 2-tuple
-        Range of the data to be processed.
-    data_units : str
-        Units of measurements of the data to be processed.
-    mask_filepath : str (optional)
-        Path to mask file. If None, extract it.
-    reg_ref_ext : str (optional)
-        File extension of registration reference.
-    corr_ref_ext : str (optional)
-        File extension of correlation reference(s).
-    tmp_dir : str (optional)
-        Subdirectory where to store temporary files (e.g. mask
-        calculation).
-    reg_dir : str (optional)
-        Subdirectory where to store registration files.
-    msk_dir : str (optional)
-        Subdirectory where to store masking files.
-    cmp_dir : str (optional)
-        Subdirectory where to store comparing files (e.g. correlation).
-    fig_dir : str (optional)
-        Subdirectory where to store plotting files (i.e. figures).
-    use_helper : boolean (optional)
-        Make use of helper files in registration.
-    bet_params : str (optional)
-        Parameters to be used with FSL's BET brain extraction algorithm.
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        dirpath (str): Path to directory to process.
+        type (str): Name of the data to be processed.
+        val_range (tuple[float]): Range (min, max) of the data to be processed.
+        val_units (str): Units of measurements of the data to be processed.
+        mask_filepath (str): Path to mask file. If None, extract it.
+        reg_ref_ext (str): File extension of registration reference.
+        corr_ref_ext (str): File extension of correlation reference(s).
+        tmp_dir (str): Subpath where to store temporary files.
+        reg_dir (str): Subpath where to store registration files.
+        msk_dir (str): Subpath where to store registration files.
+        cmp_dir (str): Subpath where to store masking files.
+        fig_dir (str): Subpath where to store plotting files (i.e. figures).
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    target_list : list of string
-        List of processed image files.
-    diff_list: list of string
-        List of files containing image differences.
-    corr_list : list of string
-        List of CSV files containing correlation computations.
+    Returns:
+        (list[str], list[str]):
+            - *target_list*: List of processed image files.
+            - *corr_list*: List of files containing correlation computations.
 
     """
     if verbose > VERB_LVL['none']:
         print('Target: {}'.format(dirpath))
     # :: manage image type, range and units
-    if not img_type:
-        img_type = os.path.split(dirpath)[-1]
-        if img_type not in SRC_IMG_TYPE:
-            img_type = None
+    if not type:
+        type = os.path.split(dirpath)[-1]
+        if type not in SRC_IMG_TYPE:
+            type = None
         if verbose >= VERB_LVL['medium']:
             print('W: image type not specified.')
-            print('I: guessed image type: {}'.format(img_type))
+            print('I: guessed image type: {}'.format(type))
     else:
         if verbose >= VERB_LVL['medium']:
-            print('I: ', img_type, val_range, val_units)
+            print('I: ', type, val_range, val_units)
     if not val_range:
         if verbose >= VERB_LVL['medium']:
             print('W: values range not specified.')
@@ -1341,14 +1321,14 @@ def check_correlation(
         val_units = 'a.u.'
         if verbose >= VERB_LVL['medium']:
             print('W: values units not specified.')
-            print('I: guessed image type: {}'.format(img_type))
+            print('I: guessed image type: {}'.format(type))
     # :: populate a list of images to analyze
     target_list, corr_list = [], []
     if os.path.exists(dirpath):
         filepath_list = mrb.listdir(dirpath, mrn.D_EXT)
         source_list = [filepath for filepath in filepath_list
-                       if not img_type or
-                       mru.parse_filename(filepath)['type'] == img_type]
+                       if not type or
+                       mru.parse_filename(filepath)['type'] == type]
         if len(source_list) > 0:
             # :: create output directories
             path_list = []
@@ -1362,9 +1342,11 @@ def check_correlation(
                     if not os.path.exists(path):
                         os.makedirs(path)
             # :: ensure the presence of a reference file
-            # todo:
+            # todo: allow code in the registration reference file to contain
+            #  registration instructions
             if reg_dir or msk_dir:
                 ref = get_ref_list(dirpath, source_list, None, reg_ref_ext)[0]
+
             # ensure the presence of a mask
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
@@ -1412,7 +1394,7 @@ def check_correlation(
             if reg_dir:
                 target_list = registering(
                     source_list, ref, mask_filepath, reg_path, use_mp=True,
-                    use_helper=use_helper, force=force, verbose=verbose)
+                    force=force, verbose=verbose)
             else:
                 target_list = source_list
             # :: mask targets
@@ -1420,6 +1402,11 @@ def check_correlation(
                 target_list = masking(
                     target_list, mask_filepath, msk_path, use_mp=True,
                     force=force, verbose=verbose)
+                # make sure the mask as correct shape
+                new_mask = os.path.join(
+                    dirpath, tmp_dir, os.path.basename(mask_filepath))
+                apply_mask(mask_filepath, mask_filepath, new_mask)
+                mask_filepath = new_mask
             # perform comparison
             if cmp_path:
                 ref_list = get_ref_list(
@@ -1436,10 +1423,10 @@ def check_correlation(
             if fig_path:
                 for target in target_list:
                     plot_sample(
-                        target, img_type, val_range, val_units, fig_path,
+                        target, type, val_range, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
-                        target, mask_filepath, img_type, val_range,
+                        target, mask_filepath, type, val_range,
                         val_units, fig_path,
                         force=force, verbose=verbose)
                 # use last plotted image to calculate approximate diff_range
@@ -1450,16 +1437,16 @@ def check_correlation(
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
                     plot_sample(
-                        diff_filepath, img_type, diff_range, val_units,
+                        diff_filepath, type, diff_range, val_units,
                         fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
                         diff_filepath, mask_filepath,
-                        img_type, diff_range, val_units, fig_path,
+                        type, diff_range, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_correlation(
                         in_filepath, ref_filepath, mask_filepath,
-                        img_type, val_range, val_units,
+                        type, val_range, val_units,
                         fig_path,
                         force=force, verbose=verbose)
         else:
@@ -1470,12 +1457,10 @@ def check_correlation(
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,
-                    img_type, val_range, val_units,
+                    type, val_range, val_units,
                     mask_filepath,
                     reg_ref_ext, corr_ref_ext,
                     tmp_dir, reg_dir, msk_dir, cmp_dir, fig_dir,
-                    use_helper,
-                    bet_params,
                     force, verbose)
                 target_list += tmp_target_list
                 corr_list += tmp_corr_list

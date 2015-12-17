@@ -67,7 +67,7 @@ import mri_tools.modules.nifti as mrn
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools import get_first_line
+
 
 # ======================================================================
 # :: Custom defined constants
@@ -122,13 +122,13 @@ def make_phantom(
     # :: position of the phantom center relative to the mask center
     position = position
     # :: create the mask
-    if phantom == PHANTOMS['cuboid']:
+    if phantom == 'cuboid':
         mask = mrg.cuboid(shape, position, lengths)
-    elif phantom == PHANTOMS['ellipsoid']:
+    elif phantom == 'ellipsoid':
         mask = mrg.ellipsoid(shape, position, lengths)
-    elif phantom == PHANTOMS['rhomboid']:
+    elif phantom == 'rhomboid':
         mask = mrg.rhomboid(shape, position, lengths)
-    elif phantom == PHANTOMS['cylinder']:
+    elif phantom == 'cylinder':
         mask = mrg.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
     img_append = mrg.render(mask, fill)
@@ -151,7 +151,7 @@ def make_phantom(
             fill,
             append, i_filepath,
             o_filepath))
-    mrn.maker(o_filepath, img, aff, hdr)
+    mrn.save(o_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -192,7 +192,8 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'], get_first_line(__doc__),
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
             INFO['copyright'], ', '.join(INFO['authors']),
             INFO['notice']),
         action='version')

@@ -4,15 +4,12 @@
 mri_tools: useful basic utilities.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-# from __future__ import unicode_literals
-
-
+from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 # import os  # Miscellaneous operating system interfaces
@@ -35,7 +32,7 @@ import itertools  # Functions creating iterators for efficient looping
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
+import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
@@ -52,8 +49,10 @@ import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
+
 # :: Local Imports
-import mri_tools.base as mrb
+import mri_tools.modules.base as mrb
+
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
@@ -205,14 +204,20 @@ def quick_2d(array):
 # ======================================================================
 def sample2d(
         array,
-        axis=0,
+        axis=None,
         index=None,
         title=None,
-        val_range=None,
+        array_range=None,
+        ticks_limit=None,
+        orientation=None,
         cmap=None,
+        colorbar_opts=None,
+        colorbar_text=None,
+        text_list=None,
         use_new_figure=True,
         close_figure=False,
-        save_path=None):
+        save_path=None,
+        ax=None):
     """
     Plot a 2D sample image of a 3D array.
 
@@ -221,12 +226,12 @@ def sample2d(
     array : ndarray
         The original 3D array.
     axis : int (optional)
-        The slicing axis.
+        The slicing axis. If None, use the shortest one.
     index : int (optional)
         The slicing index. If None, mid-value is taken.
     title : str (optional)
         The title of the plot.
-    val_range : 2-tuple (optional)
+    array_range : 2-tuple (optional)
         The (min, max) values range.
     cmap : MatPlotLib ColorMap (optional)
         The colormap to be used for displaying the histogram.
@@ -241,19 +246,48 @@ def sample2d(
     =======
     sample : ndarray
         The sliced (N-1)D-array.
+    plot : matplotlib.pyplot.Figure
+        The figure object containing the plot.
 
     """
     if array.ndim != 3:
         raise IndexError('3D array required')
-    sample = mrb.slice_array(array, axis, index)
     if use_new_figure:
-        plot = plt.figure()
+        fig = plt.figure()
+    if ax is None:
+        ax = plt.gca()
+    if axis is None:
+        axis = np.argmin(array.shape)
+    sample = mrb.slice_array(array, axis, index)
     if title:
-        plt.title(title)
-    if val_range is None:
-        val_range = mrb.range_array(array)
-    plt.imshow(sample, cmap=cmap, vmin=val_range[0], vmax=val_range[1])
-    plt.colorbar(use_gridspec=True)
+        ax.set_title(title)
+    if array_range is None:
+        array_range = mrb.range_array(array)
+    if not cmap:
+        if array_range[0] * array_range[1] < 0:
+            cmap = plt.cm.bwr
+        else:
+            cmap = plt.cm.binary
+    ax.set_aspect('equal')
+    if (orientation == 'portrait' and sample.shape[0] < sample.shape[1]) or \
+            (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
+        sample = sample.transpose()
+    plot = ax.imshow(sample, cmap=cmap, vmin=array_range[0],
+                     vmax=array_range[1])
+    if ticks_limit is not None:
+        if ticks_limit > 0:
+            ax.locator_params(nbins=ticks_limit)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
+    if colorbar_opts is not None:
+        cbar = ax.figure.colorbar(plot, ax=ax, **colorbar_opts)
+        if colorbar_text is not None:
+            cbar.set_label(colorbar_text)
+    # include additional text
+    if text_list is not None:
+        for text_kwarg in text_list:
+            ax.text(**text_kwarg)
     if save_path is not None:
         plt.tight_layout()
         plt.savefig(save_path, dpi=D_PLOT_DPI)
@@ -269,13 +303,16 @@ def histogram1d(
         hist_range=(0.0, 1.0),
         bins=None,
         array_range=None,
+        ticks_limits=None,
         scale='linear',
         title='Histogram',
         labels=('Value', 'Value Frequency'),
         style='-k',
+        text_list=None,
         use_new_figure=True,
         close_figure=False,
-        save_path=None):
+        save_path=None,
+        ax=None):
     """
     Plot 1D histogram of array with MatPlotLib.
 
@@ -310,6 +347,10 @@ def histogram1d(
     =======
     hist : array
         The calculated histogram.
+    bin_edges : array
+        The bin edges of the calculated histogram.
+    fig : matplotlib.pyplot.Figure
+        The figure object containing the plot.
 
     """
     # setup array range
@@ -328,24 +369,27 @@ def histogram1d(
         is_normed = False
     # prepare figure
     if use_new_figure:
-        plot = plt.figure()
+        fig = plt.figure()
     # create histogram
     hist, bin_edges = np.histogram(
         array, bins=bins, range=hist_range, normed=is_normed)
     # adjust scale
+    hist = hist.astype(float)
     if scale == 'log':
-        hist[hist != 0.0] = np.log(hist[hist != 0.0])
+        hist[hist > 0.0] = np.log(hist[hist > 0.0])
     elif scale == 'log10':
-        hist[hist != 0.0] = np.log10(hist[hist != 0.0])
+        hist[hist > 0.0] = np.log10(hist[hist > 0.0])
     # plot figure
-    plt.plot(mrb.mid_val_array(bin_edges), hist, style)
+    if ax is None:
+        ax = plt.gca()
+    plot = ax.plot(mrb.mid_val_array(bin_edges), hist, style)
     # setup title and labels
     if title:
-        plt.title(title)
+        ax.set_title(title)
     if labels[0]:
-        plt.xlabel(labels[0])
+        ax.set_xlabel(labels[0])
     if labels[1]:
-        plt.ylabel(labels[1] + ' ({})'.format(scale))
+        ax.set_ylabel(labels[1] + ' ({})'.format(scale))
     else:
         plt.ylabel('{}'.format(scale))
     # save figure to file
@@ -360,25 +404,51 @@ def histogram1d(
 
 # ======================================================================
 def histogram1d_list(
-        array_list,
+        arrays,
         bin_size=1,
         hist_range=(0.0, 1.0),
         bins=None,
         array_range=None,
+        ticks_limit=None,
         scale='linear',
         title='Histogram',
         labels=('Value', 'Value Frequency'),
         legends=None,
+        legend_opts=None,
         styles=None,
+        text_list=None,
         use_new_figure=True,
         close_figure=False,
-        save_path=None):
+        save_path=None,
+        ax=None):
+    """
+
+    Args:
+        arrays list[ndarray]: The array for which histogram is to be plotted.
+        bin_size [int|float]: The size of the bins.
+        hist_range:
+        bins:
+        array_range:
+        scale:
+        title:
+        labels:
+        legends:
+        styles:
+        text_list:
+        use_new_figure:
+        close_figure:
+        save_path:
+
+    Returns:
+
+    """
+
     """
     Plot 1D histograms of multiple arrays with MatPlotLib.
 
     Parameters
     ==========
-    array : nd-array
+    array : ndarray
         The array for which histogram is to be plotted.
     bin_size : int or float (optional)
         The size of the bins.
@@ -411,14 +481,14 @@ def histogram1d_list(
         The calculated histogram.
     bin_edges : array
         The bin edges of the calculated histogram.
-    plot : array
-        The plot for further manipulation of the figure.
+    fig : matplotlib.pyplot.Figure
+        The figure object containing the plot.
 
     """
     # setup array range
     if not array_range:
-        array_range = (np.nanmin(array_list[0]), np.nanmax(array_list[0]))
-        for array in array_list[1:]:
+        array_range = (np.nanmin(arrays[0]), np.nanmax(arrays[0]))
+        for array in arrays[1:]:
             array_range = (
                 min(np.nanmin(array), array_range[0]),
                 max(np.nanmax(array), array_range[1]))
@@ -435,38 +505,53 @@ def histogram1d_list(
         is_normed = False
     # prepare figure
     if use_new_figure:
-        plot = plt.figure()
+        fig = plt.figure()
     # prepare style list
     if styles is None:
         styles = [linestyle + color
                   for linestyle in PLOT_LINESTYLES for color in PLOT_COLORS]
     style_cycler = itertools.cycle(styles)
+
     # prepare histograms
-    for idx, array in enumerate(array_list):
+    if ax is None:
+        ax = plt.gca()
+    ax.set_aspect('auto')
+    plots = []
+    for idx, array in enumerate(arrays):
         hist, bin_edges = np.histogram(
             array, bins=bins, range=hist_range, normed=is_normed)
         # adjust scale
+        hist = hist.astype(float)
         if scale == 'log':
-            hist[hist != 0.0] = np.log(hist[hist != 0.0])
+            hist[hist > 0.0] = np.log(hist[hist > 0.0])
         elif scale == 'log10':
-            hist[hist != 0.0] = np.log10(hist[hist != 0.0])
+            hist[hist > 0.0] = np.log10(hist[hist > 0.0])
         # prepare legend
         if legends is not None and idx < len(legends):
             legend = legends[idx]
         else:
             legend = '_nolegend_'
         # plot figure
-        plt.plot(
+        plot = ax.plot(
             mrb.mid_val_array(bin_edges), hist, next(style_cycler),
             label=legend)
-        plt.legend()
+        plots.append(plot)
+    # create the legend for the first line.
+    ax.legend(**(legend_opts if legend_opts is not None else {}))
+    # fine-tune ticks
+    if ticks_limit is not None:
+        if ticks_limit > 0:
+            ax.locator_params(nbins=ticks_limit)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
     # setup title and labels
     if title:
-        plt.title(title)
+        ax.set_title(title.format(bins=bins, scale=scale))
     if labels[0]:
-        plt.xlabel(labels[0])
+        ax.set_xlabel(labels[0])
     if labels[1]:
-        plt.ylabel(labels[1] + ' ({})'.format(scale))
+        ax.set_ylabel(labels[1] + ' ({})'.format(scale))
     else:
         plt.ylabel('{}'.format(scale))
     # save figure to file
@@ -476,7 +561,7 @@ def histogram1d_list(
     # closing figure
     if close_figure:
         plt.close()
-    return hist, bin_edges, plot
+    return hist, bin_edges, plots
 
 
 # ======================================================================
@@ -489,14 +574,52 @@ def histogram2d(
         array_range=None,
         use_separate_range=False,
         scale='linear',
+        hist_val_range=None,
+        ticks_limit=None,
         interpolation='bicubic',
         title='2D Histogram',
         labels=('Array 1 Values', 'Array 2 Values'),
-        cmap=plt.cm.jet,
+        text_list=None,
+        cmap=plt.cm.hot_r,
         bisector=None,
+        stats_opts=None,
+        colorbar_opts=None,
+        colorbar_text=None,
         use_new_figure=True,
         close_figure=False,
-        save_path=None):
+        save_path=None,
+        ax=None):
+    """
+
+    Args:
+        array1 (ndarray):
+        array2:
+        bin_size:
+        hist_range:
+        bins:
+        array_range:
+        use_separate_range:
+        scale:
+        hist_val_range:
+        ticks_limit:
+        interpolation:
+        title:
+        labels:
+        text_list:
+        cmap:
+        bisector:
+        show_stats:
+        colorbar_opts:
+        colorbar_text:
+        use_new_figure:
+        close_figure:
+        save_path:
+        ax:
+
+    Returns:
+
+    """
+
     """
     Plot 2D histogram of two arrays with MatPlotLib.
 
@@ -518,6 +641,8 @@ def histogram2d(
         Select if display ranges in each dimension are determined separately.
     scale : ['linear'|'log'|'log10'|'normed'] string (optional)
         The frequency value scaling.
+    hist_val_range : float 2-tuple (optional)
+        The range of histogram values. If None, it is calculated automatically.
     interpolation : str (optional)
         Interpolation method (see imshow()).
     title : str (optional)
@@ -537,8 +662,14 @@ def histogram2d(
 
     Returns
     =======
-    hist2d : array
+    hist2d : ndarray
         The calculated 2D histogram.
+    x_edges : ndarray
+        The bin edges on the x-axis.
+    y_edges : ndarray
+        The bin edges on the y-axis.
+    plot : matplotlib.pyplot.Figure
+        The figure object containing the plot.
 
     """
     # setup array range
@@ -571,10 +702,9 @@ def histogram2d(
         hist_range = (hist_range, hist_range)
     hist_range = list(hist_range)
     for idx in range(2):
-        hist_range[idx] = tuple([
-                                    mrb.to_range(val,
-                                                 out_range=array_range[idx])
-                                    for val in hist_range[idx]])
+        hist_range[idx] = tuple(
+            [mrb.to_range(val, out_range=array_range[idx])
+             for val in hist_range[idx]])
     hist_range = tuple(hist_range)
     # calculate histogram
     if scale == 'normed':
@@ -587,29 +717,68 @@ def histogram2d(
         bins=bins, range=hist_range, normed=is_normed)
     hist = hist.transpose()
     # adjust scale
+    hist = hist.astype(float)
     if scale == 'log':
-        hist[hist != 0.0] = np.log(hist[hist != 0.0])
+        hist[hist > 0.0] = np.log(hist[hist > 0.0])
     elif scale == 'log10':
-        hist[hist != 0.0] = np.log10(hist[hist != 0.0])
+        hist[hist > 0.0] = np.log10(hist[hist > 0.0])
+    # adjust histogram intensity range
+    if hist_val_range is None:
+        hist_val_range = (np.floor(np.min(hist)), np.ceil(np.max(hist)))
     # prepare figure
     if use_new_figure:
-        plot = plt.figure()
+        fig = plt.figure()
+    if ax is None:
+        ax = plt.gca()
     # plot figure
-    plt.imshow(
+    plot = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
-        vmin=np.floor(np.min(hist)), vmax=np.ceil(np.max(hist)),
+        vmin=hist_val_range[0], vmax=hist_val_range[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
-    plt.colorbar(use_gridspec=True)
+    if colorbar_opts is not None:
+        cbar = ax.figure.colorbar(plot, ax=ax, **colorbar_opts)
+        if colorbar_text is not None:
+            cbar.set_label(colorbar_text)
+        if ticks_limit is not None:
+            if ticks_limit > 0:
+                cbar.locator = mpl.ticker.MaxNLocator(nbins=ticks_limit)
+            else:
+                cbar.set_ticks([])
+            cbar.update_ticks()
     # plot first bisector
     if bisector:
-        plt.autoscale(False)
-        x_val, y_val = [np.linspace(*val_range) for val_range in array_range]
-        plt.plot(array_range[0], array_range[1], bisector, label='bisector')
+        ax.autoscale(False)
+        ax.plot(array_range[0], array_range[1], bisector, label='bisector')
+    if stats_opts is not None:
+        mask = np.ones_like(array1 * array2).astype(bool)
+        mask *= (array1 > hist_range[0][0]).astype(bool)
+        mask *= (array1 < hist_range[0][1]).astype(bool)
+        mask *= (array2 > hist_range[1][0]).astype(bool)
+        mask *= (array2 < hist_range[1][1]).astype(bool)
+        stats_dict = mrb.calc_stats(
+            array1[mask] - array2[mask], **stats_opts)
+        stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
+            *mrb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
+        ax.text(
+            1 / 2, 31 / 32, stats_text,
+            horizontalalignment='center', verticalalignment='top',
+            transform=ax.transAxes)
     # setup title and labels
-    plt.title(title + ' ({} scale)'.format(scale))
-    plt.xlabel(labels[0])
-    plt.ylabel(labels[1])
+    ax.set_title(title.format(bins=bins, scale=scale))
+    ax.set_xlabel(labels[0])
+    ax.set_ylabel(labels[1])
+    # fine-tune ticks
+    if ticks_limit is not None:
+        if ticks_limit > 0:
+            ax.locator_params(nbins=ticks_limit)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
+    # include additional text
+    if text_list is not None:
+        for text_kwarg in text_list:
+            ax.text(**text_kwarg)
     # save figure to file
     if save_path is not None:
         plt.tight_layout()
@@ -617,4 +786,5 @@ def histogram2d(
     # closing figure
     if close_figure:
         plt.close()
+    plt.figure()
     return hist, x_edges, y_edges, plot

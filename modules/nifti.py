@@ -8,15 +8,12 @@ TODO:
 - improve header support
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
-
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
@@ -54,12 +51,12 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
-
 # :: Local Imports
 import mri_tools.modules.base as mrb
 import mri_tools.modules.geometry as mrg
 import mri_tools.modules.plot as mrp
 import mri_tools.modules.segmentation as mrs
+
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
@@ -128,10 +125,29 @@ def filename_addext(
     return filename
 
 
+def load(
+        in_filepath,
+        full=False):
+    """
+
+    Args:
+        in_filepath:
+        full:
+
+    Returns:
+
+    """
+    nii = nib.load(in_filepath)
+    if full:
+        return nii.get_data(), nii.get_affine(), nii.get_header()
+    else:
+        return nii.get_data()
+
+
 # ======================================================================
-def maker(
+def save(
         out_filepath,
-        image,
+        array,
         affine=None,
         header=None):
     """
@@ -141,7 +157,7 @@ def maker(
     ==========
     out_filepath : str
         Output file path
-    image : ndarray
+    array : ndarray
         Data to be stored.
     affine : ndarray (optional)
         Affine transformation.
@@ -155,7 +171,7 @@ def maker(
     """
     if affine is None:
         affine = np.eye(4)
-    nii = nib.Nifti1Image(image, affine, header)
+    nii = nib.Nifti1Image(array, affine, header)
     nii.to_filename(out_filepath)
 
 
@@ -190,7 +206,7 @@ def masking(
     mask = mask_nii.get_data()
     mask = mask.astype(bool)
     img[~mask] = mask_val
-    maker(out_filepath, img, img_nii.get_affine())
+    save(out_filepath, img, img_nii.get_affine())
 
 
 # ======================================================================
@@ -225,7 +241,7 @@ def filter(
     nii = nib.load(in_filepath)
     img, aff, hdr = func(
         nii.get_data(), nii.get_affine(), nii.get_header(), *args, **kwargs)
-    maker(out_filepath, img, aff, hdr)
+    save(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -264,7 +280,7 @@ def filter_n(
         nii = nib.load(in_filepath)
         input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
     img, aff, hdr = func(input_list, *args, **kwargs)
-    maker(out_filepath, img, aff, hdr)
+    save(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -302,7 +318,7 @@ def filter_n_m(
         input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
     output_list = func(input_list, *args, **kwargs)
     for (img, aff, hdr), out_filepath in zip(output_list, out_filepath_list):
-        maker(out_filepath, img, aff, hdr)
+        save(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -351,7 +367,7 @@ def simple_filter(
     nii = nib.load(in_filepath)
     img = func(nii.get_data(), *args, **kwargs)
     aff = nii.get_affine()
-    maker(out_filepath, img, aff)
+    save(out_filepath, img, aff)
 
 
 # ======================================================================
@@ -394,7 +410,7 @@ def simple_filter_n(
         aff_list.append(nii.get_affine())
     img = func(img_list, *args, **kwargs)
     aff = aff_list[0]  # the affine of the first image
-    maker(out_filepath, img, aff)
+    save(out_filepath, img, aff)
 
 
 # ======================================================================
@@ -416,7 +432,7 @@ def simple_filter_n_m(
         List of output file paths.
     func : function
         | Filtering function (img: ndarray, aff: ndarray, hdr: NIfTI-1 header):
-        | func((img, aff, hdr) list, *args, *kwargs) -> (img, aff, hdr) list
+        | func((list[ndarray], *args, *kwargs) -> list[ndarray]
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the filtering function.
@@ -435,7 +451,7 @@ def simple_filter_n_m(
     o_img_list = func(i_img_list, *args, **kwargs)
     aff = aff_list[0]  # the affine of the first image
     for img, out_filepath in zip(o_img_list, out_filepath_list):
-        maker(out_filepath, img, aff)
+        save(out_filepath, img, aff)
 
 
 # ======================================================================
@@ -517,7 +533,7 @@ def img_split(
             out_dirpath,
             filename_addext(out_basename + '-' +
                             str(idx).zfill(len(str(len(img_list))))))
-        maker(out_filepath, image, img_nii.get_affine())
+        save(out_filepath, image, img_nii.get_affine())
         out_filepath_list.append(out_filepath)
     return out_filepath_list
 
@@ -626,6 +642,7 @@ def img_frame(
         use_longest=True):
     """
     Add a border frame to the image (same resolution / voxel size).
+    TODO: check with 'img_reframe'
 
     Parameters
     ==========
@@ -652,6 +669,7 @@ def img_reframe(
         background=0):
     """
     Add a border frame to the image (same resolution / voxel size).
+    TODO: check with 'img_frame'
 
     Parameters
     ==========
@@ -859,6 +877,7 @@ def calc_labels(
     mri_tools.modules.geometry.calc_labels
 
     """
+
     # todo: fixme
 
     def _calc_labels(array, *params):
@@ -965,24 +984,46 @@ def change_data_type(
     img_nii = nib.load(in_filepath)
     img = img_nii.get_data()
     img = img.astype(data_type)
-    maker(out_filepath, img, img_nii.get_affine())
+    save(out_filepath, img, img_nii.get_affine())
+
+
+# ======================================================================
+def plot_sample2d(
+        img_filepath,
+        *args,
+        **kwargs):
+    """
+    Plot a 2D sample image of a 3D NIfTI-1 image.
+
+    Parameters
+    ==========
+    img_filepath : str
+        Input file path.
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the transformation function:
+        `mri_tools.modules.plot.sample2d()`
+
+    Returns
+    =======
+    sample : ndarray
+        The displayed image.
+    plot : matplotlib.pyplot.Axes
+        The Axes object containing the plot.
+
+    """
+    img_nii = nib.load(img_filepath)
+    img = img_nii.get_data()
+    sample, plot = mrp.sample2d(img, *args, **kwargs)
+    return sample, plot
 
 
 # ======================================================================
 def plot_histogram1d(
         in_filepath,
         mask_filepath=None,
-        bin_size=1,
-        hist_range=(0.01, 0.99),
-        bins=None,
-        array_range=None,
-        scale='linear',
-        title='Histogram',
-        labels=('Value', 'Value Frequency'),
-        style='-k',
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
+        *args,
+        **kwargs):
     """
     Plot 1D histogram of NIfTI-1 image using MatPlotLib.
 
@@ -992,28 +1033,10 @@ def plot_histogram1d(
         Input file path.
     mask_filepath : str
         Mask file path.
-    bin_size : int or float (optional)
-        The size of the bins.
-    hist_range : float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    title : str (optional)
-        The title of the plot.
-    labels : str 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    style : str (optional)
-        Plotting style string (as accepted by MatPlotLib).
-    use_new_figure : bool (optional)
-        Plot the histogram in a new figure.
-    close_figure : bool (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : str (optional)
-        The path to which the plot is to be saved. If unset, no output.
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the transformation function:
+        `mri_tools.modules.plot.histogram1d()`
 
     Returns
     =======
@@ -1028,9 +1051,7 @@ def plot_histogram1d(
         mask = mask_nii.get_data().astype(bool)
     else:
         mask = slice(None)
-    hist, bin_edges, plot = mrp.histogram1d(
-        img[mask], bin_size, hist_range, bins, array_range, scale, title,
-        labels, style, use_new_figure, close_figure, save_path)
+    hist, bin_edges, plot = mrp.histogram1d(img[mask], *args, **kwargs)
     return hist, bin_edges, plot
 
 
@@ -1038,18 +1059,8 @@ def plot_histogram1d(
 def plot_histogram1d_list(
         in_filepath_list,
         mask_filepath=None,
-        bin_size=1,
-        hist_range=(0.01, 0.99),
-        bins=None,
-        array_range=None,
-        scale='linear',
-        title='Histogram',
-        labels=('Value', 'Value Frequency'),
-        legends=None,
-        styles=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
+        *args,
+        **kwargs):
     """
     Plot 1D overlapping histograms of NIfTI-1 images using MatPlotLib.
 
@@ -1059,30 +1070,10 @@ def plot_histogram1d_list(
         List of input file paths (affine is taken from last item).
     mask_filepath : str
         Mask file path.
-    bin_size : int or float (optional)
-        The size of the bins.
-    hist_range : float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    title : str (optional)
-        The title of the plot.
-    labels : str 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    legends : str list (optional)
-        Legend for each histogram. If None, no legend will be displayed.
-    styles : str list (optional)
-        MatPlotLib's plotting style strings. If None, uses color cycling.
-    use_new_figure : bool (optional)
-        Plot the histogram in a new figure.
-    close_figure : bool (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : str (optional)
-        The path to which the plot is to be saved. If unset, no output.
+    args : tuple (optional)
+    kwargs : dict (optional)
+        Additional arguments to be passed to the transformation function:
+        `mri_tools.modules.plot.histogram1d_list()`
 
     Returns
     =======
@@ -1104,9 +1095,7 @@ def plot_histogram1d_list(
         img_nii = nib.load(in_filepath)
         img = img_nii.get_data()
         img_list.append(img[mask])
-    hist, bin_edges, plot = mrp.histogram1d_list(
-        img_list, bin_size, hist_range, bins, array_range, scale, title,
-        labels, legends, styles, use_new_figure, close_figure, save_path)
+    hist, bin_edges, plot = mrp.histogram1d_list(img_list, *args, **kwargs)
     return hist, bin_edges, plot
 
 
@@ -1116,68 +1105,30 @@ def plot_histogram2d(
         in2_filepath,
         mask1_filepath=None,
         mask2_filepath=None,
-        bin_size=1,
-        hist_range=(0.0, 1.0),
-        bins=None,
-        array_range=None,
-        use_separate_range=False,
-        scale='linear',
-        interpolation='bicubic',
-        title='2D Histogram',
-        labels=('Array 1 Values', 'Array 2 Values'),
-        cmap=plt.cm.jet,
-        show_contour=False,
-        bisector=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
+        *args,
+        **kwargs):
     """
     Plot 2D histogram of two arrays with MatPlotLib.
 
-    Parameters
-    ==========
-    in1_filepath : str
-        First input file path.
-    in2_filepath : str
-        Second input file path.
-    mask1_filepath : str
-        First mask file path.
-    mask2_filepath : str
-        Second mask file path.
-    bin_size : int or float | int 2-tuple (optional)
-        The size of the bins.
-    hist_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
-        The range of the histogram to display in percentage.
-    bins : int | int 2-tuple (optional)
-        The number of bins to use. If set, overrides bin_size parameter.
-    array_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
-        Theoretical range of values for the array. If unset, uses min and max.
-    use_separate_range : bool (optional)
-        Select if display ranges in each dimension are determined separately.
-    scale : ['linear'|'log'|'log10'|'normed'] string (optional)
-        The frequency value scaling.
-    interpolation : str (optional)
-        Interpolation method (see imshow()).
-    title : str (optional)
-        The title of the plot.
-    labels : str 2-tuple (optional)
-        A 2-tuple of strings containing x-labels and y-labels.
-    cmap : MatPlotLib ColorMap (optional)
-        The colormap to be used for displaying the histogram.
-    bisector : str or None (optional)
-        If not None, show the first bisector using specified line style.
-    use_new_figure : bool (optional)
-        Plot the histogram in a new figure.
-    close_figure : bool (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : str (optional)
-        The path to which the plot is to be saved. If unset, no output.
+    See Also:
+        mri_tools.modules.plot.histogram2d()
 
-    Returns
-    =======
-    hist : array
-        The calculated 2D histogram.
+    Args:
+        in1_filepath (str): First input file path.
+        in2_filepath (str): Second input file path.
+        mask1_filepath (str): First mask file path.
+        mask2_filepath (str): Second mask file path.
+        *args (tuple): Additional arguments for:
+            mri_tools.modules.plot.histogram2d()`
+        **kwargs (dict): Additional arguments for:
+            mri_tools.modules.plot.histogram2d()`
 
+    Returns:
+        (ndarray, ndarray, ndarray, matplotlib.Figure):
+            - hist2d: The calculated 2D histogram.
+            - x_edges: The bin edges on the x-axis.
+            - y_edges: The bin edges on the y-axis.
+            - plot: The figure object containing the plot.
     """
     img1_nii = nib.load(in1_filepath)
     img2_nii = nib.load(in2_filepath)
@@ -1193,69 +1144,10 @@ def plot_histogram2d(
         mask2 = mask2_nii.get_data().astype(bool)
     else:
         mask2 = slice(None)
-    hist, x_edges, y_edges, plot = mrp.histogram2d(
-        img1[mask1], img2[mask2], bin_size, hist_range, bins, array_range,
-        use_separate_range, scale, interpolation, title, labels, cmap,
-        bisector, use_new_figure, close_figure, save_path)
-    return hist, x_edges, y_edges, plot
+    hist2d, x_edges, y_edges, plot = \
+        mrp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
 
-
-# ======================================================================
-def plot_sample(
-        img_filepath,
-        axis=0,
-        index=None,
-        title=None,
-        val_range=None,
-        cmap=None,
-        use_new_figure=True,
-        close_figure=False,
-        save_path=None):
-    """
-    Plot a 2D sample image of a 3D NIfTI-1 image.
-
-    Parameters
-    ==========
-    img_filepath : str
-        Input file path.
-    axis : int (optional)
-        The slicing axis.
-    index : int (optional)
-        The slicing index. If None, mid-value is taken.
-    title : str (optional)
-        The title of the plot.
-    val_range : 2-tuple (optional)
-        The (min, max) values range.
-    cmap : MatPlotLib ColorMap (optional)
-        The colormap to be used for displaying the histogram.
-    use_new_figure : bool (optional)
-        Plot the histogram in a new figure.
-    close_figure : bool (optional)
-        Close the figure after saving (useful for batch processing).
-    save_path : str (optional)
-        The path to which the plot is to be saved. If unset, no output.
-
-    Returns
-    =======
-    sample : ndarray
-        The displayed image.
-
-    """
-    img_nii = nib.load(img_filepath)
-    img = img_nii.get_data()
-    if not cmap:
-        if val_range is None:
-            min_val, max_val = np.min(img), np.max(img)
-        else:
-            min_val, max_val = val_range
-        if min_val * max_val < 0:
-            cmap = plt.cm.bwr
-        else:
-            cmap = plt.cm.binary
-    sample, plot = mrp.sample2d(
-        img, axis, index, title, val_range, cmap, use_new_figure, close_figure,
-        save_path)
-    return sample, plot
+    return hist2d, x_edges, y_edges, plot
 
 
 # ======================================================================

@@ -96,7 +96,7 @@ def mask_threshold(
 
     """
     # for security reasons comparison is checked before eval
-    comparisons = ('=', '!=', '>', '<', '>=', '<=')
+    comparisons = ('==', '!=', '>', '<', '>=', '<=')
     modes = ('absolute', 'relative', 'percentile')
     if comparison in comparisons:
         # warning: security: use of eval

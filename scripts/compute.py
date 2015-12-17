@@ -63,12 +63,11 @@ import mri_tools.computation as mrc
 # import mri_tools.modules.correlate as mrr
 # import mri_tools.modules.geometry as mrg
 # from mri_tools.modules.sequences import mp2rage
-import common as dcmlib
+import dcmpi.common as dcmlib
 
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -101,7 +100,8 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'], get_first_line(__doc__),
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
             INFO['copyright'], ', '.join(INFO['authors']),
             INFO['notice']),
         action='version')

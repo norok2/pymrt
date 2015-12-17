@@ -26,7 +26,7 @@ DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
 LICENSE = 'License GPLv3: GNU General Public License version 3'
 COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
 # first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
+# DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
 
 
 # ======================================================================

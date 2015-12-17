@@ -4,15 +4,12 @@
 mri_tools: generic basic utilities.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-# from __future__ import unicode_literals
-
-
+from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
@@ -32,7 +29,6 @@ import fractions  # Rational numbers
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
-
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
@@ -56,6 +52,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
+
 # from mri_tools import get_first_line
 
 
@@ -182,14 +179,11 @@ def multi_replace(text, replace_list):
 
     Parameters
     ==========
-    :param text: The input string.
-    :param replace_list: The listing of the replacements.
-        Format: ((<old>, <new>), ...)
-
     text : str
-
+        The input string.
     replace_list : (2-str tuple) tuple
-
+        The listing of the replacements.
+        Format: ((<old>, <new>), ...)
 
     Returns
     =======
@@ -197,8 +191,7 @@ def multi_replace(text, replace_list):
         The string after the performed replacements.
 
     """
-    return reduce(lambda s, r: s.replace(*r), replace_list, text),
-
+    return reduce(lambda s, r: s.replace(*r), replace_list, text)
 
 
 # ======================================================================
@@ -245,7 +238,7 @@ def mdot(*array_list):
     """
     Cumulative application of `numpy.dot` operation.
     """
-    #todo: fix doc
+    # todo: fix doc
     array = array_list[0]
     for item in array_list[1:]:
         array = np.dot(array, item)
@@ -256,15 +249,17 @@ def commutator(a, b):
     """
     Calculate the commutator of two arrays: [A,B] = AB - BA
     """
-    #todo: fix doc
+    # todo: fix doc
     return a.dot(b) - b.dot(a)
+
 
 def anticommutator(a, b):
     """
     Calculate the anticommutator of two arrays: [A,B] = AB + BA
     """
-    #todo: fix doc
+    # todo: fix doc
     return a.dot(b) + b.dot(a)
+
 
 # ======================================================================
 def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
@@ -366,46 +361,40 @@ def groups_from(lst, grouping):
 # ======================================================================
 def listdir(
         path,
-        file_ext,
+        file_ext='',
         pattern=slice(None, None, None),
+        full_path=True,
         verbose=D_VERB_LVL):
     """
     Retrieve a sorted list of files matching specified extension and pattern.
 
-    Parameters
-    ==========
-    path : str
-        Path to search.
-    file_ext : str
-        File extension (eventually an empty string). None for directories
-    pattern: slice (optional)
-        Pattern for selecting filepaths (alphabetical ordering).
-    verbose : bool (optional)
-        Print useful information regarding the behavior of this function.
+    Args:
+        path (str): Path to search.
+        file_ext (str|None): File extension. Empty string for all files.
+            None for directories.
+        pattern (slice): Selection pattern (assuming alphabetical ordering).
+        full_path (bool): Include the full path.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    filepath_list : list
-        Complete file paths matching specified extension and regular pattern.
-
+    Returns:
+        list[str]: List of file names/paths.
     """
-    # filter according to file_ext
     if file_ext is None:
         if verbose >= VERB_LVL['debug']:
             print('Scanning for DIRS on:\n{}'.format(path))
-        # extracts only dirs
-        filepath_list = [os.path.join(path, fi) for fi in os.listdir(path)
-                         if os.path.isdir(os.path.join(path, fi))]
+        filepath_list = [
+            os.path.join(path, filename) if full_path else filename
+            for filename in os.listdir(path)
+            if os.path.isdir(os.path.join(path, filename))]
     else:
         if verbose >= VERB_LVL['debug']:
             print("Scanning for '{}' on:\n{}".format(file_ext, path))
         # extracts only those ending with specific file_ext
-        filepath_list = [os.path.join(path, fi) for fi in os.listdir(path)
-                         if fi.lower().endswith(file_ext.lower())]
-    # sort filepath list
-    filepath_list.sort()
-    # return filepath list matching specified pattern
-    return filepath_list[pattern]
+        filepath_list = [
+            os.path.join(path, filename) if full_path else filename
+            for filename in os.listdir(path)
+            if filename.lower().endswith(file_ext.lower())]
+    return sorted(filepath_list)[pattern]
 
 
 # ======================================================================
@@ -560,7 +549,7 @@ def compact_num_str(
             if limit < 0:
                 limit = 0
             val_str = '{:.{size}f}'.format(val, size=limit)
-    except ValueError:
+    except (TypeError, ValueError):
         print('EE:', 'Could not convert to float: {}'.format(val))
         val_str = 'NAN'
     return val_str
@@ -593,13 +582,13 @@ def auto_convert(val_str, pre_decor=None, post_decor=None):
     else:
         try:
             val = int(val_str)
-        except ValueError:
+        except (TypeError, ValueError):
             try:
                 val = float(val_str)
-            except ValueError:
+            except (TypeError, ValueError):
                 try:
                     val = complex(val_str)
-                except ValueError:
+                except (TypeError, ValueError):
                     val = val_str
     return val
 
@@ -651,6 +640,7 @@ def significant_figures(val, num):
     The 'decimal' Python standard module.
 
     """
+
     val = float(val)
     num = int(num)
     order = int(np.floor(np.log10(abs(val)))) if abs(val) != 0.0 else 0
@@ -693,8 +683,12 @@ def format_value_error(
     num = int(num)
     val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
     err_order = np.ceil(np.log10(np.abs(err))) if val != 0 else 0
-    val_str = significant_figures(val, val_order - err_order + num)
-    err_str = significant_figures(err, num)
+    try:
+        val_str = significant_figures(val, val_order - err_order + num)
+        err_str = significant_figures(err, num)
+    except ValueError:
+        val_str = str(val)
+        err_str = str(err)
     return val_str, err_str
 
 
@@ -888,6 +882,7 @@ def check_redo(
         Computation to be re-done.
 
     """
+    #todo: include output_dir autocreation
     if not in_filepath_list:
         raise IndexError('List of input files is empty.')
     for in_filepath in in_filepath_list:
@@ -1209,17 +1204,24 @@ def calc_stats(
         val_range = range_array(array)
     array = array[array > val_range[0]]
     array = array[array < val_range[1]]
-    stats_dict = {
-        'avg': np.mean(array),
-        'std': np.std(array),
-        'min': np.min(array),
-        'max': np.max(array),
-        'sum': np.sum(array),
-        'num': np.size(array), }
-    label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
-    val_list = []
-    for label in label_list:
-        val_list.append(compact_num_str(stats_dict[label]))
+    if len(array) > 0:
+        stats_dict = {
+            'avg': np.mean(array),
+            'std': np.std(array),
+            'min': np.min(array),
+            'max': np.max(array),
+            'sum': np.sum(array),
+            'num': np.size(array), }
+    else:
+        stats_dict = {
+            'avg': None, 'std': None,
+            'min': None, 'max': None,
+            'sum': None, 'num': None}
+    if save_path or title:
+        label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
+        val_list = []
+        for label in label_list:
+            val_list.append(compact_num_str(stats_dict[label]))
     if save_path:
         with open(save_path, 'wb') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=CSV_DELIMITER)

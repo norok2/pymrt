@@ -67,7 +67,6 @@ import mri_tools.modules.correlation as mrl
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -108,7 +107,8 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'], get_first_line(__doc__),
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
             INFO['copyright'], ', '.join(INFO['authors']),
             INFO['notice']),
         action='version')
@@ -180,16 +180,15 @@ if __name__ == '__main__':
 
 
     if ARGS.output and ARGS.verbose >= VERB_LVL['none']:
-        ARGS.output = os.path.dirname(ARGS.output)
+        ARGS.output = os.path.dirname(os.path.realpath(ARGS.output))
         print('OutDir:\t{}'.format(ARGS.output))
     mrl.calc_mask(
         ARGS.input,
         ARGS.output,
         ARGS.val_threshold,
-        ARGS.percentile_range,
         ARGS.comparison,
+        'absolute',
         ARGS.smoothing,
-        ARGS.size_threshold,
         ARGS.erosion_iter,
         ARGS.dilation_iter,
         ARGS.bet_params,

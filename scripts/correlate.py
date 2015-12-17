@@ -10,7 +10,7 @@ Check voxel-by-voxel correlation after registration and masking.
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-#from __future__ import unicode_literals
+from __future__ import unicode_literals
 
 
 # ======================================================================
@@ -60,7 +60,6 @@ import mri_tools.modules.correlation as mrl
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools import get_first_line
 
 
 # ======================================================================
@@ -107,7 +106,8 @@ def handle_arg():
     arg_parser.add_argument(
         '--ver', '--version',
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'], get_first_line(__doc__),
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
             INFO['copyright'], ', '.join(INFO['authors']),
             INFO['notice']),
         action='version')
@@ -121,7 +121,7 @@ def handle_arg():
         action='store_true',
         help='force new processing [%(default)s]')
     arg_parser.add_argument(
-        '-d', '--dir', metavar='DIR',
+        '-d', '--dirpath', metavar='DIR',
         default=d_working_dir,
         help='set working directory [%(default)s]')
     arg_parser.add_argument(
@@ -168,14 +168,6 @@ def handle_arg():
         '--fig_dir', metavar='SUBDIR',
         default=d_fig_dir,
         help='subdirectory where to store figures [%(default)s]')
-    arg_parser.add_argument(
-        '--toggle_helpers',
-        action='store_true',
-        help='toggle helper files usage for registration [%(default)s]')
-    arg_parser.add_argument(
-        '--bet_params', metavar='STR',
-        default=d_bet_params,
-        help='parameters to FSL\'s BET tool. Empty str to skip [%(default)s]')
     return arg_parser
 
 
@@ -191,11 +183,23 @@ if __name__ == '__main__':
     if ARGS.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
-    mrl.check_correlation(
-        ARGS.dir, ARGS.type, ARGS.range, ARGS.units,
-        ARGS.mask, ARGS.reg_ref_ext, ARGS.corr_ref_ext,
-        ARGS.tmp_dir, ARGS.reg_dir, ARGS.msk_dir, ARGS.cmp_dir, ARGS.fig_dir,
-        ARGS.toggle_helpers, ARGS.bet_params, ARGS.force, ARGS.verbose)
+    kwargs = {
+        'dirpath': ARGS.dirpath,
+        'type': ARGS.type,
+        'val_range': ARGS.range,
+        'val_units': ARGS.units,
+        'mask_filepath': ARGS.mask,
+        'reg_ref_ext': ARGS.reg_ref_ext,
+        'corr_ref_ext': ARGS.corr_ref_ext,
+        'tmp_dir': ARGS.tmp_dir,
+        'reg_dir': ARGS.reg_dir,
+        'msk_dir': ARGS.msk_dir,
+        'cmp_dir': ARGS.cmp_dir,
+        'fig_dir': ARGS.fig_dir,
+        'force': ARGS.force,
+        'verbose': ARGS.verbose,
+    }
+    mrl.check_correlation(**kwargs)
     end_time = time.time()
     if ARGS.verbose > VERB_LVL['low']:
         print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))

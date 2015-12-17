@@ -91,6 +91,17 @@ def parameters2affine(params, num_dim, transform):
     return linear, shift
 
 
+def set_bounds(
+        shape,
+        transform):
+    """
+    Set bounds for registration parameters.
+    """
+    num_dim = len(shape)
+    # todo: implement sensible bounds for different transformations
+    return None
+
+
 # ======================================================================
 def set_init_parameters(
         moving,
@@ -150,19 +161,45 @@ def set_init_parameters(
 # ======================================================================
 def _discrete_generator(transform, num_dim):
     """
+    Generator of discrete transformations.
 
+    Parameters
+    ==========
+    transform : str
+        The name of the accepted transformation.
     """
     if transform == 'reflection':
         shift = np.zeros((num_dim,))
-        for item in itertools.product([-1, 0, 1], repeat=num_dim * num_dim):
-            linear = np.array(item).reshape((num_dim, num_dim))
+        for elements in itertools.product([-1, 0, 1], repeat=num_dim * num_dim):
+            linear = np.array(elements).reshape((num_dim, num_dim))
             if np.abs(np.linalg.det(linear)) == 1:
+                linear = linear.astype(np.float)
                 yield linear, shift
     elif transform == 'reflection_simple':
         shift = np.zeros((num_dim,))
-        for item in itertools.product([-1, 1], repeat=num_dim):
-            linear = np.diag(item)
-            if np.abs(np.linalg.det(linear)) == 1:
+        for diagonal in itertools.product([-1, 1], repeat=num_dim):
+            linear = np.diag(diagonal).astype(np.float)
+            yield linear, shift
+    elif transform == 'pi_rotation':
+        shift = np.zeros((num_dim,))
+        for diagonal in itertools.product([-1, 1], repeat=num_dim):
+            if np.prod(np.array(diagonal)) == 1:
+                linear = np.diag(diagonal).astype(np.float)
+                yield linear, shift
+    elif transform == 'pi/2_rotation':
+        shift = np.zeros((num_dim,))
+        num_angles = mrg.num_angles_from_dim(num_dim)
+        for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
+            linear = mrg.angles2linear(angles)
+            yield linear, shift
+    elif transform == 'pi/2_rotation+':
+        shift = np.zeros((num_dim,))
+        num_angles = mrg.num_angles_from_dim(num_dim)
+        for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
+            for diagonal in itertools.product([-1, 1], repeat=num_dim):
+                linear = np.dot(
+                    np.diag(diagonal).astype(np.float),
+                    mrg.angles2linear(angles))
                 yield linear, shift
     else:
         shift = np.zeros(num_dim)
@@ -176,7 +213,7 @@ def minimize_discrete(
         fixed,
         transform,
         cost_threshold=None,
-        cost_func=lambda x: np.sqrt(np.sum(x ** 2)),
+        cost_func=lambda x, y: np.sqrt(np.sum((x - y) ** 2)),
         interp_order=0):
     """
     Function to minimize for discrete transformations.
@@ -188,11 +225,14 @@ def minimize_discrete(
             _min_func_affine(
                 best_params, moving, fixed, 'affine',
                 interp_order=interp_order))
+    if cost_func is None:
+        cost_func = \
+            mrb.set_keyword_parameters(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine2parameters(linear, shift, moving.ndim, 'affine')
-        cost = cost_func(
-            _min_func_affine(
-                params, moving, fixed, 'affine', interp_order=interp_order))
+        cost = _min_func_affine(
+            params, moving.ravel(), fixed.ravel(), moving.shape, 'affine',
+            cost_func, interp_order=interp_order)
         if cost < best_cost:
             best_cost = cost
             best_params = params
@@ -204,25 +244,23 @@ def minimize_discrete(
 # ======================================================================
 def _min_func_affine(
         params,
-        moving,
-        fixed,
+        moving_ravel,
+        fixed_ravel,
+        shape,
         transform='affine',
-        distance=lambda x, y: (x - y),
+        cost_func=lambda x, y: \
+                np.sqrt(np.sum((x - y) ** 2)) / (np.sum(np.abs(x)) + 1),
         interp_order=1):
     """
     Function to minimize for affine transformation.
     """
-    linear, shift = parameters2affine(params, moving.ndim, transform)
-    check_shift = all(shift < moving.shape)
-    check_linear = np.sum(np.abs(linear)) < np.sum(moving.shape)
-    if check_shift and check_linear:
-        # the other valid parameters of the `affine_transform` function are:
-        #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
-        moved = mrg.affine_transform(moving, linear, shift, order=interp_order)
-        cost = distance(moved, fixed).ravel()
-    else:
-        cost = np.tile(np.inf, len(moving))
-    return cost
+    num_dim = len(shape)
+    linear, shift = parameters2affine(params, num_dim, transform)
+    # the other valid parameters of the `affine_transform` function are:
+    #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
+    moved_ravel = mrg.affine_transform(
+        moving_ravel.reshape(shape), linear, shift, order=interp_order).ravel()
+    return cost_func(moved_ravel, fixed_ravel)
 
 
 # ======================================================================
@@ -233,6 +271,7 @@ def affine_registration(
         fixed_weights=None,
         transform=None,
         init_guess=('weights', 'random'),
+        cost_func=None,
         interp_order=1):
     """
     Register the 'moving' image to the 'fixed' image, using only the specified
@@ -254,7 +293,7 @@ def affine_registration(
 
     Returns
     =======
-    affine :
+    linear, shift :
         The n+1 square matrix describing the affine transformation that
         minimizes the specified metric and can be used for registration.
 
@@ -269,15 +308,27 @@ def affine_registration(
     continuous_transforms = (
         'affine', 'rigid', 'translation', 'rotation', 'scaling',
         'translation_rotation', 'translation_scaling')
-    discrete_transforms = ('reflection', 'reflection_simple')
+    discrete_transforms = (
+        'reflection', 'reflection_simple', 'pi_rotation', 'pi/2_rotation',
+        'pi/2_rotation+')
     if transform in continuous_transforms:
-        params = set_init_parameters(moving, fixed, transform, init_guess)
-        kwargs = mrb.set_keyword_parameters(_min_func_affine, {})
-        distance = kwargs['distance']
-        results = sp.optimize.leastsq(
-            _min_func_affine, params,
-            args=(moving, fixed, transform, distance, interp_order))
-        opt_par = results[0]
+        init_params = set_init_parameters(moving, fixed, transform, init_guess)
+        bounds = set_bounds(moving.shape, transform)
+        if bounds is not None:
+            method = 'L-BFGS-B'
+        else:
+            method = 'BFGS'
+        if cost_func is None:
+            kwargs__min_func_affine = \
+                mrb.set_keyword_parameters(_min_func_affine, {})
+            cost_func = kwargs__min_func_affine['cost_func']
+        args__min_func_affine = (
+            moving.ravel(), fixed.ravel(), moving.shape,
+            transform, cost_func, interp_order)
+        results = sp.optimize.minimize(
+            _min_func_affine, init_params, args=args__min_func_affine,
+            method=method, bounds=bounds)
+        opt_par = results.x
         linear, shift = parameters2affine(opt_par, moving.ndim, transform)
     elif transform in discrete_transforms:
         linear, shift = minimize_discrete(moving, fixed, transform)
@@ -328,53 +379,68 @@ def external_registration(
     return affine
 
 
-# # :: test
-# s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2/s018__MP2RAGE_e' \
+# ======================================================================
+# :: test
+# s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# /s018__MP2RAGE_e' \
 #      '=post0,l=2__T1.nii.gz'
-# s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2/s020__MP2RAGE_e' \
+# s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# /s020__MP2RAGE_e' \
 #      '=post2,l=2__T1.nii.gz'
-# s3 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2/s031__MP2RAGE_e' \
+# s3 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# /s031__MP2RAGE_e' \
 #      '=pre0,l=2__T1.nii.gz'
-# t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2/s018__MP2RAGE_e' \
+# t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# /s018__MP2RAGE_e' \
 #       '=post0,l=2,reg=s2__T1.nii.gz'
-# t13 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2/s018__MP2RAGE_e' \
+# t13 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# /s018__MP2RAGE_e' \
 #       '=post0,l=2,reg=s3__T1.nii.gz'
-#
-# import mri_tools.modules.nifti as mrn
-#
-#
-# def my_reg(array_list, *args, **kwargs):
-#     img = array_list[0]
-#     ref = array_list[1]
-#     # at first translate...
-#     linear, shift = affine_registration(
-#         img, ref, transform='translation', init_guess=('weights', 'weights'))
-#     # print(shift)
-#     img = mrg.affine_transform(img, linear, shift)
-#     # ... then reorient
-#     linear, shift = affine_registration(
-#         img, ref, transform='reflection_simple')
-#     # print(linear)
-#     img = mrg.affine_transform(img, linear, shift)
-#     # ... and finally perform finer registration
-#     linear, shift = affine_registration(img, ref, *args, **kwargs)
-#     array = mrg.affine_transform(img, linear, shift)
-#     # print(mrg.compose_affine(linear, shift))
-#     return array
-#
-#
-# # ======================================================================
-# if __name__ == '__main__':
-#     print(__doc__)
-#     begin_time = time.time()
-#
-#     mrn.simple_filter_n(
-#         [s1, s2], t12, my_reg,
-#         transform='rigid', interp_order=1, init_guess=('none', 'none'))
-#
-#     mrn.simple_filter_n(
-#         [s1, s3], t13, my_reg,
-#         transform='rigid', interp_order=1, init_guess=('none', 'none'))
-#
-#     end_time = time.time()
-#     print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+
+
+s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e=pre0,l=1__T2S.nii.gz'
+s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH-3D_e=post0,l=1__T2S.nii.gz'
+t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e=pre0,l=1,reg__T2S.nii.gz'
+
+import mri_tools.modules.nifti as mrn
+
+
+def my_reg(array_list, *args, **kwargs):
+    img = array_list[0]
+    ref = array_list[1]
+    # # at first translate...
+    # linear, shift = affine_registration(
+    #     img, ref, transform='translation', init_guess=('weights', 'weights'))
+    # # print(shift)
+    # img = mrg.affine_transform(img, linear, shift)
+    # ... then reorient
+    linear, shift = affine_registration(
+        img, ref, transform='reflection', interp_order=0)
+    print(linear)
+    img = mrg.affine_transform(img, linear, shift)
+    # # ... and finally perform finer registration
+    # linear, shift = affine_registration(img, ref, *args, **kwargs)
+    # img = mrg.affine_transform(img, linear, shift)
+    # print(mrg.encode_affine(linear, shift))
+    return img
+
+
+# ======================================================================
+if __name__ == '__main__':
+    print(__doc__)
+    begin_time = time.time()
+
+    # for idx, (linear, shift) in enumerate(_discrete_generator('reflection', 3)):
+    #     print(idx)
+    #     print(linear)
+
+    mrn.simple_filter_n(
+        [s1, s2], t12, my_reg,
+        transform='rigid', interp_order=1, init_guess=('none', 'none'))
+
+    # mrn.simple_filter_n(
+    #     [s1, s3], t13, my_reg,
+    #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
+
+    end_time = time.time()
+    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))

@@ -713,6 +713,7 @@ def frame(
         use_longest=True):
     """
     Add a frame to an array.
+    TODO: check with 'reframe'
 
     Parameters
     ==========
@@ -759,6 +760,7 @@ def reframe(
         background=0.0):
     """
     Add a frame to an array.
+    TODO: check with 'frame'
 
     Parameters
     ==========
@@ -899,7 +901,7 @@ def apply_to_complex(
 
 
 # ======================================================================
-def decompose_affine(
+def decode_affine(
         affine):
     """
     Decompose the affine matrix into a linear transformation and a translation.
@@ -924,7 +926,7 @@ def decompose_affine(
 
 
 # ======================================================================
-def compose_affine(
+def encode_affine(
         linear,
         shift):
     """
@@ -975,7 +977,7 @@ def num_angles_from_dim(num_dim):
     ========
     mri_tools.geometry.angles2linear
     """
-    return num_dim * (num_dim - 1.0) / 2.0
+    return num_dim * (num_dim - 1) // 2
 
 
 # ======================================================================

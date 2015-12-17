@@ -137,6 +137,23 @@ def preset_t2s_multiecho_loglin():
 
 
 # ======================================================================
+def preset_t2s_multiecho_loglin2():
+    """
+    Preset to get T2* maps from multi-echo squared data using a log-linear fit.
+    """
+    new_opts = {
+        'types': ['T2S', 'PD'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '.*FLASH.*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'img_func': 'fit_monoexp_decay_loglin2',
+        'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
+    }
+    return new_opts
+
+
+# ======================================================================
 def preset_t2s_multiecho_leasq():
     """
     Preset to get T2* maps from multi-echo data using a least-squares fit.
@@ -151,6 +168,20 @@ def preset_t2s_multiecho_leasq():
         'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
     }
     return new_opts
+
+
+# ======================================================================
+def time_to_rate(
+        array,
+        in_units='ms',
+        out_units='Hz'):
+    factor = 1.0
+    if in_units == 'ms':
+        factor *= 1e3
+    if out_units == 'kHz':
+        factor *= 1e-3
+    array[array != 0.0] = factor / array[array != 0.0]
+    return array
 
 
 # ======================================================================
@@ -270,6 +301,47 @@ def fit_monoexp_decay_loglin(
     p_arr = fit_ndarray(
         y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
         prepare, [factor], fix, [factor],
+        method='linear')
+    img_list = mrb.ndsplit(p_arr, -1)
+    type_list = ('tau', 's_0')
+    img_type_list = tuple([img_types[key] for key in type_list])
+    return img_list, img_type_list
+
+
+# ======================================================================
+def fit_monoexp_decay_loglin2(
+        images,
+        params,
+        ti_label,
+        img_types):
+    """
+    Fit monoexponential decay to images using the log-linear method.
+    """
+
+    def prepare(y_arr, factor=0, noise_level=0):
+        log_arr = np.zeros_like(y_arr)
+        # calculate logarithm only of strictly positive values
+        y_arr = y_arr - noise_level
+        log_arr[y_arr > 0.0] = np.log(
+            y_arr[y_arr > 0.0] ** 2.0 * np.e ** factor)
+        return log_arr
+
+    def fix(p_arr, factor=0):
+        # tau = p_arr[..., 0]
+        # s_0 = p_arr[..., 1]
+        p_arr[..., 0][p_arr[..., 0] != 0.0] = \
+            - 2.0 / p_arr[..., 0][p_arr[..., 0] != 0.0]
+        p_arr[..., 1] = np.exp(p_arr[..., 1] - factor)
+        return p_arr
+
+    factor = 12  # 0: untouched, other values might improve results
+    y_arr = mrb.ndstack(images, -1).astype(float)
+    y_arr = y_arr[..., 0]  # use only the modulus
+    x_arr = np.array(params[ti_label]).astype(float)
+    noise_level = np.percentile(y_arr, 3)
+    p_arr = fit_ndarray(
+        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
+        prepare, [factor, noise_level], fix, [factor],
         method='linear')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
@@ -600,7 +672,7 @@ def compute_generic(
                         img = img.astype(opts['dtype'])
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
-                    mrn.maker(target, img, aff)
+                    mrn.save(target, img, aff)
                     break
     return targets
 
