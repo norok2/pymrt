@@ -65,6 +65,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
+# TODO: replace mlab by visvis
 import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
