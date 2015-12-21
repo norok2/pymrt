@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: Matrix Algebra Formalism to analize Magnetization Transfer Experiments.
+mr_lib: Matrix Algebra Formalism to analyze Magnetization Transfer Experiments.
 """
-
 
 # ======================================================================
 # :: Future Imports
@@ -13,32 +12,17 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-__version__ = '0.0.0.1'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 19, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
-
-
 # ======================================================================
 # :: Python Standard Library Imports
 # import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-import collections  # High-performance container datatypes
-import argparse  # Parser for command-line options, arguments and subcommands
+# import collections  # High-performance container datatypes
+# import argparse  # Parser for command-line options, arguments and subcommands
+
 # import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import subprocess  # Subprocess management
@@ -47,8 +31,8 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports
-# import numpy as np  # NumPy (multidimensional numerical arrays library)
-# import scipy as sp  # SciPy (signal and image processing library)
+import numpy as np  # NumPy (multidimensional numerical arrays library)
+import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
@@ -61,88 +45,174 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
+# import scipy.integrate  # SciPy: Numeric Integration Tools
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
+import scipy.linalg  # SciPy: Linear Algebra Tools
 
 # :: Local Imports
-
-
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-D_VERB_LVL = VERB_LVL['low']
-
+# from mri_tools import VERB_LVL
+# from mri_tools import D_VERB_LVL
 
 # ======================================================================
-def my_func(my_param):
+def r_prod(*array_list):
     """
-    Sample function.
+    Calculate the matrix right-product for a list of 2D arrays.
+    """
+    result = array_list[0]
+    for array in array_list[1:]:
+        result = np.dot(result, array)
+    return result
+
+
+# ======================================================================
+def mdot_l(*array_list):
+    """
+    Calculate the matrix left-product for a list of 2D arrays.
+    """
+    result = array_list[-1]
+    for array in array_list[-2::-1]:
+        result = np.dot(array, result)
+    return result
+
+
+# ======================================================================
+def dynamic_operator(physical_model):
+    """
+
+    """
+    pass
+
+
+# ======================================================================
+def propagator_delay(
+        dynamic_operator_arr,
+        delay=0):
+    """
+    Calculate the propagator associated to delay.
 
     Parameters
-    ==========
-    my_param : type
-        Sample parameter.
-
-    Returns
-    =======
-    my_rr : rtype
-        Sample return.
+    ----------
+    dynamic_operator_arr: ndarray
 
     """
-    my_rr = my_param
-    return my_rr
+    delay *= 10e-3  # convert to s
+    propagator = sp.linalg.expm(dynamic_operator_arr * delay)
+    return propagator
 
 
 # ======================================================================
-def handle_arg():
+def propagator_detection(
+        physical_model_pools,
+        phase=(np.pi / 2.0)):
     """
-    Handle command-line application arguments.
+    Calculate the propagator associated to detection.
+
+    Parameters
+    ----------
+    physical_model_pools: list
+
+    TODO:
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = D_VERB_LVL
-    # :: Create Argument Parser
-    arg_parser = argparse.ArgumentParser(
-        description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    # :: Add POSIX standard arguments
-    arg_parser.add_argument(
-        '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
-        action='version')
-    arg_parser.add_argument(
-        '-v', '--verbose',
-        action='count', default=d_verbose,
-        help='increase the level of verbosity [%(default)s]')
-    # :: Add additional arguments
-    arg_parser.add_argument(
-        '-f', '--force',
-        action='store_true',
-        help='force new processing [%(default)s]')
-    # nothing here yet!
-    # avoid mandatory arguments whenever possible
-    return arg_parser
+    propagator = np.ones()
+    return propagator
+
+
+# ======================================================================
+def propagator_spoil(
+        physical_model_pools,
+        scale=0):
+    """
+    Calculate the propagator associated to spoil.
+
+    Parameters
+    ----------
+    operator_L_arr : ndarray
+    TODO:
+
+    """
+    propagator = np.ones()
+    return propagator
+
+
+# ======================================================================
+def propagator_pulse(
+        physical_model,
+        pulse,
+        approximation='polynomial'):
+    """
+    Calculate the propagator associated to spoil.
+
+    Parameters
+    ----------
+    physical_model : PhysicalModel
+        Physical model used in the Magnetization Transfer experiment.
+    pulse : Pulse
+TODO:
+    """
+    propagator = np.ones()
+    return propagator
+
+
+# ======================================================================
+def magnetization_transfer_signal(physical_model, pulse_sequence_params):
+    """
+    The magnetization transfer signal generated by the following sequence:
+
+    RF  _()_/‾\____()_/\________________
+    Gpe ___________/≣\____________
+    Gsl ___________/≣\____________
+    Gro ______________/‾‾‾‾‾‾‾‾\__
+    ADC ______________/‾‾‾‾‾‾‾‾\__
+
+    δx:     Delay
+    σx:     Spoiler, _()_
+    Pp:     Preparation (MT) pulse
+    Ep:     Exc
+
+    RF:     RadioFrequency signal
+    Gpe:    Gradient for phase encoding
+    Gsl:    Gradient for slice selection
+    Gro:    Gradient for readout
+
+    /|      inversion pulse
+    /\      Gaussian pulse
+    &       Sinc pulse
+    |\      selective pulse
+    TODO:
+    """
+    # mtloop=protocol parameter
+    # meq := equilibrium magnetization
+    dynamic_operator_arr = dynamic_operator(physical_model)
+    propagator_spoil_arr = propagator_spoil(physical_model['pools'])
+    propagator_detection_arr = propagator_detection(physical_model['pools'])
+    propagator_delay1_arr, propagator_delay2_arr, propagator_delay3_arr = [
+        propagator_delay(dynamic_operator_arr, pulse_sequence_params[key])
+        for key in ['delay_1', 'delay_2', 'delay_3']]
+    propagator_readout_arr, propagator_preparation_arr = [
+        propagator_pulse(physical_model, pulse_sequence_params[key])
+        for key in ['excitation_pulse', 'preparation_pulse']]
+
+    # delay3 * readoutpulse * spoil * delay2 * mtpulse * spoil * delay1
+    propagator_sequence = mdot_l(
+            propagator_delay1_arr,
+            propagator_spoil_arr,
+            propagator_preparation_arr,
+            propagator_delay2_arr,
+            propagator_spoil_arr,
+            propagator_readout_arr,
+            propagator_delay3_arr)
+
+    # detection * (sequence ^ num_loops) * equilibrium_magnetization
+    signal = mdot_r(
+            propagator_detection_arr,
+            np.linalg.matrix_power(
+                    propagator_sequence,
+                    pulse_sequence['num_preparation_loops']),
+            physical_model['equilibrium_magnetization'])
+    return signal
 
 
 # ======================================================================
 if __name__ == '__main__':
-    # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
-    # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', ARGS)
     print(__doc__)
-    begin_time = time.time()
-    # :: TODO: add your timed code here
-    end_time = time.time()
-    if ARGS.verbose > VERB_LVL['low']:
-        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
-
