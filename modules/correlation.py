@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: voxel-by-voxel correlation analysis for MRI data.
+mri_tools: voxel-by-voxel correlation analysis for MRI data.
 """
 
 # ======================================================================

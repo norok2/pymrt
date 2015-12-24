@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: generate output for LaTeX.
+mri_tools: generate output for LaTeX.
 """
-
 
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-#from __future__ import unicode_literals
-
+from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -52,6 +50,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import mri_tools.modules.base as mrb
+
+
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
@@ -123,6 +123,7 @@ def gen_table(
     A string containing the generated table(s).
 
     """
+
     def tabular(labels, rows, format_dict):
         output_str = ''
         # open wrapping...
@@ -130,11 +131,11 @@ def gen_table(
         # row coloring
         if 'rowcolors' in format_dict:
             output_str += '\\rowcolors{{{}}}{{{}}}{{{}}}\n'.format(
-                len(labels) + 1, *format_dict['rowcolors'])
+                    len(labels) + 1, *format_dict['rowcolors'])
         # vertical stretching
         if 'vstretch' in format_dict:
             output_str += '\\renewcommand{{\\arraystretch}}{{{}}}%\n'.format(
-            format_dict['vstretch'])
+                    format_dict['vstretch'])
         # begin tabular environment
         output_str += '\\begin{{tabular}}{{{}}}\n'.format('r' * len(labels[0]))
         # separator

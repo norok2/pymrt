@@ -1040,7 +1040,7 @@ def angles2linear(
 # ======================================================================
 def linear2angles():
     # todo: implement the inverse of angles2linear
-    raise ('function is not implemented yet')
+    raise ValueError('function is not implemented yet')
     pass
 
 

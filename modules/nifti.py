@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: useful NIfTI-1 utilities.
+mri_tools: useful NIfTI-1 utilities.
 
 TODO:
 - improve affine support
@@ -45,7 +45,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
@@ -240,7 +240,8 @@ def filter(
     """
     nii = nib.load(in_filepath)
     img, aff, hdr = func(
-        nii.get_data(), nii.get_affine(), nii.get_header(), *args, **kwargs)
+            nii.get_data(), nii.get_affine(), nii.get_header(), *args,
+            **kwargs)
     save(out_filepath, img, aff, hdr)
 
 
@@ -278,7 +279,7 @@ def filter_n(
     input_list = []
     for in_filepath in in_filepath_list:
         nii = nib.load(in_filepath)
-        input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
+        input_list.append((nii.get_data(), nii.get_affine(), nii.get_header()))
     img, aff, hdr = func(input_list, *args, **kwargs)
     save(out_filepath, img, aff, hdr)
 
@@ -315,7 +316,7 @@ def filter_n_m(
     input_list = []
     for in_filepath in in_filepath_list:
         nii = nib.load(in_filepath)
-        input_list.append(nii.get_data(), nii.get_affine(), nii.get_header())
+        input_list.append((nii.get_data(), nii.get_affine(), nii.get_header()))
     output_list = func(input_list, *args, **kwargs)
     for (img, aff, hdr), out_filepath in zip(output_list, out_filepath_list):
         save(out_filepath, img, aff, hdr)
@@ -530,9 +531,9 @@ def img_split(
     # save data to output
     for idx, image in enumerate(img_list):
         out_filepath = os.path.join(
-            out_dirpath,
-            filename_addext(out_basename + '-' +
-                            str(idx).zfill(len(str(len(img_list))))))
+                out_dirpath,
+                filename_addext(out_basename + '-' +
+                                str(idx).zfill(len(str(len(img_list))))))
         save(out_filepath, image, img_nii.get_affine())
         out_filepath_list.append(out_filepath)
     return out_filepath_list
@@ -576,13 +577,13 @@ def img_zoom(
     def _zoom(array, zoom, interpolation_order, extra_dim, fill_dim):
         zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
-            array.reshape(shape), zoom, order=interpolation_order)
+                array.reshape(shape), zoom, order=interpolation_order)
         aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
         return array, aff_transform
 
     simple_filter(
-        in_filepath, out_filepath, _zoom,
-        zoom, interpolation_order, extra_dim, fill_dim)
+            in_filepath, out_filepath, _zoom,
+            zoom, interpolation_order, extra_dim, fill_dim)
 
 
 # ======================================================================
@@ -624,13 +625,14 @@ def img_resample(
         zoom = mrg.shape2zoom(array.shape, new_shape, keep_ratio_method)
         zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
-            array.reshape(shape), zoom, order=interpolation_order)
+                array.reshape(shape), zoom, order=interpolation_order)
         # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
         return array
 
     simple_filter(
-        in_filepath, out_filepath, _zoom,
-        new_shape, keep_ratio_method, extra_dim, fill_dim, interpolation_order)
+            in_filepath, out_filepath, _zoom,
+            new_shape, keep_ratio_method, extra_dim, fill_dim,
+            interpolation_order)
 
 
 # ======================================================================
@@ -658,7 +660,8 @@ def img_frame(
         Use longest dimension to get the border size.
     """
     simple_filter(
-        in_filepath, out_filepath, mrg.frame, border, background, use_longest)
+            in_filepath, out_filepath, mrg.frame, border, background,
+            use_longest)
 
 
 # ======================================================================
@@ -684,7 +687,7 @@ def img_reframe(
 
     """
     simple_filter(
-        in_filepath, out_filepath, mrg.reframe, new_shape, background)
+            in_filepath, out_filepath, mrg.reframe, new_shape, background)
 
 
 # ======================================================================
@@ -744,8 +747,9 @@ def img_common_sampling(
     for in_filepath, out_filepath in zip(in_filepath_list, out_filepath_list):
         # ratio should not be kept: keep_ratio_method=None
         img_resample(
-            in_filepath, out_filepath, new_shape, None, interpolation_order,
-            extra_dim, fill_dim)
+                in_filepath, out_filepath, new_shape, None,
+                interpolation_order,
+                extra_dim, fill_dim)
     return out_filepath_list
 
 
@@ -885,8 +889,9 @@ def calc_labels(
         return
 
     simple_filter(
-        in_filepath, out_filepath,
-        lambda x, p: (mrs.find_objects(x.astype(int), *p).astype(int)), *pars)
+            in_filepath, out_filepath,
+            lambda x, p: (mrs.find_objects(x.astype(int), *p).astype(int)),
+            *pars)
 
 
 # ======================================================================
@@ -896,7 +901,7 @@ def calc_stats(
         save_path=None,
         mask_nan=True,
         mask_inf=True,
-        mask_vals=[0.0],
+        mask_vals=(0.0,),
         printing=None,
         title=None,
         compact=False):
@@ -952,10 +957,10 @@ def calc_stats(
             else:
                 title = os.path.basename(img_filepath)
         stats_dict = mrb.calc_stats(
-            img[mask], mask_nan, mask_inf, mask_vals, save_path, title)
+                img[mask], mask_nan, mask_inf, mask_vals, save_path, title)
     else:
         stats_dict = mrb.calc_stats(
-            img[mask], mask_nan, mask_inf, mask_vals, save_path)
+                img[mask], mask_nan, mask_inf, mask_vals, save_path)
     return stats_dict
 
 

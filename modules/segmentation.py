@@ -4,14 +4,12 @@
 mri_tools.segmentation: generic segmentation using scikit
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -51,6 +49,8 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
+
+
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
@@ -113,7 +113,8 @@ def mask_threshold(
         mask = eval('array {} threshold'.format(comparison))
     else:
         raise ValueError(
-            'valid comparison modes are: [{}]'.format(', '.join(comparisons)))
+                'valid comparison modes are: [{}]'.format(
+                        ', '.join(comparisons)))
     return mask
 
 
@@ -168,3 +169,46 @@ def find_objects(
     for value, mask in enumerate(masks):
         labels += mask.astype(int) * (value + 1)
     return labels, masks
+
+
+# ======================================================================
+def snr_analysis(
+        array,
+        num_samples=200):
+    """
+    Estimate the SNR of a real-positive-valued array.
+
+    Args:
+        array:
+
+    Returns:
+
+    """
+    import matplotlib.pyplot as plt
+
+
+    print('start...')
+    hist, bin_edges = np.histogram(array, bins=num_samples, normed=True)
+    step = bin_edges[1] - bin_edges[0]
+    x = np.linspace(0, 100, num_samples)
+    y = np.cumsum(hist) * step
+    y2 = np.array([sp.percentile(array, q) for q in x])
+    plt.figure()
+    plt.plot(hist)
+    plt.figure()
+    plt.plot(x, y)
+    plt.figure()
+    plt.plot(x, y2)
+    plt.show()
+    signal_level = 1
+    noise_level = 10
+    snr = signal_level / noise_level
+    return snr, signal_level, noise_level
+
+
+import nibabel as nib
+
+src = "/nobackup/isar1/TEMP/QSM-PLB" \
+      "/P05_d0_S8_FLASH_3D_0p6_multiecho_corrected_magnitude_sum_Te8.16.nii"
+array = nib.load(src).get_data()
+print(snr_analysis(array))

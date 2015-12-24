@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: basic and advanced generic computations for MRI data analysis.
+mri_tools: basic and advanced generic computations for MRI data analysis.
 """
 
 
@@ -218,7 +218,7 @@ def func_exp_recovery(t_arr, tau, s_0, eff=1.0, const=0.0):
     if s_0 > 0.0 and tau > 0.0 and eff > 0.0:
         s_t_arr = s_0 * (1.0 - 2.0 * eff * np.exp(-t_arr / tau)) + const
     else:
-        s_t_arr = np.tile(np.inf, len((t_arr)))
+        s_t_arr = np.tile(np.inf, len(t_arr))
     return s_t_arr
 
 

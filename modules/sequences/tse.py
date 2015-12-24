@@ -30,7 +30,7 @@ from __future__ import unicode_literals
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import warnings  # Warning control
 # :: External Imports
-import numpy as np  # NumPy (multidimensional numerical arrays library)
+# import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import sympy as sym  # SymPy (symbolic CAS library)
@@ -128,8 +128,7 @@ def evolution_tse(
         tmp_magnetization, tmp_excitation = evolution(
                 tmp_magnetization, 2 * flip_angle, (1, 2), refocus_interval,
                 relaxation_longitudinal, relaxation_transverse,
-                resonance_offset,
-                equilibrium_magnetization)
+                resonance_offset, equilibrium_magnetization)
     final_magnetization, tmp_excitation = evolution(
             tmp_magnetization, (2 * flip_angle), (1, 2),
             (repetition_time - turbo_factor * refocus_interval),
@@ -180,7 +179,8 @@ if __name__ == '__main__':
     print('\nSteady-State after excitation:')
     print(ss[1])
 
-    # signal = sym.sqrt(sym.trigsimp(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1]))
+    # signal = sym.sqrt(sym.trigsimp(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][
+    # 1]))
     signal = sym.sqrt(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1])
     print('\nSignal expression:')
     print(signal)

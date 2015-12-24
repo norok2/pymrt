@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mr_lib: read files with a JCAMP-DX-like structure.
+mri_tools: read files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """
-
 
 # ======================================================================
 # :: Future Imports
@@ -13,23 +12,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
-
-__version__ = '0.0.0.10'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -49,6 +31,8 @@ import datetime  # Basic date and time types
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+
+
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
@@ -99,10 +83,10 @@ def _auto_convert(val_str):
     else:
         try:
             val = int(val_str)
-        except (ValueError):
+        except ValueError:
             try:
                 val = float(val_str)
-            except (ValueError):
+            except ValueError:
                 val = val_str
     return val
 
@@ -136,9 +120,9 @@ def _parse_record(record):
             val = _auto_convert(val_data_str)
         else:
             val_hdr = [int(dim)
-                for dim in val_hdr_str.split(',')]
+                       for dim in val_hdr_str.split(',')]
             val_data = [_auto_convert(value)
-                for value in val_data_str.split(' ')]
+                        for value in val_data_str.split(' ')]
             val = np.array(val_data).reshape(val_hdr)
     else:
         val = _auto_convert(val)
@@ -166,9 +150,9 @@ def read(filepath):
 
     """
     ldr_sep, ldr_usr_sep, ldr_dict_sep = '##', '$', '='
-    with open(filepath, 'rb') as ifile:
+    with open(filepath, 'rb') as in_file:
         ldr_std, ldr_user = {}, {}
-        data = ifile.read()
+        data = in_file.read()
         data, comments = _strip_comments(data)
         ldrs = [ldr for ldr in data.split(ldr_sep) if ldr]
         ldr_list = []
