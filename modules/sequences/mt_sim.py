@@ -602,32 +602,27 @@ def test_z_spectrum():
     delay3 = NoRfPulse(30.0e-3)
     readout_pulse = RfPulseRect(10.0e-6)
     spoiler = Spoiler(1.0)
-    mt_pulse = RfPulseGauss(4000, 40.0e-3, np.deg2rad(220.0))
+    powers = np.linspace(0.5, 1, 4)
+    for power in powers:
+        mt_pulse = RfPulseGauss(4000, 40.0e-3, np.deg2rad(220.0 * power))
 
-    pulse_sequence = PulseTrain(
-            PulseList(
-                    [delay1,
-                     spoiler,
-                     mt_pulse,
-                     delay2,
-                     spoiler,
-                     readout_pulse,
-                     delay3]),
-            num_repetitions)
+        pulse_sequence = PulseTrain(
+                PulseList(
+                        [delay1,
+                         spoiler,
+                         mt_pulse,
+                         delay2,
+                         spoiler,
+                         readout_pulse,
+                         delay3]),
+                num_repetitions)
 
-    w = np.linspace(-300, 300, 301)
-    s_func = np.vectorize(pulse_sequence.signal)
-    s = s_func(spin_model, w + w_rf)
-    plt.plot(w, s)
+        w = np.linspace(-300, 300, 101)
+        s_func = np.vectorize(pulse_sequence.signal)
+        s = s_func(spin_model, w + w_rf)
+        plt.figure()
+        plt.plot(w, s)
     plt.show()
-
-    print(spin_model)
-    print(delay1)
-    print(readout_pulse)
-    print(mt_pulse)
-    print(spoiler)
-    print(signal)
-    print(spin_model.detector())
 
 
 # ======================================================================
@@ -636,7 +631,7 @@ if __name__ == '__main__':
     # test_symbolic()
     # test_simple()
     # test_mt_sequence()
-    test_z_spectrum()
-    # import cProfile
-    #
-    # cProfile.run('', sort=2)
+    # test_z_spectrum()
+    import cProfile
+
+    cProfile.run('test_z_spectrum()', sort=2)
