@@ -16,12 +16,15 @@
       <w>filenames</w>
       <w>filepath</w>
       <w>filepaths</w>
+      <w>freqs</w>
       <w>imag</w>
       <w>isar</w>
       <w>leasq</w>
       <w>linearize</w>
+      <w>lineshape</w>
       <w>linestyles</w>
       <w>loglin</w>
+      <w>lorentzian</w>
       <w>lossless</w>
       <w>magnetom</w>
       <w>matlab</w>
@@ -53,6 +56,8 @@
       <w>stdout</w>
       <w>subpath</w>
       <w>superellipsoid</w>
+      <w>superlorentz</w>
+      <w>superlorentzian</w>
       <w>thresholding</w>
       <w>vals</w>
       <w>voxel</w>
