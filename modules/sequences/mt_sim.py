@@ -581,7 +581,10 @@ def test_mt_sequence():
 
 
 # ======================================================================
-def test_z_spectrum():
+def test_z_spectrum(
+        freqs=np.logspace(0, 4, 400) * 50,
+        powers=np.logspace(-1, 1, 20),
+        save_file='z_spectrum.npz'):
     """
     Notes: import pi, sin and cos from numpy
 
@@ -602,9 +605,9 @@ def test_z_spectrum():
     delay3 = NoRfPulse(30.0e-3)
     readout_pulse = RfPulseRect(10.0e-6)
     spoiler = Spoiler(1.0)
-    powers = np.linspace(0.5, 1, 4)
-    for power in powers:
-        mt_pulse = RfPulseGauss(4000, 40.0e-3, np.deg2rad(220.0 * power))
+    data = np.zeros((len(freqs), len(powers)))
+    for i, power in enumerate(powers):
+        mt_pulse = RfPulseGauss(4000, 40.0e-3, np.deg2rad(90.0 * power))
 
         pulse_sequence = PulseTrain(
                 PulseList(
@@ -617,13 +620,10 @@ def test_z_spectrum():
                          delay3]),
                 num_repetitions)
 
-        w = np.linspace(-300, 300, 101)
         s_func = np.vectorize(pulse_sequence.signal)
-        s = s_func(spin_model, w + w_rf)
-        plt.figure()
-        plt.plot(w, s)
-    plt.show()
-
+        s = s_func(spin_model, w_rf + freqs)
+        data[:, i] = s
+    np.savez(save_file, freqs, powers, data)
 
 # ======================================================================
 if __name__ == '__main__':
