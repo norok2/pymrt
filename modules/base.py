@@ -16,8 +16,8 @@ import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-# import time  # Time access and conversions
-# import datetime  # Basic date and time types
+import time  # Time access and conversions
+import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
@@ -52,13 +52,14 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
+from mri_tools import _EVENTS
 
 # from mri_tools import get_first_line
 
 
 # ======================================================================
 # :: Custom defined constants
-
+_EVENTS += [('mri_tools.base', time.time())]
 
 # ======================================================================
 # :: Default values usable in functions.
@@ -195,6 +196,57 @@ def multi_replace(text, replace_list):
 
 
 # ======================================================================
+def cartesian(arrays):
+    """
+    Generate a cartesian product of input arrays.
+
+    Parameters
+    ----------
+    arrays : list of array-like
+        1-D arrays to form the cartesian product of.
+    out : ndarray
+        Array to place the cartesian product in.
+
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape (M, len(arrays)) containing cartesian products
+        formed of input arrays.
+
+    Examples
+    --------
+    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+    array([[1, 4, 6],
+           [1, 4, 7],
+           [1, 5, 6],
+           [1, 5, 7],
+           [2, 4, 6],
+           [2, 4, 7],
+           [2, 5, 6],
+           [2, 5, 7],
+           [3, 4, 6],
+           [3, 4, 7],
+           [3, 5, 6],
+           [3, 5, 7]])
+
+    """
+
+    arrays = [np.asarray(x) for x in arrays]
+    dtype = arrays[0].dtype
+
+    n = np.prod([x.size for x in arrays])
+    out = np.zeros([n, len(arrays)], dtype=dtype)
+
+    m = n / arrays[0].size
+    out[:, 0] = np.repeat(arrays[0], m)
+    if arrays[1:]:
+        out[0:m, 1:] = cartesian(arrays[1:])
+        for j in range(1, arrays[0].size):
+            out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
+    return out
+
+
+# ======================================================================
 def set_keyword_parameters(
         func,
         values):
@@ -224,7 +276,7 @@ def set_keyword_parameters(
     """
     inspected = inspect.getargspec(func)
     defaults = dict(
-        zip(reversed(inspected.args), reversed(inspected.defaults)))
+            zip(reversed(inspected.args), reversed(inspected.defaults)))
     kw_params = {}
     for key in inspected.args:
         if key in values:
@@ -298,11 +350,11 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
             # 1:]]
             # :: new style
             proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True, close_fds=True)
+                    cmd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True, close_fds=True)
             p_stdout = proc.stdout.read()
             p_stderr = proc.stderr.read()
             if verbose > VERB_LVL['medium']:
@@ -848,12 +900,12 @@ def string_between(
     if begin_str in in_str and end_str in in_str:
         if greedy:
             out_str = in_str[
-                      in_str.find(begin_str) + incl_begin:
-                      in_str.rfind(end_str) + incl_end]
+            in_str.find(begin_str) + incl_begin:
+            in_str.rfind(end_str) + incl_end]
         else:
             out_str = in_str[
-                      in_str.rfind(begin_str) + incl_begin:
-                      in_str.find(end_str) + incl_end]
+            in_str.rfind(begin_str) + incl_begin:
+            in_str.find(end_str) + incl_end]
     else:
         out_str = ''
     return out_str
@@ -882,7 +934,7 @@ def check_redo(
         Computation to be re-done.
 
     """
-    #todo: include output_dir autocreation
+    # todo: include output_dir autocreation
     if not in_filepath_list:
         raise IndexError('List of input files is empty.')
     for in_filepath in in_filepath_list:
@@ -1211,7 +1263,7 @@ def calc_stats(
             'min': np.min(array),
             'max': np.max(array),
             'sum': np.sum(array),
-            'num': np.size(array), }
+            'num': np.size(array),}
     else:
         stats_dict = {
             'avg': None, 'std': None,
@@ -1232,7 +1284,7 @@ def calc_stats(
         for label in label_list:
             if compact:
                 print_str += '{}={}, '.format(
-                    label, compact_num_str(stats_dict[label]))
+                        label, compact_num_str(stats_dict[label]))
             else:
                 print_str += '{}={}, '.format(label, stats_dict[label])
         print(print_str)
@@ -1443,8 +1495,36 @@ def curve_fit(param_list):
         n_fit_par = len(param_list[3])  # number of fitting parameters
         result = \
             np.tile(err_val, n_fit_par), \
-            np.tile(err_val, (n_fit_par, n_fit_par))
+                np.tile(err_val, (n_fit_par, n_fit_par))
     return result
+
+
+# ======================================================================
+def _print_elapsed(
+        events,
+        label='\nElapsed Time(s): '):
+    """
+    Print quick-and-dirty elapsed times at specific, labelled, intervals.
+
+    Args:
+        elapsed (list[str,time]: A list of labelled time points in the form of
+            2-tuples: (label, time.time())
+        label:
+
+    Returns:
+
+    """
+    print(label, end='\n' if len(events) > 2 else '')
+    first_elapsed = events[0][1]
+    for i in range(len(events) - 1):
+        name = events[i + 1][0]
+        curr_elapsed = events[i + 1][1]
+        last_elapsed = events[i][1]
+        diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
+        diff_last = datetime.timedelta(0, curr_elapsed - last_elapsed)
+        if diff_first == diff_last:
+            diff_first = '-'
+        print('{:24s} {:>24s}, {:>24s}'.format(name, diff_last, diff_first))
 
 
 # ======================================================================

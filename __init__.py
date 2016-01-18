@@ -4,7 +4,6 @@
 mri_tools: collection of software for MRI analysis
 """
 
-
 # Copyright (C) 2015 Riccardo Metere <metere@cbs.mpg.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -43,7 +42,7 @@ __version__ = "$Revision$"
 INFO = {
     'authors': (
         'Riccardo Metere <metere@cbs.mpg.de>',
-        ),
+    ),
     'copyright': 'Copyright (C) 2015',
     'license': 'License: GNU General Public License version 3 (GPLv3)',
     'notice':
@@ -53,19 +52,20 @@ It is covered by the GNU General Public License version 3 (GPLv3).
 You are welcome to redistribute it under its terms and conditions.
         """,
     'version': __version__
-    }
-
+}
 
 # ======================================================================
 # :: supported verbosity levels (level 4 skipped on purpose)
 VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
 D_VERB_LVL = VERB_LVL['low']
 
+# ======================================================================
+# :: quick and dirty timing facility
+_EVENTS = []
 
 # ======================================================================
 # :: export modules
 __path__.append(os.path.join(os.path.dirname(__file__), 'modules'))
-
 
 # ======================================================================
 # Greetings
