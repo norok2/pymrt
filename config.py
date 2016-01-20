@@ -31,5 +31,5 @@ from __future__ import unicode_literals
 # todo: automagically find them?
 EXT_CMD = {
     'fsl/4.1/flirt': 'fsl4.1-flirt',
-    'fsl/4.1/bet': 'fsl4.1-bet2',
+    'fsl/4.1/bet': 'fsl4.1-bet',
 }

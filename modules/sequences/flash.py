@@ -124,8 +124,8 @@ def evolution_flash(
             equilibrium_magnetization)
 
     # attempt some simplification
-    for idx in range(num_dim):
-        final_magnetization[idx] = sym.trigsimp(final_magnetization[idx])
+    for i in range(num_dim):
+        final_magnetization[i] = sym.trigsimp(final_magnetization[i])
     return final_magnetization, first_excitation
 
 
@@ -154,8 +154,8 @@ def magnetization(
         label='',
         num_dim=3):
     mag_vec = sym.Matrix(
-            [sym.Symbol('M_{}_{}'.format(label, idx))
-             for idx in range(num_dim)])
+            [sym.Symbol('M_{}_{}'.format(label, i))
+             for i in range(num_dim)])
     return mag_vec
 
 

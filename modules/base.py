@@ -286,6 +286,7 @@ def set_keyword_parameters(
     return kw_params
 
 
+# ======================================================================
 def mdot(*array_list):
     """
     Cumulative application of `numpy.dot` operation.
@@ -295,6 +296,24 @@ def mdot(*array_list):
     for item in array_list[1:]:
         array = np.dot(array, item)
     return array
+
+
+# ======================================================================
+def ndot(array, dim=-1, step=1):
+    """
+    Cumulative application of `numpy.dot` operation.
+    """
+
+    if dim < 0:
+        dim += array.ndim
+    start = 0 if step > 0 else array.shape[dim] - 1
+    stop = array.shape[dim] if step > 0 else -1
+    prod = array[
+        [slice(None) if j != dim else start for j in range(array.ndim)]]
+    for i in range(start, stop, step)[1:]:
+        indexes = [slice(None) if j != dim else i for j in range(array.ndim)]
+        prod = np.dot(prod, array[indexes])
+    return prod
 
 
 def commutator(a, b):
@@ -318,36 +337,27 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
     Execute command and retrieve output at the end of execution.
 
-    Parameters
-    ==========
-    cmd : str
-        Command to execute.
-    use_pipes : bool (optional)
-        If True, get both stdout and stderr streams from the process.
-    dry : bool (optional)
-        If True, the command is printed instead of being executed (dry run).
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        command (str): Command to execute.
+        use_pipes (bool): Get stdout and stderr streams from the process.
+        dry (bool): Print rather than execute the command (dry run).
+        verbose (int): Set level of verbosity
 
-    Returns
-    =======
-    p_stdout : str
-        The stdout of the process after execution.
-    p_stderr : str
-        The stderr of the process after execution.
+    Returns:
+        p_stdout (str|None): if use_pipes the stdout of the process
+        p_stderr (str|None): if use_pipes the stderr of the process
 
     """
     p_stdout = p_stderr = None
     if dry:
         print('Dry:\t{}'.format(cmd))
     else:
-        if verbose > VERB_LVL['low']:
+        if verbose >= VERB_LVL['high']:
             print('Cmd:\t{}'.format(cmd))
         if use_pipes:
-            #            # :: deprecated
-            #            proc = os.popen3(cmd)
-            #            p_stdout, p_stderr = [item.read() for item in proc[
-            # 1:]]
+            # # :: deprecated
+            # proc = os.popen3(cmd)
+            # p_stdout, p_stderr = [item.read() for item in proc[1:]]
             # :: new style
             proc = subprocess.Popen(
                     cmd,
@@ -357,13 +367,12 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
                     shell=True, close_fds=True)
             p_stdout = proc.stdout.read()
             p_stderr = proc.stderr.read()
-            if verbose > VERB_LVL['medium']:
+            if verbose >= VERB_LVL['debug']:
                 print('stdout:\t{}'.format(p_stdout))
-            if verbose > VERB_LVL['medium']:
                 print('stderr:\t{}'.format(p_stderr))
         else:
-            #            # :: deprecated
-            #            os.system(cmd)
+            # # :: deprecated
+            # os.system(cmd)
             # :: new style
             subprocess.call(cmd, shell=True)
     return p_stdout, p_stderr
@@ -388,16 +397,16 @@ def groups_from(lst, grouping):
 
     """
     group, groups = [], []
-    jdx = 0
-    count = grouping[jdx] if jdx < len(grouping) else len(lst) + 1
-    for idx, item in enumerate(lst):
-        if idx >= count:
+    j = 0
+    count = grouping[j] if j < len(grouping) else len(lst) + 1
+    for i, item in enumerate(lst):
+        if i >= count:
             loop = True
             while loop:
                 groups.append(group)
                 group = []
-                jdx += 1
-                add = grouping[jdx] if jdx < len(grouping) else len(lst) + 1
+                j += 1
+                add = grouping[j] if j < len(grouping) else len(lst) + 1
                 if add < 0:
                     add = len(lst) + 1
                 count += add
@@ -1315,7 +1324,7 @@ def slice_array(
 
     """
     # initialize slice index
-    slab = [slice(None)] * len(array.shape)
+    slab = [slice(None)] * array.ndim
     # ensure index is meaningful
     if not index:
         index = np.int(array.shape[axis] / 2.0)
@@ -1418,7 +1427,7 @@ def ndstack(arr_list, axis=-1):
 
     """
     arr = arr_list[0]
-    n_dim = len(arr.shape) + 1
+    n_dim = arr.ndim + 1
     if axis < 0:
         axis += n_dim
     if axis < 0:
@@ -1429,9 +1438,9 @@ def ndstack(arr_list, axis=-1):
     shape = arr.shape[:axis] + tuple([len(arr_list)]) + arr.shape[axis:]
     # stack arrays together
     arr = np.zeros(shape, dtype=arr.dtype)
-    for idx, src in enumerate(arr_list):
+    for i, src in enumerate(arr_list):
         index = [slice(None)] * n_dim
-        index[axis] = idx
+        index[axis] = i
         arr[tuple(index)] = src
     return arr
 
@@ -1454,13 +1463,12 @@ def ndsplit(arr, axis=-1):
         A list of NumPy arrays of the same size.
 
     """
-    n_dim = len(arr.shape)
     # split array apart
     arr_list = []
-    for idx in range(arr.shape[axis]):
+    for i in range(arr.shape[axis]):
         # determine index for slicing
-        index = [slice(None)] * n_dim
-        index[axis] = idx
+        index = [slice(None)] * arr.ndim
+        index[axis] = i
         arr_list.append(arr[index])
     return arr_list
 
@@ -1500,8 +1508,26 @@ def curve_fit(param_list):
 
 
 # ======================================================================
+def _elapsed(
+        name,
+        events=_EVENTS):
+    """
+    Print quick-and-dirty elapsed times at specific, labelled, intervals.
+
+    Args:
+        elapsed (list[str,time]: A list of labelled time points in the form of
+            2-tuples: (label, time.time())
+        label:
+
+    Returns:
+
+    """
+    events.append((name, time.time()))
+
+
+# ======================================================================
 def _print_elapsed(
-        events,
+        events=_EVENTS,
         label='\nElapsed Time(s): '):
     """
     Print quick-and-dirty elapsed times at specific, labelled, intervals.
@@ -1543,3 +1569,17 @@ if __name__ == '__main__':
     # print(significant_figures(77, 1))
     # print(significant_figures(77, 2))
     # print(significant_figures(77, 3))
+
+
+# shape = np.array((100000, 20, 20))
+# dim = 0
+# arr = np.arange(np.prod(shape)).reshape(shape)
+# print(arr.shape)
+# _EVENTS += [('created', time.time())]
+# prod1 = mdot(*[arr[j, :, :] for j in range(shape[dim])][::-1])
+# _EVENTS += [('mdot', time.time())]
+# prod2 = ndot(arr, dim, -1)
+# _EVENTS += [('ndot', time.time())]
+# print(np.sum(np.abs(prod1 - prod2)))
+# _print_elapsed()
+# quit()

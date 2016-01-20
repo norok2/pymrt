@@ -158,8 +158,8 @@ def find_objects(
         containers = [
             [slice(None) for dim in labels.shape]
             for num in range(num_labels)]
-    for idx, (label, container) in enumerate(zip(labels, containers)):
-        label_value = idx + 1
+    for i, (label, container) in enumerate(zip(labels, containers)):
+        label_value = i + 1
         mask = labels[container]
         mask = (mask == label_value)
         masks.append(mask)
@@ -205,10 +205,13 @@ def snr_analysis(
     snr = signal_level / noise_level
     return snr, signal_level, noise_level
 
+# ======================================================================
+if __name__ == '__main__':
+    print(__doc__)
 
-import nibabel as nib
+    import nibabel as nib
 
-src = "/nobackup/isar1/TEMP/QSM-PLB" \
-      "/P05_d0_S8_FLASH_3D_0p6_multiecho_corrected_magnitude_sum_Te8.16.nii"
-array = nib.load(src).get_data()
-print(snr_analysis(array))
+    src = "/nobackup/isar1/TEMP/QSM-PLB" \
+          "/P05_d0_S8_FLASH_3D_0p6_multiecho_corrected_magnitude_sum_Te8.16.nii"
+    array = nib.load(src).get_data()
+    print(snr_analysis(array))

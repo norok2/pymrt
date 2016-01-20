@@ -78,8 +78,10 @@ from mri_tools.modules.base import _elapsed, _print_elapsed
 
 # ======================================================================
 # Proton Gyromagnetic Ratio
+# Hz / T / rad
 GAMMA = \
     sp.constants.physical_constants['proton gyromag. ratio'][0]
+# MHz / T
 GAMMA_BAR = \
     sp.constants.physical_constants['proton gyromag. ratio over 2 pi'][0]
 
@@ -99,6 +101,14 @@ def superlorentz_integrand(x, t):
 # ======================================================================
 @np.vectorize
 def superlorentz(x):
+    """
+
+    Args:
+        x:
+
+    Returns:
+
+    """
     # scipy.integrate.quad returns both the value and the error, here ignored
     return sp.integrate.quad(
             lambda t: superlorentz_integrand(x, t), 0.0, pi / 2.0)[0]
@@ -117,9 +127,10 @@ def _superlorentz_approx(
         x_i=_SUPERLORENTZ['x'],
         y_i=_SUPERLORENTZ['y']):
     """
+    something
 
     Args:
-        x (ndarray[float]:
+        x (ndarray):
         x_i:
         y_i:
 
@@ -433,6 +444,8 @@ def dynamics_operator(
     """
     # todo: fix it!
     # todo: separate spin_model and excitation parts
+    # todo: include chemical exchange
+    # todo: include cross-relaxation
     # :: no-delete version / without cross-relaxation
     # model_info = _model_info(approx)
     # l_op = np.zeros(model_info['operator_shape']).astype(type(m0[0]))
@@ -1172,7 +1185,7 @@ def test_approx_propagator(
 def test_z_spectrum(
         freqs=np.logspace(0, 5, 16),
         powers=np.linspace(0.1, 10, 16),
-        save_file='z_spectrum_approx.npz'):
+        save_file='/tmp/mri_tools/z_spectrum_approx.npz'):
     """
     Test calculation of z-spectra
 

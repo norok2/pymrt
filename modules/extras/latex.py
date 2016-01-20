@@ -141,23 +141,23 @@ def gen_table(
         # separator
         output_str += '\\hline \\hline\n'
         # write labels
-        for idx, label in enumerate(labels):
-            for jdx, col in enumerate(label):
+        for i, label in enumerate(labels):
+            for j, col in enumerate(label):
                 if label_filters:
-                    col = label_filters[idx][jdx](col)
+                    col = label_filters[i][j](col)
                 output_str += to_safe('{}\t'.format(col))
-                output_str += '& ' if jdx + 1 < len(label) else '\\\\\n'
+                output_str += '& ' if j + 1 < len(label) else '\\\\\n'
         # separator
         output_str += '\hline\n'
         # write data
         seps = mrb.accumulate(grouping) if grouping else []
-        for idx, row in enumerate(rows):
-            for jdx, col in enumerate(row):
+        for i, row in enumerate(rows):
+            for j, col in enumerate(row):
                 if row_filters:
-                    col = row_filters[jdx](col)
+                    col = row_filters[j](col)
                 output_str += to_safe('{}\t'.format(col))
-                output_str += '& ' if jdx + 1 < len(row) else '\\\\\n'
-            if idx + 1 in seps and idx + 1 < len(rows):
+                output_str += '& ' if j + 1 < len(row) else '\\\\\n'
+            if i + 1 in seps and i + 1 < len(rows):
                 output_str += '\\hline\n'
         # separator
         output_str += '\\hline \\hline\n'
@@ -185,9 +185,9 @@ def gen_table(
     if split:
         num_chunks = int(np.ceil(len(rows) / split))
         chunks = []
-        for idx in range(num_chunks):
-            begin_idx = idx * split
-            end_idx = (idx + 1) * split if (idx + 1) < num_chunks else None
+        for i in range(num_chunks):
+            begin_idx = i * split
+            end_idx = (i + 1) * split if (i + 1) < num_chunks else None
             chunks.append(rows[begin_idx:end_idx])
         for chunk in chunks:
             output_str += tabular(labels, chunk, format_dict)

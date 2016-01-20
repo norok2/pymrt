@@ -643,7 +643,7 @@ def nd_superellipsoid(
     # calculate the position of the center of the solid inside the mask
     x_0 = relative2coord(position, shape)
     # create the grid with origin in the middle
-    grid = tuple([slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)])
+    grid = [slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)]
     x_arr = np.ogrid[grid]
     # create the mask
     mask = np.zeros(shape, dtype=float)
@@ -698,10 +698,10 @@ def nd_prism(
         base_mask.shape[:axis] + tuple([extra_shape]) + base_mask.shape[axis:])
     # create indefinite prism
     mask = np.zeros(shape, dtype=bool)
-    for idx in range(extra_shape):
-        if extra_mask[idx]:
+    for i in range(extra_shape):
+        if extra_mask[i]:
             index = [slice(None)] * n_dim
-            index[axis] = idx
+            index[axis] = i
             mask[tuple(index)] = base_mask
     return mask
 
@@ -920,8 +920,8 @@ def decode_affine(
         The array containing the shift along each axis.
 
     """
-    num_dim = affine.shape
-    linear = affine[:num_dim[0] - 1, :num_dim[1] - 1]
+    dims = affine.shape
+    linear = affine[:dims[0] - 1, :dims[1] - 1]
     shift = affine[:-1, -1]
     return linear, shift
 
@@ -946,9 +946,9 @@ def encode_affine(
         The n+1 square matrix describing the affine transformation.
 
     """
-    num_dim = linear.shape
-    affine = np.eye(num_dim[0] + 1)
-    affine[:num_dim[0], :num_dim[1]] = linear
+    dims = linear.shape
+    affine = np.eye(dims[0] + 1)
+    affine[:dims[0], :dims[1]] = linear
     affine[:-1, -1] = shift
     return affine
 
@@ -985,7 +985,8 @@ def num_angles_from_dim(num_dim):
 def angles2linear(
         angles,
         axes_list=None,
-        use_degree=True):
+        use_degree=True,
+        tol=2e6):
     """
     Calculate the linear transformation relative to the specified rotations.
 
@@ -1030,8 +1031,7 @@ def angles2linear(
         linear = np.dot(linear, rotation)
     # :: check that this is a rotation matrix
     det = np.linalg.det(linear)
-    tolerance = np.finfo(np.double).eps
-    if np.abs(det) - 1.0 > tolerance:
+    if np.abs(det) - 1.0 > tol * np.finfo(np.double).eps:
         msg = 'rotation matrix may be inaccurate [det = {}]'.format(repr(det))
         warnings.warn(msg)
     return linear
@@ -1127,11 +1127,11 @@ def weighted_center(
     # numpy.double to improve the accuracy of the norm and the weighted center
     array = array.astype(np.double)
     norm = sp.ndimage.sum(array, labels, index)
-    grid = np.ogrid[[slice(0, idx) for idx in array.shape]]
+    grid = np.ogrid[[slice(0, i) for i in array.shape]]
     # numpy.double to improve the accuracy of the result
     center = np.zeros(array.ndim).astype(np.double)
-    for idx in range(array.ndim):
-        center[idx] = sp.ndimage.sum(array * grid[idx], labels, index) / norm
+    for i in range(array.ndim):
+        center[i] = sp.ndimage.sum(array * grid[i], labels, index) / norm
     return center
 
 
@@ -1183,17 +1183,17 @@ def weighted_covariance(
     norm = sp.ndimage.sum(array, labels, index)
     if origin is None:
         origin = np.array(sp.ndimage.center_of_mass(array, labels, index))
-    grid = np.ogrid[[slice(0, idx) for idx in array.shape]] - origin
+    grid = np.ogrid[[slice(0, i) for i in array.shape]] - origin
     # numpy.double to improve the accuracy of the result
     cov = np.zeros((array.ndim, array.ndim)).astype(np.double)
-    for idx in range(array.ndim):
-        for jdx in range(array.ndim):
-            if idx <= jdx:
-                cov[idx, jdx] = sp.ndimage.sum(
-                    array * grid[idx] * grid[jdx], labels, index) / norm
+    for i in range(array.ndim):
+        for j in range(array.ndim):
+            if i <= j:
+                cov[i, j] = sp.ndimage.sum(
+                    array * grid[i] * grid[j], labels, index) / norm
             else:
                 # the covariance mass matrix is symmetric
-                cov[idx, jdx] = cov[jdx, idx]
+                cov[i, j] = cov[j, i]
     return cov
 
 

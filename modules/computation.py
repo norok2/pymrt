@@ -4,7 +4,6 @@
 mri_tools: basic and advanced generic computations for MRI data analysis.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
@@ -12,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+# todo: include kwargs to function calls
+# todo: get rid of tty colorify
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -30,7 +31,6 @@ import multiprocessing  # Process-based parallelism
 # import inspect  # Inspect live objects
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -54,10 +54,13 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import mri_tools.modules.base as mrb
 import mri_tools.modules.utils as mru
 import mri_tools.modules.nifti as mrn
+
 # from dcmpi.lib.common import ID
+
 # from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
+
 # from mri_tools import get_first_line
 
 
@@ -91,17 +94,36 @@ def preset_t1_mp2rage_builtin():
         'param_select': ['ProtocolName', '_series'],
         'match': '.*MP2RAGE.*',
         'dtype': 'float',
-        'mask': [[None], [None], [None], [0]],
+        'mask': [[None], [None], [None], [1]],
     }
     new_opts.update({
-        'img_func': 'match_series',
-        'img_params': (
-            (
-                ('.*T1_Images.*', new_opts['types'][0]),
-                ('.*INV2(?!_PHS).*', new_opts['types'][1]),
+        'compute_func': 'match_series',
+        'compute_kwargs': {
+            'matches': (
+                ('.*_T1_Images.*', new_opts['types'][0]),
+                ('.*_INV2(?!_PHS).*', new_opts['types'][1]),
             ),
-        )
+        }
     })
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_memp2rage_loglin2():
+    """
+    Preset to get built-in T2* maps from the ME-MP2RAGE sequence.
+    """
+    new_opts = {
+        'types': ['T2S', 'PD'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '.*ME-MP2RAGE.*_INV2(?!_PHS).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_loglin2',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+    }
     return new_opts
 
 
@@ -130,8 +152,10 @@ def preset_t2s_multiecho_loglin():
         'match': '.*FLASH.*',
         'dtype': 'float',
         'multi_acq': False,
-        'img_func': 'fit_monoexp_decay_loglin',
-        'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
+        'compute_func': 'fit_monoexp_decay_loglin',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
     }
     return new_opts
 
@@ -147,8 +171,10 @@ def preset_t2s_multiecho_loglin2():
         'match': '.*FLASH.*',
         'dtype': 'float',
         'multi_acq': False,
-        'img_func': 'fit_monoexp_decay_loglin2',
-        'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
+        'compute_func': 'fit_monoexp_decay_loglin2',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
     }
     return new_opts
 
@@ -164,10 +190,49 @@ def preset_t2s_multiecho_leasq():
         'match': '.*FLASH.*',
         'dtype': 'float',
         'multi_acq': False,
-        'img_func': 'fit_monoexp_decay_leasq',
-        'img_params': ('EchoTime::ms', {'tau': 'T2S', 's_0': 'PD'})
+        'compute_func': 'fit_monoexp_decay_leasq',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
     }
     return new_opts
+
+
+# ======================================================================
+def preset_qsm_as_legacy():
+    """
+    Preset to get built-in CHI maps from the FLASH sequence.
+    """
+    new_opts = {
+        'types': ['CHI', 'MSK'],
+        'param_select': [
+            'ProtocolName', 'EchoTime::ms', 'ImagingFrequency', '_series'],
+        'match': '.*FLASH.*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'ext_qsm_as_legacy',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def ext_qsm_as_legacy(images, params, ti_label, img_types):
+    print(params)
+    norm_factor = 1e4
+    y_arr = mrb.ndstack(images, -1).astype(float)
+    y_arr = y_arr[..., 0]  # use only the modulus
+    y_arr = y_arr / np.max(y_arr) * norm_factor
+    x_arr = np.array(params[ti_label]).astype(float)
+    p_arr = fit_ndarray(
+            y_arr, x_arr, func_exp_decay,
+            (np.mean(x_arr), np.mean(y_arr)), method='lsqr')
+    img_list = mrb.ndsplit(p_arr, -1)
+    type_list = ('tau', 's_0')
+    img_type_list = tuple([img_types[key] for key in type_list])
+    return img_list, img_type_list
 
 
 # ======================================================================
@@ -175,12 +240,26 @@ def time_to_rate(
         array,
         in_units='ms',
         out_units='Hz'):
-    factor = 1.0
+    k = 1.0
     if in_units == 'ms':
-        factor *= 1e3
+        k *= 1.0e3
     if out_units == 'kHz':
-        factor *= 1e-3
-    array[array != 0.0] = factor / array[array != 0.0]
+        k *= 1.0e-3
+    array[array != 0.0] = k / array[array != 0.0]
+    return array
+
+
+# ======================================================================
+def rate_to_time(
+        array,
+        in_units='Hz',
+        out_units='ms'):
+    k = 1.0
+    if in_units == 'kHz':
+        k *= 1.0e3
+    if out_units == 'ms':
+        k *= 1.0e-3
+    array[array != 0.0] = k / array[array != 0.0]
     return array
 
 
@@ -262,8 +341,8 @@ def fit_monoexp_decay_leasq(
     y_arr = y_arr / np.max(y_arr) * norm_factor
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = fit_ndarray(
-        y_arr, x_arr, func_exp_decay,
-        (np.mean(x_arr), np.mean(y_arr)), method='non-linear')
+            y_arr, x_arr, func_exp_decay,
+            (np.mean(x_arr), np.mean(y_arr)), method='lsqr')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
     img_type_list = tuple([img_types[key] for key in type_list])
@@ -280,28 +359,28 @@ def fit_monoexp_decay_loglin(
     Fit monoexponential decay to images using the log-linear method.
     """
 
-    def prepare(y_arr, factor=0):
-        log_arr = np.zeros_like(y_arr)
+    def prepare(arr, factor=0):
+        log_arr = np.zeros_like(arr)
         # calculate logarithm only of strictly positive values
-        log_arr[y_arr > 0.0] = np.log(y_arr[y_arr > 0.0] * np.e ** factor)
+        log_arr[arr > 0.0] = np.log(arr[arr > 0.0] * np.e ** factor)
         return log_arr
 
-    def fix(p_arr, factor=0):
+    def fix(arr, factor=0):
         # tau = p_arr[..., 0]
         # s_0 = p_arr[..., 1]
-        p_arr[..., 0][p_arr[..., 0] != 0.0] = \
-            - 1.0 / p_arr[..., 0][p_arr[..., 0] != 0.0]
-        p_arr[..., 1] = np.exp(p_arr[..., 1] - factor)
-        return p_arr
+        arr[..., 0][arr[..., 0] != 0.0] = \
+            - 1.0 / arr[..., 0][arr[..., 0] != 0.0]
+        arr[..., 1] = np.exp(arr[..., 1] - factor)
+        return arr
 
-    factor = 12  # 0: untouched, other values might improve results
+    exp_factor = 12  # 0: untouched, other values might improve results
     y_arr = mrb.ndstack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = fit_ndarray(
-        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-        prepare, [factor], fix, [factor],
-        method='linear')
+            y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
+            prepare, [exp_factor], fix, [exp_factor],
+            method='poly')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
     img_type_list = tuple([img_types[key] for key in type_list])
@@ -318,31 +397,31 @@ def fit_monoexp_decay_loglin2(
     Fit monoexponential decay to images using the log-linear method.
     """
 
-    def prepare(y_arr, factor=0, noise_level=0):
-        log_arr = np.zeros_like(y_arr)
+    def prepare(arr, factor=0, noise=0):
+        log_arr = np.zeros_like(arr)
         # calculate logarithm only of strictly positive values
-        y_arr = y_arr - noise_level
-        log_arr[y_arr > 0.0] = np.log(
-            y_arr[y_arr > 0.0] ** 2.0 * np.e ** factor)
+        arr -= noise
+        log_arr[arr > 0.0] = np.log(
+                arr[arr > 0.0] ** 2.0 * np.e ** factor)
         return log_arr
 
-    def fix(p_arr, factor=0):
+    def fix(arr, factor=0):
         # tau = p_arr[..., 0]
         # s_0 = p_arr[..., 1]
-        p_arr[..., 0][p_arr[..., 0] != 0.0] = \
-            - 2.0 / p_arr[..., 0][p_arr[..., 0] != 0.0]
-        p_arr[..., 1] = np.exp(p_arr[..., 1] - factor)
-        return p_arr
+        arr[..., 0][arr[..., 0] != 0.0] = \
+            - 2.0 / arr[..., 0][arr[..., 0] != 0.0]
+        arr[..., 1] = np.exp(arr[..., 1] - factor)
+        return arr
 
-    factor = 12  # 0: untouched, other values might improve results
+    exp_factor = 12  # 0: untouched, other values might improve results
     y_arr = mrb.ndstack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     noise_level = np.percentile(y_arr, 3)
     p_arr = fit_ndarray(
-        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-        prepare, [factor, noise_level], fix, [factor],
-        method='linear')
+            y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
+            prepare, [exp_factor, noise_level], fix, [exp_factor],
+            method='poly')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
     img_type_list = tuple([img_types[key] for key in type_list])
@@ -356,27 +435,40 @@ def fit_ndarray(
         fit_func=None,
         fit_params=None,
         pre_func=None,
-        pre_params=None,
+        pre_args=None,
+        pre_kwargs=None,
         post_func=None,
-        post_params=None,
-        method='non-linear'):
+        post_args=None,
+        post_kwargs=None,
+        method='lsqr'):
     """
     Curve fitting for y = F(x, p)
-    TODO: finish documentation
 
-    Parameters
-    ==========
-    y_arr : ndarray
-        Dependent variable (x dependence in the n-th dimension).
-    x_arr : ndarray
-        Independent variable (same number of elements as the n-th dimension).
+    Args:
+        y_arr (ndarray): Dependent variable
+        x_arr (ndarray): Independent variable
+        fit_func (func):
+        fit_params (list[float]):
+        pre_func (func):
+        pre_args (list):
+        pre_kwargs (dict):
+        post_func (func):
+        post_args (list):
+        post_kwargs (dict):
+        method (str): Method to use for the curve fitting procedure.
 
-    Returns
-    =======
-    p_arr : ndarray
-        Parameters fit (must be)
 
+
+    Returns:
+        p_arr (ndarray) :
     """
+    # TODO: finish documentation
+
+    # y_arr : ndarray ???
+    #    Dependent variable (x dependence in the n-th dimension).
+    # x_arr : ndarray ???
+    #    Independent variable (same number of elements as the n-th dimension).
+
     # reshape to linearize the independent dimensions of the array
     support_axis = -1
     shape = y_arr.shape
@@ -385,19 +477,23 @@ def fit_ndarray(
     num_voxels = y_arr.shape[0]
     p_arr = np.zeros((num_voxels, len(fit_params)))
     # preprocessing
-    if pre_func is not None and pre_params is not None:
-        y_arr = pre_func(y_arr, *pre_params)
+    if pre_func is not None:
+        if pre_args is None:
+            pre_args = []
+        if pre_kwargs is None:
+            pre_kwargs = {}
+        y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
 
-    if method == 'non-linear':
+    if method == 'lsqr':
         iter_param_list = [
             (fit_func, x_arr, y_i_arr, fit_params)
             for y_i_arr in mrb.ndsplit(y_arr, 0)]
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
-        for idx, (par_opt, par_cov) in \
+        for i, (par_opt, par_cov) in \
                 enumerate(pool.imap(mrb.curve_fit, iter_param_list)):
-            p_arr[idx] = par_opt
+            p_arr[i] = par_opt
 
-    elif method == 'linear':
+    elif method == 'poly':
         # polyfit requires to change matrix orientation using transpose
         p_arr = np.polyfit(x_arr, y_arr.transpose(), len(fit_params) - 1)
         # transpose the results back
@@ -408,13 +504,17 @@ def fit_ndarray(
             p_arr = fit_func(y_arr, x_arr, fit_params)
         except Exception as ex:
             print('WW: Exception "{}" in ndarray_fit() method "{}"'.format(
-                ex, method))
+                    ex, method))
 
     # revert to original shape
     p_arr = p_arr.reshape(list(shape[:support_axis]) + [len(fit_params)])
     # post process
-    if post_func is not None and post_params is not None:
-        p_arr = post_func(p_arr, *post_params)
+    if post_func is not None:
+        if post_args is None:
+            post_args = []
+        if post_kwargs is None:
+            post_kwargs = {}
+        y_arr = post_func(y_arr, *post_args, **post_kwargs)
     return p_arr
 
 
@@ -424,10 +524,11 @@ def match_series(images, params, matches):
     TODO: finish documentation
     """
     img_list, img_type_list = [], []
-    for idx, series in enumerate(params['_series']):
-        for match, img_type in matches:
+    for match, img_type in matches:
+        for i, series in enumerate(params['_series']):
             if re.match(match, series):
-                img_list.append(images[idx])
+                # print(match, series, img_type, images[i].shape)  # DEBUG
+                img_list.append(images[i])
                 img_type_list.append(img_type)
                 break
     return img_list, img_type_list
@@ -486,23 +587,24 @@ def sources_generic(
         opts = mrb.merge_dicts(D_OPTS, opts)
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
-        last_acq = None
+        last_acq, new_acq = None, None
         data_filepath_list = mrb.listdir(
-            data_dirpath, opts['data_ext'], pattern)
+                data_dirpath, opts['data_ext'], pattern)
         for data_filepath in data_filepath_list:
             info = mru.parse_filename(mrn.filename_noext(
-                mrb.os.path.basename(data_filepath)))
+                    mrb.os.path.basename(data_filepath)))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
                 series_meta_filepath = os.path.join(
-                    meta_dirpath, mru.to_filename(info, ext=opts['meta_ext']))
+                        meta_dirpath,
+                        mru.to_filename(info, ext=opts['meta_ext']))
                 if os.path.isfile(series_meta_filepath):
                     with open(series_meta_filepath, 'r') as meta_file:
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
-                        meta_dirpath, series_meta['_acquisition'] +
-                                      mrb.add_extsep(opts['meta_ext']))
+                            meta_dirpath, series_meta['_acquisition'] +
+                                          mrb.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -544,10 +646,10 @@ def sources_generic(
                 grouping = list(opts['groups']) * \
                            int((len(sources) / sum(opts['groups'])) + 1)
                 seps = mrb.accumulate(grouping) if grouping else []
-                for idx, source in enumerate(sources):
+                for i, source in enumerate(sources):
                     grouped_sources.append(source)
                     grouped_params.append(params)
-                    if idx + 1 in seps or idx + 1 == len(sources):
+                    if i + 1 in seps or i + 1 == len(sources):
                         grouped_sources_list.append(grouped_sources)
                         grouped_params_list.append(grouped_params)
                         grouped_sources, grouped_params = [], []
@@ -567,8 +669,8 @@ def sources_generic(
 def compute_generic(
         sources,
         out_dirpath,
-        params={},
-        opts={},
+        params=None,
+        opts=None,
         force=False,
         verbose=D_VERB_LVL):
     """
@@ -588,12 +690,14 @@ def compute_generic(
         * mask: (int (1|2|3)-tuple) tuple: Slicing for each dimension
         * adapt_mask: bool: adapt over- or under-sized mask
         * dtype: str: data type to be used for the target images
-        * | img_func: str: name of the function used for computation
-          | img_func(images, params, img_params...) -> img_list, img_type_list
-        * img_params: list: additional parameters for img_func
+        * | compute_func: str: name of the function used for computation
+          | compute_func(images, params, compute_args, compute_kwargs)
+          | -> img_list, img_type_list
+        * compute_args: list: additional positional parameters for compute_func
+        * compute_kwargs: dict: additional keyword parameters for compute_func
         * | aff_func: str: name of the function for affine computation
-          | aff_func(affines, aff_params...) -> affine
-        * aff_params: list: additional parameters for aff_func
+          | aff_func(affines, aff_args...) -> affine
+        * aff_args: list: additional parameters for aff_func
     force : boolean (optional)
         Force calculation of output.
     verbose : int (optional)
@@ -616,6 +720,11 @@ def compute_generic(
     # get the num, name and seq from first source file
     opts = mrb.merge_dicts(D_OPTS, opts)
 
+    if params is None:
+        params = {}
+    if opts is None:
+        opts = {}
+
     targets = []
     info = mru.parse_filename(sources[0])
     if 'ProtocolName' in params:
@@ -627,14 +736,13 @@ def compute_generic(
     # perform the calculation
     if mrb.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
-            print(
-                '{}:\t{}'.format(mrb.tty_colorify('Object', 'g'),
-                                 os.path.basename(info['name'])))
+            print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
             print('Opts:\t{}'.format(json.dumps(opts)))
         images, affines = [], []
-        mask = [(slice(*dim) if dim is not None else slice(None))
-                for dim in opts['mask']]
+        mask = [
+            (slice(*dim) if dim is not None else slice(None))
+            for dim in opts['mask']]
         for source in sources:
             if verbose > VERB_LVL['none']:
                 print('Source:\t{}'.format(os.path.basename(source)))
@@ -650,19 +758,27 @@ def compute_generic(
                     for i in range(len(image.shape))]
             images.append(image[mask])
             affines.append(affine)
-        if 'img_func' in opts:
-            img_func = globals()[opts['img_func']]
-            img_params = opts['img_params'] if 'img_params' in opts else []
-            img_list, img_type_list = img_func(images, params, *img_params)
+        if 'compute_func' in opts:
+            compute_func = eval(opts['compute_func'])
+            if 'compute_args' not in opts:
+                opts['compute_args'] = []
+            if 'compute_kwargs' not in opts:
+                opts['compute_kwargs'] = {}
+            img_list, img_type_list = compute_func(
+                    images, params,
+                    *opts['compute_args'], **opts['compute_kwargs'])
         else:
             img_list, img_type_list = zip(*[(img, img_type)
                                             for img, img_type
                                             in zip(images, itertools.cycle(
-                    opts['types']))])
+                        opts['types']))])
         if 'aff_func' in opts:
             aff_func = globals()[opts['aff_func']]
-            aff_params = opts['aff_params'] if 'aff_params' in opts else []
-            aff = aff_func(affines, *aff_params)
+            if 'aff_args' not in opts:
+                opts['aff_args'] = []
+            if 'aff_kwargs' not in opts:
+                opts['aff_kwargs'] = {}
+            aff = aff_func(affines, *opts['aff_args'], **opts['aff_kwargs'])
         else:
             aff = affines[0]
         for target, target_type in zip(targets, opts['types']):
@@ -680,9 +796,11 @@ def compute_generic(
 # ======================================================================
 def compute(
         sources_func,
-        sources_params,
-        calc_func,
-        calc_params,
+        sources_args,
+        sources_kwargs,
+        compute_func,
+        compute_args,
+        compute_kwargs,
         in_dirpath,
         out_dirpath,
         recursive=False,
@@ -698,17 +816,22 @@ def compute(
 
     Parameters
     ==========
-    get_sources_func : func
+    sources_func : func
         | Function returning a list of list of filepaths.
-        | sources_func(data_path, meta_path, sources_params...) ->
+        | sources_func(data_path, meta_path, sources_args...) ->
         | ((string, dict) list) list
-    get_sources_params : list
-        Parameters to be passed to get_sources_func.
-    calc_func : func
+    sources_args : list
+        Positional parameters passed to get_sources_func.
+    sources_kwargs : list
+        Keyword parameters passed to get_sources_func.
+    compute_func : func
         | Function performing calculation on each list of filepaths.
-        | calc_func(source_list, out_dirpath, calc_params...) -> out_filepath
-    calc_params : list
-        Parameters to be passed to calc_func.
+        | compute_func(source_list, out_dirpath, compute_args...) ->
+        out_filepath
+    compute_args : list
+        Positional parameters passed to compute_func.
+    compute_kwargs : list
+        Keyword parameters passed to compute_func.
     in_dirpath : str
         Path to input directory.
     out_dirpath : str
@@ -741,7 +864,7 @@ def compute(
 
     # extract input files from directory
     sources_list, params_list = sources_func(
-        data_dirpath, meta_dirpath, *sources_params)
+            data_dirpath, meta_dirpath, *sources_args, **sources_kwargs)
     if sources_list and params_list:
         if not out_dirpath:
             out_dirpath = in_dirpath
@@ -756,7 +879,9 @@ def compute(
             print('Meta subpath:\t{}'.format(meta_subpath))
         for sources, params in zip(sources_list, params_list):
             begin_time = time.time()
-            calc_func(sources, out_dirpath, params, *calc_params)
+            compute_func(
+                    sources, out_dirpath, params,
+                    *compute_args, **compute_kwargs)
             end_time = time.time()
             if verbose >= VERB_LVL['medium']:
                 print('Time:\t', datetime.timedelta(0, end_time - begin_time))
@@ -772,10 +897,10 @@ def compute(
             new_in_dirpath = os.path.join(in_dirpath, subdir)
             new_out_dirpath = os.path.join(out_dirpath, subdir)
             compute(
-                sources_func, sources_params,
-                calc_func, calc_params,
-                new_in_dirpath, new_out_dirpath, recursive,
-                meta_subpath, data_subpath, verbose)
+                    sources_func, sources_args, sources_kwargs,
+                    compute_func, compute_args, compute_kwargs,
+                    new_in_dirpath, new_out_dirpath, recursive,
+                    meta_subpath, data_subpath, verbose)
 
 
 # ======================================================================
