@@ -265,7 +265,7 @@ def sample2d(
         array_range = mrb.range_array(array)
     if not cmap:
         if array_range[0] * array_range[1] < 0:
-            cmap = plt.cm.bwr
+            cmap = plt.cm.seismic
         else:
             cmap = plt.cm.binary
     ax.set_aspect('equal')
@@ -517,7 +517,7 @@ def histogram1d_list(
         ax = plt.gca()
     ax.set_aspect('auto')
     plots = []
-    for idx, array in enumerate(arrays):
+    for i, array in enumerate(arrays):
         hist, bin_edges = np.histogram(
             array, bins=bins, range=hist_range, normed=is_normed)
         # adjust scale
@@ -527,8 +527,8 @@ def histogram1d_list(
         elif scale == 'log10':
             hist[hist > 0.0] = np.log10(hist[hist > 0.0])
         # prepare legend
-        if legends is not None and idx < len(legends):
-            legend = legends[idx]
+        if legends is not None and i < len(legends):
+            legend = legends[i]
         else:
             legend = '_nolegend_'
         # plot figure
@@ -701,10 +701,10 @@ def histogram2d(
     except AttributeError:
         hist_range = (hist_range, hist_range)
     hist_range = list(hist_range)
-    for idx in range(2):
-        hist_range[idx] = tuple(
-            [mrb.to_range(val, out_range=array_range[idx])
-             for val in hist_range[idx]])
+    for i in range(2):
+        hist_range[i] = tuple(
+            [mrb.to_range(val, out_range=array_range[i])
+             for val in hist_range[i]])
     hist_range = tuple(hist_range)
     # calculate histogram
     if scale == 'normed':

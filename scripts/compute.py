@@ -11,14 +11,12 @@ available through the 'method' command-line argument.
 See also: mri_tools.modules.compute
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -59,7 +57,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import mri_tools.modules.base as mrb
 # import mri_tools.modules.utils as mru
 # import mri_tools.modules.nifti as mrn
-import mri_tools.computation as mrc
+import mri_tools.modules.computation as mrc
 # import mri_tools.modules.correlate as mrr
 # import mri_tools.modules.geometry as mrg
 # from mri_tools.modules.sequences import mp2rage
@@ -68,6 +66,7 @@ import dcmpi.common as dcmlib
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
+from mri_tools.modules.base import _elapsed, _print_elapsed
 
 
 # ======================================================================
@@ -92,56 +91,57 @@ def handle_arg():
     d_data_subpath = dcmlib.ID['nifti']
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
-        description=__doc__,
-        epilog='v.{} - {}\n{}'.format(
-            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+            description=__doc__,
+            epilog='v.{} - {}\n{}'.format(
+                    INFO['version'], ', '.join(INFO['authors']),
+                    INFO['license']),
+            formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
-        '--ver', '--version',
-        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'],
-            next(line for line in __doc__.splitlines() if line),
-            INFO['copyright'], ', '.join(INFO['authors']),
-            INFO['notice']),
-        action='version')
+            '--ver', '--version',
+            version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+                    INFO['version'],
+                    next(line for line in __doc__.splitlines() if line),
+                    INFO['copyright'], ', '.join(INFO['authors']),
+                    INFO['notice']),
+            action='version')
     arg_parser.add_argument(
-        '-v', '--verbose',
-        action='count', default=d_verbose,
-        help='increase the level of verbosity [%(default)s]')
+            '-v', '--verbose',
+            action='count', default=d_verbose,
+            help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
-        '-f', '--force',
-        action='store_true',
-        help='force new processing [%(default)s]')
+            '-f', '--force',
+            action='store_true',
+            help='force new processing [%(default)s]')
     arg_parser.add_argument(
-        '-i', '--input', metavar='INPUT_DIR',
-        default=d_input_dir,
-        help='set input directory [%(default)s]')
+            '-i', '--input', metavar='DIR',
+            default=d_input_dir,
+            help='set input directory [%(default)s]')
     arg_parser.add_argument(
-        '-o', '--output', metavar='OUTPUT_DIR',
-        default=d_output_dir,
-        help='set output directory [%(default)s]')
+            '-o', '--output', metavar='DIR',
+            default=d_output_dir,
+            help='set output directory [%(default)s]')
     arg_parser.add_argument(
-        '-r', '--recursive',
-        action='store_true',
-        help='Force descending into subdirectories [%(default)s]')
+            '-r', '--recursive',
+            action='store_true',
+            help='Force descending into subdirectories [%(default)s]')
     arg_parser.add_argument(
-        '-e', '--meta_subpath', metavar='DIR',
-        default=d_meta_subpath,
-        help='set extra input subdirectory [%(default)s]')
+            '-e', '--meta_subpath', metavar='DIR',
+            default=d_meta_subpath,
+            help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
-        '-a', '--data_subpath', metavar='DIR',
-        default=d_data_subpath,
-        help='set extra input subdirectory [%(default)s]')
+            '-a', '--data_subpath', metavar='DIR',
+            default=d_data_subpath,
+            help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
-        '-m', '--method', metavar='METHOD',
-        default=d_method,
-        help='set computation target and method [%(default)s]')
+            '-m', '--method', metavar='METHOD',
+            default=d_method,
+            help='set computation target and method [%(default)s]')
     arg_parser.add_argument(
-        '-n', '--options', metavar='OPTS',
-        default=d_options,
-        help='set JSON-formatted options dictionary [%(default)s]')
+            '-n', '--options', metavar='OPTS',
+            default=d_options,
+            help='set JSON-formatted options dictionary [%(default)s]')
     return arg_parser
 
 
@@ -155,14 +155,14 @@ if __name__ == '__main__':
         ARG_PARSER.print_help()
         print()
         print('II:', 'Parsed Arguments:', ARGS)
-    begin_time = time.time()
 
     if ARGS.verbose >= VERB_LVL['medium']:
         print("II: Using method/options: '{}' / '{}'".format(
-            ARGS.method,ARGS.options))
+                ARGS.method, ARGS.options))
 
     if ARGS.method:
         def f_name(label, name): return '_'.join((label, name))
+
         preset_func_name = f_name('preset', ARGS.method)
         sources_func_name = f_name('sources', ARGS.method)
         compute_func_name = f_name('compute', ARGS.method)
@@ -175,29 +175,31 @@ if __name__ == '__main__':
             opts = new_opts
         # source extraction
         sources_func = vars(mrc)[sources_func_name] \
-             if sources_func_name in vars(mrc) else mrc.sources_generic
-        sources_params = [opts, ARGS.force, ARGS.verbose]
+            if sources_func_name in vars(mrc) else mrc.sources_generic
+        sources_args = [opts, ARGS.force, ARGS.verbose]
+        sources_kwargs = {}
         # computation
         compute_func = vars(mrc)[compute_func_name] \
             if compute_func_name in vars(mrc) else mrc.compute_generic
-        compute_params = [opts, ARGS.force, ARGS.verbose]
+        compute_args = [opts, ARGS.force, ARGS.verbose]
+        compute_kwargs = {}
         # inform on the actual functions
         if ARGS.verbose > VERB_LVL['none']:
             print('II: Mode: {} / {} / {}'.format(
-                ARGS.method, sources_func.__name__, compute_func.__name__))
+                    ARGS.method, sources_func.__name__, compute_func.__name__))
             print('II: Opts: {}'.format(json.dumps(opts)))
-        # procede with computation on selected sources
+        # proceed with computation on selected sources
         if opts != {}:
             mrc.compute(
-                sources_func, sources_params,
-                compute_func, compute_params,
-                ARGS.input, ARGS.output, ARGS.recursive,
-                ARGS.meta_subpath, ARGS.data_subpath, ARGS.verbose)
+                    sources_func, sources_args, sources_kwargs,
+                    compute_func, compute_args, compute_kwargs,
+                    ARGS.input, ARGS.output, ARGS.recursive,
+                    ARGS.meta_subpath, ARGS.data_subpath, ARGS.verbose)
         else:
             print("EE: Mode / options combination not supported.")
     else:
         print('WW: Method not specified.')
 
-    end_time = time.time()
+    _elapsed('compute')
     if ARGS.verbose > VERB_LVL['none']:
-        print('TotTime:\t', datetime.timedelta(0, end_time - begin_time))
+        _print_elapsed()

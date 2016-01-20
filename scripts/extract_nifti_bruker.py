@@ -189,13 +189,13 @@ def extract_nii(dirpath, extradir, force, verbose):
             old_mag_filepath_list = mrn.img_split(mag_filepath)
             old_phs_filepath_list = mrn.img_split(phs_filepath)
             base_protocol = info_dict['protocol']
-            for idx, (mt_freq, mt_power, old_mag_filepath, old_phs_filepath) \
+            for i, (mt_freq, mt_power, old_mag_filepath, old_phs_filepath) \
                     in enumerate(zip(
                     method_ldr_dict['MT_superlist_freq'].ravel().tolist(),
                     method_ldr_dict['MT_superlist_power'].ravel().tolist(),
                     old_mag_filepath_list, old_phs_filepath_list)):
                 param_dict = {
-                    'id': idx,
+                    'id': i,
                     'mtfreq': float(mt_freq),
                     'mtpower': float(mt_power)}
                 info_dict['protocol'] = mru.to_protocol(

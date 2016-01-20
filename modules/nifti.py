@@ -529,11 +529,11 @@ def img_split(
     # split data
     img_list = mrb.ndsplit(img, axis)
     # save data to output
-    for idx, image in enumerate(img_list):
+    for i, image in enumerate(img_list):
         out_filepath = os.path.join(
                 out_dirpath,
                 filename_addext(out_basename + '-' +
-                                str(idx).zfill(len(str(len(img_list))))))
+                                str(i).zfill(len(str(len(img_list))))))
         save(out_filepath, image, img_nii.get_affine())
         out_filepath_list.append(out_filepath)
     return out_filepath_list
@@ -721,12 +721,12 @@ def img_common_sampling(
     def combine_shape(shape_list, lossless=lossless):
         new_shape = [1] * max([len(shape) for shape in shape_list])
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
-        for idx, shape in enumerate(shape_list):
-            shape_arr[idx, :len(shape)] = np.array(shape)
+        for i, shape in enumerate(shape_list):
+            shape_arr[i, :len(shape)] = np.array(shape)
         combiner = mrb.lcm if lossless else max
         new_shape = [
-            combiner(*list(shape_arr[:, idx]))
-            for idx in range(len(new_shape))]
+            combiner(*list(shape_arr[:, i]))
+            for i in range(len(new_shape))]
         return tuple(new_shape)
 
     # calculate new shape
@@ -784,11 +784,11 @@ def img_common_support(
         if any([len(shape) != len(new_shape) for shape in shape_list]):
             raise IndexError('shape length must match')
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
-        for idx, shape in enumerate(shape_list):
-            shape_arr[idx, :len(shape)] = np.array(shape)
+        for i, shape in enumerate(shape_list):
+            shape_arr[i, :len(shape)] = np.array(shape)
         new_shape = [
-            max(*list(shape_arr[:, idx]))
-            for idx in range(len(new_shape))]
+            max(*list(shape_arr[:, i]))
+            for i in range(len(new_shape))]
         return tuple(new_shape)
 
     # calculate new shape

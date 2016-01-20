@@ -185,7 +185,7 @@ if __name__ == '__main__':
     begin_time = time.time()
     kwargs = {
         'dirpath': ARGS.dirpath,
-        'type': ARGS.type,
+        'val_type': ARGS.type,
         'val_range': ARGS.range,
         'val_units': ARGS.units,
         'mask_filepath': ARGS.mask,

@@ -124,7 +124,7 @@ def evolution_tse(
             relaxation_longitudinal, relaxation_transverse, resonance_offset,
             equilibrium_magnetization)
 
-    for idx in range(turbo_factor - 1):
+    for i in range(turbo_factor - 1):
         tmp_magnetization, tmp_excitation = evolution(
                 tmp_magnetization, 2 * flip_angle, (1, 2), refocus_interval,
                 relaxation_longitudinal, relaxation_transverse,
@@ -135,8 +135,8 @@ def evolution_tse(
             relaxation_longitudinal, relaxation_transverse, resonance_offset,
             equilibrium_magnetization)
     # attempt some simplification
-    # for idx in range(num_dim):
-    #     final_magnetization[idx] = sym.factor(final_magnetization[idx])
+    # for i in range(num_dim):
+    #     final_magnetization[i] = sym.factor(final_magnetization[i])
     return final_magnetization, first_excitation
 
 
@@ -165,7 +165,7 @@ def magnetization(
         label='',
         num_dim=3):
     mag_vec = sym.Matrix(
-            [sym.Symbol('M_{}_{}'.format(label, idx)) for idx in
+            [sym.Symbol('M_{}_{}'.format(label, i)) for i in
              range(num_dim)])
     return mag_vec
 
