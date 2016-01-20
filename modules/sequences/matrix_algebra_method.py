@@ -937,7 +937,6 @@ def test_dynamics_operator_symbolic():
         'r1': np.array((r1a, r1b, r1c)),
         'r2': np.array((r2a, r2b, r2c)),
         'k': np.array((k_ab, k_ac, k_bc)),
-        's': np.array((s_ab, s_ac, s_bc)),
         'approx': (None, None, 'superlorentz')}
     spin_model['m0'] /= np.sum(spin_model['m0'])
     w_rf, w1 = sym.symbols('w_rf w1')
