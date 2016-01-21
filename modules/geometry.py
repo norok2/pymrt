@@ -1031,7 +1031,7 @@ def angles2linear(
         linear = np.dot(linear, rotation)
     # :: check that this is a rotation matrix
     det = np.linalg.det(linear)
-    if np.abs(det) - 1.0 > tol * np.finfo(np.double).eps:
+    if np.abs(det) - 1.0 > tol * np.finfo(float).eps:
         msg = 'rotation matrix may be inaccurate [det = {}]'.format(repr(det))
         warnings.warn(msg)
     return linear

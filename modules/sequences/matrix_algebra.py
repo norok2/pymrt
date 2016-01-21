@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mri_tools: Matrix algebra formalism for Magnetization Transfer MRI experiments.
+mri_tools/sequences/matrix_algebra: solver of the Bloch-McConnell equations.
 """
+
+#todo: add references
 
 # ======================================================================
 # :: Future Imports
@@ -22,13 +24,13 @@ import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 # import argparse  # Parser for command-line options, arguments and subcommands
-
 import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+# import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -77,10 +79,13 @@ from mri_tools.modules.base import _elapsed, _print_elapsed
 
 # ======================================================================
 # Proton Gyromagnetic Ratio
+# rad/s/T
 GAMMA = \
     sp.constants.physical_constants['proton gyromag. ratio'][0]
-GAMMA_BAR = \
-    sp.constants.physical_constants['proton gyromag. ratio over 2 pi'][0]
+# Hz/T
+GAMMA_BAR = 1.0e-6 * \
+            sp.constants.physical_constants['proton gyromag. ratio over 2 pi'][
+                0]
 
 # Magnetic Field Strength
 B0 = 3.0  # T
@@ -138,14 +143,14 @@ def _sat_rate_lineshape(
     """
 
     Args:
-        r2:
-        w0:
-        w_c: carrier frequency of the pulse excitation in Hz
-        w1:
-        lineshape:
+        r2 (float): transverse relaxation rates in Hz
+        w0 (float): resonance angular frequency in rad/s
+        w_c (float): carrier angular frequency of the pulse excitation in rad/s
+        w1 (complex): pulse excitation angular frequency in rad/s
+        lineshape (str): the lineshape of the Henkelman absorption term
 
     Returns:
-
+        saturation_rate (float): the Henkelman absorption saturation rate
     """
     if lineshape == 'superlorentz':
         lineshape_factor = superlorentz((w0 - w_c) / r2)
@@ -213,7 +218,7 @@ def _shape_sinc(
 
     Args:
         num_steps:
-        truncation:
+        roots:
 
     Returns:
 
@@ -231,7 +236,7 @@ def _shape_cos_sin(
 
     Args:
         num_steps:
-        truncation:
+        roots:
 
     Returns:
 
@@ -252,8 +257,8 @@ def dynamics_operator(
 
     Args:
         spin_model (SpinModel): spin model term of the dynamics operator
-        w_c (float): carrier frequency of the pulse excitation in Hz
-        w1 (complex): complex form of B1+ related frequency in Hz
+        w_c (float): carrier angular frequency of the pulse excitation in rad/s
+        w1 (complex): pulse excitation angular frequency in rad/s
 
     Returns:
         l_op (ndarray[float]): The dynamics operator L
@@ -281,33 +286,16 @@ def dynamics_operator(
     return spin_model.l_op + l_op
 
 
-# mode (str|None): Approximation to use for faster computation.
-#     Accepted values are:
-#
-#     exact
-#         do not perform additional approximations
-#     sum_simple
-#         use expm(sum(M_i)) = prod(expm(M_i))
-#     sum_order1
-#         perform pseudo-first-order correction for non-commuting
-#         matrices:
-#         expm(sum(M_i) + sum([M_i, M_j]/2) = prod(expm(M_i))
-#     poly_abs:
-#         Use a fast polynomial approximation based on |w1| values
-#     interp_abs:
-#         Use a fast linear interpolation based on |w1| values
-#     reduced:
-#         Calculate the propagator on a coarse pulse, obtained by
-#         riducing the number of steps - but the same flip angle
-#         (norm-invariant).
-
 # ======================================================================
 def _propagator_sum(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator expm(-L * Dt) using:
+    Calculate the time-evolution propagator assuming commutativity.
+
+    The time evolution propagator expm(-L * Dt) can be estimated using:
         expm(sum(M_i)) = prod(expm(M_i))
+    which is only valid for commuting operators.
 
     Args:
         pulse_exc (PulseExc): the e.m. pulse excitation to manipulate the spins
@@ -329,8 +317,11 @@ def _propagator_sum_order1(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator expm(-L * Dt) using a
-    pseudo-first-order correction for non-commuting matrices:
+    Calculate the time-evolution propagator assuming quasi-commutativity.
+
+    The time evolution propagator expm(-L * Dt) can be estimated using:
+        expm(sum(M_i)) = prod(expm(M_i))
+    including a pseudo-first-order correction for quasi-commuting operators:
         expm(sum(M_i) + sum([M_i, M_j]/2) = prod(expm(M_i))
 
     Args:
@@ -358,7 +349,9 @@ def _propagator_sum_sep(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator expm(-L * Dt) using:
+    Calculate the time-evolution propagator using a separated sum approximation.
+
+    The time evolution propagator expm(-L * Dt) can be estimated assuming:
         prod(expm(-L_i * Dt)) = powm(expm(L_free)) + expm(sum(L_w1_i * Dt))
         (L_i = L_free + L_w1_i)
 
@@ -389,6 +382,10 @@ def _propagator_poly(
         fit_order=3,
         num_samples=None):
     """
+    Calculate the time-evolution propagator using polynomial approximation.
+
+    The time evolution propagator expm(-L * Dt) is estimated with a (fast)
+    element-wise polynomial fit, on exact values calculated over the w1 domain.
 
     Args:
         pulse_exc (PulseExc): the e.m. pulse pulse_exc to manipulate the spins
@@ -497,11 +494,16 @@ def _propagator_interp(
         method='cubic',
         num_samples=5):
     """
+    Calculate the time-evolution propagator using interpolation.
+
+    The time evolution propagator expm(-L * Dt) is estimated with a (fast)
+    element-wise interpolation approximation, on exact values calculated
+    over the w1 domain.
 
     Args:
         pulse_exc (PulseExc): the e.m. pulse excitation to manipulate the spins
         spin_model (SpinModel): the model for the spin system
-        method (str): the method used by the intepolator function
+        method (str): the method used by the interpolating function
             'scipy.interpolate.griddata'
         num_samples (int): number of samples for the interpolation
 
@@ -578,11 +580,16 @@ def _propagator_linear(
         spin_model,
         num_samples=32):
     """
+    Calculate the time-evolution propagator using linear interpolation.
+
+    The time evolution propagator expm(-L * Dt) is estimated with a (fast)
+    element-wise linear interpolation approximation, on exact values calculated
+    over the w1 domain. Assumes real and imaginary part to be independent.
 
     Args:
         pulse_exc (PulseExc): the e.m. pulse excitation to manipulate the spins
         spin_model (SpinModel): the model for the spin system
-        num_resamples (int): number of samples for the interpolation
+        num_samples (int): number of samples for the interpolation
 
     Returns:
         p_op (ndarray): The (approximated) propagator operator P.
@@ -664,6 +671,11 @@ def _propagator_reduced(
         spin_model,
         num_resamples=32):
     """
+    Calculate the time-evolution propagator of a coarser pulse excitation.
+
+    The time evolution propagator expm(-L * Dt) is estimated on an approximated
+    pulse excitation, obtained by reducing the number of samples of the
+    original pulse excitation.
 
     Args:
         pulse_exc (PulseExc): the e.m. pulse excitation to manipulate the spins
@@ -695,20 +707,25 @@ def z_spectrum(spin_model, pulse_sequence, powers, freqs):
 
 # ======================================================================
 class SpinModel:
+    """
+    Model of the spin system
+    """
     def __init__(
             self,
-            m0,
+            s0,
+            mc,
             w0,
             r1,
             r2,
             k,
             approx=None):
         """
-        Physical model to use for the spins system.
+        Base constructor of the spin model class.
 
         Args:
-            m0 (ndarray[float]): magnetization vectors magnitudes in arb.units
-            w0 (ndarray[float]): resonance frequencies in Hz
+            s0 (float): magnetization vector magnitude scaling in arb.units
+            mc (ndarray[float]): magnetization concentration ratios in #
+            w0 (ndarray[float]): resonance angular frequencies in rad/s
             r1 (ndarray[float]): longitudinal relaxation rates in Hz
             r2 (ndarray[float]): transverse relaxation rates in Hz
             k (ndarray[float]): pool-pool exchange rate constants in Hz
@@ -716,7 +733,7 @@ class SpinModel:
         Returns:
             None
         """
-        self.num_pools = len(m0)
+        self.num_pools = len(mc)
         # exchange at equilibrium between each two pools
         self.num_exchange = sp.misc.comb(self.num_pools, 2)
         self.approx = approx \
@@ -728,18 +745,20 @@ class SpinModel:
         self.operator_shape = (self.operator_dim,) * 2
         self.operator_base_dim = 1 + 3 * self.num_pools
         self.operator_base_shape = (self.operator_base_dim,) * 2
-        self.dtype = type(m0[0])
+        self.dtype = type(mc[0])
         # simple check on the number of parameters
         if self.num_pools != len(r1) != len(r2) != len(approx) \
                 or len(k) != self.num_exchange:
             raise IndexError('inconsistent spin model')
-        self.m0 = np.array(m0)
+        sum_mc = sum(mc)
+        self.s0 = s0
+        self.mc = np.array(mc) / sum_mc
+        self.m0 = s0 * self.mc
         self.w0 = np.array(w0)
         self.r1 = np.array(r1)
         self.r2 = np.array(r2)
         self.k = np.array(k)
         self.k_op = self.kinetics_operator()
-        self.mc = self.m0 / sum(self.m0)
         self.ignore_k_transverse = True
         self.l_op = self.dynamics_operator()
         self.m_eq = self.equilibrium_magnetization()
@@ -788,7 +807,6 @@ class SpinModel:
         Returns:
             det (ndarray): the detector vector
         """
-        # todo: include the phase correctly?
         det = np.zeros(self.operator_dim).astype(complex)
         num_exact, num_approx = 0, 0
         for lineshape in self.approx:
@@ -830,9 +848,9 @@ class SpinModel:
         # include pool-pool interaction
         locator = np.diag([0.0, 0.0, 1.0]) \
             if self.ignore_k_transverse else np.eye(3)
-        mc_op = np.repeat(self.mc.reshape((-1, 1)), self.num_pools, axis=1)
-        l_k_op = self.k_op * mc_op - np.diag(np.dot(self.k_op, self.mc))
-        l_op[1:, 1:] += np.kron(l_k_op, locator)
+        m0_op = np.repeat(self.m0.reshape((-1, 1)), self.num_pools, axis=1)
+        l_k_op = self.k_op * m0_op - np.diag(np.dot(self.k_op, self.m0))
+        l_op[1:, 1:] -= np.kron(l_k_op, locator)
         # remove transverse components of approximated pools
         l_op = np.delete(l_op, to_remove, 0)
         l_op = np.delete(l_op, to_remove, 1)
@@ -864,18 +882,23 @@ class SpinModel:
 
 # ======================================================================
 class PulseExc:
+    """
+    Pulse excitation interacting with the spin system
+    """
     def __init__(
             self,
             duration,
             w1_arr=None,
             w_c=None):
         """
-        Class for the e.m. pulse excitation.
+        Base constructor of the pulse excitation class.
 
         Args:
             duration (float): duration of the pulse in s
-            w1_arr (ndarray): shape of the pulse excitation in rad / s
-            w_c (float): carrier frequency of the pulse excitation in Hz
+            w1_arr (ndarray[complex]): array of the pulse excitation angular
+                frequency in rad/s
+            w_c (float): carrier angular frequency of the pulse excitation in
+                rad/s
 
         Returns:
             None
@@ -927,7 +950,8 @@ class PulseExc:
             shape (str): name of the desired pulse shape.
                 Note that a shape function (named '_shape_[SHAPE]' must exist)
             shape_kwargs (dict): keyword arguments for shape func
-            w_c (float): carrier frequency of the pulse excitation in Hz
+            w_c (float): carrier angular frequency of the pulse excitation in
+            rad/s
             propagator_mode (str): calculation mode for the propagator
                 [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
             propagator_kwargs (dict): keyword arguments for propagator func
@@ -962,9 +986,27 @@ class PulseExc:
         return self
 
     def get_norm(self):
+        """
+        Calculate the norm of the pulse excitation in rad
+
+        Returns:
+            norm (float): the norm of the pulse excitation.
+        """
         return np.sum(np.abs(self.w1_arr * self.dt))
 
     def set_norm(self, new_norm):
+        """
+        Set a new norm for the pulse excitation in rad
+
+        This is equivalent to setting the flip angle (mind a scaling factor).
+        Note that this modifies the w1_arr.
+
+        Args:
+            new_norm (float): the new norm of the pulse.
+
+        Returns:
+            None.
+        """
         if self.norm == 0.0:
             self.w1_arr = np.ones_like(self.w1_arr)
             self.norm = self.get_norm()
@@ -972,10 +1014,28 @@ class PulseExc:
         self.norm = new_norm
 
     def get_flip_angle(self):
+        """
+        Get the flip angle of the pulse excitation in deg
+
+        Returns:
+            norm (float): the norm of the pulse excitation.
+        """
         return self.flip_angle
 
-    def set_flip_angle(self, flip_angle):
-        self.set_norm(np.deg2rad(flip_angle))
+    def set_flip_angle(self, new_flip_angle):
+        """
+        Set a new flip angle for the pulse excitation.
+
+        This is equivalent to setting the norm (mind a scaling factor).
+        Note that this modifies the w1_arr.
+
+        Args:
+            new_flip_angle (float): the new flip angle of the pulse in deg
+
+        Returns:
+            None.
+        """
+        self.set_norm(np.deg2rad(new_flip_angle))
 
     def propagator(
             self,
@@ -1226,7 +1286,8 @@ def test_dynamics_operator_symbolic():
 
     # 2-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
@@ -1241,7 +1302,8 @@ def test_dynamics_operator_symbolic():
 
     # 3-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152, 0.3)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 3),
             r1=(1.8, 1.0, 1.2),
             r2=(32.2581, 8.4746e4, 30.0),
@@ -1256,7 +1318,8 @@ def test_dynamics_operator_symbolic():
 
     # 4-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152, 0.3, 0.01)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 4),
             r1=(1.8, 1.0, 1.2, 2.0),
             r2=(32.2581, 8.4746e4, 30.0, 60.0),
@@ -1283,11 +1346,12 @@ def test_dynamics_operator():
 
     # 2-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
-            k=(0.05,),
+            k=(0.3456,),
             approx=(None, 'superlorentz_approx'))
 
     print(spin_model)
@@ -1335,11 +1399,12 @@ def test_mt_sequence():
     w_c = GAMMA * B0
 
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
-            k=(0.05,),
+            k=(0.3456,),
             approx=(None, 'superlorentz_approx'))
 
     num_repetitions = 300
@@ -1372,11 +1437,12 @@ def test_approx_propagator(
     w_c = GAMMA * B0
 
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
+            s0=100,
+            mc=(1.0, 0.152),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
-            k=(0.05,),
+            k=(0.3456,),
             approx=(None, 'superlorentz_approx'))
 
     # todo: fix for classes
@@ -1427,8 +1493,8 @@ def test_approx_propagator(
 
 # ======================================================================
 def test_z_spectrum(
-        freqs=np.logspace(0, 5, 16),
-        powers=np.linspace(0.1, 10, 16),
+        freqs=np.round(np.logspace(np.log10(50), np.log10(50000), 32)),
+        powers=np.round(np.logspace(np.log10(50), np.log10(5000), 32)),
         save_file='z_spectrum_approx.npz'):
     """
     Test calculation of z-spectra
@@ -1445,116 +1511,52 @@ def test_z_spectrum(
     w_c = GAMMA * B0
 
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
+            s0=100,
+            mc=(0.8681,  0.1319),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
-            k=(30.0,),
+            k=(0.3456,),
             approx=(None, 'superlorentz_approx'))
 
-    num_repetitions = 300
+    num_repetitions = 3000
 
     mt_flash_kernel = PulseList([
         Delay(10.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(40.0e-3, 90.0, 4000, 'gauss', None,
-                        w_c, 'poly', {'fit_order': 5}),
-        Delay(20.0e-3),
+        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', None,
+                        w_c, 'poly', {'fit_order': 3}),
+        Delay(10.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(10.0e-6, 90.0, 1, 'rect', None),
-        Delay(0.0e-3)],
-            b0=3.0)
+        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', None)],
+            w_c=w_c)
+
+    flip_angles = powers * 11.799 / 50.0
 
     class MtFlash(PulseTrain):
-        def set_power(self, power):
-            self.kernel.pulses[2].set_flip_angle(90.0 * power)
+        def set_flip_angle(self, flip_angle):
+            self.kernel.pulses[2].set_flip_angle(flip_angle)
 
         def set_freq(self, freq):
-            self.kernel.pulses[2].w_c = w_c + freq
+            self.kernel.pulses[2].w_c = w_c + 2 * pi * freq
 
     mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
 
     data = np.zeros((len(freqs), len(powers)))
     for j, freq in enumerate(freqs):
-        for i, power in enumerate(powers):
-            mt_flash.set_power(power)
+        for i, flip_angle in enumerate(flip_angles):
+            mt_flash.set_flip_angle(flip_angle)
             mt_flash.set_freq(freq)
             data[j, i] = mt_flash.signal(spin_model)
 
     # plot results
-    X, Y = np.meshgrid(powers * 90.0, np.log10(freqs))
+    X, Y = np.meshgrid(powers, np.log10(freqs))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_surface(
             X, Y, data, cmap=plt.cm.hot,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
     # np.savez(save_file, freqs, powers, data)
-    return data, powers, freqs
-
-
-def test_fit_single_voxel(
-        freqs=np.logspace(0, 5, 16),
-        powers=np.linspace(0.1, 10, 16),
-        save_file='z_spectrum_approx.npz'):
-    """
-    Test calculation of z-spectra
-
-    Args:
-        freqs (ndarray[float]):
-        powers (ndarray[float]):
-        save_file (string):
-
-    Returns:
-        freq
-
-    """
-    w_c = GAMMA * B0
-
-    spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152)],
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(30.0,),
-            approx=(None, 'superlorentz_approx'))
-
-    num_repetitions = 300
-
-    mt_flash_kernel = PulseList([
-        Delay(10.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(40.0e-3, 90.0, 4000, 'gauss', None,
-                        w_c, 'poly', {'fit_order': 5}),
-        Delay(20.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(10.0e-6, 90.0, 1, 'rect', None),
-        Delay(0.0e-3)],
-            b0=3.0)
-
-    class MtFlash(PulseTrain):
-        def set_power(self, power):
-            self.kernel.pulses[2].set_flip_angle(90.0 * power)
-
-        def set_freq(self, freq):
-            self.kernel.pulses[2].w_c = w_c + freq
-
-    mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
-
-    data = np.zeros((len(freqs), len(powers)))
-    for j, freq in enumerate(freqs):
-        for i, power in enumerate(powers):
-            mt_flash.set_power(power)
-            mt_flash.set_freq(freq)
-            data[j, i] = mt_flash.signal(spin_model)
-
-    # plot results
-    X, Y = np.meshgrid(powers * 90.0, np.log10(freqs))
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(
-            X, Y, data, cmap=plt.cm.hot,
-            rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-    np.savez(save_file, freqs, powers, data)
     return data, powers, freqs
 
 

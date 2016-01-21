@@ -1254,7 +1254,7 @@ def test_z_spectrum(
                     spin_model['r1'], spin_model['r2'], spin_model['k'],
                     spin_model['approx'],
                     excitation['w_rf'], excitation['w1_arr'], excitation['dt'],
-                    'linear')
+                    'poly_5')
             kernel_list = (
                 propagators['delay0'],
                 propagators['spoiler'],
