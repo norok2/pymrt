@@ -70,7 +70,7 @@ import mri_tools.modules.base as mrb
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
-# from mri_tools.modules.base import _elapsed, _print_elapsed
+from mri_tools.modules.base import _elapsed, _print_elapsed
 
 # from mri_tools import get_first_line
 
@@ -107,9 +107,7 @@ def superlorentz(x):
 # todo: check that the sampling rate is appropriate: 1024 is usually enough
 _SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 256)
 _SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-
-
-# _elapsed('Superlorentz Approx.')
+_elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -1429,8 +1427,8 @@ def test_approx_propagator(
 
 # ======================================================================
 def test_z_spectrum(
-        freqs=np.logspace(0, 5, 32),
-        powers=np.linspace(0.1, 10, 32),
+        freqs=np.logspace(0, 5, 16),
+        powers=np.linspace(0.1, 10, 16),
         save_file='z_spectrum_approx.npz'):
     """
     Test calculation of z-spectra
@@ -1490,13 +1488,13 @@ def test_z_spectrum(
     ax.plot_surface(
             X, Y, data, cmap=plt.cm.hot,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-    np.savez(save_file, freqs, powers, data)
+    # np.savez(save_file, freqs, powers, data)
     return data, powers, freqs
 
 
 def test_fit_single_voxel(
-        freqs=np.logspace(0, 5, 32),
-        powers=np.linspace(0.1, 10, 32),
+        freqs=np.logspace(0, 5, 16),
+        powers=np.linspace(0.1, 10, 16),
         save_file='z_spectrum_approx.npz'):
     """
     Test calculation of z-spectra
@@ -1571,10 +1569,10 @@ if __name__ == '__main__':
     # _elapsed('test_mt_sequence')
     # test_approx_propagator()
     # _elapsed('test_approx_propagator')
-    # test_z_spectrum()
-    # _elapsed('test_z_spectrum')
-    test_fit_single_voxel()
+    test_z_spectrum()
+    _elapsed('test_z_spectrum')
+    # test_fit_single_voxel()
 
-    # _print_elapsed()
+    _print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

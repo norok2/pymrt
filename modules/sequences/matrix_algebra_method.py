@@ -416,7 +416,6 @@ def equilibrium_magnetization(
 
 #  ======================================================================
 def dynamics_operator(
-        s0,
         m0,
         w0,
         r1,
@@ -488,7 +487,7 @@ def dynamics_operator(
             [w_rf - w0[i], r2[i], w1x],
             [w1y, -w1x, r1[i]]])
         # ...additional modification for homogeneous form
-        l_op[base + 2, 0] = -2.0 * r1[i] * s0 * m0[i]
+        l_op[base + 2, 0] = -2.0 * r1[i] * m0[i]
         # deal with approximations
         if lineshape:
             to_remove.extend([base, base + 1])
@@ -496,7 +495,7 @@ def dynamics_operator(
             # r_rf = sym.symbols('r_rf')
             l_op[base + 2, base + 2] += r_rf
     # include cross-relaxation
-    k_op_base += np.diag( * num_pools)
+    # k_op_base += np.diag( * num_pools)
     k_op = np.kron(np.eye(3), k_op_base)
     l_op[1:,1:] += k_op
     # remove transverse components of approximated pools
@@ -1235,7 +1234,7 @@ def test_z_spectrum(
                 'dt': val[1],
                 'w_rf': np.array((w_rf + freq,))}
             propagators[key] = propagator_pulse(
-                    spin_model['s0'], spin_model['m0'], spin_model['w0'],
+                    spin_model['m0'], spin_model['w0'],
                     spin_model['r1'], spin_model['r2'], spin_model['k'],
                     spin_model['approx'],
                     excitation['w_rf'], excitation['w1_arr'], excitation['dt'],
@@ -1251,7 +1250,7 @@ def test_z_spectrum(
                 'w_rf': np.array((w_rf + freq,))
             }
             propagators['mt_prep'] = propagator_pulse(
-                    spin_model['s0'], spin_model['m0'], spin_model['w0'],
+                    spin_model['m0'], spin_model['w0'],
                     spin_model['r1'], spin_model['r2'], spin_model['k'],
                     spin_model['approx'],
                     excitation['w_rf'], excitation['w1_arr'], excitation['dt'],
@@ -1280,7 +1279,7 @@ def test_z_spectrum(
     ax.plot_surface(
             X, Y, data, cmap=plt.cm.hot,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-    np.savez(save_file, freqs, powers, data)
+    # np.savez(save_file, freqs, powers, data)
     return data, powers, freqs
 
 
@@ -1289,14 +1288,14 @@ if __name__ == '__main__':
     print(__doc__)
     # test_dynamics_operator_symbolic()
     # _elapsed('test_dynamics_operator_symbolic')
-    test_dynamics_operator_numeric()
-    _elapsed('test_dynamics_operator_numeric')
+    # test_dynamics_operator_numeric()
+    # _elapsed('test_dynamics_operator_numeric')
     # test_mt_sequence()
     # _elapsed('test_mt_sequence')
     # test_approx_propagator()
     # _elapsed('test_approx_propagator')
-    # data, powers, freqs = test_z_spectrum()
-    # _elapsed('test_z_spectrum')
+    test_z_spectrum()
+    _elapsed('test_z_spectrum')
 
     _print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
