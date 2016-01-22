@@ -70,6 +70,11 @@ from mri_tools.modules.base import _elapsed, _print_elapsed
 
 
 # ======================================================================
+def _func_name(label, name):
+    return '_'.join((label, name))
+
+
+# ======================================================================
 def handle_arg():
     """
     Handle command-line application arguments.
@@ -161,11 +166,9 @@ if __name__ == '__main__':
                 ARGS.method, ARGS.options))
 
     if ARGS.method:
-        def f_name(label, name): return '_'.join((label, name))
-
-        preset_func_name = f_name('preset', ARGS.method)
-        sources_func_name = f_name('sources', ARGS.method)
-        compute_func_name = f_name('compute', ARGS.method)
+        preset_func_name = _func_name('preset', ARGS.method)
+        sources_func_name = _func_name('sources', ARGS.method)
+        compute_func_name = _func_name('compute', ARGS.method)
 
         # use preset if available
         opts = json.loads(ARGS.options) if ARGS.options else {}

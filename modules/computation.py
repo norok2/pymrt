@@ -17,7 +17,7 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-# import shutil  # High-level file operations
+import shutil  # High-level file operations
 # import math  # Mathematical functions
 import time  # Time access and conversions
 import datetime  # Basic date and time types
@@ -31,6 +31,7 @@ import multiprocessing  # Process-based parallelism
 # import inspect  # Inspect live objects
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import hashlib  # Secure hashes and message digests
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -38,7 +39,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
-import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
+# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
@@ -82,6 +83,11 @@ D_OPTS = {
     'mask': [None],
     'adapt_mask': True,
 }
+
+
+# ======================================================================
+def _simple_affines(affines):
+    return tuple(affines[0] for affine in affines)
 
 
 # ======================================================================
@@ -187,7 +193,7 @@ def preset_t2s_multiecho_leasq():
     new_opts = {
         'types': ['T2S', 'PD'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
-        'match': '.*FLASH.*',
+        'match': '.*(FLASH|ME-MP2RAGE).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'fit_monoexp_decay_leasq',
@@ -207,32 +213,67 @@ def preset_qsm_as_legacy():
         'types': ['CHI', 'MSK'],
         'param_select': [
             'ProtocolName', 'EchoTime::ms', 'ImagingFrequency', '_series'],
-        'match': '.*FLASH.*',
+        'match': '.*(FLASH|ME-MP2RAGE).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'ext_qsm_as_legacy',
         'compute_kwargs': {
-            'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'te_label': 'EchoTime::ms',
+            'img_types': {'qsm': 'CHI', 'mask': 'MSK'}}
     }
     return new_opts
 
 
 # ======================================================================
-def ext_qsm_as_legacy(images, params, ti_label, img_types):
-    print(params)
-    norm_factor = 1e4
-    y_arr = mrb.ndstack(images, -1).astype(float)
-    y_arr = y_arr[..., 0]  # use only the modulus
-    y_arr = y_arr / np.max(y_arr) * norm_factor
-    x_arr = np.array(params[ti_label]).astype(float)
-    p_arr = fit_ndarray(
-            y_arr, x_arr, func_exp_decay,
-            (np.mean(x_arr), np.mean(y_arr)), method='lsqr')
-    img_list = mrb.ndsplit(p_arr, -1)
-    type_list = ('tau', 's_0')
-    img_type_list = tuple([img_types[key] for key in type_list])
-    return img_list, img_type_list
+def ext_qsm_as_legacy(
+        images,
+        affines,
+        params,
+        te_label,
+        # b0_label,
+        # th_label,
+        img_types):
+    # determine correct TE
+    max_te = 25.0  # ms
+    for i, te in enumerate(params[te_label]):
+        if te < max_te:
+            selected = i
+    tmp_dirpath = '/tmp/{}'.format(hashlib.md5(str(params)).hexdigest())
+    if not os.path.isdir(tmp_dirpath):
+        os.makedirs(tmp_dirpath)
+    tmp_filenames = ('magnitude.nii.gz', 'phase.nii.gz',
+                     'qsm.nii.gz', 'mask.nii.gz')
+    tmp_filepaths = tuple(os.path.join(tmp_dirpath, tmp_filename)
+                          for tmp_filename in tmp_filenames)
+    # export temp input
+    for image, affine, tmp_filepath in zip(images, affines, tmp_filepaths):
+        mrn.save(tmp_filepath, image[..., selected], affine)
+    # execute script on temp input
+    cmd = [
+        'qsm_as_legacy.py',
+        '--magnitude_input', tmp_filepaths[0],
+        '--phase_input', tmp_filepaths[1],
+        '--qsm_output', tmp_filepaths[2],
+        '--mask_output', tmp_filepaths[3],
+        '--echo_time', str(params[te_label][selected]),
+        # '--field_strength', str(params[b0_label][selected]),
+        # '--angles', str(params[th_label][selected]),
+        '--units', 'ppb']
+    mrb.execute(str(' '.join(cmd)))
+    # import temp output
+    img_list, aff_list = [], []
+    for tmp_filepath in tmp_filepaths[2:]:
+        img, aff, hdr = mrn.load(tmp_filepath, full=True)
+        img_list.append(img)
+        aff_list.append(aff)
+    # clean up tmp files
+    if os.path.isdir(tmp_dirpath):
+        shutil.rmtree(tmp_dirpath)
+    # prepare output
+    type_list = ('qsm', 'mask')
+    params_list = ({'te': params[te_label][selected]}, {})
+    img_type_list = tuple(img_types[key] for key in type_list)
+    return img_list, aff_list, img_type_list, params_list
 
 
 # ======================================================================
@@ -329,6 +370,7 @@ def func_flash(m0, fa, tr, t1, te, t2s):
 # ======================================================================
 def fit_monoexp_decay_leasq(
         images,
+        affines,
         params,
         ti_label,
         img_types):
@@ -340,18 +382,21 @@ def fit_monoexp_decay_leasq(
     y_arr = y_arr[..., 0]  # use only the modulus
     y_arr = y_arr / np.max(y_arr) * norm_factor
     x_arr = np.array(params[ti_label]).astype(float)
-    p_arr = fit_ndarray(
+    p_arr = voxel_curve_fit(
             y_arr, x_arr, func_exp_decay,
-            (np.mean(x_arr), np.mean(y_arr)), method='lsqr')
+            (np.mean(x_arr), np.mean(y_arr)), method='curve_fit')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
-    img_type_list = tuple([img_types[key] for key in type_list])
-    return img_list, img_type_list
+    img_type_list = tuple(img_types[key] for key in type_list)
+    aff_list = _simple_affines(affines)
+    params_list = ({},) * len(img_list)
+    return img_list, aff_list, img_type_list, params_list
 
 
 # ======================================================================
 def fit_monoexp_decay_loglin(
         images,
+        affines,
         params,
         ti_label,
         img_types):
@@ -377,19 +422,22 @@ def fit_monoexp_decay_loglin(
     y_arr = mrb.ndstack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
-    p_arr = fit_ndarray(
+    p_arr = voxel_curve_fit(
             y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
             prepare, [exp_factor], fix, [exp_factor],
             method='poly')
     img_list = mrb.ndsplit(p_arr, -1)
+    aff_list = _simple_affines(affines)
     type_list = ('tau', 's_0')
-    img_type_list = tuple([img_types[key] for key in type_list])
-    return img_list, img_type_list
+    img_type_list = tuple(img_types[key] for key in type_list)
+    params_list = ({},) * len(img_list)
+    return img_list, aff_list, img_type_list, params_list
 
 
 # ======================================================================
 def fit_monoexp_decay_loglin2(
         images,
+        affines,
         params,
         ti_label,
         img_types):
@@ -418,18 +466,21 @@ def fit_monoexp_decay_loglin2(
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     noise_level = np.percentile(y_arr, 3)
-    p_arr = fit_ndarray(
+    p_arr = voxel_curve_fit(
             y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
             prepare, [exp_factor, noise_level], fix, [exp_factor],
             method='poly')
+
     img_list = mrb.ndsplit(p_arr, -1)
+    aff_list = _simple_affines(affines)
     type_list = ('tau', 's_0')
-    img_type_list = tuple([img_types[key] for key in type_list])
-    return img_list, img_type_list
+    img_type_list = tuple(img_types[key] for key in type_list)
+    params_list = ({},) * len(img_list)
+    return img_list, aff_list, img_type_list, params_list
 
 
 # ======================================================================
-def fit_ndarray(
+def voxel_curve_fit(
         y_arr,
         x_arr,
         fit_func=None,
@@ -440,7 +491,7 @@ def fit_ndarray(
         post_func=None,
         post_args=None,
         post_kwargs=None,
-        method='lsqr'):
+        method='curve_fit'):
     """
     Curve fitting for y = F(x, p)
 
@@ -456,8 +507,6 @@ def fit_ndarray(
         post_args (list):
         post_kwargs (dict):
         method (str): Method to use for the curve fitting procedure.
-
-
 
     Returns:
         p_arr (ndarray) :
@@ -484,7 +533,7 @@ def fit_ndarray(
             pre_kwargs = {}
         y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
 
-    if method == 'lsqr':
+    if method == 'curve_fit':
         iter_param_list = [
             (fit_func, x_arr, y_i_arr, fit_params)
             for y_i_arr in mrb.ndsplit(y_arr, 0)]
@@ -519,19 +568,21 @@ def fit_ndarray(
 
 
 # ======================================================================
-def match_series(images, params, matches):
+def match_series(images, affines, params, matches):
     """
     TODO: finish documentation
     """
-    img_list, img_type_list = [], []
+    img_list, aff_list, img_type_list = [], [], []
     for match, img_type in matches:
         for i, series in enumerate(params['_series']):
             if re.match(match, series):
                 # print(match, series, img_type, images[i].shape)  # DEBUG
                 img_list.append(images[i])
+                aff_list.append(affines[i])
                 img_type_list.append(img_type)
                 break
-    return img_list, img_type_list
+    params_list = ({},) * len(img_list)
+    return img_list, aff_list, img_type_list, params_list
 
 
 # ======================================================================
@@ -695,9 +746,9 @@ def compute_generic(
           | -> img_list, img_type_list
         * compute_args: list: additional positional parameters for compute_func
         * compute_kwargs: dict: additional keyword parameters for compute_func
-        * | aff_func: str: name of the function for affine computation
-          | aff_func(affines, aff_args...) -> affine
-        * aff_args: list: additional parameters for aff_func
+        * | affine_func: str: name of the function for affine computation
+          | affine_func(affines, affine_args...) -> affine
+        * affine_args: list: additional parameters for affine_func
     force : boolean (optional)
         Force calculation of output.
     verbose : int (optional)
@@ -748,9 +799,7 @@ def compute_generic(
                 print('Source:\t{}'.format(os.path.basename(source)))
             if verbose > VERB_LVL['none']:
                 print('Params:\t{}'.format(params))
-            nifti = nib.load(source)
-            image = nifti.get_data()
-            affine = nifti.get_affine()
+            image, affine, header = mrn.load(source, full=True)
             # fix mask if shapes are different
             if opts['adapt_mask']:
                 mask = [
@@ -764,28 +813,24 @@ def compute_generic(
                 opts['compute_args'] = []
             if 'compute_kwargs' not in opts:
                 opts['compute_kwargs'] = {}
-            img_list, img_type_list = compute_func(
-                    images, params,
+            img_list, aff_list, img_type_list, params_list = compute_func(
+                    images, affines, params,
                     *opts['compute_args'], **opts['compute_kwargs'])
         else:
-            img_list, img_type_list = zip(*[(img, img_type)
-                                            for img, img_type
-                                            in zip(images, itertools.cycle(
-                        opts['types']))])
-        if 'aff_func' in opts:
-            aff_func = globals()[opts['aff_func']]
-            if 'aff_args' not in opts:
-                opts['aff_args'] = []
-            if 'aff_kwargs' not in opts:
-                opts['aff_kwargs'] = {}
-            aff = aff_func(affines, *opts['aff_args'], **opts['aff_kwargs'])
-        else:
-            aff = affines[0]
+            img_list, aff_list, img_type_list = zip(
+                    *[(img, aff, img_type) for img, aff, img_type
+                      in zip(images, affines, itertools.cycle(opts['types']))])
+            params_list = ({},) * len(img_list)
+
         for target, target_type in zip(targets, opts['types']):
-            for img, img_type in zip(img_list, img_type_list):
+            for img, aff, img_type, params in \
+                    zip(img_list, aff_list, img_type_list, params_list):
                 if img_type == target_type:
                     if 'dtype' in opts:
                         img = img.astype(opts['dtype'])
+                    if params:
+                        for key, val in params.items():
+                            target = mru.change_param_val(target, key, val)
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
                     mrn.save(target, img, aff)
