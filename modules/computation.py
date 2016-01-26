@@ -213,7 +213,8 @@ def preset_qsm_as_legacy():
         'types': ['CHI', 'MSK'],
         'param_select': [
             'ProtocolName', 'EchoTime::ms', 'ImagingFrequency', '_series'],
-        'match': '.*(FLASH|ME-MP2RAGE).*',
+        # 'match': '.*((FLASH)|(ME-MP2RAGE.*INV2)).*',
+        'match': '.*(ME-MP2RAGE.*INV2).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'ext_qsm_as_legacy',
@@ -246,6 +247,9 @@ def ext_qsm_as_legacy(
     tmp_filepaths = tuple(os.path.join(tmp_dirpath, tmp_filename)
                           for tmp_filename in tmp_filenames)
     # export temp input
+    if len(images) > 2:
+        images = images[-2:]
+        affines = affines[-2:]
     for image, affine, tmp_filepath in zip(images, affines, tmp_filepaths):
         mrn.save(tmp_filepath, image[..., selected], affine)
     # execute script on temp input
