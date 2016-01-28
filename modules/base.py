@@ -196,22 +196,18 @@ def multi_replace(text, replace_list):
 
 
 # ======================================================================
-def cartesian(arrays):
+def cartesian(*arrays):
     """
     Generate a cartesian product of input arrays.
 
     Parameters
     ----------
-    arrays : list of array-like
-        1-D arrays to form the cartesian product of.
-    out : ndarray
-        Array to place the cartesian product in.
+    arrays (list of arrays): 1-D arrays to form the cartesian product of
 
     Returns
     -------
-    out : ndarray
-        2-D array of shape (M, len(arrays)) containing cartesian products
-        formed of input arrays.
+    out (ndarray): 2-D array of shape (M, len(arrays)) containing cartesian
+        products formed of input arrays.
 
     Examples
     --------
@@ -909,12 +905,12 @@ def string_between(
     if begin_str in in_str and end_str in in_str:
         if greedy:
             out_str = in_str[
-            in_str.find(begin_str) + incl_begin:
-            in_str.rfind(end_str) + incl_end]
+                      in_str.find(begin_str) + incl_begin:
+                      in_str.rfind(end_str) + incl_end]
         else:
             out_str = in_str[
-            in_str.rfind(begin_str) + incl_begin:
-            in_str.find(end_str) + incl_end]
+                      in_str.rfind(begin_str) + incl_begin:
+                      in_str.find(end_str) + incl_end]
     else:
         out_str = ''
     return out_str
@@ -1503,7 +1499,7 @@ def curve_fit(param_list):
         n_fit_par = len(param_list[3])  # number of fitting parameters
         result = \
             np.tile(err_val, n_fit_par), \
-                np.tile(err_val, (n_fit_par, n_fit_par))
+            np.tile(err_val, (n_fit_par, n_fit_par))
     return result
 
 

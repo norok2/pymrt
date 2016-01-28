@@ -4,7 +4,7 @@
 mri_tools/sequences/matrix_algebra: solver of the Bloch-McConnell equations.
 """
 
-#todo: add references
+# todo: add references
 
 # ======================================================================
 # :: Future Imports
@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
+import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
 import cmath  # Mathematical functions for complex numbers
@@ -48,7 +48,7 @@ import cProfile as profile  # Deterministic Profiler
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
-# import scipy.optimize  # SciPy: Optimization
+import scipy.optimize  # SciPy: Optimization
 import scipy.integrate  # SciPy: Integration
 import scipy.interpolate  # SciPy: Interpolation
 import scipy.constants  # SciPy: Constants
@@ -349,7 +349,8 @@ def _propagator_sum_sep(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator using a separated sum approximation.
+    Calculate the time-evolution propagator using a separated sum
+    approximation.
 
     The time evolution propagator expm(-L * Dt) can be estimated assuming:
         prod(expm(-L_i * Dt)) = powm(expm(L_free)) + expm(sum(L_w1_i * Dt))
@@ -701,7 +702,7 @@ def _propagator_reduced(
 
 
 # ======================================================================
-def z_spectrum(spin_model, pulse_sequence, powers, freqs):
+def z_spectrum(spin_model, pulse_sequence, amplitudes, freqs):
     pass
 
 
@@ -710,6 +711,7 @@ class SpinModel:
     """
     Model of the spin system
     """
+
     def __init__(
             self,
             s0,
@@ -764,6 +766,67 @@ class SpinModel:
         self.m_eq = self.equilibrium_magnetization()
         self.det = self.detector()
 
+    # @classmethod
+    # def serialized(
+    #         cls,
+    #         duration,
+    #         flip_angle=90.0,
+    #         num_steps=1,
+    #         shape='rect',
+    #         shape_kwargs=None,
+    #         w_c=None,
+    #         propagator_mode=None,
+    #         propagator_kwargs=None):
+    #     """
+    #     Generate a pulse excitation with a specific shape.
+    #
+    #     Args:
+    #         duration (float): duration of the pulse in s
+    #         flip_angle (float): flip angle of the excitation in deg
+    #         num_steps (int): number of sampling point for the pulse
+    #         shape (str|unicode): name of the desired pulse shape.
+    #             Note: a function named '_shape_[SHAPE]' must exist.
+    #                 [normal|cauchy|sinc|cos_sin]
+    #         shape_kwargs (dict|None): keyword arguments for the shape
+    # function
+    #         w_c (float): carrier angular frequency of the pulse excitation in
+    #             rad/s
+    #         propagator_mode (str|unicode): calculation mode for the
+    # propagator.
+    #             Note: a function named '_propagator_[MODE]' must exist.
+    #                 [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
+    #         propagator_kwargs (dict|None): keyword arguments for the
+    #             propagator function
+    #
+    #     Returns:
+    #         pulse_exc (PulseExc): the generated pulse excitation
+    #     """
+    #     if shape_kwargs is None:
+    #         shape_kwargs = {}
+    #     if shape == 'gauss':
+    #         w1_arr = _shape_normal(num_steps, **shape_kwargs)
+    #     elif shape == 'lorentz':
+    #         w1_arr = _shape_cauchy(num_steps, **shape_kwargs)
+    #     elif shape == 'sinc':
+    #         w1_arr = _shape_sinc(num_steps, **shape_kwargs)
+    #     elif shape == 'rect':
+    #         w1_arr = np.array((1.0,) * num_steps)
+    #     else:
+    #         try:
+    #             shape_func = eval('_shape_' + shape)
+    #             w1_arr = shape_func(num_steps, **shape_kwargs)
+    #         except:
+    #             raise ValueError('{}: unknown shape'.format(shape))
+    #     self = cls(duration, w1_arr, w_c)
+    #     self.shape = shape
+    #     self.shape_kwargs = shape_kwargs
+    #     self.set_flip_angle(flip_angle)
+    #     if propagator_mode is not None:
+    #         self.propagator_mode = propagator_mode
+    #     if propagator_kwargs is not None:
+    #         self.propagator_kwargs = propagator_kwargs
+    #     return self
+
     def equilibrium_magnetization(self):
         """
         Generate the equilibrium magnetization vector.
@@ -772,8 +835,8 @@ class SpinModel:
         calculate the signal intensity.
 
         Note that B0 is assumed parallel to z-axis, therefore:
-        - the transverse magnetization is zero
-        - the longitudinal magnetization is only in the z-axis
+            - the transverse magnetization is zero
+            - the longitudinal magnetization is only in the z-axis
 
         Returns:
             m_eq (ndarray): the equilibrium magnetization vector
@@ -885,6 +948,7 @@ class PulseExc:
     """
     Pulse excitation interacting with the spin system
     """
+
     def __init__(
             self,
             duration,
@@ -947,14 +1011,17 @@ class PulseExc:
             duration (float): duration of the pulse in s
             flip_angle (float): flip angle of the excitation in deg
             num_steps (int): number of sampling point for the pulse
-            shape (str): name of the desired pulse shape.
-                Note that a shape function (named '_shape_[SHAPE]' must exist)
-            shape_kwargs (dict): keyword arguments for shape func
+            shape (str|unicode): name of the desired pulse shape.
+                Note: a function named '_shape_[SHAPE]' must exist.
+                    [normal|cauchy|sinc|cos_sin]
+            shape_kwargs (dict|None): keyword arguments for the shape function
             w_c (float): carrier angular frequency of the pulse excitation in
-            rad/s
-            propagator_mode (str): calculation mode for the propagator
-                [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
-            propagator_kwargs (dict): keyword arguments for propagator func
+                rad/s
+            propagator_mode (str|unicode): calculation mode for the propagator.
+                Note: a function named '_propagator_[MODE]' must exist.
+                    [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
+            propagator_kwargs (dict|None): keyword arguments for the
+                propagator function
 
         Returns:
             pulse_exc (PulseExc): the generated pulse excitation
@@ -1430,7 +1497,7 @@ def test_mt_sequence():
 
 # ======================================================================
 def test_approx_propagator(
-        powers=(1.0,)):
+        amplitudes=(1.0,)):
     """
     Test the approximation of propagators - for speeding up.
     """
@@ -1461,10 +1528,10 @@ def test_approx_propagator(
         # 'random',
         'cos_sin',
     )
-    for power in powers:
+    for amplitude in amplitudes:
         for shape, shape_kwargs in shapes:
             pulse_exc = PulseExc.shaped(
-                    40.0e-3, 90.0 * power, 4000,
+                    40.0e-3, 90.0 * amplitude, 4000,
                     shape, shape_kwargs, w_c, )
             for i, (propagator_mode, propagator_kwargs) in enumerate(modes):
                 pulse_exc = {
@@ -1494,14 +1561,15 @@ def test_approx_propagator(
 # ======================================================================
 def test_z_spectrum(
         freqs=np.round(np.logspace(np.log10(50), np.log10(50000), 32)),
-        powers=np.round(np.logspace(np.log10(50), np.log10(5000), 32)),
-        save_file='z_spectrum_approx.npz'):
+        amplitudes=np.round(np.logspace(np.log10(50), np.log10(5000), 32)),
+        plot_data=True,
+        save_file=None):
     """
     Test calculation of z-spectra
 
     Args:
         freqs (ndarray[float]):
-        powers (ndarray[float]):
+        amplitudes (ndarray[float]):
         save_file (string):
 
     Returns:
@@ -1512,26 +1580,26 @@ def test_z_spectrum(
 
     spin_model = SpinModel(
             s0=100,
-            mc=(0.8681,  0.1319),
+            mc=(0.8681, 0.1319),
             w0=((w_c,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx'))
 
-    num_repetitions = 3000
+    num_repetitions = 300
 
     mt_flash_kernel = PulseList([
         Delay(10.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', None,
+        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
                         w_c, 'poly', {'fit_order': 3}),
         Delay(10.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', None)],
+        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
             w_c=w_c)
 
-    flip_angles = powers * 11.799 / 50.0
+    flip_angles = amplitudes * 11.799 / 50.0
 
     class MtFlash(PulseTrain):
         def set_flip_angle(self, flip_angle):
@@ -1542,7 +1610,7 @@ def test_z_spectrum(
 
     mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
 
-    data = np.zeros((len(freqs), len(powers)))
+    data = np.zeros((len(freqs), len(amplitudes)))
     for j, freq in enumerate(freqs):
         for i, flip_angle in enumerate(flip_angles):
             mt_flash.set_flip_angle(flip_angle)
@@ -1550,14 +1618,116 @@ def test_z_spectrum(
             data[j, i] = mt_flash.signal(spin_model)
 
     # plot results
-    X, Y = np.meshgrid(powers, np.log10(freqs))
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(
-            X, Y, data, cmap=plt.cm.hot,
-            rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-    # np.savez(save_file, freqs, powers, data)
-    return data, powers, freqs
+    if plot_data:
+        X, Y = np.meshgrid(amplitudes, np.log10(freqs))
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(
+                X, Y, data, cmap=plt.cm.hot,
+                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+    if save_file:
+        np.savez(save_file, freqs, amplitudes, data)
+    return data, freqs, flip_angles
+
+
+# ======================================================================
+def test_fit_spin_model(
+        snr_level=10,
+        plot_data=True):
+    """
+    Test calculation of z-spectra
+
+    Args:
+        freqs (ndarray[float]):
+        amplitudes (ndarray[float]):
+        save_file (string):
+
+    Returns:
+        None
+    """
+    w_c = GAMMA * B0
+
+    num_repetitions = 3000
+
+    mt_flash_kernel = PulseList([
+        Delay(10.0e-3),
+        Spoiler(1.0),
+        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
+                        w_c, 'poly', {'fit_order': 3}),
+        Delay(10.0e-3),
+        Spoiler(1.0),
+        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
+            w_c=w_c)
+
+    class MtFlash(PulseTrain):
+        def set_flip_angle(self, flip_angle):
+            self.kernel.pulses[2].set_flip_angle(flip_angle)
+
+        def set_freq(self, freq):
+            self.kernel.pulses[2].w_c = w_c + 2 * pi * freq
+
+    mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
+
+    def mt_signal(x_arr, s0, mc_a, r1a, r1b, r2a, r2b, k_ab):
+        spin_model = SpinModel(
+                s0=s0,
+                mc=(mc_a, 1.0 - mc_a),
+                w0=((w_c,) * 2),
+                r1=(r1a, r1b),
+                r2=(r2a, r2b),
+                k=(k_ab,),
+                approx=(None, 'superlorentz_approx'))
+        y_arr = np.zeros_like(x_arr[:, 0])
+        i = 0
+        for freq, flip_angle in x_arr:
+            mt_flash.set_flip_angle(flip_angle)
+            mt_flash.set_freq(freq)
+            y_arr[i] = mt_flash.signal(spin_model)
+            i += 1
+        return y_arr
+
+    # simulate a measurement
+    exact, freqs, flip_angles = test_z_spectrum(
+            freqs=np.round(np.logspace(np.log10(50), np.log10(50000), 16)),
+            amplitudes=np.round(np.logspace(np.log10(50), np.log10(5000), 16)),
+            plot_data=False)
+    noise = (np.random.rand(*exact.shape) - 0.5) * np.max(exact) / snr_level
+    measured = exact + noise
+
+    x_data = mrb.cartesian(freqs, flip_angles)
+    y_data = measured.ravel()
+    p0 = 100, 0.8, 1.8, 1.0, 32, 8e4, 0.5
+    bounds = [[50, 1000], [0, 1], [0.1, 10], [0.1, 10], [10, 50],
+              [1e4, 1e5], [0, 1]]
+
+    def sum_of_squares(params, x_data, m_data):
+        e_data = mt_signal(x_data, *params)
+        return np.sum((m_data - e_data) ** 2.0)
+
+    res = scipy.optimize.minimize(
+            sum_of_squares, p0, args=(x_data, y_data), method='L-BFGS-B',
+            bounds=bounds)
+    print(res.x, res.success, res.message)
+
+    fitted = mt_signal(x_data, *res.x).reshape(measured.shape)
+
+
+    # p_opt, p_cov = scipy.optimize.curve_fit(mt_signal, x_data, y_data, p0=p0)
+    # print(p_opt, p_cov)
+
+    if plot_data:
+        X, Y = np.meshgrid(flip_angles, freqs)
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(
+                X, Y, exact, cmap=plt.cm.hot,
+                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+        ax.plot_surface(
+                X, Y, measured, cmap=plt.cm.pink,
+                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+        ax.plot_surface(
+                X, Y, fitted, cmap=plt.cm.pink,
+                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
 
 
 # ======================================================================
@@ -1571,9 +1741,10 @@ if __name__ == '__main__':
     # _elapsed('test_mt_sequence')
     # test_approx_propagator()
     # _elapsed('test_approx_propagator')
-    test_z_spectrum()
-    _elapsed('test_z_spectrum')
-    # test_fit_single_voxel()
+    # test_z_spectrum()
+    # _elapsed('test_z_spectrum')
+    test_fit_spin_model()
+    _elapsed('test_fit_spin_model')
 
     _print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
