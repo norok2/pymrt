@@ -30,7 +30,7 @@ import itertools  # Functions creating iterators for efficient looping
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-# import warnings  # Warning control
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -88,7 +88,7 @@ GAMMA_BAR = 1.0e-6 * \
                 0]
 
 # Magnetic Field Strength
-B0 = 3.0  # T
+B0 = 7.0  # T
 
 _SUPERLORENTZ = {'x': None, 'y': None}
 
@@ -105,7 +105,7 @@ def superlorentz_integrand(x, t):
 def superlorentz(x):
     # scipy.integrate.quad returns both the value and the error, here ignored
     return sp.integrate.quad(
-            lambda t: superlorentz_integrand(x, t), 0.0, pi / 2.0)[0]
+        lambda t: superlorentz_integrand(x, t), 0.0, pi / 2.0)[0]
 
 
 # ======================================================================
@@ -182,9 +182,9 @@ def _shape_normal(
 
     """
     x = np.linspace(
-            scipy.stats.norm.ppf(0.0 + truncation[0]),
-            scipy.stats.norm.ppf(1.0 - truncation[1]),
-            num_steps)
+        scipy.stats.norm.ppf(0.0 + truncation[0]),
+        scipy.stats.norm.ppf(1.0 - truncation[1]),
+        num_steps)
     y = scipy.stats.norm.pdf(x)
     return y
 
@@ -203,9 +203,9 @@ def _shape_cauchy(
 
     """
     x = np.linspace(
-            scipy.stats.cauchy.ppf(0.0 + truncation[0]),
-            scipy.stats.cauchy.ppf(1.0 - truncation[1]),
-            num_steps)
+        scipy.stats.cauchy.ppf(0.0 + truncation[0]),
+        scipy.stats.cauchy.ppf(1.0 - truncation[1]),
+        num_steps)
     y = scipy.stats.cauchy.pdf(x)
     return y
 
@@ -248,6 +248,32 @@ def _shape_cos_sin(
 
 
 # ======================================================================
+def _shape_from_file(
+        filename,
+        dirpath='pulses'):
+    """
+
+    Args:
+        num_steps:
+        roots:
+
+    Returns:
+
+    """
+    dirpath = os.path.realpath(dirpath)
+    filepath = os.path.join(dirpath, filename + mrb.add_extsep(mrb.CSV_EXT))
+    arr = np.loadtxt(filepath)
+    if arr.ndim == 1:
+        y_re = arr
+        y_im = 0.0
+    elif arr.ndim > 1:
+        y_re = arr[:,0]
+        y_im = arr[:,1]
+    if arr.ndim > 2:
+        warnings.warn('unknown pulse format in: ' + "'{}'")
+    return y_re + 1j * y_im
+
+# ======================================================================
 def dynamics_operator(
         spin_model,
         w_c,
@@ -276,7 +302,7 @@ def dynamics_operator(
             [w1y, -w1x, 0.0]])
         if lineshape:
             r_rf = _sat_rate_lineshape(
-                    spin_model.r2[i], spin_model.w0[i], w_c, w1, lineshape)
+                spin_model.r2[i], spin_model.w0[i], w_c, w1, lineshape)
             # r_rf = sym.symbols('r_rf')  # for symbolic
             l_op[base, base] += bloch_core[-1, -1] + r_rf
             num_approx += 1
@@ -371,7 +397,7 @@ def _propagator_sum_sep(
     # calculate propagators
     p_op_free = scipy.linalg.expm(-l_op_free * pulse_exc.dt)
     p_op_pow = scipy.linalg.fractional_matrix_power(
-            p_op_free, pulse_exc.num_steps)
+        p_op_free, pulse_exc.num_steps)
     p_op_w1 = scipy.linalg.expm(-p_op_w1_sum)
     return np.dot(p_op_pow, p_op_w1_sum)
 
@@ -404,9 +430,9 @@ def _propagator_poly(
             pulse_exc.w1_arr.imag
         # :: calculate samples
         p_op_approx = np.zeros(
-                spin_model.operator_shape + (num_samples,))
+            spin_model.operator_shape + (num_samples,))
         w1_approx = np.linspace(
-                np.min(_w1_arr), np.max(_w1_arr), num_samples)
+            np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
             p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
@@ -426,7 +452,7 @@ def _propagator_poly(
         p_arr = p_arr.reshape(list(shape[:support_axis]) + [fit_order + 1])
         # :: approximate all propagators and calculate final result
         p_op_arr = np.zeros(
-                (pulse_exc.num_steps,) + spin_model.operator_shape)
+            (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
@@ -450,14 +476,14 @@ def _propagator_poly(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_approx = np.zeros(
-                spin_model.operator_shape + (num_samples,))
+            spin_model.operator_shape + (num_samples,))
         w1_approx = np.zeros(
-                num_re_samples * num_im_samples).astype(complex)
+            num_re_samples * num_im_samples).astype(complex)
         i = 0
         for w1_re in w1_re_approx:
             for w1_im in w1_im_approx:
                 l_op = dynamics_operator(
-                        spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
+                    spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
                 p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
                 w1_approx[i] = w1_re + 1j * w1_im
                 i += 1
@@ -477,11 +503,11 @@ def _propagator_poly(
         p_arr = p_arr.reshape(list(shape[:support_axis]) + [fit_order + 1])
         # :: approximate all propagators and calculate final result
         p_op_arr = np.zeros(
-                (pulse_exc.num_steps,) + spin_model.operator_shape)
+            (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.real(
-                        np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
+                    np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
@@ -517,18 +543,18 @@ def _propagator_interp(
         # :: calculate samples
         p_op_approx = np.zeros(spin_model.operator_shape + (num_samples,))
         w1_approx = np.linspace(
-                np.min(_w1_arr), np.max(_w1_arr), num_samples)
+            np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
             p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
-                (pulse_exc.num_steps,) + spin_model.operator_shape)
+            (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = scipy.interpolate.griddata(
-                        w1_approx, p_op_approx[i, j, :], _w1_arr,
-                        method=method, fill_value=0.0)
+                    w1_approx, p_op_approx[i, j, :], _w1_arr,
+                    method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
@@ -549,26 +575,26 @@ def _propagator_interp(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_approx = np.zeros(
-                spin_model.operator_shape + (num_samples,))
+            spin_model.operator_shape + (num_samples,))
         w1_approx = np.zeros((num_re_samples * num_im_samples, 2))
         i = 0
         for w1_re in w1_re_approx:
             for w1_im in w1_im_approx:
                 l_op = dynamics_operator(
-                        spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
+                    spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
                 p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
                 w1_approx[i, :] = (w1_re, w1_im)
                 i += 1
         # perform interpolation
         p_op_arr = np.zeros(
-                (pulse_exc.num_steps,) + spin_model.operator_shape)
+            (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = scipy.interpolate.griddata(
-                        w1_approx,
-                        p_op_approx[i, j, :],
-                        (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
-                        method=method, fill_value=0.0)
+                    w1_approx,
+                    p_op_approx[i, j, :],
+                    (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
+                    method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
@@ -600,19 +626,19 @@ def _propagator_linear(
             if pulse_exc.is_real else pulse_exc.w1_arr.imag
         # :: calculate samples
         p_op_approx = np.zeros(
-                spin_model.operator_shape + (num_samples,))
+            spin_model.operator_shape + (num_samples,))
         w1_approx = np.linspace(
-                np.min(_w1_arr), np.max(_w1_arr), num_samples)
+            np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
             p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
-                (pulse_exc.num_steps,) + spin_model.operator_shape)
+            (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.interp(
-                        _w1_arr, w1_approx, p_op_approx[i, j, :])
+                    _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
@@ -633,9 +659,9 @@ def _propagator_linear(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_re_approx = np.zeros(
-                spin_model.operator_shape + (num_re_samples,))
+            spin_model.operator_shape + (num_re_samples,))
         p_op_im_approx = np.zeros(
-                spin_model.operator_shape + (num_im_samples,))
+            spin_model.operator_shape + (num_im_samples,))
         for i, w1_re in enumerate(w1_re_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_re)
             p_op_re_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
@@ -644,16 +670,16 @@ def _propagator_linear(
             p_op_re_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
-                spin_model.operator_shape + (
-                    pulse_exc.num_steps,))
+            spin_model.operator_shape + (
+                pulse_exc.num_steps,))
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr_re = np.interp(
-                        pulse_exc.w1_arr.real,
-                        w1_re_approx, p_op_re_approx[i, j, :])
+                    pulse_exc.w1_arr.real,
+                    w1_re_approx, p_op_re_approx[i, j, :])
                 p_op_arr_im = np.interp(
-                        pulse_exc.w1_arr.imag,
-                        w1_im_approx, p_op_im_approx[i, j, :])
+                    pulse_exc.w1_arr.imag,
+                    w1_im_approx, p_op_im_approx[i, j, :])
                 weighted = \
                     (p_op_arr_re * np.abs(pulse_exc.w1_arr.real) +
                      p_op_arr_im * np.abs(pulse_exc.w1_arr.imag)) / \
@@ -687,7 +713,7 @@ def _propagator_reduced(
         p_op (ndarray): The (approximated) propagator operator P.
     """
     chunk_marks = np.round(
-            np.linspace(0, pulse_exc.num_steps - 1, num_resamples + 1))
+        np.linspace(0, pulse_exc.num_steps - 1, num_resamples + 1))
     dt_reduced = pulse_exc.dt * pulse_exc.num_steps / num_resamples
     w1_reduced_arr = np.zeros(num_resamples).astype(pulse_exc.w1_arr[0])
     for i in range(num_resamples):
@@ -695,8 +721,8 @@ def _propagator_reduced(
         w1_reduced_arr[i] = np.mean(pulse_exc.w1_arr[chunk])
     p_op_list = [
         sp.linalg.expm(
-                -dt_reduced *
-                dynamics_operator(spin_model, pulse_exc.w_c, w1))
+            -dt_reduced *
+            dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
     return mrb.mdot(*p_op_list[::-1])
 
@@ -741,7 +767,7 @@ class SpinModel:
         self.approx = approx \
             if approx is not None else [None] * self.num_pools
         self.num_approx = sum(
-                [0 if item is None else 1 for item in self.approx])
+            [0 if item is None else 1 for item in self.approx])
         self.num_exact = self.num_pools - self.num_approx
         self.operator_dim = 1 + 3 * self.num_exact + self.num_approx
         self.operator_shape = (self.operator_dim,) * 2
@@ -927,8 +953,8 @@ class SpinModel:
             k_op (ndarray):
         """
         indexes = sorted(
-                list(itertools.combinations(range(self.num_pools), 2)),
-                key=lambda x: x[1])
+            list(itertools.combinations(range(self.num_pools), 2)),
+            key=lambda x: x[1])
         k_op = np.zeros((self.num_pools,) * 2).astype(self.dtype)
         for k, index in zip(self.k, indexes):
             k_op[index] = k
@@ -1036,6 +1062,9 @@ class PulseExc:
             w1_arr = _shape_sinc(num_steps, **shape_kwargs)
         elif shape == 'rect':
             w1_arr = np.array((1.0,) * num_steps)
+        elif shape.startswith('_from_'):
+            filename = shape[len('_from_'):]
+            w1_arr = _shape_from_file(filename)
         else:
             try:
                 shape_func = eval('_shape_' + shape)
@@ -1127,8 +1156,8 @@ class PulseExc:
         if self.propagator_mode == 'exact':
             p_op_list = [
                 sp.linalg.expm(
-                        -self.dt *
-                        dynamics_operator(spin_model, self.w_c, w1))
+                    -self.dt *
+                    dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self.w1_arr]
             p_op = mrb.mdot(*p_op_list[::-1])
         else:
@@ -1137,16 +1166,16 @@ class PulseExc:
                 p_op = p_op_func(self, spin_model, *args, **kwargs)
             except:
                 raise ValueError(
-                        '{}: unknown propagator mode'.format(
-                                self.propagator_mode))
+                    '{}: unknown propagator mode'.format(
+                        self.propagator_mode))
 
         return p_op
 
     def __repr__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
-                'flip_angle', round(self.flip_angle, 1),
-                np.deg2rad(self.flip_angle))
+            'flip_angle', round(self.flip_angle, 1),
+            np.deg2rad(self.flip_angle))
         names = [
             'duration', 'shape', 'shape_kwargs', 'dt', 'num_steps', 'w_c',
             'is_real', 'is_imag', 'propagator_mode', 'propagator_kwargs']
@@ -1252,7 +1281,7 @@ class PulseSequence:
             self,
             spin_model):
         signal = mrb.mdot(
-                spin_model.det, self.propagator(spin_model), spin_model.m_eq)
+            spin_model.det, self.propagator(spin_model), spin_model.m_eq)
         return np.abs(signal)
 
     def __repr__(self):
@@ -1310,8 +1339,47 @@ class PulseTrain(PulseSequence):
             *args,
             **kwargs):
         return scipy.linalg.fractional_matrix_power(
-                self.kernel.propagator(spin_model, *args, **kwargs),
-                self.num_repetitions)
+            self.kernel.propagator(spin_model, *args, **kwargs),
+            self.num_repetitions)
+
+
+# ======================================================================
+class MtFlash(PulseTrain):
+    def __init__(
+            self,
+            kernel,
+            num_repetitions,
+            mt_pulse_index=None,
+            *args,
+            **kwargs):
+        """
+
+        Args:
+            kernel (PulseList): The list of pulses to be repeated.
+            num_repetitions (:
+            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
+                If None, use the pulse with zero carrier frequency.
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        PulseTrain.__init__(self, kernel, num_repetitions, *args, **kwargs)
+        if mt_pulse_index is None:
+            for i, item in enumerate(kernel.pulses):
+                if hasattr(item, 'w_c') and item.w_c == 0.0:
+                    self.mt_pulse_index = i
+                    break
+        else:
+            self.mt_pulse_index = mt_pulse_index
+
+    def set_flip_angle(self, flip_angle):
+        self.kernel.pulses[self.mt_pulse_index].set_flip_angle(flip_angle)
+
+    def set_freq(self, freq):
+        self.kernel.pulses[self.mt_pulse_index].w_c = \
+            self.kernel.w_c + 2 * pi * freq
 
 
 # ======================================================================
@@ -1353,13 +1421,13 @@ def test_dynamics_operator_symbolic():
 
     # 2-pool model
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(0.05,),
-            approx=(None, 'superlorentz_approx'))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 2),
+        r1=(1.8, 1.0),
+        r2=(32.2581, 8.4746e4),
+        k=(0.05,),
+        approx=(None, 'superlorentz_approx'))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1369,13 +1437,13 @@ def test_dynamics_operator_symbolic():
 
     # 3-pool model
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 3),
-            r1=(1.8, 1.0, 1.2),
-            r2=(32.2581, 8.4746e4, 30.0),
-            k=(0.05, 0.5, 0.1),
-            approx=(None, 'superlorentz_approx', None))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 3),
+        r1=(1.8, 1.0, 1.2),
+        r2=(32.2581, 8.4746e4, 30.0),
+        k=(0.05, 0.5, 0.1),
+        approx=(None, 'superlorentz_approx', None))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1385,13 +1453,13 @@ def test_dynamics_operator_symbolic():
 
     # 4-pool model
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 4),
-            r1=(1.8, 1.0, 1.2, 2.0),
-            r2=(32.2581, 8.4746e4, 30.0, 60.0),
-            k=(0.05, 0.5, 0.1, 0.001, 0.4, 0.2),
-            approx=(None, 'superlorentz_approx', None, 'gauss'))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 4),
+        r1=(1.8, 1.0, 1.2, 2.0),
+        r2=(32.2581, 8.4746e4, 30.0, 60.0),
+        k=(0.05, 0.5, 0.1, 0.001, 0.4, 0.2),
+        approx=(None, 'superlorentz_approx', None, 'gauss'))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1413,13 +1481,13 @@ def test_dynamics_operator():
 
     # 2-pool model
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(0.3456,),
-            approx=(None, 'superlorentz_approx'))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 2),
+        r1=(1.8, 1.0),
+        r2=(32.2581, 8.4746e4),
+        k=(0.3456,),
+        approx=(None, 'superlorentz_approx'))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1429,12 +1497,12 @@ def test_dynamics_operator():
 
     # 3-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152, 0.3)],
-            w0=((w_c,) * 3),
-            r1=(1.8, 1.0, 1.2),
-            r2=(32.2581, 8.4746e4, 30.0),
-            k=(0.05, 0.5, 0.1),
-            approx=(None, 'superlorentz_approx', None))
+        m0=[v * 100.0 for v in (1.0, 0.152, 0.3)],
+        w0=((w_c,) * 3),
+        r1=(1.8, 1.0, 1.2),
+        r2=(32.2581, 8.4746e4, 30.0),
+        k=(0.05, 0.5, 0.1),
+        approx=(None, 'superlorentz_approx', None))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1444,12 +1512,12 @@ def test_dynamics_operator():
 
     # 4-pool model
     spin_model = SpinModel(
-            m0=[v * 100.0 for v in (1.0, 0.152, 0.3, 0.01)],
-            w0=((w_c,) * 4),
-            r1=(1.8, 1.0, 1.2, 2.0),
-            r2=(32.2581, 8.4746e4, 30.0, 60.0),
-            k=(0.05, 0.5, 0.1, 0.001, 0.4, 0.2),
-            approx=(None, 'superlorentz_approx', None, 'gauss'))
+        m0=[v * 100.0 for v in (1.0, 0.152, 0.3, 0.01)],
+        w0=((w_c,) * 4),
+        r1=(1.8, 1.0, 1.2, 2.0),
+        r2=(32.2581, 8.4746e4, 30.0, 60.0),
+        k=(0.05, 0.5, 0.1, 0.001, 0.4, 0.2),
+        approx=(None, 'superlorentz_approx', None, 'gauss'))
 
     print(spin_model)
     print(spin_model.m_eq)
@@ -1466,13 +1534,13 @@ def test_mt_sequence():
     w_c = GAMMA * B0
 
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(0.3456,),
-            approx=(None, 'superlorentz_approx'))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 2),
+        r1=(1.8, 1.0),
+        r2=(32.2581, 8.4746e4),
+        k=(0.3456,),
+        approx=(None, 'superlorentz_approx'))
 
     num_repetitions = 300
 
@@ -1485,7 +1553,7 @@ def test_mt_sequence():
         Spoiler(1.0),
         PulseExc.shaped(10.0e-6, 90.0, 1, 'rect', None),
         Delay(30.0e-3)],
-            b0=3.0)
+        b0=3.0)
     mt_flash = PulseTrain(mt_flash_kernel, num_repetitions)
 
     signal = mt_flash.signal(spin_model)
@@ -1504,13 +1572,13 @@ def test_approx_propagator(
     w_c = GAMMA * B0
 
     spin_model = SpinModel(
-            s0=100,
-            mc=(1.0, 0.152),
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(0.3456,),
-            approx=(None, 'superlorentz_approx'))
+        s0=100,
+        mc=(1.0, 0.152),
+        w0=((w_c,) * 2),
+        r1=(1.8, 1.0),
+        r2=(32.2581, 8.4746e4),
+        k=(0.3456,),
+        approx=(None, 'superlorentz_approx'))
 
     # todo: fix for classes
 
@@ -1531,8 +1599,8 @@ def test_approx_propagator(
     for amplitude in amplitudes:
         for shape, shape_kwargs in shapes:
             pulse_exc = PulseExc.shaped(
-                    40.0e-3, 90.0 * amplitude, 4000,
-                    shape, shape_kwargs, w_c, )
+                40.0e-3, 90.0 * amplitude, 4000,
+                shape, shape_kwargs, w_c, )
             for i, (propagator_mode, propagator_kwargs) in enumerate(modes):
                 pulse_exc = {
                     'w1_arr': rf_pulse[0],
@@ -1540,12 +1608,12 @@ def test_approx_propagator(
                     'w_c': np.array(w_c)}
                 begin_time = time.time()
                 p_op = propagator_pulse(
-                        spin_model['s0'], spin_model['m0'], spin_model['w0'],
-                        spin_model['r1'], spin_model['r2'], spin_model['k'],
-                        spin_model['approx'],
-                        pulse_exc['w_c'], pulse_exc['w1_arr'],
-                        pulse_exc['dt'],
-                        mode)
+                    spin_model['s0'], spin_model['m0'], spin_model['w0'],
+                    spin_model['r1'], spin_model['r2'], spin_model['k'],
+                    spin_model['approx'],
+                    pulse_exc['w_c'], pulse_exc['w1_arr'],
+                    pulse_exc['dt'],
+                    mode)
                 end_time = time.time()
                 if i == 0:
                     p_op_exact = p_op
@@ -1554,20 +1622,29 @@ def test_approx_propagator(
                             np.sum(np.abs(p_op_exact))
                 # print('\n', p_op)
                 print('{:>12s}, {:>24s}, err.: {:.3e}, time: {}'.format(
-                        shape, mode, rel_error,
-                        datetime.timedelta(0, end_time - begin_time)))
+                    shape, mode, rel_error,
+                    datetime.timedelta(0, end_time - begin_time)))
 
 
 # ======================================================================
 def test_z_spectrum(
-        freqs=np.round(np.logspace(np.log10(50), np.log10(50000), 32)),
-        amplitudes=np.round(np.logspace(np.log10(50), np.log10(5000), 32)),
+        spin_model=SpinModel(
+            s0=100,
+            mc=(0.8681, 0.1319),
+            w0=((GAMMA * B0,) * 2),
+            r1=(1.8, 1.0),
+            r2=(32.2581, 8.4746e4),
+            k=(0.3456,),
+            approx=(None, 'superlorentz_approx')),
+        freqs=np.round(mrb.sgnlogspace(50, 50000, 16)),
+        amplitudes=np.round(mrb.sgnlogspace(50, 5000, 16)),
         plot_data=True,
         save_file=None):
     """
     Test calculation of z-spectra
 
     Args:
+        spin_model (SpinModel):
         freqs (ndarray[float]):
         amplitudes (ndarray[float]):
         save_file (string):
@@ -1576,39 +1653,21 @@ def test_z_spectrum(
         freq
 
     """
-    w_c = GAMMA * B0
-
-    spin_model = SpinModel(
-            s0=100,
-            mc=(0.8681, 0.1319),
-            w0=((w_c,) * 2),
-            r1=(1.8, 1.0),
-            r2=(32.2581, 8.4746e4),
-            k=(0.3456,),
-            approx=(None, 'superlorentz_approx'))
-
-    num_repetitions = 300
-
-    mt_flash_kernel = PulseList([
-        Delay(10.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
-                        w_c, 'poly', {'fit_order': 3}),
-        Delay(10.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
-            w_c=w_c)
+    w_c = spin_model.w0[0]
 
     flip_angles = amplitudes * 11.799 / 50.0
 
-    class MtFlash(PulseTrain):
-        def set_flip_angle(self, flip_angle):
-            self.kernel.pulses[2].set_flip_angle(flip_angle)
-
-        def set_freq(self, freq):
-            self.kernel.pulses[2].w_c = w_c + 2 * pi * freq
-
-    mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
+    mt_flash = MtFlash(
+        PulseList([
+            Delay(10.0e-3),
+            Spoiler(1.0),
+            PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
+                            0.0, 'poly', {'fit_order': 3}),
+            Delay(10.0e-3),
+            Spoiler(1.0),
+            PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
+            w_c=w_c),
+        300)
 
     data = np.zeros((len(freqs), len(amplitudes)))
     for j, freq in enumerate(freqs):
@@ -1623,8 +1682,8 @@ def test_z_spectrum(
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.plot_surface(
-                X, Y, data, cmap=plt.cm.hot,
-                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+            X, Y, data, cmap=plt.cm.hot,
+            rstride=1, cstride=1, linewidth=0.01, antialiased=False)
     if save_file:
         np.savez(save_file, freqs, amplitudes, data)
     return data, freqs, flip_angles
@@ -1632,7 +1691,7 @@ def test_z_spectrum(
 
 # ======================================================================
 def test_fit_spin_model(
-        snr_level=10,
+        snr_level=20,
         plot_data=True):
     """
     Test calculation of z-spectra
@@ -1647,36 +1706,31 @@ def test_fit_spin_model(
     """
     w_c = GAMMA * B0
 
-    num_repetitions = 3000
+    mt_flash = MtFlash(
+        PulseList([
+            Delay(16610.0e-6),
+            Spoiler(0.0),
+            Delay(160.0e-6),
+            PulseExc.shaped(10000.0e-6, 90.0, 0, '_from_GAUSS5120', {},
+                            0.0, 'poly', {'fit_order': 3}),
+            Delay(160.0e-6 + 970.0e-6),
+            Spoiler(1.0),
+            Delay(160.0e-6),
+            PulseExc.shaped(100e-6, 11.0, 1, 'rect', {}),
+            Delay(4900.0e-6)],
+            w_c=w_c),
+        300)
 
-    mt_flash_kernel = PulseList([
-        Delay(10.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
-                        w_c, 'poly', {'fit_order': 3}),
-        Delay(10.0e-3),
-        Spoiler(1.0),
-        PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
-            w_c=w_c)
-
-    class MtFlash(PulseTrain):
-        def set_flip_angle(self, flip_angle):
-            self.kernel.pulses[2].set_flip_angle(flip_angle)
-
-        def set_freq(self, freq):
-            self.kernel.pulses[2].w_c = w_c + 2 * pi * freq
-
-    mt_flash = MtFlash(mt_flash_kernel, num_repetitions)
-
-    def mt_signal(x_arr, s0, mc_a, r1a, r1b, r2a, r2b, k_ab):
+    def mt_signal(x_arr, s0, mc_a, r1a, r2a, r2b, k_ab):
         spin_model = SpinModel(
-                s0=s0,
-                mc=(mc_a, 1.0 - mc_a),
-                w0=((w_c,) * 2),
-                r1=(r1a, r1b),
-                r2=(r2a, r2b),
-                k=(k_ab,),
-                approx=(None, 'superlorentz_approx'))
+            s0=s0,
+            mc=(mc_a, 1.0 - mc_a),
+            w0=(w_c, w_c * (1 - 3.5e-6)),
+            # w0=((w_c,) * 2),
+            r1=(r1a, 1.0),
+            r2=(r2a, r2b),
+            k=(k_ab,),
+            approx=(None, 'superlorentz_approx'))
         y_arr = np.zeros_like(x_arr[:, 0])
         i = 0
         for freq, flip_angle in x_arr:
@@ -1687,47 +1741,53 @@ def test_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    exact, freqs, flip_angles = test_z_spectrum(
-            freqs=np.round(np.logspace(np.log10(50), np.log10(50000), 16)),
-            amplitudes=np.round(np.logspace(np.log10(50), np.log10(5000), 16)),
-            plot_data=False)
-    noise = (np.random.rand(*exact.shape) - 0.5) * np.max(exact) / snr_level
-    measured = exact + noise
+    freqs = mrb.sgnlogspace(100.0, 100.0e3, 16)
+    flip_angles = np.linspace(1.0, 2000.0, 16)
 
-    x_data = mrb.cartesian(freqs, flip_angles)
-    y_data = measured.ravel()
-    p0 = 100, 0.8, 1.8, 1.0, 32, 8e4, 0.5
-    bounds = [[50, 1000], [0, 1], [0.1, 10], [0.1, 10], [10, 50],
-              [1e4, 1e5], [0, 1]]
+    x_data = np.array(tuple(itertools.product(freqs, flip_angles)))
+    print(x_data.shape)
 
-    def sum_of_squares(params, x_data, m_data):
-        e_data = mt_signal(x_data, *params)
-        return np.sum((m_data - e_data) ** 2.0)
+    # see: mt_signal
+    p_e = 100, 0.8681, 1.8, 32.2581, 8.4746e4, 0.3456
+    exact = mt_signal(x_data, *p_e).reshape((len(freqs), len(flip_angles)))
+    # num = len(freqs) * len(flip_angles)
+    # noise = (np.random.rand(*exact.shape) - 0.5) * np.max(exact) / snr_level
+    # measured = exact + noise
+    #
+    # p0 = 100, 0.5, 5.0, 20.0, 5e4, 0.5
+    # bounds = [[50, 1000], [0, 1], [0.1, 10], [10, 50], [1e4, 1e5], [0, 1]]
+    # y_data = measured.ravel()
+    #
+    # def sum_of_squares(params, x_data, m_data):
+    #     e_data = mt_signal(x_data, *params)
+    #     return np.sum((m_data - e_data) ** 2.0)
+    #
+    # res = scipy.optimize.minimize(
+    #     sum_of_squares, p0, args=(x_data, y_data), method='L-BFGS-B',
+    #     bounds=bounds, options={'gtol': 1e-05, 'ftol': 2e-09})
+    # print(res.x, res.success, res.message)
+    #
+    # fitted = mt_signal(x_data, *res.x).reshape(measured.shape)
 
-    res = scipy.optimize.minimize(
-            sum_of_squares, p0, args=(x_data, y_data), method='L-BFGS-B',
-            bounds=bounds)
-    print(res.x, res.success, res.message)
-
-    fitted = mt_signal(x_data, *res.x).reshape(measured.shape)
-
-
-    # p_opt, p_cov = scipy.optimize.curve_fit(mt_signal, x_data, y_data, p0=p0)
-    # print(p_opt, p_cov)
+    # # faked fitted
+    # fitted = mt_signal(x_data, *p0).reshape(measured.shape)
 
     if plot_data:
-        X, Y = np.meshgrid(flip_angles, freqs)
+        X, Y = np.meshgrid(flip_angles, mrb.sgnlog(freqs, 10.0))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
+        ax.set_ylabel('Frequency offset / Hz (log10 scale)')
+        ax.set_zlabel('Signal Intensity / arb.units')
         ax.plot_surface(
-                X, Y, exact, cmap=plt.cm.hot,
-                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-        ax.plot_surface(
-                X, Y, measured, cmap=plt.cm.pink,
-                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
-        ax.plot_surface(
-                X, Y, fitted, cmap=plt.cm.pink,
-                rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+            X, Y, exact, cmap=plt.cm.hot,
+            rstride=1, cstride=1, linewidth=0.005, antialiased=False)
+        # ax.plot_surface(
+        #     X, Y, measured, cmap=plt.cm.ocean,
+        #     rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+        # ax.plot_surface(
+        #     X, Y, fitted, cmap=plt.cm.bone,
+        #     rstride=1, cstride=1, linewidth=0.01, antialiased=False)
 
 
 # ======================================================================
@@ -1741,7 +1801,11 @@ if __name__ == '__main__':
     # _elapsed('test_mt_sequence')
     # test_approx_propagator()
     # _elapsed('test_approx_propagator')
-    # test_z_spectrum()
+    # test_z_spectrum(
+    #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA * B0,) * 4,
+    #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
+    #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
+    #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
     # _elapsed('test_z_spectrum')
     test_fit_spin_model()
     _elapsed('test_fit_spin_model')

@@ -12,6 +12,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
+import functools
 import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
@@ -56,10 +57,9 @@ from mri_tools import _EVENTS
 
 # from mri_tools import get_first_line
 
-
 # ======================================================================
 # :: Custom defined constants
-_EVENTS += [('mri_tools.base', time.time())]
+
 
 # ======================================================================
 # :: Default values usable in functions.
@@ -170,7 +170,7 @@ def accumulate(lst, func=lambda x, y: x + y):
     itertools.accumulate
 
     """
-    return [reduce(func, lst[:idx + 1]) for idx in range(len(lst))]
+    return [functools.reduce(func, lst[:idx + 1]) for idx in range(len(lst))]
 
 
 # ======================================================================
@@ -192,7 +192,7 @@ def multi_replace(text, replace_list):
         The string after the performed replacements.
 
     """
-    return reduce(lambda s, r: s.replace(*r), replace_list, text)
+    return functools.reduce(lambda s, r: s.replace(*r), replace_list, text)
 
 
 # ======================================================================
@@ -272,7 +272,7 @@ def set_keyword_parameters(
     """
     inspected = inspect.getargspec(func)
     defaults = dict(
-            zip(reversed(inspected.args), reversed(inspected.defaults)))
+        zip(reversed(inspected.args), reversed(inspected.defaults)))
     kw_params = {}
     for key in inspected.args:
         if key in values:
@@ -356,11 +356,11 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
             # p_stdout, p_stderr = [item.read() for item in proc[1:]]
             # :: new style
             proc = subprocess.Popen(
-                    cmd,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=True, close_fds=True)
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True, close_fds=True)
             p_stdout = proc.stdout.read()
             p_stderr = proc.stderr.read()
             if verbose >= VERB_LVL['debug']:
@@ -963,6 +963,64 @@ def check_redo(
 
 
 # ======================================================================
+def sgnlog(x, base=np.e):
+    """
+    Signed logarithm of x: log(abs(x) * sign(x)
+
+    Args:
+        x (float|ndarray): The input value(s)
+
+    Returns:
+        The signed logarithm
+    """
+    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
+
+
+# ======================================================================
+def sgnlogspace(
+        start,
+        stop,
+        num=50,
+        endpoint=True,
+        base=10.0):
+    """
+    Logarithmically spaced samples between signed start and stop endpoints.
+
+    Args:
+        start (float): The starting value of the sequence.
+        stop (float): The end value of the sequence.
+        num (int): Number of samples to generate. Must be non-negative.
+        endpoint (bool): If True, stop is the last sample.
+        base (float): The base of the log space. Must be non-negative.
+
+    Returns:
+        samples (ndarray): equally spaced samples on a log scale.
+    """
+    if start * stop < 0.0:
+        bounds = (
+            (start, -(np.exp(-np.log(np.abs(start))))),
+            ((np.exp(-np.log(np.abs(stop)))), stop))
+        args_bounds = tuple(
+            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
+            for arg_bounds in bounds)
+        args_num = (num // 2, num - num // 2)
+        args_sign = (np.sign(start), np.sign(stop))
+        args_endpoint = True, endpoint
+        logspaces = tuple(
+            np.logspace(*(arg_bounds + (arg_num, arg_endpoint, base))) \
+            * arg_sign
+            for arg_bounds, arg_sign, arg_num, arg_endpoint
+            in zip(args_bounds, args_sign, args_num, args_endpoint))
+        samples = np.concatenate(logspaces)
+    else:
+        sign = np.sign(start)
+        logspace_bound = \
+            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
+        samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
+    return samples
+
+
+# ======================================================================
 def to_range(
         val,
         in_range=(0.0, 1.0),
@@ -1289,7 +1347,7 @@ def calc_stats(
         for label in label_list:
             if compact:
                 print_str += '{}={}, '.format(
-                        label, compact_num_str(stats_dict[label]))
+                    label, compact_num_str(stats_dict[label]))
             else:
                 print_str += '{}={}, '.format(label, stats_dict[label])
         print(print_str)
@@ -1506,19 +1564,21 @@ def curve_fit(param_list):
 # ======================================================================
 def _elapsed(
         name,
+        time_point=time.time(),
         events=_EVENTS):
     """
-    Print quick-and-dirty elapsed times at specific, labelled, intervals.
+    Append a named event point to the events list.
 
     Args:
-        elapsed (list[str,time]: A list of labelled time points in the form of
-            2-tuples: (label, time.time())
-        label:
+        name (str): The name of the event point
+        time_point (float): The time in seconds since the epoch
+        events (list[(str,time)]): A list of named event time points.
+            Each event is a 2-tuple: (label, time)
 
     Returns:
-
+        None
     """
-    events.append((name, time.time()))
+    events.append((name, time_point))
 
 
 # ======================================================================
@@ -1526,15 +1586,15 @@ def _print_elapsed(
         events=_EVENTS,
         label='\nElapsed Time(s): '):
     """
-    Print quick-and-dirty elapsed times at specific, labelled, intervals.
+    Print quick-and-dirty elapsed times between named event points.
 
     Args:
-        elapsed (list[str,time]: A list of labelled time points in the form of
-            2-tuples: (label, time.time())
-        label:
+        events (list[str,time]): A list of named event time points.
+            Each event is a 2-tuple: (label, time).
+        label (str): heading of the elapsed time table.
 
     Returns:
-
+        None
     """
     print(label, end='\n' if len(events) > 2 else '')
     first_elapsed = events[0][1]
@@ -1546,26 +1606,16 @@ def _print_elapsed(
         diff_last = datetime.timedelta(0, curr_elapsed - last_elapsed)
         if diff_first == diff_last:
             diff_first = '-'
-        print('{:24s} {:>24s}, {:>24s}'.format(name, diff_last, diff_first))
+        print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
+            name, diff_last, diff_first))
 
 
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
 
-    ## Test significant_figures:
-    # print(significant_figures(0.077355507524, 1))
-    # print(significant_figures(0.077355507524, 2))
-    # print(significant_figures(0.077355507524, 3))
-    #
-    # print(significant_figures(77355507524, 1))
-    # print(significant_figures(77355507524, 2))
-    # print(significant_figures(77355507524, 3))
-    #
-    # print(significant_figures(77, 1))
-    # print(significant_figures(77, 2))
-    # print(significant_figures(77, 3))
-
+# ======================================================================
+_elapsed('mri_tools.base')
 
 # shape = np.array((100000, 20, 20))
 # dim = 0

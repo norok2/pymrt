@@ -67,35 +67,6 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = D_VERB_LVL
-    # working directory
-    d_working_dir = '.'
-    # data units
-    d_type = None
-    # data range
-    d_range = None
-    # data units
-    d_units = None
-    # mask file
-    d_mask_file = None
-    # registration reference extension
-    d_reg_ref_ext = mrl.D_EXT['registration reference']
-    # correlation reference extension
-    d_corr_ref_ext = mrl.D_EXT['correlation reference']
-    # temporary dir
-    d_tmp_dir = 'tmp'
-    # registration dir
-    d_reg_dir = 'reg'
-    # masking dir
-    d_msk_dir = 'msk'
-    # comparing dir
-    d_cmp_dir = 'cmp'
-    # figures dir
-    d_fig_dir = 'fig'
-    # FSL's BET brain extraction algorithm parameters
-    d_bet_params = ''
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -113,7 +84,7 @@ def handle_arg():
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
@@ -122,51 +93,51 @@ def handle_arg():
         help='force new processing [%(default)s]')
     arg_parser.add_argument(
         '-d', '--dirpath', metavar='DIR',
-        default=d_working_dir,
+        default='.',
         help='set working directory [%(default)s]')
     arg_parser.add_argument(
         '-t', '--type', metavar='TYPE',
-        default=d_type,
+        default=None,
         help='set data type [%(default)s]')
     arg_parser.add_argument(
         '-a', '--range', metavar=('MIN', 'MAX'),
-        type=float, nargs=2, default=d_range,
+        type=float, nargs=2, default=None,
         help='set parameters for the range of values [%(default)s]')
     arg_parser.add_argument(
         '-u', '--units', metavar='UNITS',
-        default=d_units,
+        default=None,
         help='set units for values [%(default)s]')
     arg_parser.add_argument(
         '-m', '--mask', metavar='MASK_FILE',
-        default=d_mask_file,
+        default=None,
         help='set exact mask file [%(default)s]')
     arg_parser.add_argument(
         '--reg_ref_ext', metavar='FILE_EXT',
-        default=d_reg_ref_ext,
+        default=mrl.D_EXT['registration reference'],
         help='file extension of registration reference flag [%(default)s]')
     arg_parser.add_argument(
         '--corr_ref_ext', metavar='FILE_EXT',
-        default=d_corr_ref_ext,
+        default=mrl.D_EXT['correlation reference'],
         help='file extension of correlation reference flag [%(default)s]')
     arg_parser.add_argument(
         '--tmp_dir', metavar='SUBDIR',
-        default=d_tmp_dir,
+        default='tmp',
         help='subdirectory where to store temporary files [%(default)s]')
     arg_parser.add_argument(
         '--reg_dir', metavar='SUBDIR',
-        default=d_reg_dir,
+        default='reg',
         help='subdirectory where to store registration files [%(default)s]')
     arg_parser.add_argument(
         '--msk_dir', metavar='SUBDIR',
-        default=d_msk_dir,
+        default='msk',
         help='subdirectory where to store masking files [%(default)s]')
     arg_parser.add_argument(
         '--cmp_dir', metavar='SUBDIR',
-        default=d_cmp_dir,
+        default='cmp',
         help='subdirectory where to store comparing files [%(default)s]')
     arg_parser.add_argument(
         '--fig_dir', metavar='SUBDIR',
-        default=d_fig_dir,
+        default='fig',
         help='subdirectory where to store figures [%(default)s]')
     return arg_parser
 

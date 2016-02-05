@@ -32,7 +32,7 @@ from __future__ import unicode_literals
 import os  # Miscellaneous operating system interfaces
 
 # ======================================================================
-# :: Versioning
+# :: Version
 __version__ = "$Revision$"
 # $Source$
 
