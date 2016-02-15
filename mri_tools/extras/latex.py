@@ -49,7 +49,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
+import mri_tools.base as mrb
 
 
 # from mri_tools import INFO

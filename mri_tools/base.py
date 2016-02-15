@@ -1562,7 +1562,7 @@ def curve_fit(param_list):
 
 
 # ======================================================================
-def _elapsed(
+def elapsed(
         name,
         time_point=time.time(),
         events=_EVENTS):
@@ -1582,7 +1582,7 @@ def _elapsed(
 
 
 # ======================================================================
-def _print_elapsed(
+def print_elapsed(
         events=_EVENTS,
         label='\nElapsed Time(s): '):
     """
@@ -1615,7 +1615,7 @@ if __name__ == '__main__':
     print(__doc__)
 
 # ======================================================================
-_elapsed('mri_tools.base')
+elapsed('mri_tools.base')
 
 # shape = np.array((100000, 20, 20))
 # dim = 0
@@ -1627,5 +1627,5 @@ _elapsed('mri_tools.base')
 # prod2 = ndot(arr, dim, -1)
 # _EVENTS += [('ndot', time.time())]
 # print(np.sum(np.abs(prod1 - prod2)))
-# _print_elapsed()
+# print_elapsed()
 # quit()

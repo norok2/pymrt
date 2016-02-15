@@ -8,7 +8,7 @@ appropriate combination of values in the 'options' command-line argument.
 Some computations, that are of particular interest in MRI, are readily
 available through the 'method' command-line argument.
 
-See also: mri_tools.modules.compute
+See also: mri_tools.compute
 """
 
 # ======================================================================
@@ -54,19 +54,19 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.modules.base as mrb
-# import mri_tools.modules.utils as mru
-# import mri_tools.modules.nifti as mrn
-import mri_tools.modules.computation as mrc
-# import mri_tools.modules.correlate as mrr
-# import mri_tools.modules.geometry as mrg
-# from mri_tools.modules.sequences import mp2rage
+# import mri_tools.base as mrb
+# import mri_tools.utils as mru
+# import mri_tools.nifti as mrn
+import mri_tools.computation as mrc
+# import mri_tools.correlate as mrr
+# import mri_tools.geometry as mrg
+# from mri_tools.sequences import mp2rage
 import dcmpi.common as dcmlib
 
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools.modules.base import _elapsed, _print_elapsed
+from mri_tools.base import elapsed, print_elapsed
 
 
 # ======================================================================
@@ -203,6 +203,6 @@ if __name__ == '__main__':
     else:
         print('WW: Method not specified.')
 
-    _elapsed('compute')
+    elapsed('compute')
     if ARGS.verbose > VERB_LVL['none']:
-        _print_elapsed()
+        print_elapsed()

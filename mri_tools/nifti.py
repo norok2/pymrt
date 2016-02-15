@@ -52,10 +52,10 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import mri_tools.modules.base as mrb
-import mri_tools.modules.geometry as mrg
-import mri_tools.modules.plot as mrp
-import mri_tools.modules.segmentation as mrs
+import mri_tools.base as mrb
+import mri_tools.geometry as mrg
+import mri_tools.plot as mrp
+import mri_tools.segmentation as mrs
 
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
@@ -571,7 +571,7 @@ def img_zoom(
 
     See Also
     ========
-    mri_tools.modules.geometry.
+    mri_tools.geometry.
     """
 
     def _zoom(array, zoom, interpolation_order, extra_dim, fill_dim):
@@ -841,7 +841,7 @@ def img_mask_threshold(
 
     See Also
     ========
-    mri_tools.modules.segmentation.mask_threshold
+    mri_tools.segmentation.mask_threshold
 
     """
 
@@ -859,7 +859,7 @@ def calc_labels(
         *args,
         **kwargs):
     """
-    Extract labels using: mri_tools.modules.geometry.calc_labels
+    Extract labels using: mri_tools.geometry.calc_labels
 
     Parameters
     ==========
@@ -878,7 +878,7 @@ def calc_labels(
 
     See Also
     ========
-    mri_tools.modules.geometry.calc_labels
+    mri_tools.geometry.calc_labels
 
     """
 
@@ -1007,7 +1007,7 @@ def plot_sample2d(
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
-        `mri_tools.modules.plot.sample2d()`
+        `mri_tools.plot.sample2d()`
 
     Returns
     =======
@@ -1041,7 +1041,7 @@ def plot_histogram1d(
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
-        `mri_tools.modules.plot.histogram1d()`
+        `mri_tools.plot.histogram1d()`
 
     Returns
     =======
@@ -1078,7 +1078,7 @@ def plot_histogram1d_list(
     args : tuple (optional)
     kwargs : dict (optional)
         Additional arguments to be passed to the transformation function:
-        `mri_tools.modules.plot.histogram1d_list()`
+        `mri_tools.plot.histogram1d_list()`
 
     Returns
     =======
@@ -1116,7 +1116,7 @@ def plot_histogram2d(
     Plot 2D histogram of two arrays with MatPlotLib.
 
     See Also:
-        mri_tools.modules.plot.histogram2d()
+        mri_tools.plot.histogram2d()
 
     Args:
         in1_filepath (str): First input file path.
@@ -1124,9 +1124,9 @@ def plot_histogram2d(
         mask1_filepath (str): First mask file path.
         mask2_filepath (str): Second mask file path.
         *args (tuple): Additional arguments for:
-            mri_tools.modules.plot.histogram2d()`
+            mri_tools.plot.histogram2d()`
         **kwargs (dict): Additional arguments for:
-            mri_tools.modules.plot.histogram2d()`
+            mri_tools.plot.histogram2d()`
 
     Returns:
         (ndarray, ndarray, ndarray, matplotlib.Figure):

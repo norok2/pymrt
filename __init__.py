@@ -32,40 +32,8 @@ from __future__ import unicode_literals
 import os  # Miscellaneous operating system interfaces
 
 # ======================================================================
-# :: Version
-__version__ = "$Revision$"
-# $Source$
-
-
-# ======================================================================
-# :: Project Details
-INFO = {
-    'authors': (
-        'Riccardo Metere <metere@cbs.mpg.de>',
-    ),
-    'copyright': 'Copyright (C) 2015',
-    'license': 'License: GNU General Public License version 3 (GPLv3)',
-    'notice':
-        """
-This program is free software and it comes with ABSOLUTELY NO WARRANTY.
-It is covered by the GNU General Public License version 3 (GPLv3).
-You are welcome to redistribute it under its terms and conditions.
-        """,
-    'version': __version__
-}
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-D_VERB_LVL = VERB_LVL['low']
-
-# ======================================================================
-# :: quick and dirty timing facility
-_EVENTS = []
-
-# ======================================================================
-# :: export modules
-__path__.append(os.path.join(os.path.dirname(__file__), 'modules'))
+# :: export mri_tools
+__path__.append(os.path.join(os.path.dirname(__file__), 'mri_tools'))
 
 # ======================================================================
 # Greetings

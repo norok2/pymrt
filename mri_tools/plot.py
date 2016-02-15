@@ -51,7 +51,7 @@ import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
+import mri_tools.base as mrb
 
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL

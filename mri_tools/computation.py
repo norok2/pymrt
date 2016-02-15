@@ -52,9 +52,9 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
-import mri_tools.modules.utils as mru
-import mri_tools.modules.nifti as mrn
+import mri_tools.base as mrb
+import mri_tools.utils as mru
+import mri_tools.nifti as mrn
 
 # from dcmpi.lib.common import ID
 
@@ -629,9 +629,9 @@ def sources_generic(
 
     See Also
     ========
-    mri_tools.modules.computation.compute_generic,
-    mri_tools.modules.computation.compute,
-    mri_tools.modules.computation.D_OPTS
+    mri_tools.computation.compute_generic,
+    mri_tools.computation.compute,
+    mri_tools.computation.D_OPTS
 
     """
     sources_list = []
@@ -767,9 +767,9 @@ def compute_generic(
 
     See Also
     ========
-    mri_tools.modules.computation.sources_generic,
-    mri_tools.modules.computation.compute,
-    mri_tools.modules.computation.D_OPTS
+    mri_tools.computation.sources_generic,
+    mri_tools.computation.compute,
+    mri_tools.computation.D_OPTS
 
     """
     # get the num, name and seq from first source file
@@ -900,9 +900,9 @@ def compute(
 
     See Also
     ========
-    mri_tools.modules.computation.compute_generic,
-    mri_tools.modules.computation.source_generic,
-    mri_tools.modules.computation.D_OPTS
+    mri_tools.computation.compute_generic,
+    mri_tools.computation.source_generic,
+    mri_tools.computation.D_OPTS
 
     """
     # handle extra subdirectories in input path

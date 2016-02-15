@@ -54,9 +54,9 @@ import re  # Regular expression operations
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
-import mri_tools.modules.nifti as mrn
-from mri_tools.modules.debug import dbg
+import mri_tools.base as mrb
+import mri_tools.nifti as mrn
+from mri_tools.debug import dbg
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL

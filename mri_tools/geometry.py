@@ -74,8 +74,8 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
-import mri_tools.modules.plot as mrp
+import mri_tools.base as mrb
+import mri_tools.plot as mrp
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL

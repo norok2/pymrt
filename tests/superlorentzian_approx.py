@@ -59,12 +59,12 @@ from numpy import pi, sin, cos, exp, sqrt
 # from sympy import pi, sin, cos, exp, sqrt, re, im
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
+import mri_tools.base as mrb
 
 
-# import mri_tools.modules.geometry as mrg
-# import mri_tools.modules.plot as mrp
-# import mri_tools.modules.segmentation as mrs
+# import mri_tools.geometry as mrg
+# import mri_tools.plot as mrp
+# import mri_tools.segmentation as mrs
 
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL

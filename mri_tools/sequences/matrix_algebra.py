@@ -31,6 +31,8 @@ import itertools  # Functions creating iterators for efficient looping
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
+# import profile  # Deterministic Profiler
+
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -43,7 +45,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 # import numba  # Numba Just-In-Time compiler for Python / NumPy
-import cProfile as profile  # Deterministic Profiler
+
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -63,16 +65,16 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 # from numba import jit
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
+import mri_tools.base as mrb
 
-# import mri_tools.modules.geometry as mrg
-# import mri_tools.modules.plot as mrp
-# import mri_tools.modules.segmentation as mrs
+# import mri_tools.geometry as mrg
+# import mri_tools.plot as mrp
+# import mri_tools.segmentation as mrs
 
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
-from mri_tools.modules.base import _elapsed, _print_elapsed
+from mri_tools.base import elapsed, print_elapsed
 
 # from mri_tools import get_first_line
 
@@ -112,7 +114,7 @@ def superlorentz(x):
 # todo: check that the sampling rate is appropriate: 1024 is usually enough
 _SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 256)
 _SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-_elapsed('Superlorentz Approx.')
+elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -267,11 +269,12 @@ def _shape_from_file(
         y_re = arr
         y_im = 0.0
     elif arr.ndim > 1:
-        y_re = arr[:,0]
-        y_im = arr[:,1]
+        y_re = arr[:, 0]
+        y_im = arr[:, 1]
     if arr.ndim > 2:
         warnings.warn('unknown pulse format in: ' + "'{}'")
     return y_re + 1j * y_im
+
 
 # ======================================================================
 def dynamics_operator(
@@ -456,8 +459,7 @@ def _propagator_poly(
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
-        p_op_list = [p_op_arr[j, :, :] for j in
-                     range(pulse_exc.num_steps)]
+        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
@@ -508,8 +510,7 @@ def _propagator_poly(
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
-        p_op_list = [p_op_arr[j, :, :] for j in
-                     range(pulse_exc.num_steps)]
+        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
     return p_op
 
@@ -591,12 +592,10 @@ def _propagator_interp(
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = scipy.interpolate.griddata(
-                    w1_approx,
-                    p_op_approx[i, j, :],
+                    w1_approx, p_op_approx[i, j, :],
                     (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
                     method=method, fill_value=0.0)
-        p_op_list = [p_op_arr[j, :, :] for j in
-                     range(pulse_exc.num_steps)]
+        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
     return p_op
 
@@ -669,9 +668,7 @@ def _propagator_linear(
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_im)
             p_op_re_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
-        p_op_arr = np.zeros(
-            spin_model.operator_shape + (
-                pulse_exc.num_steps,))
+        p_op_arr = np.zeros((pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr_re = np.interp(
@@ -686,8 +683,7 @@ def _propagator_linear(
                     (np.abs(pulse_exc.w1_arr.real) +
                      np.abs(pulse_exc.w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
-        p_op_list = [p_op_arr[:, :, j] for j in
-                     range(pulse_exc.num_steps)]
+        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrb.mdot(*p_op_list[::-1])
     return p_op
 
@@ -1061,7 +1057,7 @@ class PulseExc:
         elif shape == 'sinc':
             w1_arr = _shape_sinc(num_steps, **shape_kwargs)
         elif shape == 'rect':
-            w1_arr = np.array((1.0,) * num_steps)
+            w1_arr = np.ones((num_steps,)).astype(complex)
         elif shape.startswith('_from_'):
             filename = shape[len('_from_'):]
             w1_arr = _shape_from_file(filename)
@@ -1069,8 +1065,10 @@ class PulseExc:
             try:
                 shape_func = eval('_shape_' + shape)
                 w1_arr = shape_func(num_steps, **shape_kwargs)
-            except:
-                raise ValueError('{}: unknown shape'.format(shape))
+            except NameError:
+                msg = '{}: unknown shape. Fall back to rect'.format(shape)
+                warnings.warn(msg)
+                w1_arr = np.ones((num_steps,)).astype(complex)
         self = cls(duration, w1_arr, w_c)
         self.shape = shape
         self.shape_kwargs = shape_kwargs
@@ -1156,19 +1154,21 @@ class PulseExc:
         if self.propagator_mode == 'exact':
             p_op_list = [
                 sp.linalg.expm(
-                    -self.dt *
-                    dynamics_operator(spin_model, self.w_c, w1))
+                    -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self.w1_arr]
             p_op = mrb.mdot(*p_op_list[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
                 p_op = p_op_func(self, spin_model, *args, **kwargs)
-            except:
-                raise ValueError(
-                    '{}: unknown propagator mode'.format(
-                        self.propagator_mode))
-
+            except NameError:
+                msg = '{}: unknown approximation'.format(self.propagator_mode)
+                warnings.warn(msg)
+                p_op_list = [
+                    sp.linalg.expm(
+                        -self.dt * dynamics_operator(spin_model, self.w_c, w1))
+                    for w1 in self.w1_arr]
+                p_op = mrb.mdot(*p_op_list[::-1])
         return p_op
 
     def __repr__(self):
@@ -1565,20 +1565,23 @@ def test_mt_sequence():
 
 # ======================================================================
 def test_approx_propagator(
-        amplitudes=(1.0,)):
+        spin_model=SpinModel(
+            s0=100,
+            mc=(0.8681, 0.1319),
+            w0=((GAMMA * B0,) * 2),
+            r1=(1.8, 1.0),
+            r2=(32.2581, 8.4746e4),
+            k=(0.3456,),
+            approx=(None, 'superlorentz_approx')),
+        flip_angle=90.0):
     """
     Test the approximation of propagators - for speeding up.
+
+    Args:
+        spin_model (SpinModel):
+        flip_angles (float):
     """
     w_c = GAMMA * B0
-
-    spin_model = SpinModel(
-        s0=100,
-        mc=(1.0, 0.152),
-        w0=((w_c,) * 2),
-        r1=(1.8, 1.0),
-        r2=(32.2581, 8.4746e4),
-        k=(0.3456,),
-        approx=(None, 'superlorentz_approx'))
 
     # todo: fix for classes
 
@@ -1588,42 +1591,49 @@ def test_approx_propagator(
     modes += ['poly_{}'.format(order) for order in range(4, 5)]
     modes += ['interp_{}_{}'.format(mode, num_samples)
               for mode in ['linear', 'cubic'] for num_samples in range(4, 5)]
-    shapes = (
-        'gauss',
-        'lorentz',
-        'sinc',
-        # 'fermi',
-        # 'random',
-        'cos_sin',
-    )
-    for amplitude in amplitudes:
-        for shape, shape_kwargs in shapes:
-            pulse_exc = PulseExc.shaped(
-                40.0e-3, 90.0 * amplitude, 4000,
-                shape, shape_kwargs, w_c, )
-            for i, (propagator_mode, propagator_kwargs) in enumerate(modes):
-                pulse_exc = {
-                    'w1_arr': rf_pulse[0],
-                    'dt': rf_pulse[1],
-                    'w_c': np.array(w_c)}
+    modes = {
+        'linear': {
+            'num_samples': tuple(range(10, 20, 5))},
+        'interp': {
+            'method': ('linear', 'cubic'),
+            'num_samples': tuple(range(10, 20, 3))},
+        'reduced': {
+            'num_resamples': tuple(range(10, 20, 5))},
+        'poly': {
+            'fit_order': tuple(range(3, 6))}
+    }
+
+    shapes = {
+        'gauss': {},
+        'lorentz': {},
+        'sinc': {},
+        # 'fermi': {},
+        # 'random': {},
+        'cos_sin': {},
+    }
+    exact_p_ops = {}
+    for shape, shape_kwargs in shapes.items():
+        pulse = PulseExc.shaped(
+            40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c, 'exact', {})
+        exact_p_ops[shape] = pulse.propagator(spin_model)
+
+    for shape, shape_kwargs in shapes.items():
+        for mode, mode_params in modes.items():
+            kwargs_items = [{}]
+            names = mode_params.keys()
+            for values in itertools.product(*[mode_params[i] for i in names]):
+                kwargs_items.append({k: v for k, v in zip(names, values)})
+            for kwargs in kwargs_items:
+                pulse = PulseExc.shaped(
+                    40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c,
+                    mode, kwargs)
                 begin_time = time.time()
-                p_op = propagator_pulse(
-                    spin_model['s0'], spin_model['m0'], spin_model['w0'],
-                    spin_model['r1'], spin_model['r2'], spin_model['k'],
-                    spin_model['approx'],
-                    pulse_exc['w_c'], pulse_exc['w1_arr'],
-                    pulse_exc['dt'],
-                    mode)
-                end_time = time.time()
-                if i == 0:
-                    p_op_exact = p_op
-                    p_op_norm = np.sum(np.abs(p_op_exact))
-                rel_error = np.sum(np.abs(p_op_exact - p_op)) / \
-                            np.sum(np.abs(p_op_exact))
-                # print('\n', p_op)
-                print('{:>12s}, {:>24s}, err.: {:.3e}, time: {}'.format(
-                    shape, mode, rel_error,
-                    datetime.timedelta(0, end_time - begin_time)))
+                p_op = pulse.propagator(spin_model)
+                elapsed = datetime.timedelta(0, time.time() - begin_time)
+                rel_error = np.sum(np.abs(exact_p_ops[shape] - p_op)) / \
+                            np.sum(np.abs(exact_p_ops[shape]))
+                print('{:>8s}, {:>8s}, {:>48s},\t{:.3e}, {}'.format(
+                    shape, mode, str(kwargs), rel_error, elapsed))
 
 
 # ======================================================================
@@ -1644,9 +1654,11 @@ def test_z_spectrum(
     Test calculation of z-spectra
 
     Args:
+
         spin_model (SpinModel):
         freqs (ndarray[float]):
         amplitudes (ndarray[float]):
+        plot_data (bool):
         save_file (string):
 
     Returns:
@@ -1697,9 +1709,8 @@ def test_fit_spin_model(
     Test calculation of z-spectra
 
     Args:
-        freqs (ndarray[float]):
-        amplitudes (ndarray[float]):
-        save_file (string):
+        snr_level (float):
+        plot_data (bool):
 
     Returns:
         None
@@ -1741,14 +1752,13 @@ def test_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    freqs = mrb.sgnlogspace(100.0, 100.0e3, 16)
-    flip_angles = np.linspace(1.0, 2000.0, 16)
+    freqs = mrb.sgnlogspace(100.0, 300.0e3, 32)
+    flip_angles = np.linspace(1.0, 1100.0, 32)
 
     x_data = np.array(tuple(itertools.product(freqs, flip_angles)))
-    print(x_data.shape)
 
     # see: mt_signal
-    p_e = 100, 0.8681, 1.8, 32.2581, 8.4746e4, 0.3456
+    p_e = 100, 0.8681, 2.0, 32.2581, 8.4746e4, 0.3456
     exact = mt_signal(x_data, *p_e).reshape((len(freqs), len(flip_angles)))
     # num = len(freqs) * len(flip_angles)
     # noise = (np.random.rand(*exact.shape) - 0.5) * np.max(exact) / snr_level
@@ -1794,22 +1804,23 @@ def test_fit_spin_model(
 if __name__ == '__main__':
     print(__doc__)
     # test_dynamics_operator_symbolic()
-    # _elapsed('test_symbolic')
+    # elapsed('test_symbolic')
     # test_dynamics_operator()
-    # _elapsed('test_dynamics_operator')
+    # elapsed('test_dynamics_operator')
     # test_mt_sequence()
-    # _elapsed('test_mt_sequence')
+    # elapsed('test_mt_sequence')
     # test_approx_propagator()
-    # _elapsed('test_approx_propagator')
+    # elapsed('test_approx_propagator')
     # test_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA * B0,) * 4,
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
     #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
-    # _elapsed('test_z_spectrum')
+    # test_z_spectrum()
+    # elapsed('test_z_spectrum')
     test_fit_spin_model()
-    _elapsed('test_fit_spin_model')
+    elapsed('test_fit_spin_model')
 
-    _print_elapsed()
+    print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

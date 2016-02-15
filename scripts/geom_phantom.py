@@ -51,18 +51,18 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.modules.base as mrb
-# import mri_tools.modules.utils as mru
-import mri_tools.modules.geometry as mrg
-# import mri_tools.modules.plot as mrp
-# import mri_tools.modules.registration as mrr
-# import mri_tools.modules.segmentation as mrs
-# import mri_tools.modules.computation as mrc
-# import mri_tools.modules.correlation as mrl
-import mri_tools.modules.nifti as mrn
-# import mri_tools.modules.sequences as mrq
-# from mri_tools.modules.debug import dbg
-# from mri_tools.modules.sequences import mp2rage
+# import mri_tools.base as mrb
+# import mri_tools.utils as mru
+import mri_tools.geometry as mrg
+# import mri_tools.plot as mrp
+# import mri_tools.registration as mrr
+# import mri_tools.segmentation as mrs
+# import mri_tools.computation as mrc
+# import mri_tools.correlation as mrl
+import mri_tools.nifti as mrn
+# import mri_tools.sequences as mrq
+# from mri_tools.debug import dbg
+# from mri_tools.sequences import mp2rage
 
 from mri_tools import INFO
 from mri_tools import VERB_LVL

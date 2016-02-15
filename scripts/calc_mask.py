@@ -55,13 +55,13 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.modules.base as mrb
-# import mri_tools.modules.utils as mru
-# import mri_tools.modules.nifti as mrn
-# import mri_tools.modules.computation as mrc
-import mri_tools.modules.correlation as mrl
-# import mri_tools.modules.geometry as mrg
-# from mri_tools.modules.sequences import mp2rage
+# import mri_tools.base as mrb
+# import mri_tools.utils as mru
+# import mri_tools.nifti as mrn
+# import mri_tools.computation as mrc
+import mri_tools.correlation as mrl
+# import mri_tools.geometry as mrg
+# from mri_tools.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
 from mri_tools import INFO

@@ -54,9 +54,9 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 
 
 # :: Local Imports
-import mri_tools.modules.base as mrb
-# import mri_tools.modules.nifti as mrn
-import mri_tools.modules.geometry as mrg
+import mri_tools.base as mrb
+# import mri_tools.nifti as mrn
+import mri_tools.geometry as mrg
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
@@ -402,7 +402,7 @@ s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e
 s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH-3D_e=post0,l=1__T2S.nii.gz'
 t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e=pre0,l=1,reg__T2S.nii.gz'
 
-import mri_tools.modules.nifti as mrn
+import mri_tools.nifti as mrn
 
 
 def my_reg(array_list, *args, **kwargs):
