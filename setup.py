@@ -66,6 +66,8 @@ def fix_version(
 
     with open(source_filepath, 'w') as src_file:
         src_file.write(src_str)
+
+    print('Version: {}'.format(version))
     return version
 
 

@@ -29,11 +29,6 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-import os  # Miscellaneous operating system interfaces
-
-# ======================================================================
-# :: export mri_tools
-__path__.append(os.path.join(os.path.dirname(__file__), 'mri_tools'))
 
 # ======================================================================
 # Greetings
