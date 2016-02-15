@@ -33,9 +33,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = "$Revision$"
-# $Source$
-
+__version__ = '0.3.0.0'
 
 # ======================================================================
 # :: Project Details
@@ -44,7 +42,7 @@ INFO = {
         'Riccardo Metere <metere@cbs.mpg.de>',
     ),
     'copyright': 'Copyright (C) 2015',
-    'license': 'License: GNU General Public License version 3 (GPLv3)',
+    'license': 'License: GPLv3+',
     'notice':
         """
 This program is free software and it comes with ABSOLUTELY NO WARRANTY.
@@ -77,5 +75,7 @@ _EVENTS = []
 # import mri_tools.extras as mre
 # from mri_tools.debug import dbg
 # from mri_tools.sequences import mp2rage
+# from mri_tools.sequences import matrix_algebra
+# from mri_tools.extras import twix
 # from mri_tools.extras import jcampdx
 # from mri_tools.extras import latex

@@ -1,6 +1,4 @@
-=======
 Authors
 =======
 
 Riccardo Metere <rick@metere.it>
-	idea, main development, bugfixes

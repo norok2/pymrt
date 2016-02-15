@@ -1,96 +1,147 @@
-##!/usr/bin/env python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Setup instructions.
 
-#import os, subprocess, re
-#from distutils.core import setup, Command
-#from distutils.command.sdist import sdist as _sdist
+See: https://packaging.python.org/en/latest/distributing.html
+"""
 
-#class Test(Command):
-    #description = "run unit tests"
-    #user_options = []
-    #boolean_options = []
-    #def initialize_options(self):
-        #pass
-    #def finalize_options(self):
-        #pass
-    #def run(self):
-        #from ecdsa import numbertheory
-        #numbertheory.__main__()
-        #from ecdsa import ellipticcurve
-        #ellipticcurve.__main__()
-        #from ecdsa import ecdsa
-        #ecdsa.__main__()
-        #from ecdsa import test_pyecdsa
-        #test_pyecdsa.unittest.main(module=test_pyecdsa, argv=["dummy"])
-        ## all tests os.exit(1) upon failure
+# ======================================================================
+# :: Future Imports (for Python 2)
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+# from __future__ import unicode_literals
 
-#VERSION_PY = """
-## This file is originally generated from Git information by running 'setup.py
-## version'. Distribution tarballs contain a pre-generated copy of this file.
-#__version__ = '%s'
-#"""
+# ======================================================================
+# :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
+import re  # Regular expression operations
+from codecs import open  # use a consistent encoding (in Python 2)
 
-#def update_version_py():
-    #if not os.path.isdir(".git"):
-        #print "This does not appear to be a Git repository."
-        #return
-    #try:
-        #p = subprocess.Popen(["git", "describe",
-                              #"--tags", "--dirty", "--always"],
-                             #stdout=subprocess.PIPE)
-    #except EnvironmentError:
-        #print "unable to run git, leaving ecdsa/_version.py alone"
-        #return
-    #stdout = p.communicate()[0]
-    #if p.returncode != 0:
-        #print "unable to run git, leaving ecdsa/_version.py alone"
-        #return
-    ## we use tags like "python-ecdsa-0.5", so strip the prefix
-    #assert stdout.startswith("python-ecdsa-")
-    #ver = stdout[len("python-ecdsa-"):].strip()
-    #f = open("ecdsa/_version.py", "w")
-    #f.write(VERSION_PY % ver)
-    #f.close()
-    #print "set ecdsa/_version.py to '%s'" % ver
+# ======================================================================
+# :: Choice of the setup tools
+from setuptools import setup
+from setuptools import find_packages
 
-#def get_version():
-    #try:
-        #f = open("ecdsa/_version.py")
-    #except EnvironmentError:
-        #return None
-    #for line in f.readlines():
-        #mo = re.match("__version__ = '([^']+)'", line)
-        #if mo:
-            #ver = mo.group(1)
-            #return ver
-    #return None
+# ======================================================================
+# project specific variables
+VERSION_SOURCE_FILEPATH = 'dcmpi/__init__.py'
+README_SOURCE_FILE = 'README.rst'
 
-#class Version(Command):
-    #description = "update _version.py from Git repo"
-    #user_options = []
-    #boolean_options = []
-    #def initialize_options(self):
-        #pass
-    #def finalize_options(self):
-        #pass
-    #def run(self):
-        #update_version_py()
-        #print "Version is now", get_version()
 
-#class sdist(_sdist):
-    #def run(self):
-        #update_version_py()
-        ## unless we update this, the sdist command will keep using the old
-        ## version
-        #self.distribution.metadata.version = get_version()
-        #return _sdist.run(self)
+# get the working directory for the setup script
+CWD = os.path.realpath(os.path.dirname(__file__))
 
-#setup(name="ecdsa",
-      #version=get_version(),
-      #description="ECDSA cryptographic signature library (pure python)",
-      #author="Brian Warner",
-      #author_email="warner-pyecdsa@lothar.com",
-      #url="http://github.com/warner/python-ecdsa",
-      #packages=["ecdsa"],
-      #license="MIT",
-      #cmdclass={ "test": Test, "version": Version, "sdist": sdist },
-      #) 
+# get the long description from the README file
+with open(os.path.join(CWD, README_SOURCE_FILE),
+          encoding='utf-8') as readme_file:
+    LONG_DESCRIPTION_TEXT = readme_file.read()
+
+
+# ======================================================================
+def fix_version(
+        version=None,
+        source_filepath=VERSION_SOURCE_FILEPATH):
+    """
+    Fix version in source code.
+
+    Args:
+        version (str): version to be used for fixing the source code
+        source_filepath (str): Path to file where __version__ is located
+
+    Returns:
+        version (str): the actual version text used
+    """
+    if version is None:
+        import setuptools_scm
+
+        version = setuptools_scm.get_version()
+    with open(source_filepath, 'r') as src_file:
+        src_str = src_file.read()
+        src_str = re.sub(
+            r"__version__ = '.*'",
+            "__version__ = '{}'".format(version),
+            src_str)
+
+    with open(source_filepath, 'w') as src_file:
+        src_file.write(src_str)
+    return version
+
+
+# ======================================================================
+# :: call the setup tool
+setup(
+    name='dcmpi',
+
+    description='DICOM Preprocessing Interface.',
+    long_description=LONG_DESCRIPTION_TEXT,
+
+    version=fix_version(),
+
+    url='https://bitbucket.org/norok2/dcmpi',
+
+    author='Riccardo Metere',
+    author_email='rick@metere.it',
+
+    license='GPLv3+',
+
+    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    classifiers=[
+        'Development Status :: 4 - Beta',
+
+        'Intended Audience :: System Administrators',
+
+        'Topic :: System :: Shells',
+        'Topic :: System :: Systems Administration',
+        'Topic :: System :: Filesystems',
+        'Topic :: System :: Monitoring',
+        'Topic :: Utilities',
+
+        'Operating System :: POSIX',
+
+        'License :: OSI Approved :: GNU General Public License v3 or later'
+        ' (GPLv3+)',
+
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+    ],
+
+    keywords='dicom dcm preprocessing',
+
+    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+
+    install_requires=[
+        'numpy',
+        'scipy',
+        'sympy',
+        'nibabel',
+        'matplotlib', ],
+
+    package_data={
+        'dcmpi': ['report_templates/*.html', ],
+    },
+
+    # data_files=[('my_data', ['data/data_file'])],
+
+    entry_points={
+        'console_scripts': [
+            'dcmpi_gui=dcmpi.dcmpi_gui:main',
+            'dcmpi=dcmpi.dcmpi_cli:main',
+
+            'dcmpi_monitor_folder=dcmpi.dcmpi_monitor_folder:main',
+
+            'dcmpi__import_sources=dcmpi.import_sources:main',
+            'dcmpi__sorting=dcmpi.sorting:main',
+            'dcmpi__get_info=dcmpi.get_info:main',
+            'dcmpi__get_meta=dcmpi.get_meta:main',
+            'dcmpi__get_nifti=dcmpi.get_nifti:main',
+            'dcmpi__get_prot=dcmpi.get_prot:main',
+            'dcmpi__report=dcmpi.report:main',
+            'dcmpi__backup=dcmpi.backup:main',
+        ],
+    },
+)
