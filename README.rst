@@ -8,8 +8,8 @@ tools to perform common tasks for the analysis of quantitative MRI data.
 
 It is relatively easy to extend and users are encouraged
 
-Releases information are available through `NEWS.rst`
-For a more comprehensive list of changes see `CHANGELOG.rst`
+Releases information are available through ``NEWS.rst``.
+For a more comprehensive list of changes see ``CHANGELOG.rst``.
 
 
 Installation
@@ -31,7 +31,7 @@ Alternatively, you can the clone the source repository from
     $ git clone git@bitbucket.org:norok2/mri_tools.git
     $ python setup.py install
 
-For more details see also `INSTALL.rst`.
+For more details see also ``INSTALL.rst``.
 
 License
 -------
@@ -45,8 +45,8 @@ This software originated as part of my Ph.D. work at the
 <http://www.cbs.mpg.de>`_ and the `University of Leipzig
 <http://www.uni-leipzig.de>`_.
 
-For a complete list of authors please see `AUTHORS.rst`
-People who have influenced this work are acknowledged in `THANKS.rst`
+For a complete list of authors please see ``AUTHORS.rst``.
+People who have influenced this work are acknowledged in ``THANKS.rst``.
 
 This work was partly funded by the European Union through the
 

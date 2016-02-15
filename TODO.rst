@@ -6,3 +6,4 @@ TODO
 - include some tests
 - create proper unit tests
 - work out a proper setup.py
+- use gitchangelog package?

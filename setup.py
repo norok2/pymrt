@@ -26,9 +26,8 @@ from setuptools import find_packages
 
 # ======================================================================
 # project specific variables
-VERSION_SOURCE_FILEPATH = 'dcmpi/__init__.py'
+VERSION_SOURCE_FILEPATH = 'mri_tools/__init__.py'
 README_SOURCE_FILE = 'README.rst'
-
 
 # get the working directory for the setup script
 CWD = os.path.realpath(os.path.dirname(__file__))
@@ -67,14 +66,13 @@ def fix_version(
     with open(source_filepath, 'w') as src_file:
         src_file.write(src_str)
 
-    print('Version: {}'.format(version))
     return version
 
 
 # ======================================================================
 # :: call the setup tool
 setup(
-    name='dcmpi',
+    name='mri_tools',
 
     description='DICOM Preprocessing Interface.',
     long_description=LONG_DESCRIPTION_TEXT,
