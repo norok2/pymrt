@@ -30,17 +30,4 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 
-# ======================================================================
-# Greetings
-MY_GREETINGS = """
-                _   _              _
- _ __ ___  _ __(_) | |_ ___   ___ | |___
-| '_ ` _ \| '__| | | __/ _ \ / _ \| / __|
-| | | | | | |  | | | || (_) | (_) | \__ \\
-|_| |_| |_|_|  |_|  \__\___/ \___/|_|___/
-"""
-# generated with: figlet 'mri tools' -f standard
-# note: '\' characters need to be escaped (with another '\')
 
-# :: Causes the greetings to be printed any time the library is loaded.
-print(MY_GREETINGS)

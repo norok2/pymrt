@@ -4,14 +4,12 @@
 Check voxel-by-voxel correlation after registration and masking.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -143,34 +141,39 @@ def handle_arg():
 
 
 # ======================================================================
-if __name__ == '__main__':
+def main():
     # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
-        print('II:', 'Parsed Arguments:', ARGS)
-    if ARGS.verbose > VERB_LVL['low']:
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
+        print('II:', 'Parsed Arguments:', args)
+    if args.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
     kwargs = {
-        'dirpath': ARGS.dirpath,
-        'val_type': ARGS.type,
-        'val_range': ARGS.range,
-        'val_units': ARGS.units,
-        'mask_filepath': ARGS.mask,
-        'reg_ref_ext': ARGS.reg_ref_ext,
-        'corr_ref_ext': ARGS.corr_ref_ext,
-        'tmp_dir': ARGS.tmp_dir,
-        'reg_dir': ARGS.reg_dir,
-        'msk_dir': ARGS.msk_dir,
-        'cmp_dir': ARGS.cmp_dir,
-        'fig_dir': ARGS.fig_dir,
-        'force': ARGS.force,
-        'verbose': ARGS.verbose,
+        'dirpath': args.dirpath,
+        'val_type': args.type,
+        'val_range': args.range,
+        'val_units': args.units,
+        'mask_filepath': args.mask,
+        'reg_ref_ext': args.reg_ref_ext,
+        'corr_ref_ext': args.corr_ref_ext,
+        'tmp_dir': args.tmp_dir,
+        'reg_dir': args.reg_dir,
+        'msk_dir': args.msk_dir,
+        'cmp_dir': args.cmp_dir,
+        'fig_dir': args.fig_dir,
+        'force': args.force,
+        'verbose': args.verbose,
     }
     mrl.check_correlation(**kwargs)
     end_time = time.time()
-    if ARGS.verbose > VERB_LVL['low']:
+    if args.verbose > VERB_LVL['low']:
         print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

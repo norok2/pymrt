@@ -96,82 +96,82 @@ def handle_arg():
     d_data_subpath = dcmlib.ID['nifti']
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
-            description=__doc__,
-            epilog='v.{} - {}\n{}'.format(
-                    INFO['version'], ', '.join(INFO['authors']),
-                    INFO['license']),
-            formatter_class=argparse.RawDescriptionHelpFormatter)
+        description=__doc__,
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']),
+            INFO['license']),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
-            '--ver', '--version',
-            version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-                    INFO['version'],
-                    next(line for line in __doc__.splitlines() if line),
-                    INFO['copyright'], ', '.join(INFO['authors']),
-                    INFO['notice']),
-            action='version')
+        '--ver', '--version',
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
+        action='version')
     arg_parser.add_argument(
-            '-v', '--verbose',
-            action='count', default=d_verbose,
-            help='increase the level of verbosity [%(default)s]')
+        '-v', '--verbose',
+        action='count', default=d_verbose,
+        help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
-            '-f', '--force',
-            action='store_true',
-            help='force new processing [%(default)s]')
+        '-f', '--force',
+        action='store_true',
+        help='force new processing [%(default)s]')
     arg_parser.add_argument(
-            '-i', '--input', metavar='DIR',
-            default=d_input_dir,
-            help='set input directory [%(default)s]')
+        '-i', '--input', metavar='DIR',
+        default=d_input_dir,
+        help='set input directory [%(default)s]')
     arg_parser.add_argument(
-            '-o', '--output', metavar='DIR',
-            default=d_output_dir,
-            help='set output directory [%(default)s]')
+        '-o', '--output', metavar='DIR',
+        default=d_output_dir,
+        help='set output directory [%(default)s]')
     arg_parser.add_argument(
-            '-r', '--recursive',
-            action='store_true',
-            help='Force descending into subdirectories [%(default)s]')
+        '-r', '--recursive',
+        action='store_true',
+        help='Force descending into subdirectories [%(default)s]')
     arg_parser.add_argument(
-            '-e', '--meta_subpath', metavar='DIR',
-            default=d_meta_subpath,
-            help='set extra input subdirectory [%(default)s]')
+        '-e', '--meta_subpath', metavar='DIR',
+        default=d_meta_subpath,
+        help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
-            '-a', '--data_subpath', metavar='DIR',
-            default=d_data_subpath,
-            help='set extra input subdirectory [%(default)s]')
+        '-a', '--data_subpath', metavar='DIR',
+        default=d_data_subpath,
+        help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
-            '-m', '--method', metavar='METHOD',
-            default=d_method,
-            help='set computation target and method [%(default)s]')
+        '-m', '--method', metavar='METHOD',
+        default=d_method,
+        help='set computation target and method [%(default)s]')
     arg_parser.add_argument(
-            '-n', '--options', metavar='OPTS',
-            default=d_options,
-            help='set JSON-formatted options dictionary [%(default)s]')
+        '-n', '--options', metavar='OPTS',
+        default=d_options,
+        help='set JSON-formatted options dictionary [%(default)s]')
     return arg_parser
 
 
 # ======================================================================
-if __name__ == '__main__':
+def main():
     # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
         print()
-        print('II:', 'Parsed Arguments:', ARGS)
+        print('II:', 'Parsed Arguments:', args)
 
-    if ARGS.verbose >= VERB_LVL['medium']:
+    if args.verbose >= VERB_LVL['medium']:
         print("II: Using method/options: '{}' / '{}'".format(
-                ARGS.method, ARGS.options))
+            args.method, args.options))
 
-    if ARGS.method:
-        preset_func_name = _func_name('preset', ARGS.method)
-        sources_func_name = _func_name('sources', ARGS.method)
-        compute_func_name = _func_name('compute', ARGS.method)
+    if args.method:
+        preset_func_name = _func_name('preset', args.method)
+        sources_func_name = _func_name('sources', args.method)
+        compute_func_name = _func_name('compute', args.method)
 
         # use preset if available
-        opts = json.loads(ARGS.options) if ARGS.options else {}
+        opts = json.loads(args.options) if args.options else {}
         if preset_func_name in vars(mrc):
             new_opts = vars(mrc)[preset_func_name]()
             new_opts.update(opts)
@@ -179,30 +179,35 @@ if __name__ == '__main__':
         # source extraction
         sources_func = vars(mrc)[sources_func_name] \
             if sources_func_name in vars(mrc) else mrc.sources_generic
-        sources_args = [opts, ARGS.force, ARGS.verbose]
+        sources_args = [opts, args.force, args.verbose]
         sources_kwargs = {}
         # computation
         compute_func = vars(mrc)[compute_func_name] \
             if compute_func_name in vars(mrc) else mrc.compute_generic
-        compute_args = [opts, ARGS.force, ARGS.verbose]
+        compute_args = [opts, args.force, args.verbose]
         compute_kwargs = {}
         # inform on the actual functions
-        if ARGS.verbose > VERB_LVL['none']:
+        if args.verbose > VERB_LVL['none']:
             print('II: Mode: {} / {} / {}'.format(
-                    ARGS.method, sources_func.__name__, compute_func.__name__))
+                args.method, sources_func.__name__, compute_func.__name__))
             print('II: Opts: {}'.format(json.dumps(opts)))
         # proceed with computation on selected sources
         if opts != {}:
             mrc.compute(
-                    sources_func, sources_args, sources_kwargs,
-                    compute_func, compute_args, compute_kwargs,
-                    ARGS.input, ARGS.output, ARGS.recursive,
-                    ARGS.meta_subpath, ARGS.data_subpath, ARGS.verbose)
+                sources_func, sources_args, sources_kwargs,
+                compute_func, compute_args, compute_kwargs,
+                args.input, args.output, args.recursive,
+                args.meta_subpath, args.data_subpath, args.verbose)
         else:
             print("EE: Mode / options combination not supported.")
     else:
         print('WW: Method not specified.')
 
     elapsed('compute')
-    if ARGS.verbose > VERB_LVL['none']:
+    if args.verbose > VERB_LVL['none']:
         print_elapsed()
+
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

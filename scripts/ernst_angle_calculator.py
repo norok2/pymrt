@@ -15,10 +15,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-__version__ = '0.0.0.0'
-# $Source$
-
-
 # ======================================================================
 # :: Custom Module Details
 AUTHOR = 'Riccardo Metere'
@@ -57,7 +53,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import mri_tools.modules.nifti as mrn
 # import mri_tools.modules.geometry as mrg
 # from mri_tools.modules.sequences import mp2rage
-
+from mri_tools import __version__
 
 # ======================================================================
 # :: supported verbosity levels (level 4 skipped on purpose)
@@ -117,13 +113,13 @@ def handle_arg():
 # ======================================================================
 if __name__ == '__main__':
     # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
         print()
-        print('II:', 'Parsed Arguments:', ARGS)
+        print('II:', 'Parsed Arguments:', args)
     print(__doc__)
 
 T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]

@@ -1,5 +1,6 @@
-MRI Tools: software tools to deal with MRI data
-===============================================
+=============================================
+MRI Tools: Data analysis for quantitative MRI
+=============================================
 
 Overview
 --------
@@ -9,6 +10,7 @@ tools to perform common tasks for the analysis of quantitative MRI data.
 It is relatively easy to extend and users are encouraged
 
 Releases information are available through ``NEWS.rst``.
+
 For a more comprehensive list of changes see ``CHANGELOG.rst``.
 
 
@@ -35,8 +37,10 @@ For more details see also ``INSTALL.rst``.
 
 License
 -------
-This work is licensed through the terms and conditions of the GPLv3+:
-`G
+This work is licensed through the terms and conditions of the
+`GPLv3+ <http://www.gnu.org/licenses/gpl-3.0.html>`_
+The use of this software for scientific purpose is gratefully acknowledged
+through citation of the following.
 
 Acknowledgements
 ----------------
@@ -46,6 +50,7 @@ This software originated as part of my Ph.D. work at the
 <http://www.uni-leipzig.de>`_.
 
 For a complete list of authors please see ``AUTHORS.rst``.
+
 People who have influenced this work are acknowledged in ``THANKS.rst``.
 
 This work was partly funded by the European Union through the

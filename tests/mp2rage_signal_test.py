@@ -386,11 +386,11 @@ def handle_arg():
 # ======================================================================
 if __name__ == '__main__':
     # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
         print()
-        print('II:', 'Parsed Arguments:', ARGS)
-    ui_plot(ARGS.t1, ARGS.direct, ARGS.dicom_range, ARGS.no_optim_a1, ARGS.ot1)
+        print('II:', 'Parsed Arguments:', args)
+    ui_plot(args.t1, args.direct, args.dicom_range, args.no_optim_a1, args.ot1)

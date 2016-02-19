@@ -6,14 +6,12 @@ Module Name and Description
 Long module description.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -68,11 +66,11 @@ from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
 
-
 # ======================================================================
 # :: Custom defined constants
 APPEND_MODE = {'sum': 'sum', 'prod': 'prod'}
 PHANTOMS = ('cuboid', 'ellipsoid', 'rhomboid', 'cylinder')
+
 
 # TODO: fix documentation
 
@@ -245,16 +243,21 @@ def handle_arg():
 
 
 # ======================================================================
-if __name__ == '__main__':
+def main():
     # handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
         print()
-        print('II:', 'Parsed Arguments:', ARGS)
+        print('II:', 'Parsed Arguments:', args)
 
     make_phantom(
-        ARGS.infile, ARGS.sizes, ARGS.append, ARGS.phantom, ARGS.position,
-        ARGS.lengths, ARGS.intensities, ARGS.outfile, ARGS.verbose)
+        args.infile, args.sizes, args.append, args.phantom, args.position,
+        args.lengths, args.intensities, args.outfile, args.verbose)
+
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

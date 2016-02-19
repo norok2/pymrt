@@ -11,14 +11,12 @@ Extract a mask from an image (with specialized options for brain extraction).
 * binary erosion(s) witha specified number of iterations.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -165,36 +163,40 @@ def handle_arg():
 
 
 # ======================================================================
-if __name__ == '__main__':
+def main():
     # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
     # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
         print()
-        print('II:', 'Parsed Arguments:', ARGS)
-    if ARGS.verbose > VERB_LVL['low']:
+        print('II:', 'Parsed Arguments:', args)
+    if args.verbose > VERB_LVL['low']:
         print(__doc__)
     begin_time = time.time()
 
-
-    if ARGS.output and ARGS.verbose >= VERB_LVL['none']:
-        ARGS.output = os.path.dirname(os.path.realpath(ARGS.output))
-        print('OutDir:\t{}'.format(ARGS.output))
+    if args.output and args.verbose >= VERB_LVL['none']:
+        args.output = os.path.dirname(os.path.realpath(args.output))
+        print('OutDir:\t{}'.format(args.output))
     mrl.calc_mask(
-        ARGS.input,
-        ARGS.output,
-        ARGS.val_threshold,
-        ARGS.comparison,
+        args.input,
+        args.output,
+        args.val_threshold,
+        args.comparison,
         'absolute',
-        ARGS.smoothing,
-        ARGS.erosion_iter,
-        ARGS.dilation_iter,
-        ARGS.bet_params,
-        ARGS.force,
-        ARGS.verbose)
+        args.smoothing,
+        args.erosion_iter,
+        args.dilation_iter,
+        args.bet_params,
+        args.force,
+        args.verbose)
 
     end_time = time.time()
-    if ARGS.verbose > VERB_LVL['low']:
+    if args.verbose > VERB_LVL['low']:
         print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

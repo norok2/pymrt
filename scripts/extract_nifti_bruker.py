@@ -313,21 +313,24 @@ def handle_arg():
         help='set output subdirectory [%(default)s]')
     return arg_parser
 
+# ======================================================================
+def main():
+        # :: handle program parameters
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
+    # :: print debug info
+    if args.verbose == VERB_LVL['debug']:
+        arg_parser.print_help()
+        print()
+        print('II:', 'Parsed Arguments:', args)
+    if args.verbose > VERB_LVL['low']:
+        print(__doc__)
+    begin_time = time.time()
+    extract_nifti(args.dir, args.extradir, args.force, args.verbose)
+    end_time = time.time()
+    if args.verbose > VERB_LVL['low']:
+        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
 
 # ======================================================================
 if __name__ == '__main__':
-    # :: handle program parameters
-    ARG_PARSER = handle_arg()
-    ARGS = ARG_PARSER.parse_args()
-    # :: print debug info
-    if ARGS.verbose == VERB_LVL['debug']:
-        ARG_PARSER.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', ARGS)
-    if ARGS.verbose > VERB_LVL['low']:
-        print(__doc__)
-    begin_time = time.time()
-    extract_nifti(ARGS.dir, ARGS.extradir, ARGS.force, ARGS.verbose)
-    end_time = time.time()
-    if ARGS.verbose > VERB_LVL['low']:
-        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+    main()

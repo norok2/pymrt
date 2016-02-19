@@ -33,7 +33,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.2.0.1.dev0+ng8b07135.d20160215'
+__version__ = '0.2.0.1.dev1+ngd795260.d20160219'
 
 # ======================================================================
 # :: Project Details
@@ -79,3 +79,17 @@ _EVENTS = []
 # from mri_tools.extras import twix
 # from mri_tools.extras import jcampdx
 # from mri_tools.extras import latex
+
+# ======================================================================
+# Greetings
+MY_GREETINGS = r"""
+                _   _              _
+ _ __ ___  _ __(_) | |_ ___   ___ | |___
+| '_ ` _ \| '__| | | __/ _ \ / _ \| / __|
+| | | | | | |  | | | || (_) | (_) | \__ \
+|_| |_| |_|_|  |_|  \__\___/ \___/|_|___/
+"""
+# generated with: figlet 'mri tools' -f standard
+
+# :: Causes the greetings to be printed any time the library is loaded.
+print(MY_GREETINGS)

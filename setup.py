@@ -74,12 +74,12 @@ def fix_version(
 setup(
     name='mri_tools',
 
-    description='DICOM Preprocessing Interface.',
+    description='Data analysis for quantitative MRI',
     long_description=LONG_DESCRIPTION_TEXT,
 
     version=fix_version(),
 
-    url='https://bitbucket.org/norok2/dcmpi',
+    url='https://bitbucket.org/norok2/mri_tools',
 
     author='Riccardo Metere',
     author_email='rick@metere.it',
@@ -119,29 +119,26 @@ setup(
         'scipy',
         'sympy',
         'nibabel',
-        'matplotlib', ],
+        'matplotlib',
+        'pyparsing',
+    ],
 
     package_data={
-        'dcmpi': ['report_templates/*.html', ],
+        'mri_tools': ['sequences/pulses/*.csv', ],
     },
 
     # data_files=[('my_data', ['data/data_file'])],
 
     entry_points={
         'console_scripts': [
-            'dcmpi_gui=dcmpi.dcmpi_gui:main',
-            'dcmpi=dcmpi.dcmpi_cli:main',
+            'mrt_calc_mask=scripts.calc_mask:main',
+            'mrt_geom_phantom=scripts.geom_phantom:main',
+            'mrt_extract_nifti_bruker=scripts.extract_nifti_bruker:main'
 
-            'dcmpi_monitor_folder=dcmpi.dcmpi_monitor_folder:main',
+            'mrt_compute=scripts.compute:main',
+            'mrt_correlate=scripts.correlate:main',
 
-            'dcmpi__import_sources=dcmpi.import_sources:main',
-            'dcmpi__sorting=dcmpi.sorting:main',
-            'dcmpi__get_info=dcmpi.get_info:main',
-            'dcmpi__get_meta=dcmpi.get_meta:main',
-            'dcmpi__get_nifti=dcmpi.get_nifti:main',
-            'dcmpi__get_prot=dcmpi.get_prot:main',
-            'dcmpi__report=dcmpi.report:main',
-            'dcmpi__backup=dcmpi.backup:main',
+            'mrt_ernst_angle=scripts.ernst_angle_calculator:main',
         ],
     },
 )
