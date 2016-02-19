@@ -6,10 +6,11 @@ mri_tools: voxel-by-voxel correlation analysis for MRI data.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
@@ -62,7 +63,7 @@ import mri_tools.nifti as mrn
 
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools.config import EXT_CMD
+from config import EXT_CMD
 
 # ======================================================================
 # :: parsing constants

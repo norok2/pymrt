@@ -262,7 +262,14 @@ def _shape_from_file(
     Returns:
 
     """
-    dirpath = os.path.realpath(dirpath)
+    tmp_dirpaths = [
+        os.path.realpath(dirpath),
+        os.path.join(os.path.dirname(__file__), dirpath),
+        ]
+    for tmp_dirpath in tmp_dirpaths:
+        if os.path.isdir(tmp_dirpath):
+            dirpath = tmp_dirpath
+            break
     filepath = os.path.join(dirpath, filename + mrb.add_extsep(mrb.CSV_EXT))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
@@ -1417,7 +1424,7 @@ def test_dynamics_operator_symbolic():
     """
     # todo: make it flexible and working
     w_c, w1 = sym.symbols('w_c w1')
-    m0 = [sym.symbol('m0{}'.format())]
+    m0 = [sym.symbols('m0{}'.format())]
 
     # 2-pool model
     spin_model = SpinModel(
@@ -1582,8 +1589,6 @@ def test_approx_propagator(
         flip_angles (float):
     """
     w_c = GAMMA * B0
-
-    # todo: fix for classes
 
     modes = ['exact']
     modes += ['linear', 'reduced']

@@ -7,11 +7,10 @@ mri_tools.registration: generic registration using numpy/scipy
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -61,7 +60,7 @@ import mri_tools.geometry as mrg
 # from mri_tools import VERB_LVL
 # from mri_tools import D_VERB_LVL
 # from mri_tools import get_first_line
-from mri_tools.config import EXT_CMD
+from config import EXT_CMD
 
 
 # ======================================================================

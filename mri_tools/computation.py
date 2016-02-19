@@ -236,6 +236,7 @@ def ext_qsm_as_legacy(
         img_types):
     # determine correct TE
     max_te = 25.0  # ms
+    selected = len(params[te_label])
     for i, te in enumerate(params[te_label]):
         if te < max_te:
             selected = i

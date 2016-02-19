@@ -2,19 +2,20 @@
 
 
 # ======================================================================
-echo " :: Create change log..."
-CHANGELOG="CHANGELOG.txt"
+echo "\n :: Create change log..."
+CHANGELOG=CHANGELOG.txt
 echo -e "Change Log\n==========\n" > ${CHANGELOG}
 git log --oneline --decorate --graph >> ${CHANGELOG}
+echo "${CHANGELOG} successfully created."
 
 
 # ======================================================================
-echo " :: Create package..."
+echo "\n :: Create package..."
 python setup.py bdist_wheel --universal
 
 
 # ======================================================================
-echo " :: Distribute package..."
+echo "\n :: Distribute package..."
 PYPIRC_EXT=pypirc
 if [ -z "$1" ]; then
     for FILE in *.${PYPIRC_EXT}; do

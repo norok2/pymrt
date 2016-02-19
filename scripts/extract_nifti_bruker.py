@@ -72,6 +72,7 @@ import subprocess  # Subprocess management
 import mri_tools.base as mrb
 import mri_tools.utils as mru
 import mri_tools.nifti as mrn
+import mri_tools.extras as mre
 # import mri_tools.geometry as mrg
 # from mri_tools.sequences import mp2rage
 
@@ -171,12 +172,12 @@ def extract_nii(dirpath, extradir, force, verbose):
             os.makedirs(dest_dirpath)
         # extract info from protocol information files
         method_ldr_std_dict, method_ldr_user_dict, method_comments = \
-            mri_tools.jcampdx.read(method_filepath)
+            mre.jcampdx.read(method_filepath)
         method_ldr_dict = dict(
             list(method_ldr_std_dict.items()) + \
             list(method_ldr_user_dict.items()))
         params_ldr_std_dict, params_ldr_user_dict, params_comments = \
-            mri_tools.jcampdx.read(params_filepath)
+            mre.jcampdx.read(params_filepath)
         params_ldr_dict = dict(
             list(params_ldr_std_dict.items()) + \
             list(params_ldr_user_dict.items()))

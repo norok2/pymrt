@@ -43,7 +43,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
-import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
+# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants

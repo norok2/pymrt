@@ -1,5 +1,5 @@
 =============================================
-MRI Tools: Data analysis for quantitative MRI
+MRI Tools: data analysis for quantitative MRI
 =============================================
 
 Overview

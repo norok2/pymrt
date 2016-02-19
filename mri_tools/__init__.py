@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-mri_tools: collection of software for MRI analysis
+mri_tools: data analysis for quantitative MRI
 """
 
 # Copyright (C) 2015 Riccardo Metere <metere@cbs.mpg.de>
@@ -33,7 +33,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.2.0.1.dev1+ngd795260.d20160219'
+__version__ = '0.2.0.1.dev2+ng6064027.d20160219'
 
 # ======================================================================
 # :: Project Details

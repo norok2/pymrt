@@ -66,7 +66,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 
 # :: External Imports Submodules
 # TODO: replace mlab by visvis
-import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
+# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematical and Physical Constants
@@ -1518,8 +1518,6 @@ def _self_test_interactive():
     mrp.quick(cylinder(shape_3d, position_3d, 2.0 * D_LENGTH_1, D_LENGTH_1))
     # :: - Position test
     mrp.quick(ellipsoid(shape_3d, (0.0, 1.0, 0.5), D_LENGTH_3))
-
-    mlab.show()
 
 
 # ======================================================================

@@ -276,22 +276,17 @@ def _read_x_protocol(text):
 
     key_value = pp.Group(tag + exp)
     exp <<= (
-        pp.Group(lbra + pp.ZeroOrMore(exp) + rbra) | key_value | number | cstr)
-
-    # val = cstr | number
-    # exp <<= pp.Group(
-    #             pp.OneOrMore(tag) +
-    #             pp.OneOrMore(
-    #                 (lbra + pp.OneOrMore(val | exp) + rbra) |
-    #                 (val + exp) |
-    #                 (lbra + rbra)
-    #             )
-    #     )
+        key_value |
+        number |
+        cstr |
+        pp.Group(lbra + pp.ZeroOrMore(exp) + rbra)
+        )
 
     # print(x_prot)
-    x_prot = exp.parseString(text).asList()
+    x_prot = exp.parseString(text)
     with open('/media/Data/tmp/parsed.json', 'w') as f:
-        json.dump(x_prot, f, sort_keys=True, indent=4)
+        json.dump(
+            (x_prot.asDict(), x_prot.asList()), f, sort_keys=True, indent=4)
 
     quit()
     return x_prot
@@ -412,7 +407,7 @@ def test():
                'meas_MID389_gre_qmri_0_6mm_FA30_MTOff_LowRes_FID36111.dat'
     # twix = read(filepath)
     # with open('/media/Data/tmp/hdr_Meas.txt', 'r') as f:
-    with open('/media/Data/tmp/xprot.txt', 'r') as f:
+    with open('/media/Data/tmp/hdr_Meas.txt', 'r') as f:
         t = f.read()
         _read_x_protocol(t)
 
