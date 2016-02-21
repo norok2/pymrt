@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools: data analysis for quantitative MRI
@@ -33,7 +33,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.2.0.1.dev2+ng6064027.d20160219'
+__version__ = '0.2.0.1.dev3+ng3007796.d20160220'
 
 # ======================================================================
 # :: Project Details
@@ -42,7 +42,7 @@ INFO = {
         'Riccardo Metere <metere@cbs.mpg.de>',
     ),
     'copyright': 'Copyright (C) 2015',
-    'license': 'License: GPLv3+',
+    'license': 'GNU General Public License version 3 or later (GPLv3+)',
     'notice':
         """
 This program is free software and it comes with ABSOLUTELY NO WARRANTY.
@@ -70,7 +70,7 @@ _EVENTS = []
 # import mri_tools.segmentation as mrs
 # import mri_tools.computation as mrc
 # import mri_tools.correlation as mrl
-# import mri_tools.nifti as mrn
+# import mri_tools.input_output as mrio
 # import mri_tools.sequences as mrq
 # import mri_tools.extras as mre
 # from mri_tools.debug import dbg

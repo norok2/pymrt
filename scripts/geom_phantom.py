@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Module Name and Description
@@ -57,7 +57,7 @@ import mri_tools.geometry as mrg
 # import mri_tools.segmentation as mrs
 # import mri_tools.computation as mrc
 # import mri_tools.correlation as mrl
-import mri_tools.nifti as mrn
+import mri_tools.input_output as mrio
 # import mri_tools.sequences as mrq
 # from mri_tools.debug import dbg
 # from mri_tools.sequences import mp2rage
@@ -149,7 +149,7 @@ def make_phantom(
             fill,
             append, i_filepath,
             o_filepath))
-    mrn.save(o_filepath, img, aff, hdr)
+    mrio.save(o_filepath, img, aff, hdr)
 
 
 # ======================================================================

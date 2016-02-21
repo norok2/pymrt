@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools: voxel-by-voxel correlation analysis for MRI data.
@@ -56,14 +56,14 @@ import mri_tools.registration as mrr
 import mri_tools.segmentation as mrs
 # import mri_tools.computation as mrc
 # import mri_tools.correlation as mrl
-import mri_tools.nifti as mrn
+import mri_tools.input_output as mrio
 # import mri_tools.sequences as mrq
 # from mri_tools.debug import dbg
 # from mri_tools.sequences import mp2rage
 
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from config import EXT_CMD
+from mri_tools.config import EXT_CMD
 
 # ======================================================================
 # :: parsing constants
@@ -108,8 +108,8 @@ MP2RAGE_ID = {
 # useful groupings
 SRC_IMG_TYPE = set(MAP_ID.values() + [TYPE_ID['none']])
 KNOWN_IMG_TYPES = set(
-        MAP_ID.values() + TYPE_ID.values() + SERVICE_ID.values() +
-        MP2RAGE_ID.values())
+    MAP_ID.values() + TYPE_ID.values() + SERVICE_ID.values() +
+    MP2RAGE_ID.values())
 
 # suffix of new reconstructed image from Siemens
 NEW_RECO_ID = 'rr'
@@ -119,8 +119,8 @@ SERIES_NUM_ID = 's'
 MASK_FILENAME = 'mask'
 
 D_EXT = {
-    'registration reference': '0_REG_REF',
-    'correlation reference': '0_CORR_REF'}
+    'reg_ref': '0_REG_REF',
+    'corr_ref': '0_CORR_REF'}
 
 
 # ======================================================================
@@ -159,14 +159,14 @@ def _get_ref_list(
             if subdir:
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
-            ref_filename = mrn.filename_addext(
-                    os.path.basename(ref_src)[:-len(mrb.add_extsep(ref_ext))])
+            ref_filename = mrio.filename_addext(
+                os.path.basename(ref_src)[:-len(mrb.add_extsep(ref_ext))])
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepath_list.append(ref_filepath)
     elif target_list:
         ref_filepath_list = target_list
     else:
-        ref_filepath_list = mrb.listdir(dirpath, mrn.D_EXT)
+        ref_filepath_list = mrb.listdir(dirpath, mrb.EXT['img'])
     if not ref_filepath_list:
         msg = 'No reference file(s) found'
         raise RuntimeError(msg)
@@ -225,8 +225,8 @@ def _compute_affine_fsl(
             for key, val in flirt__kwargs.items():
                 cmd_args[str(key)] = eval(val)
         cmd = ' '.join(
-                [ext_cmd] + ['-{} {}'.format(k, v) for k, v in
-                    cmd_args.items()])
+            [ext_cmd] + ['-{} {}'.format(k, v) for k, v in
+                         cmd_args.items()])
         if verbose >= VERB_LVL['high']:
             print('> ', cmd)
         mrb.execute(cmd, verbose=verbose)
@@ -269,8 +269,8 @@ def _apply_affine_fsl(
             'init': aff_filepath,
         }
         cmd = ' '.join(
-                [ext_cmd] +
-                ['-{} {}'.format(k, v) for k, v in cmd_options.items()])
+            [ext_cmd] +
+            ['-{} {}'.format(k, v) for k, v in cmd_options.items()])
         mrb.execute(cmd, verbose=verbose)
 
 
@@ -331,16 +331,16 @@ def register_fsl(
         in_tmp_filepath = in_filepath
         ref_tmp_filepath = ref_filepath
     xfm_filepath = os.path.join(
-            os.path.dirname(out_filepath),
-            mru.combine_filename(affine_prefix, (ref_filepath, in_filepath)) +
-            mrb.add_extsep(mrb.TXT_EXT))
+        os.path.dirname(out_filepath),
+        mru.combine_filename(affine_prefix, (ref_filepath, in_filepath)) +
+        mrb.add_extsep(mrb.EXT['text']))
     _compute_affine_fsl(
-            in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
-            ref_mask_filepath, flirt_kwargs, flirt__kwargs,
-            force=force, verbose=verbose)
+        in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
+        ref_mask_filepath, flirt_kwargs, flirt__kwargs,
+        force=force, verbose=verbose)
     _apply_affine_fsl(
-            in_filepath, ref_filepath, out_filepath, xfm_filepath,
-            force, verbose)
+        in_filepath, ref_filepath, out_filepath, xfm_filepath,
+        force, verbose)
 
 
 # ======================================================================
@@ -386,7 +386,7 @@ def register(
         # img = mrg.affine_transform(img, linear, shift)
         # ... then reorient
         linear, shift = mrr.affine_registration(
-                img, ref, transform='reflection_simple')
+            img, ref, transform='reflection_simple')
         img = mrg.affine_transform(img, linear, shift)
         # ... and finally perform finer registration
         linear, shift = mrr.affine_registration(img, ref, *args, **kwargs)
@@ -394,9 +394,9 @@ def register(
         return img
 
     if mrb.check_redo([in_filepath, ref_filepath], [out_filepath], force):
-        mrn.simple_filter_n(
-                [in_filepath, ref_filepath], out_filepath, _quick_reg,
-                transform='rigid', interp_order=1, init_guess=('none', 'none'))
+        mrio.simple_filter_n(
+            [in_filepath, ref_filepath], out_filepath, _quick_reg,
+            transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
     if verbose > VERB_LVL['none']:
         print('Regstr:\t{}'.format(os.path.basename(out_filepath)))
@@ -445,9 +445,9 @@ def apply_mask(
     if mrb.check_redo([in_filepath, mask_filepath], [out_filepath], force):
         if verbose > VERB_LVL['none']:
             print('RunMsk:\t{}'.format(os.path.basename(out_filepath)))
-        mrn.simple_filter_n(
-                [in_filepath, mask_filepath], out_filepath,
-                _mask_reframe, mask_val)
+        mrio.simple_filter_n(
+            [in_filepath, mask_filepath], out_filepath,
+            _mask_reframe, mask_val)
 
 
 # ======================================================================
@@ -530,12 +530,12 @@ def calc_mask(
             array = sp.ndimage.binary_dilation(array, iterations=dilation_iter)
         return array.astype(float)
 
-    # todo: move to mrn?
+    # todo: move to mrio.
     if not out_filepath:
         out_filepath = os.path.dirname(in_filepath)
     if os.path.isdir(out_filepath):
         out_filename = os.path.basename(
-                mru.change_img_type(in_filepath, SERVICE_ID['mask']))
+            mru.change_img_type(in_filepath, SERVICE_ID['mask']))
         out_filepath = os.path.join(out_filepath, out_filename)
 
     in_tmp_filepath = mru.change_img_type(in_filepath, helper_img_type) \
@@ -582,8 +582,8 @@ def calc_mask(
             print('I: compute_mask params: ', _calc_mask_kwargs.items())
         if verbose > VERB_LVL['none']:
             print('GetMsk:\t{}'.format(os.path.basename(out_filepath)))
-        mrn.simple_filter(
-                in_tmp_filepath, out_filepath, _calc_mask, **_calc_mask_kwargs)
+        mrio.simple_filter(
+            in_tmp_filepath, out_filepath, _calc_mask, **_calc_mask_kwargs)
     return out_filepath
 
 
@@ -611,9 +611,9 @@ def calc_difference(
     if mrb.check_redo([in1_filepath, in2_filepath], [out_filepath], force):
         if verbose > VERB_LVL['none']:
             print('DifImg:\t{}'.format(os.path.basename(out_filepath)))
-        mrn.simple_filter_n(
-                [in1_filepath, in2_filepath], out_filepath,
-                (lambda images: images[1] - images[0]))
+        mrio.simple_filter_n(
+            [in1_filepath, in2_filepath], out_filepath,
+            (lambda images: images[1] - images[0]))
 
 
 # ======================================================================
@@ -694,18 +694,18 @@ def calc_correlation(
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
         d_dict = mrb.calc_stats(
-                d_arr, mask_nan, mask_inf, mask_val_list)
+            d_arr, mask_nan, mask_inf, mask_val_list)
         # calculate stats of the absolute difference image
         e_arr = np.abs(d_arr)
         e_dict = mrb.calc_stats(
-                e_arr, mask_nan, mask_inf, mask_val_list)
+            e_arr, mask_nan, mask_inf, mask_val_list)
         # calculate Pearson's Correlation Coefficient
         pcc_val, pcc_p_val = \
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
         pcc2_val = pcc_val * pcc_val
         # calculate linear polynomial fit
         linear_coeff, linear_offset = np.polyfit(
-                img1[mask].ravel(), img2[mask].ravel(), 1)
+            img1[mask].ravel(), img2[mask].ravel(), 1)
         #        # calculate Theil robust slope estimator (WARNING: too much
         #  memory!)
         #        theil_coeff, theil_offset, = sp.stats.mstats.theilslopes(
@@ -716,33 +716,33 @@ def calc_correlation(
         num_tot = np.size(mask)
         num_ratio = num / num_tot
         # save results to csv
-        filename_max_len = max([len(mrn.filename_noext(os.path.basename(path)))
-            for path in [in2_filepath, in1_filepath]])
+        filenames = [
+            mrb.change_ext(os.path.basename(path), '', mrb.EXT['img'])
+            for path in [in2_filepath, in1_filepath]]
+        lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
         val_filter = (lambda x: mrb.compact_num_str(x, trunc)) \
             if trunc else (lambda x: x)
         d_arr_val = [val_filter(d_dict[key]) for key in label_list]
         e_arr_val = [val_filter(e_dict[key]) for key in label_list]
         values = \
-            ['{: <{size}s}'.format(
-                    mrn.filename_noext(os.path.basename(path)),
-                    size=filename_max_len)
-                for path in [in2_filepath, in1_filepath]] + \
+            ['{: <{size}s}'.format(name, size=lbl_len) for name in
+             filenames] + \
             list(d_arr_val) + list(e_arr_val) + \
             [val_filter(val)
-                for val in [pcc_val, pcc2_val, pcc_p_val,
-                linear_coeff, linear_offset,
-                #                theil_coeff, theil_offset,
-                num, num_tot, num_ratio]]
+             for val in [pcc_val, pcc2_val, pcc_p_val,
+                         linear_coeff, linear_offset,
+                         #                theil_coeff, theil_offset,
+                         num, num_tot, num_ratio]]
         labels = \
             ['{: <{size}s}'.format('x_corr_file', size=filename_max_len),
-                '{: <{size}s}'.format('y_corr_file', size=filename_max_len)] + \
+             '{: <{size}s}'.format('y_corr_file', size=filename_max_len)] + \
             ['D-' + lbl for lbl in label_list] + \
             ['E-' + lbl for lbl in label_list] + \
             ['r', 'r2', 'p-val',
-                'lin-cof', 'lin-off',
-                #             'thl-cof', 'thl-off',
-                'N_eff', 'N_tot', 'N_ratio']
+             'lin-cof', 'lin-off',
+             #             'thl-cof', 'thl-off',
+             'N_eff', 'N_tot', 'N_ratio']
         with open(out_filepath, 'wb') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             csvwriter.writerow([mrb.COMMENT_TOKEN + in2_filepath])
@@ -786,7 +786,7 @@ def combine_correlation(
     def same(list1, list2):
         """Check if list items are the same, except for blank stripping."""
         return all(item1.strip() == item2.strip()
-            for item1, item2 in zip(list1, list2))
+                   for item1, item2 in zip(list1, list2))
 
     filepath_list.sort()
     # :: get base dir
@@ -797,7 +797,7 @@ def combine_correlation(
             for row in csvreader:
                 if row[0].startswith(mrb.COMMENT_TOKEN):
                     base_dir = os.path.dirname(os.path.commonprefix(
-                            (base_dir, row[0]))) + os.path.sep \
+                        (base_dir, row[0]))) + os.path.sep \
                         if base_dir else row[0]
     # :: summarize correlation results
     labels, rows, max_cols = [], [], []
@@ -828,7 +828,7 @@ def combine_correlation(
             rows[j][i] = '{: <{size}s}'.format(col, size=max_cols[i])
     # :: write grouped correlation to new file
     out_filepath = os.path.join(
-            out_dirpath, out_filename + mrb.add_extsep(mrb.CSV_EXT))
+        out_dirpath, out_filename + mrb.add_extsep(mrb.EXT['tab']))
     if mrb.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'wb') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
@@ -836,12 +836,12 @@ def combine_correlation(
                 selected_cols = range(len(labels))
             csvwriter.writerow([base_dir])
             csvwriter.writerow(
-                    [item for i, item in enumerate(labels) if
-                        i in selected_cols])
+                [item for i, item in enumerate(labels) if
+                 i in selected_cols])
             for row in rows:
                 csvwriter.writerow(
-                        [col for i, col in enumerate(row) if
-                            i in selected_cols])
+                    [col for i, col in enumerate(row) if
+                     i in selected_cols])
     return out_filepath
 
 
@@ -884,11 +884,10 @@ def plot_correlation(
     None.
 
     """
+    filename = mru.combine_filename(
+        corr_prefix, (img1_filepath, img2_filepath))
     save_path = os.path.join(
-            out_dirpath, mru.combine_filename(
-                    corr_prefix,
-                    (img1_filepath, img2_filepath)) + mrb.add_extsep(
-                    mrb.PNG_EXT))
+        out_dirpath, filename + mrb.add_extsep(mrb.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
@@ -903,13 +902,13 @@ def plot_correlation(
         x_lbl = '{} / {} ({})'.format(val_type, val_units, img1_label)
         y_lbl = '{} / {} ({})'.format(val_type, val_units, img2_label)
         # plot the 2D histogram
-        mrn.plot_histogram2d(
-                img1_filepath, img2_filepath, mask_filepath, mask_filepath,
-                hist_range=(0.0, 1.0), bins=512, array_range=val_range,
-                scale='log10', title=title, cmap=plt.cm.hot_r,
-                labels=(x_lbl, y_lbl), bisector=':k',
-                colorbar_opts={},
-                save_path=save_path, close_figure=not plt.isinteractive())
+        mrio.plot_histogram2d(
+            img1_filepath, img2_filepath, mask_filepath, mask_filepath,
+            hist_range=(0.0, 1.0), bins=512, array_range=val_range,
+            scale='log10', title=title, cmap=plt.cm.hot_r,
+            labels=(x_lbl, y_lbl), bisector=':k',
+            colorbar_opts={},
+            save_path=save_path, close_figure=not plt.isinteractive())
 
 
 # ======================================================================
@@ -952,11 +951,11 @@ def plot_histogram(
     None.
 
     """
-    save_path = os.path.join(out_dirpath, out_filepath_prefix + INFO_SEP +
-                                          mrn.filename_noext(
-                                                  os.path.basename(
-                                                          img_filepath)) +
-                                          mrb.add_extsep(mrb.PNG_EXT))
+    save_path = os.path.join(
+        out_dirpath,
+        out_filepath_prefix + INFO_SEP +
+        mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
+                       mrb.EXT['img']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
@@ -966,12 +965,12 @@ def plot_histogram(
         if not val_type:
             val_type = ''
         plot_title = '{} ({})'.format(
-                val_type, mru.filename2label(img_filepath, max_length=32))
-        mrn.plot_histogram1d(
-                img_filepath, mask_filepath, hist_range=(0.0, 1.0), bins=1024,
-                array_range=val_range, title=plot_title,
-                labels=(val_units, None), save_path=save_path,
-                close_figure=not plt.isinteractive())
+            val_type, mru.filename2label(img_filepath, max_length=32))
+        mrio.plot_histogram1d(
+            img_filepath, mask_filepath, hist_range=(0.0, 1.0), bins=1024,
+            array_range=val_range, title=plot_title,
+            labels=(val_units, None), save_path=save_path,
+            close_figure=not plt.isinteractive())
 
 
 # ======================================================================
@@ -1017,24 +1016,24 @@ def plot_sample(
     None.
 
     """
-    save_path = os.path.join(out_dirpath, out_filepath_prefix + INFO_SEP +
-                                          mrn.filename_noext(
-                                                  os.path.basename(
-                                                          img_filepath)) +
-                                          mrb.add_extsep(mrb.PNG_EXT))
+    save_path = os.path.join(
+        out_dirpath,
+        out_filepath_prefix + INFO_SEP +
+        mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
+                       mrb.EXT['img']))
     if mrb.check_redo([img_filepath], [save_path], force):
         if verbose > VERB_LVL['none']:
             print('PltFig:\t{}'.format(os.path.basename(save_path)))
         if not val_type:
             val_type = 'Image'
         plot_title = '{} / {} ({})'.format(
-                val_type, val_units,
-                mru.filename2label(img_filepath, max_length=32))
-        mrn.plot_sample2d(
-                img_filepath, axis, index, title=plot_title,
-                array_range=val_range,
-                colorbar_opts={},
-                close_figure=not plt.isinteractive(), save_path=save_path)
+            val_type, val_units,
+            mru.filename2label(img_filepath, max_length=32))
+        mrio.plot_sample2d(
+            img_filepath, axis, index, title=plot_title,
+            array_range=val_range,
+            colorbar_opts={},
+            close_figure=not plt.isinteractive(), save_path=save_path)
 
 
 # ======================================================================
@@ -1101,7 +1100,7 @@ def registering(
     out_filepath_list = []
     for in_filepath in in_filepath_list:
         out_filepath = os.path.join(
-                out_dirpath, os.path.basename(in_filepath))
+            out_dirpath, os.path.basename(in_filepath))
         out_filepath_list.append(out_filepath)
         if ref_filepath != in_filepath:
             register_kwargs.update({
@@ -1113,7 +1112,7 @@ def registering(
             if use_mp:
                 # parallel
                 proc_result = pool.apply_async(
-                        register_func, register_args, register_kwargs)
+                    register_func, register_args, register_kwargs)
                 proc_result_list.append(proc_result)
             else:
                 # serial
@@ -1191,7 +1190,7 @@ def masking(
         if use_mp:
             # parallel
             proc_result = pool.apply_async(
-                    apply_mask, apply_mask_args, apply_mask_kwargs)
+                apply_mask, apply_mask_args, apply_mask_kwargs)
             proc_result_list.append(proc_result)
         else:
             # serial
@@ -1231,17 +1230,15 @@ def get_comparing_list(
         if skip_symmetric and _symmetric(in_filepath, ref_filepath, cmp_list):
             continue
         diff_filepath = os.path.join(
-                out_dirpath,
-                mru.combine_filename(diff_prefix, (
-                    ref_filepath, in_filepath)) +
-                mrb.add_extsep(mrn.D_EXT))
+            out_dirpath,
+            mru.combine_filename(diff_prefix, (ref_filepath, in_filepath)) +
+            mrb.add_extsep(mrb.EXT['img']))
         corr_filepath = os.path.join(
-                out_dirpath,
-                mru.combine_filename(corr_prefix, (
-                    ref_filepath, in_filepath)) +
-                mrb.add_extsep(mrb.CSV_EXT))
+            out_dirpath,
+            mru.combine_filename(corr_prefix, (ref_filepath, in_filepath)) +
+            mrb.add_extsep(mrb.EXT['tab']))
         cmp_list.append(
-                (in_filepath, ref_filepath, diff_filepath, corr_filepath))
+            (in_filepath, ref_filepath, diff_filepath, corr_filepath))
     return cmp_list
 
 
@@ -1316,9 +1313,9 @@ def comparing(
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
     cmp_list = get_comparing_list(
-            in_filepath_list, ref_filepath_list, out_dirpath,
-            skip_equal=True, skip_symmetric=True,
-            diff_prefix='diff', corr_prefix='corr')
+        in_filepath_list, ref_filepath_list, out_dirpath,
+        skip_equal=True, skip_symmetric=True,
+        diff_prefix='diff', corr_prefix='corr')
     for in_filepath, ref_filepath, diff_filepath, corr_filepath in cmp_list:
         if not mask_vals:
             mask_vals = [0.0]
@@ -1326,24 +1323,24 @@ def comparing(
             # parallel
             # calc difference
             proc_result = pool.apply_async(
-                    calc_difference,
-                    (in_filepath, ref_filepath, diff_filepath, force, verbose))
+                calc_difference,
+                (in_filepath, ref_filepath, diff_filepath, force, verbose))
             proc_result_list.append(proc_result)
             # calc correlation
             proc_result = pool.apply_async(
-                    calc_correlation,
-                    (in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                    mask_nan, mask_inf, mask_vals, val_range, trunc,
-                    force, verbose))
+                calc_correlation,
+                (in_filepath, ref_filepath, corr_filepath, mask_filepath,
+                 mask_nan, mask_inf, mask_vals, val_range, trunc,
+                 force, verbose))
             proc_result_list.append(proc_result)
         else:
             # serial
             calc_difference(
-                    in_filepath, ref_filepath, diff_filepath, force, verbose)
+                in_filepath, ref_filepath, diff_filepath, force, verbose)
             calc_correlation(
-                    in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                    mask_nan, mask_inf, mask_vals, val_range, trunc,
-                    force, verbose)
+                in_filepath, ref_filepath, corr_filepath, mask_filepath,
+                mask_nan, mask_inf, mask_vals, val_range, trunc,
+                force, verbose)
     if use_mp:
         res_list = []
         for proc_result in proc_result_list:
@@ -1358,8 +1355,8 @@ def check_correlation(
         val_range=None,
         val_units=None,
         mask_filepath=None,
-        reg_ref_ext=D_EXT['registration reference'],
-        corr_ref_ext=D_EXT['correlation reference'],
+        reg_ref_ext=D_EXT['reg_ref'],
+        corr_ref_ext=D_EXT['corr_ref'],
         tmp_dir='tmp',
         reg_dir='reg',
         msk_dir='msk',
@@ -1418,10 +1415,10 @@ def check_correlation(
     # :: populate a list of images to analyze
     target_list, corr_list = [], []
     if os.path.exists(dirpath):
-        filepath_list = mrb.listdir(dirpath, mrn.D_EXT)
+        filepath_list = mrb.listdir(dirpath, mrb.EXT['img'])
         source_list = [filepath for filepath in filepath_list
-            if not val_type or
-               mru.parse_filename(filepath)['type'] == val_type]
+                       if not val_type or
+                       mru.parse_filename(filepath)['type'] == val_type]
         if len(source_list) > 0:
             # :: create output directories
             # NOTE: use tmp/reg/msk/cmp/fig_path in code
@@ -1457,7 +1454,7 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filepath = mrn.filename_addext(MASK_FILENAME)
+                    mask_filepath = mrio.filename_addext(MASK_FILENAME)
                 # add current directory if it was not specified
                 if not os.path.exists(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)
@@ -1466,8 +1463,8 @@ def check_correlation(
                     if 'calc_mask' not in reg_info:
                         reg_info['calc_mask'] = {}
                     mask_filepath = calc_mask(
-                            ref, tmp_path, verbose=verbose, force=force,
-                            **reg_info['calc_mask'])
+                        ref, tmp_path, verbose=verbose, force=force,
+                        **reg_info['calc_mask'])
             else:
                 mask_filepath = None
             if verbose >= VERB_LVL['medium']:
@@ -1479,21 +1476,21 @@ def check_correlation(
                 if reg_info['func_register'] not in reg_info:
                     reg_info[reg_info['func_register']] = {}
                 target_list = registering(
-                        source_list, ref, mask_filepath, reg_path,
-                        register_func=eval(reg_info['func_register']),
-                        register_args=(),
-                        register_kwargs=reg_info[reg_info['func_register']],
-                        use_mp=False, force=force, verbose=verbose)
+                    source_list, ref, mask_filepath, reg_path,
+                    register_func=eval(reg_info['func_register']),
+                    register_args=(),
+                    register_kwargs=reg_info[reg_info['func_register']],
+                    use_mp=False, force=force, verbose=verbose)
             else:
                 target_list = source_list
             # :: mask targets
             if msk_path:
                 target_list = masking(
-                        target_list, mask_filepath, msk_path, use_mp=False,
-                        force=force, verbose=verbose)
+                    target_list, mask_filepath, msk_path, use_mp=False,
+                    force=force, verbose=verbose)
                 # make sure the mask has correct shape
                 new_mask = os.path.join(
-                        dirpath, msk_path, os.path.basename(mask_filepath))
+                    dirpath, msk_path, os.path.basename(mask_filepath))
                 if verbose >= VERB_LVL['medium']:
                     print('I: newly shaped mask: {}'.format(new_mask))
                 apply_mask(mask_filepath, mask_filepath, new_mask)
@@ -1501,45 +1498,45 @@ def check_correlation(
             # perform comparison
             if cmp_path:
                 ref_list, ref_src_list = _get_ref_list(
-                        dirpath, target_list, msk_dir, corr_ref_ext)
+                    dirpath, target_list, msk_dir, corr_ref_ext)
                 cmp_list = comparing(
-                        target_list, ref_list, cmp_path, mask_filepath,
-                        use_mp=False, val_range=val_range,
-                        force=force, verbose=verbose)
+                    target_list, ref_list, cmp_path, mask_filepath,
+                    use_mp=False, val_range=val_range,
+                    force=force, verbose=verbose)
                 # group resulting correlations
                 corr_list = [item[3] for item in cmp_list]
                 combine_correlation(
-                        corr_list, cmp_path, force=force, verbose=verbose)
+                    corr_list, cmp_path, force=force, verbose=verbose)
             # plotting
             if fig_path:
                 for target in target_list:
                     plot_sample(
-                            target, val_type, val_range, val_units, fig_path,
-                            force=force, verbose=verbose)
+                        target, val_type, val_range, val_units, fig_path,
+                        force=force, verbose=verbose)
                     plot_histogram(
-                            target, mask_filepath, val_type, val_range,
-                            val_units, fig_path,
-                            force=force, verbose=verbose)
+                        target, mask_filepath, val_type, val_range,
+                        val_units, fig_path,
+                        force=force, verbose=verbose)
                 # use last plotted image to calculate approximate diff_range
                 if val_range is None:
-                    stats_dict = mrn.calc_stats(target)
+                    stats_dict = mrio.calc_stats(target)
                     val_range = (stats_dict['min'], stats_dict['max'])
                 diff_range = mrb.combined_range(val_range, val_range, '-')
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
                     plot_sample(
-                            diff_filepath, val_type, diff_range, val_units,
-                            fig_path,
-                            force=force, verbose=verbose)
+                        diff_filepath, val_type, diff_range, val_units,
+                        fig_path,
+                        force=force, verbose=verbose)
                     plot_histogram(
-                            diff_filepath, mask_filepath,
-                            val_type, diff_range, val_units, fig_path,
-                            force=force, verbose=verbose)
+                        diff_filepath, mask_filepath,
+                        val_type, diff_range, val_units, fig_path,
+                        force=force, verbose=verbose)
                     plot_correlation(
-                            in_filepath, ref_filepath, mask_filepath,
-                            val_type, val_range, val_units,
-                            fig_path,
-                            force=force, verbose=verbose)
+                        in_filepath, ref_filepath, mask_filepath,
+                        val_type, val_range, val_units,
+                        fig_path,
+                        force=force, verbose=verbose)
         else:
             if verbose >= VERB_LVL['medium']:
                 print('W: no input file found.')
@@ -1547,18 +1544,18 @@ def check_correlation(
             sub_dirpath_list = mrb.listdir(dirpath, None)
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
-                        sub_dirpath,
-                        val_type, val_range, val_units,
-                        mask_filepath,
-                        reg_ref_ext, corr_ref_ext,
-                        tmp_dir, reg_dir, msk_dir, cmp_dir, fig_dir,
-                        force, verbose)
+                    sub_dirpath,
+                    val_type, val_range, val_units,
+                    mask_filepath,
+                    reg_ref_ext, corr_ref_ext,
+                    tmp_dir, reg_dir, msk_dir, cmp_dir, fig_dir,
+                    force, verbose)
                 target_list += tmp_target_list
                 corr_list += tmp_corr_list
             # group resulting correlations
             if corr_list:
                 combine_correlation(corr_list, dirpath,
-                        force=force, verbose=verbose)
+                                    force=force, verbose=verbose)
     return target_list, corr_list
 
 

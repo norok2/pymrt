@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Template: Module Name and Description
@@ -16,22 +16,10 @@ from __future__ import unicode_literals
 
 
 # ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 1, 'month': 'Jul', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-# first non-empty line of __doc__
-DOCget_first_line = [line for line in __doc__.splitlines() if line][0]
-
-
-# ======================================================================
 # :: Python Standard Library Imports
 # import os  # Operating System facilities
 # import math  # Mathematical Functions
-import collections  # Collections of Items
+# import collections  # Collections of Items
 import argparse  # Argument Parsing
 
 # :: External Imports
@@ -48,36 +36,13 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import mri_tools.modules.base as mrb
-# import mri_tools.modules.utils as mru
-# import mri_tools.modules.nifti as mrn
-# import mri_tools.modules.geometry as mrg
-# from mri_tools.modules.sequences import mp2rage
-from mri_tools import __version__
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-
-
-# ======================================================================
-def my_func(my_param):
-    """
-    Sample function.
-
-    Parameters
-    ==========
-    my_param : type
-        Sample parameter.
-
-    Returns
-    =======
-    my_rr : rtype
-        Sample return.
-
-    """
-    my_rr = my_param
-    return my_rr
+# import mri_tools.base as mrb
+# import mri_tools.utils as mru
+# import mri_tools.input_output as mrio
+# import mri_tools.geometry as mrg
+from mri_tools import INFO
+from mri_tools import VERB_LVL
+from mri_tools import D_VERB_LVL
 
 
 # ======================================================================
@@ -85,24 +50,24 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = VERB_LVL['none']
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOCget_first_line, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     # nothing here yet!
@@ -111,7 +76,7 @@ def handle_arg():
 
 
 # ======================================================================
-if __name__ == '__main__':
+def main():
     # :: handle program parameters
     arg_parser = handle_arg()
     args = arg_parser.parse_args()
@@ -122,12 +87,16 @@ if __name__ == '__main__':
         print('II:', 'Parsed Arguments:', args)
     print(__doc__)
 
-T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]
-th_E_val = np.rad2deg(np.arccos(np.exp(-TR_val / T1_val)))
-plt.ion()
-plt.xlabel('TR / ms')
-plt.ylabel('flip angle / deg')
-plt.contourf(np.arange(1, 20, 0.1), np.arange(700, 2500), th_E_val, 50)
-plt.colorbar()
-plt.show(block=True)
-print(T1_val.shape)
+    T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]
+    th_E_val = np.rad2deg(np.arccos(np.exp(-TR_val / T1_val)))
+    plt.ion()
+    plt.xlabel('TR / ms')
+    plt.ylabel('flip angle / deg')
+    plt.contourf(np.arange(1, 20, 0.1), np.arange(700, 2500), th_E_val, 50)
+    plt.colorbar()
+    plt.show(block=True)
+    print(T1_val.shape)
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

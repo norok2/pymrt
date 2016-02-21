@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools: read files with a JCAMP-DX-like structure.
@@ -53,7 +53,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # :: Local Imports
 # import mri_tools.base as mrb
 # import mri_tools.utils as mru
-# import mri_tools.nifti as mrn
+# import mri_tools.input_output as mrio
 # import mri_tools.geometry as mrg
 # from mri_tools.sequences import mp2rage
 

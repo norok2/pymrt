@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools.utils: useful utilities for MRI data analysis.
@@ -55,7 +55,7 @@ import re  # Regular expression operations
 
 # :: Local Imports
 import mri_tools.base as mrb
-import mri_tools.nifti as mrn
+import mri_tools.input_output as mrio
 from mri_tools.debug import dbg
 # from mri_tools import INFO
 # from mri_tools import VERB_LVL
@@ -187,7 +187,7 @@ def parse_filename(
 
     """
     filename = os.path.basename(filepath)
-    filename_noext = mrn.filename_noext(filename)
+    filename_noext = mrb.change_ext(filename, '', mrb.EXT['img'])
     if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
         tokens = filename_noext.split(i_sep)
         info = {}
@@ -219,7 +219,7 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
-        ext=mrn.D_EXT):
+        ext=mrio.D_EXT):
     """
     Reconstruct file name/path with SIEMENS-like structure.
     Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
@@ -451,22 +451,22 @@ def extract_param_val(
 # ======================================================================
 def combine_filename(
         prefix,
-        filename_list):
+        filenames):
     """
     Create a new filename, based on a combination of filenames.
 
     Args:
         prefix:
-        filename_list:
+        filenames:
 
     Returns:
 
     """
     # todo: fix doc
     filename = prefix
-    for filenames in filename_list:
+    for name in filenames:
         filename += 2 * INFO_SEP + \
-                    mrn.filename_noext(os.path.basename(filenames))
+                    mrb.change_ext(os.path.basename(name), '', mrb.EXT['img'])
     return filename
 
 
@@ -579,7 +579,7 @@ def filename2label(
 ##        regmat_filepath_list = [
 ##            os.path.join(
 ##            tmp_dirpath,
-##            mrn.filename_noext(os.path.basename(img_tuple[0])) +
+##            mrio.del_ext(os.path.basename(img_tuple[0])) +
 ##            mrb.add_extsep(mrb.TXT_EXT))
 ##            for img_tuple in img_tuple_list]
 ##        iter_param_list = [
@@ -647,14 +647,14 @@ def filename2label(
 #
 #        img = mrb.ndstack(img_list, -1)
 #        img = np.mean(img, -1)
-#        mrn.save(out_mag_filepath, np.abs(img), affine_nii)
-##        mrn.save(out_phs_filepath, np.angle(img), affine_nii)
+#        mrio.save(out_mag_filepath, np.abs(img), affine_nii)
+##        mrio.save(out_phs_filepath, np.angle(img), affine_nii)
 #
 ##        fixed = np.abs(img_list[0])
 ##        for idx, img in enumerate(img_list):
 ##            affine = mrb.affine_registration(np.abs(img), fixed, 'rigid')
 ##            img_list[idx] = mrb.apply_affine(img_list[idx], affine)
-##        mrn.save(out_filepath, np.abs(img), affine_nii)
+##        mrio.save(out_filepath, np.abs(img), affine_nii)
 ##        print(img.shape, img.nbytes / 1024 / 1024)  # DEBUG
 ##        # calculate the Fourier transform
 ##        for img in img_list:
@@ -668,9 +668,9 @@ def filename2label(
 ##        print(linear, shift)
 ##        moved = sp.ndimage.affine_transform(moving, linear, offset=-shift)
 ##        mrb.sample2d(moved, -1)
-##        mrn.save(out_filepath, moving, affine)
-##        mrn.save(mag_filepath, fixed, affine)
-##        mrn.save(phs_filepath, moved-fixed, affine)
+##        mrio.save(out_filepath, moving, affine)
+##        mrio.save(mag_filepath, fixed, affine)
+##        mrio.save(phs_filepath, moved-fixed, affine)
 ##        for idx in range(len(img_list)):
 ##            tmp_img = img[:, :, :, idx]
 ##            tmp_fft = fft[:, :, :, idx]

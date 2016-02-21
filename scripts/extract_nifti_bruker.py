@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Extract NIfTI-1 files from Bruker datasets.
@@ -71,7 +71,7 @@ import subprocess  # Subprocess management
 # :: Local Imports
 import mri_tools.base as mrb
 import mri_tools.utils as mru
-import mri_tools.nifti as mrn
+import mri_tools.input_output as mrio
 import mri_tools.extras as mre
 # import mri_tools.geometry as mrg
 # from mri_tools.sequences import mp2rage
@@ -131,7 +131,7 @@ def postprocess_nii_mag(
     receiver_gain = params_ldr_dict['RG'] / 1000.0  # in Volts
     # correction factor
     factor = num_avgs * receiver_gain
-    mrn.simple_filter(in_filepath, out_filepath, (lambda img: img / factor), [])
+    mrio.simple_filter(in_filepath, out_filepath, (lambda img: img / factor), [])
 
 
 # ======================================================================
@@ -187,8 +187,8 @@ def extract_nii(dirpath, extradir, force, verbose):
                 in ['MTyesno', 'MT_superlist_freq', 'MT_superlist_power']]) \
                 and method_ldr_dict['MTyesno'] == 'Yes':
             # MT-specific code
-            old_mag_filepath_list = mrn.img_split(mag_filepath)
-            old_phs_filepath_list = mrn.img_split(phs_filepath)
+            old_mag_filepath_list = mrio.split(mag_filepath)
+            old_phs_filepath_list = mrio.split(phs_filepath)
             base_protocol = info_dict['protocol']
             for i, (mt_freq, mt_power, old_mag_filepath, old_phs_filepath) \
                     in enumerate(zip(
@@ -215,8 +215,8 @@ def extract_nii(dirpath, extradir, force, verbose):
                 shutil.move(old_phs_filepath, new_phs_filepath)
         elif 'EffectiveTE' in method_ldr_dict:
             # Multi-Echo-specific code
-            old_mag_filepath_list = mrn.img_split(mag_filepath)
-            old_phs_filepath_list = mrn.img_split(phs_filepath)
+            old_mag_filepath_list = mrio.split(mag_filepath)
+            old_phs_filepath_list = mrio.split(phs_filepath)
             for te_val, old_mag_filepath, old_phs_filepath in \
                     zip(method_ldr_dict['EffectiveTE'], old_mag_filepath_list,
                     old_phs_filepath_list):

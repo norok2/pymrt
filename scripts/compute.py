@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Perform a custom calculation on a set of data matching specified criteria.
@@ -56,7 +56,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # :: Local Imports
 # import mri_tools.base as mrb
 # import mri_tools.utils as mru
-# import mri_tools.nifti as mrn
+# import mri_tools.input_output as mrio
 import mri_tools.computation as mrc
 # import mri_tools.correlate as mrr
 # import mri_tools.geometry as mrg

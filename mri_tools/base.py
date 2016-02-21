@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools: generic basic utilities.
@@ -17,7 +17,7 @@ import functools
 import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
-# import math  # Mathematical functions
+import math  # Mathematical functions
 import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
@@ -68,12 +68,13 @@ from mri_tools import _EVENTS
 COMMENT_TOKEN = '#'
 CSV_DELIMITER = '\t'
 PNG_RANGE = (0.0, 255.0)
-PNG_EXT = 'png'
-EPS_EXT = 'eps'
-SVG_EXT = 'svg'
-TXT_EXT = 'txt'
-CSV_EXT = 'csv'
-DCM_EXT = 'ima'
+EXT = {
+    'plot': 'png',
+    'img': 'nii.gz',
+    'text': 'txt',
+    'tab': 'csv',
+    'data': 'json',
+}
 D_TAB_SIZE = 8
 
 # :: TTY amenities
@@ -88,21 +89,16 @@ def gcd(*num_list):
     """
     Find the greatest common divisor (GCD) of a list of numbers.
 
-    Parameters
-    ==========
-    *num_list : list of int
-        The input numbers.
+    Args:
+        num_list (list[int]): The input numbers
 
-    Returns
-    =======
-    gcd_val : int
-        The value of the greatest common divisor (GCD).
-
+    Returns:
+        val (int): The value of the greatest common divisor (GCD).
     """
-    gcd_val = num_list[0]
+    val = num_list[0]
     for num in num_list[1:]:
-        gcd_val = fractions.gcd(gcd_val, num)
-    return gcd_val
+        val = math.gcd(val, num)
+    return val
 
 
 # ======================================================================
@@ -515,12 +511,10 @@ def add_extsep(ext):
 
     """
     if not ext:
-        dot_ext = ''
-    elif ext[0] == os.path.extsep:
-        dot_ext = ext
-    else:
-        dot_ext = os.path.extsep + ext
-    return dot_ext
+        ext = ''
+    if not ext.startswith(os.path.extsep):
+        ext = os.path.extsep + ext
+    return ext
 
 
 # ======================================================================
@@ -557,7 +551,8 @@ def change_ext(
             true_old_ext = filepath.endswith(old_ext)
         if true_old_ext:
             filepath = filepath[:-len(old_ext)]
-    filepath += add_extsep(new_ext)
+    if new_ext:
+        filepath += add_extsep(new_ext)
     return filepath
 
 

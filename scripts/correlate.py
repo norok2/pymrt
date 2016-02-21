@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Check voxel-by-voxel correlation after registration and masking.
@@ -48,7 +48,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # :: Local Imports
 # import mri_tools.base as mrb
 # import mri_tools.utils as mru
-# import mri_tools.nifti as mrn
+# import mri_tools.input_output as mrio
 # import mri_tools.compute as mrc
 import mri_tools.correlation as mrl
 # import mri_tools.geometry as mrg

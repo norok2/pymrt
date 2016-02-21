@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools: basic and advanced generic computations for MRI data analysis.
@@ -54,7 +54,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # :: Local Imports
 import mri_tools.base as mrb
 import mri_tools.utils as mru
-import mri_tools.nifti as mrn
+import mri_tools.input_output as mrio
 
 # from dcmpi.lib.common import ID
 
@@ -70,7 +70,7 @@ META_EXT = 'info'  # ID['info']
 
 D_OPTS = {
     # sources
-    'data_ext': mrn.D_EXT,
+    'data_ext': mrb.EXT['img'],
     'meta_ext': META_EXT,
     'multi_acq': False,
     'use_meta': True,
@@ -252,7 +252,7 @@ def ext_qsm_as_legacy(
         images = images[-2:]
         affines = affines[-2:]
     for image, affine, tmp_filepath in zip(images, affines, tmp_filepaths):
-        mrn.save(tmp_filepath, image[..., selected], affine)
+        mrio.save(tmp_filepath, image[..., selected], affine)
     # execute script on temp input
     cmd = [
         'qsm_as_legacy.py',
@@ -268,7 +268,7 @@ def ext_qsm_as_legacy(
     # import temp output
     img_list, aff_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
-        img, aff, hdr = mrn.load(tmp_filepath, full=True)
+        img, aff, hdr = mrio.load(tmp_filepath, full=True)
         img_list.append(img)
         aff_list.append(aff)
     # clean up tmp files
@@ -388,8 +388,8 @@ def fit_monoexp_decay_leasq(
     y_arr = y_arr / np.max(y_arr) * norm_factor
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = voxel_curve_fit(
-            y_arr, x_arr, func_exp_decay,
-            (np.mean(x_arr), np.mean(y_arr)), method='curve_fit')
+        y_arr, x_arr, func_exp_decay,
+        (np.mean(x_arr), np.mean(y_arr)), method='curve_fit')
     img_list = mrb.ndsplit(p_arr, -1)
     type_list = ('tau', 's_0')
     img_type_list = tuple(img_types[key] for key in type_list)
@@ -428,9 +428,9 @@ def fit_monoexp_decay_loglin(
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = voxel_curve_fit(
-            y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-            prepare, [exp_factor], fix, [exp_factor],
-            method='poly')
+        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
+        prepare, [exp_factor], fix, [exp_factor],
+        method='poly')
     img_list = mrb.ndsplit(p_arr, -1)
     aff_list = _simple_affines(affines)
     type_list = ('tau', 's_0')
@@ -455,7 +455,7 @@ def fit_monoexp_decay_loglin2(
         # calculate logarithm only of strictly positive values
         arr -= noise
         log_arr[arr > 0.0] = np.log(
-                arr[arr > 0.0] ** 2.0 * np.e ** factor)
+            arr[arr > 0.0] ** 2.0 * np.e ** factor)
         return log_arr
 
     def fix(arr, factor=0):
@@ -472,9 +472,9 @@ def fit_monoexp_decay_loglin2(
     x_arr = np.array(params[ti_label]).astype(float)
     noise_level = np.percentile(y_arr, 3)
     p_arr = voxel_curve_fit(
-            y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-            prepare, [exp_factor, noise_level], fix, [exp_factor],
-            method='poly')
+        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
+        prepare, [exp_factor, noise_level], fix, [exp_factor],
+        method='poly')
 
     img_list = mrb.ndsplit(p_arr, -1)
     aff_list = _simple_affines(affines)
@@ -558,7 +558,7 @@ def voxel_curve_fit(
             p_arr = fit_func(y_arr, x_arr, fit_params)
         except Exception as ex:
             print('WW: Exception "{}" in ndarray_fit() method "{}"'.format(
-                    ex, method))
+                ex, method))
 
     # revert to original shape
     p_arr = p_arr.reshape(list(shape[:support_axis]) + [len(fit_params)])
@@ -645,22 +645,22 @@ def sources_generic(
         sources, params = [], {}
         last_acq, new_acq = None, None
         data_filepath_list = mrb.listdir(
-                data_dirpath, opts['data_ext'], pattern)
+            data_dirpath, opts['data_ext'], pattern)
         for data_filepath in data_filepath_list:
-            info = mru.parse_filename(mrn.filename_noext(
-                    mrb.os.path.basename(data_filepath)))
+            info = mru.parse_filename(
+                mrb.change_ext(mrb.os.path.basename(data_filepath), ''))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
                 series_meta_filepath = os.path.join(
-                        meta_dirpath,
-                        mru.to_filename(info, ext=opts['meta_ext']))
+                    meta_dirpath,
+                    mru.to_filename(info, ext=opts['meta_ext']))
                 if os.path.isfile(series_meta_filepath):
                     with open(series_meta_filepath, 'r') as meta_file:
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
-                            meta_dirpath, series_meta['_acquisition'] +
-                                          mrb.add_extsep(opts['meta_ext']))
+                        meta_dirpath, series_meta['_acquisition'] +
+                                      mrb.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -804,7 +804,7 @@ def compute_generic(
                 print('Source:\t{}'.format(os.path.basename(source)))
             if verbose > VERB_LVL['none']:
                 print('Params:\t{}'.format(params))
-            image, affine, header = mrn.load(source, full=True)
+            image, affine, header = mrio.load(source, full=True)
             # fix mask if shapes are different
             if opts['adapt_mask']:
                 mask = [
@@ -819,12 +819,12 @@ def compute_generic(
             if 'compute_kwargs' not in opts:
                 opts['compute_kwargs'] = {}
             img_list, aff_list, img_type_list, params_list = compute_func(
-                    images, affines, params,
-                    *opts['compute_args'], **opts['compute_kwargs'])
+                images, affines, params,
+                *opts['compute_args'], **opts['compute_kwargs'])
         else:
             img_list, aff_list, img_type_list = zip(
-                    *[(img, aff, img_type) for img, aff, img_type
-                      in zip(images, affines, itertools.cycle(opts['types']))])
+                *[(img, aff, img_type) for img, aff, img_type
+                  in zip(images, affines, itertools.cycle(opts['types']))])
             params_list = ({},) * len(img_list)
 
         for target, target_type in zip(targets, opts['types']):
@@ -838,7 +838,7 @@ def compute_generic(
                             target = mru.change_param_val(target, key, val)
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
-                    mrn.save(target, img, aff)
+                    mrio.save(target, img, aff)
                     break
     return targets
 
@@ -914,7 +914,7 @@ def compute(
 
     # extract input files from directory
     sources_list, params_list = sources_func(
-            data_dirpath, meta_dirpath, *sources_args, **sources_kwargs)
+        data_dirpath, meta_dirpath, *sources_args, **sources_kwargs)
     if sources_list and params_list:
         if not out_dirpath:
             out_dirpath = in_dirpath
@@ -930,8 +930,8 @@ def compute(
         for sources, params in zip(sources_list, params_list):
             begin_time = time.time()
             compute_func(
-                    sources, out_dirpath, params,
-                    *compute_args, **compute_kwargs)
+                sources, out_dirpath, params,
+                *compute_args, **compute_kwargs)
             end_time = time.time()
             if verbose >= VERB_LVL['medium']:
                 print('Time:\t', datetime.timedelta(0, end_time - begin_time))
@@ -947,10 +947,10 @@ def compute(
             new_in_dirpath = os.path.join(in_dirpath, subdir)
             new_out_dirpath = os.path.join(out_dirpath, subdir)
             compute(
-                    sources_func, sources_args, sources_kwargs,
-                    compute_func, compute_args, compute_kwargs,
-                    new_in_dirpath, new_out_dirpath, recursive,
-                    meta_subpath, data_subpath, verbose)
+                sources_func, sources_args, sources_kwargs,
+                compute_func, compute_args, compute_kwargs,
+                new_in_dirpath, new_out_dirpath, recursive,
+                meta_subpath, data_subpath, verbose)
 
 
 # ======================================================================

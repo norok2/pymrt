@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools.geometry: create and manipulate 2D, 3D and N-D geometries.
@@ -720,7 +720,7 @@ def frame(
     ==========
     array : ndarray
         The input array.
-    border : int or int tuple (optional)
+    borders : float or float tuple (optional)
         The size of the border relative to the initial array shape.
     background : int or float (optional)
         The background value to be used for the frame.
@@ -841,7 +841,7 @@ def zoom_prepare(
 def shape2zoom(
         old_shape,
         new_shape,
-        keep_ratio_method=None):
+        aspect=None):
     """
     Calculate zoom (or conversion) factor between two shapes.
 
@@ -851,7 +851,7 @@ def shape2zoom(
         The shape of the source array.
     new_shape : int tuple
         The target shape of the array.
-    keep_ratio_method : callable or None
+    aspect : callable or None
         | Function to be applied to zoom factors tuple to enforce aspect ratio.
         | None to avoid keeping aspect ratio.
         | Signature: keep_ratio_method(iterable) -> float
@@ -867,8 +867,8 @@ def shape2zoom(
     if len(old_shape) != len(new_shape):
         raise IndexError('length of tuples must match')
     zoom = [new / old for old, new in zip(old_shape, new_shape)]
-    if keep_ratio_method:
-        zoom = [keep_ratio_method(zoom)] * len(zoom)
+    if aspect:
+        zoom = [aspect(zoom)] * len(zoom)
     return zoom
 
 

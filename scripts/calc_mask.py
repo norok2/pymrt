@@ -1,14 +1,14 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Extract a mask from an image (with specialized options for brain extraction).
 
-| Workflow is:
-* Brain extraction with FSL's BET (if any)
-* Gaussian filter (smoothing) with specified sigma
-* histogram deviation reduction by a specified factor
-* masking values using a relative threshold (and thresholding method)
-* binary erosion(s) witha specified number of iterations.
+Workflow is:
+- Brain extraction with FSL's BET (if any)
+- Gaussian filter (smoothing) with specified sigma
+- histogram deviation reduction by a specified factor
+- masking values using a relative threshold (and thresholding method)
+- binary erosion(s) witha specified number of iterations.
 """
 
 # ======================================================================
@@ -55,7 +55,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # :: Local Imports
 # import mri_tools.base as mrb
 # import mri_tools.utils as mru
-# import mri_tools.nifti as mrn
+# import mri_tools.input_output as mrio
 # import mri_tools.computation as mrc
 import mri_tools.correlation as mrl
 # import mri_tools.geometry as mrg
@@ -72,29 +72,6 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = D_VERB_LVL
-    # input filepath
-    d_input = None
-    # output filepath
-    d_output = None
-    # FSL's BET brain extraction algorithm parameters
-    d_bet_params = ''
-    # smoothing
-    d_smoothing = 0.0
-    # histogram deviation factor
-    d_percentile_range = (0.0, 1.0)
-    # relative value threshold in the (0, 1) range
-    d_val_threshold = 0.1
-    # comparison method
-    d_comparison = '>'
-    # relative size threshold in the (0, 1) range
-    d_size_threshold = 0.02
-    # number of erosion iterations
-    d_erosion_iter = 0
-    # number of dilation iterations
-    d_dilation_iter = 0
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -112,7 +89,7 @@ def handle_arg():
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
@@ -121,43 +98,43 @@ def handle_arg():
         help='force new processing [%(default)s]')
     arg_parser.add_argument(
         '-i', '--input', metavar='FILE',
-        default=d_input, required=True,
+        default=None, required=True,
         help='set input filepath [%(default)s]')
     arg_parser.add_argument(
         '-o', '--output', metavar='FILE',
-        default=d_output,
+        default=None,
         help='set output filepath [%(default)s]')
     arg_parser.add_argument(
         '-b', '--bet_params', metavar='STR',
-        default=d_bet_params,
+        default='',
         help='parameters to FSL\'s BET tool. Empty STR to skip [%(default)s]')
     arg_parser.add_argument(
         '-s', '--smoothing', metavar='SIGMA',
-        type=float, default=d_smoothing,
+        type=float, default=0.0,
         help='value of Gaussian smoothing\'s sigma [%(default)s]')
     arg_parser.add_argument(
         '-r', '--percentile_range', metavar=('MIN', 'MAX'),
-        type=float, nargs=2, default=d_percentile_range,
+        type=float, nargs=2, default=(0.0, 1.0),
         help='percentiles to obtain values range for threshold [%(default)s]')
     arg_parser.add_argument(
         '-a', '--val_threshold', metavar='R',
-        type=float, default=d_val_threshold,
+        type=float, default=0.1,
         help='value threshold (relative to values range) [%(default)s]')
     arg_parser.add_argument(
         '-c', '--comparison', metavar='STR',
-        default=d_comparison,
+        default='>',
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-z', '--size_threshold', metavar='Z',
-        type=float, default=d_size_threshold,
+        type=float, default=0.02,
         help='size threshold (relative to matrix size) [%(default)s]')
     arg_parser.add_argument(
         '-e', '--erosion_iter', metavar='N',
-        type=int, default=d_erosion_iter,
+        type=int, default=0,
         help='number of postprocess binary erosion iterations [%(default)s]')
     arg_parser.add_argument(
         '-d', '--dilation_iter', metavar='N',
-        type=int, default=d_erosion_iter,
+        type=int, default=0,
         help='number of postprocess binary dilation iterations [%(default)s]')
     return arg_parser
 

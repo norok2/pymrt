@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools/twix: manage Siemens's TWIX (raw) data from MRI scanners.

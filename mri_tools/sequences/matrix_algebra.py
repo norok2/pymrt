@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 mri_tools/sequences/matrix_algebra: solver of the Bloch-McConnell equations.
