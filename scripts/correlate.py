@@ -111,11 +111,11 @@ def handle_arg():
         help='set exact mask file [%(default)s]')
     arg_parser.add_argument(
         '--reg_ref_ext', metavar='FILE_EXT',
-        default=mrl.D_EXT['registration reference'],
+        default=mrl.D_EXT['reg_ref'],
         help='file extension of registration reference flag [%(default)s]')
     arg_parser.add_argument(
         '--corr_ref_ext', metavar='FILE_EXT',
-        default=mrl.D_EXT['correlation reference'],
+        default=mrl.D_EXT['corr_ref'],
         help='file extension of correlation reference flag [%(default)s]')
     arg_parser.add_argument(
         '--tmp_dir', metavar='SUBDIR',

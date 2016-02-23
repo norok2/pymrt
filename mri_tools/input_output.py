@@ -80,10 +80,15 @@ def load(
 
     Args:
         in_filepath (str): The input file path
-        full (bool): If true, returns
+        full (bool): If true, return the image data, the affine and the header
 
     Returns:
+        ndarray|[ndarray,ndarray,header]: Returns the image data, and,
+            if `full` is set to True, also the affine transformation matrix
+            and the data header.
 
+    See Also:
+        nibabel.load, nibabel.get_data, nibabel.get_affine, nibabel.get_header
     """
     obj = nib.load(in_filepath)
     if full:
@@ -112,8 +117,8 @@ def save(
     """
     if affine is None:
         affine = np.eye(4)
-    nii = nib.Nifti1Image(array, affine, header)
-    nii.to_filename(out_filepath)
+    obj = nib.Nifti1Image(array, affine, header)
+    obj.to_filename(out_filepath)
 
 
 # ======================================================================
@@ -134,13 +139,13 @@ def masking(
     Returns:
         None
     """
-    img_nii = nib.load(in_filepath)
-    mask_nii = nib.load(mask_filepath)
-    img = img_nii.get_data()
-    mask = mask_nii.get_data()
+    obj = nib.load(in_filepath)
+    obj_mask = nib.load(mask_filepath)
+    img = obj.get_data()
+    mask = obj_mask.get_data()
     mask = mask.astype(bool)
     img[~mask] = mask_val
-    save(out_filepath, img, img_nii.get_affine())
+    save(out_filepath, img, obj.get_affine())
 
 
 # ======================================================================
@@ -170,9 +175,9 @@ def filter_1_1(
     Returns:
         None
     """
-    nii = nib.load(in_filepath)
+    obj = nib.load(in_filepath)
     img, aff, hdr = func(
-        nii.get_data(), nii.get_affine(), nii.get_header(), *args,
+        obj.get_data(), obj.get_affine(), obj.get_header(), *args,
         **kwargs)
     save(out_filepath, img, aff, hdr)
 
@@ -206,8 +211,8 @@ def filter_n_1(
     """
     input_list = []
     for in_filepath in in_filepath_list:
-        nii = nib.load(in_filepath)
-        input_list.append((nii.get_data(), nii.get_affine(), nii.get_header()))
+        obj = nib.load(in_filepath)
+        input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
     img, aff, hdr = func(input_list, *args, **kwargs)
     save(out_filepath, img, aff, hdr)
 
@@ -243,8 +248,8 @@ def filter_n_m(
     """
     input_list = []
     for in_filepath in in_filepath_list:
-        nii = nib.load(in_filepath)
-        input_list.append((nii.get_data(), nii.get_affine(), nii.get_header()))
+        obj = nib.load(in_filepath)
+        input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
     output_list = func(input_list, *args, **kwargs)
     for (img, aff, hdr), out_filepath in zip(output_list, out_filepath_list):
         save(out_filepath, img, aff, hdr)
@@ -307,9 +312,9 @@ def simple_filter_1_1(
     Returns:
         None
     """
-    nii = nib.load(in_filepath)
-    img = func(nii.get_data(), *args, **kwargs)
-    aff = nii.get_affine()
+    obj = nib.load(in_filepath)
+    img = func(obj.get_data(), *args, **kwargs)
+    aff = obj.get_affine()
     save(out_filepath, img, aff)
 
 
@@ -340,9 +345,9 @@ def simple_filter_n_1(
     img_list = []
     aff_list = []
     for in_filepath in in_filepath_list:
-        nii = nib.load(in_filepath)
-        img_list.append(nii.get_data())
-        aff_list.append(nii.get_affine())
+        obj = nib.load(in_filepath)
+        img_list.append(obj.get_data())
+        aff_list.append(obj.get_affine())
     img = func(img_list, *args, **kwargs)
     aff = aff_list[-1]  # the affine of the first image
     save(out_filepath, img, aff)
@@ -376,9 +381,9 @@ def simple_filter_n_m(
     i_img_list = []
     aff_list = []
     for in_filepath in in_filepath_list:
-        nii = nib.load(in_filepath)
-        i_img_list.append(nii.get_data())
-        aff_list.append(nii.get_affine())
+        obj = nib.load(in_filepath)
+        i_img_list.append(obj.get_data())
+        aff_list.append(obj.get_affine())
     o_img_list = func(i_img_list, *args, **kwargs)
     aff = aff_list[0]  # the affine of the first image
     for img, out_filepath in zip(o_img_list, out_filepath_list):
@@ -464,8 +469,8 @@ def split(
             os.path.basename(in_filepath), '', mrb.EXT['img'])
     out_filepath_list = []
     # load source image
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
+    obj = nib.load(in_filepath)
+    img = obj.get_data()
     # split data
     img_list = mrb.ndsplit(img, axis)
     # save data to output
@@ -474,7 +479,7 @@ def split(
         out_filepath = os.path.join(
             out_dirpath,
             mrb.change_ext(out_basename + '-' + i_str, mrb.EXT['img'], ''))
-        save(out_filepath, image, img_nii.get_affine())
+        save(out_filepath, image, obj.get_affine())
         out_filepath_list.append(out_filepath)
     return out_filepath_list
 
@@ -502,7 +507,7 @@ def zoom(
     Returns:    
         None
 
-    See:
+    See Also:
         mri_tools.geometry
     """
 
@@ -652,8 +657,8 @@ def common_sampling(
     if new_shape is None:
         shape_list = []
         for in_filepath in in_filepath_list:
-            img_nii = nib.load(in_filepath)
-            shape_list.append(img_nii.get_data().shape)
+            obj = nib.load(in_filepath)
+            shape_list.append(obj.get_data().shape)
         new_shape = combine_shape(shape_list)
 
     # resample images
@@ -712,8 +717,8 @@ def common_support(
     if new_shape is None:
         shape_list = []
         for in_filepath in in_filepath_list:
-            img_nii = nib.load(in_filepath)
-            shape_list.append(img_nii.get_data().shape)
+            obj = nib.load(in_filepath)
+            shape_list.append(obj.get_data().shape)
         new_shape = combine_shape(shape_list)
 
     if out_filepath_list is None:
@@ -753,7 +758,7 @@ def mask_threshold(
     Returns:
         None
 
-    See:
+    See Also:
         mri_tools.segmentation.mask_threshold
     """
 
@@ -781,7 +786,7 @@ def find_objects(
             If None, use default.
         max_label (int): Limit the number of labels to search through.
 
-    See:
+    See Also:
         mri_tools.geometry.find_objects
     """
 
@@ -830,11 +835,11 @@ def calc_stats(
             - 'std': standard deviation
             - 'sum': summation
     """
-    img_nii = nib.load(img_filepath)
-    img = img_nii.get_data()
+    obj = nib.load(img_filepath)
+    img = obj.get_data()
     if mask_filepath:
-        mask_nii = nib.load(mask_filepath)
-        mask = mask_nii.get_data().astype(bool)
+        obj_mask = nib.load(mask_filepath)
+        mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
     if not save_path and printing is not False:
@@ -893,11 +898,11 @@ def plot_sample2d(
     Returns:
         The result of `mri_tools.plot.sample2d`
 
-    See:
+    See Also:
         mri_tools.plot
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data()
+    obj = nib.load(in_filepath)
+    img = obj.get_data()
     sample, plot = mrp.sample2d(img, *args, **kwargs)
     return sample, plot
 
@@ -922,14 +927,14 @@ def plot_histogram1d(
     Returns:
         The result of `mri_tools.plot.histogram1d`
 
-    See:
+    See Also:
         mri_tools.plot
     """
-    img_nii = nib.load(in_filepath)
-    img = img_nii.get_data().astype(np.double)
+    obj = nib.load(in_filepath)
+    img = obj.get_data().astype(np.double)
     if mask_filepath:
-        mask_nii = nib.load(mask_filepath)
-        mask = mask_nii.get_data().astype(bool)
+        obj_mask = nib.load(mask_filepath)
+        mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
     result = mrp.histogram1d(img[mask], *args, **kwargs)
@@ -956,18 +961,18 @@ def plot_histogram1d_list(
     Returns:
         The result of `mri_tools.plot.histogram1d_list`
 
-    See:
+    See Also:
         mri_tools.plot
     """
     if mask_filepath:
-        mask_nii = nib.load(mask_filepath)
-        mask = mask_nii.get_data().astype(bool)
+        obj_mask = nib.load(mask_filepath)
+        mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
     img_list = []
     for in_filepath in in_filepath_list:
-        img_nii = nib.load(in_filepath)
-        img = img_nii.get_data()
+        obj = nib.load(in_filepath)
+        img = obj.get_data()
         img_list.append(img[mask])
     hist, bin_edges, plot = mrp.histogram1d_list(img_list, *args, **kwargs)
     return hist, bin_edges, plot
@@ -997,21 +1002,21 @@ def plot_histogram2d(
     Returns:
         The result of `mri_tools.plot.histogram2d`
 
-    See:
+    See Also:
         mri_tools.plot.histogram2d
     """
-    img1_nii = nib.load(in1_filepath)
-    img2_nii = nib.load(in2_filepath)
-    img1 = img1_nii.get_data().astype(np.double)
-    img2 = img2_nii.get_data().astype(np.double)
+    obj1 = nib.load(in1_filepath)
+    obj2 = nib.load(in2_filepath)
+    img1 = obj1.get_data().astype(np.double)
+    img2 = obj2.get_data().astype(np.double)
     if mask1_filepath:
-        mask1_nii = nib.load(mask1_filepath)
-        mask1 = mask1_nii.get_data().astype(bool)
+        obj1_mask = nib.load(mask1_filepath)
+        mask1 = obj1_mask.get_data().astype(bool)
     else:
         mask1 = slice(None)
     if mask2_filepath:
-        mask2_nii = nib.load(mask2_filepath)
-        mask2 = mask2_nii.get_data().astype(bool)
+        obj2_mask = nib.load(mask2_filepath)
+        mask2 = obj2_mask.get_data().astype(bool)
     else:
         mask2 = slice(None)
     hist2d, x_edges, y_edges, plot = \

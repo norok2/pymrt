@@ -433,7 +433,7 @@ if __name__ == '__main__':
     #     print(idx)
     #     print(linear)
 
-    mrio.simple_filter_n(
+    mrio.simple_filter_n_1(
         [s1, s2], t12, my_reg,
         transform='rigid', interp_order=1, init_guess=('none', 'none'))
 

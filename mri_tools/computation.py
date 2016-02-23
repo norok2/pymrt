@@ -155,7 +155,7 @@ def preset_t2s_multiecho_loglin():
     new_opts = {
         'types': ['T2S', 'PD'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
-        'match': '.*FLASH.*',
+        'match': '(?i).*(gre|flash|me).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'fit_monoexp_decay_loglin',
@@ -174,7 +174,7 @@ def preset_t2s_multiecho_loglin2():
     new_opts = {
         'types': ['T2S', 'PD'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
-        'match': '.*FLASH.*',
+        'match': '(?i).*(gre|flash|me).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'fit_monoexp_decay_loglin2',
@@ -205,9 +205,31 @@ def preset_t2s_multiecho_leasq():
 
 
 # ======================================================================
+def preset_b1t_afi():
+    """
+    Preset to get B1+ maps from the AFI sequence.
+    """
+    new_opts = {
+        'types': ['B1T'],
+        'param_select': [
+            'ProtocolName', 'RepetitionTime::ms', 'FlipAngle::deg',
+            '_series'],
+        'match': '.*(afi|b1).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'calc_afi',
+        'compute_kwargs': {
+            'ti_label': 'RepetitionTime::ms',
+            'fa_label': 'FlipAngle::deg',
+            'img_types': {'eff': 'B1T'}}
+    }
+    return new_opts
+
+
+# ======================================================================
 def preset_qsm_as_legacy():
     """
-    Preset to get built-in CHI maps from the FLASH sequence.
+    Preset to get CHI maps from a multi-echo sequence.
     """
     new_opts = {
         'types': ['CHI', 'MSK'],
@@ -278,6 +300,37 @@ def ext_qsm_as_legacy(
     type_list = ('qsm', 'mask')
     params_list = ({'te': params[te_label][selected]}, {})
     img_type_list = tuple(img_types[key] for key in type_list)
+    return img_list, aff_list, img_type_list, params_list
+
+
+def calc_afi(
+        images,
+        affines,
+        params,
+        ti_label,
+        fa_label,
+        img_types):
+    """
+    Fit monoexponential decay to images using the log-linear method.
+    """
+
+    y_arr = mrb.ndstack(images)
+    s_arr = mrb.polar2complex(y_arr[..., 0], ensure_phase_range(y_arr[..., 1]))
+    # s_arr = images[0]
+    t_r = params[ti_label]
+    nominal_fa = params[fa_label]
+
+    mask = s_arr[..., 0] != 0.0
+    r = np.zeros_like(s_arr[..., 1])
+    r[mask] = s_arr[..., 0][mask] / s_arr[..., 1][mask]
+    n = t_r[1] / t_r[0]
+    fa = np.rad2deg(np.real(np.arccos((r * n - 1) / (n - r))))
+
+    img_list = [fa / nominal_fa]
+    aff_list = _simple_affines(affines)
+    type_list = ['eff']
+    img_type_list = tuple(img_types[key] for key in type_list)
+    params_list = ({},) * len(img_list)
     return img_list, aff_list, img_type_list, params_list
 
 
@@ -418,8 +471,8 @@ def fit_monoexp_decay_loglin(
     def fix(arr, factor=0):
         # tau = p_arr[..., 0]
         # s_0 = p_arr[..., 1]
-        arr[..., 0][arr[..., 0] != 0.0] = \
-            - 1.0 / arr[..., 0][arr[..., 0] != 0.0]
+        mask = arr[..., 0] != 0.0
+        arr[..., 0][mask] = - 1.0 / arr[..., 0][mask]
         arr[..., 1] = np.exp(arr[..., 1] - factor)
         return arr
 
@@ -428,8 +481,10 @@ def fit_monoexp_decay_loglin(
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = voxel_curve_fit(
-        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-        prepare, [exp_factor], fix, [exp_factor],
+        y_arr, x_arr,
+        None, (np.mean(x_arr), np.mean(y_arr)),
+        prepare, [exp_factor], {},
+        fix, [exp_factor], {},
         method='poly')
     img_list = mrb.ndsplit(p_arr, -1)
     aff_list = _simple_affines(affines)
@@ -454,15 +509,15 @@ def fit_monoexp_decay_loglin2(
         log_arr = np.zeros_like(arr)
         # calculate logarithm only of strictly positive values
         arr -= noise
-        log_arr[arr > 0.0] = np.log(
-            arr[arr > 0.0] ** 2.0 * np.e ** factor)
+        mask = arr > 0.0
+        log_arr[mask] = np.log(arr[mask] ** 2.0 * np.e ** factor)
         return log_arr
 
     def fix(arr, factor=0):
         # tau = p_arr[..., 0]
         # s_0 = p_arr[..., 1]
-        arr[..., 0][arr[..., 0] != 0.0] = \
-            - 2.0 / arr[..., 0][arr[..., 0] != 0.0]
+        mask = arr[..., 0] != 0.0
+        arr[..., 0][mask] = - 2.0 / arr[..., 0][mask]
         arr[..., 1] = np.exp(arr[..., 1] - factor)
         return arr
 
@@ -472,8 +527,10 @@ def fit_monoexp_decay_loglin2(
     x_arr = np.array(params[ti_label]).astype(float)
     noise_level = np.percentile(y_arr, 3)
     p_arr = voxel_curve_fit(
-        y_arr, x_arr, None, (np.mean(x_arr), np.mean(y_arr)),
-        prepare, [exp_factor, noise_level], fix, [exp_factor],
+        y_arr, x_arr,
+        None, (np.mean(x_arr), np.mean(y_arr)),
+        prepare, [exp_factor, noise_level], {},
+        fix, [exp_factor], {},
         method='poly')
 
     img_list = mrb.ndsplit(p_arr, -1)
@@ -568,7 +625,7 @@ def voxel_curve_fit(
             post_args = []
         if post_kwargs is None:
             post_kwargs = {}
-        y_arr = post_func(y_arr, *post_args, **post_kwargs)
+        p_arr = post_func(p_arr, *post_args, **post_kwargs)
     return p_arr
 
 
@@ -637,10 +694,10 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
+    opts = mrb.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
-        opts = mrb.merge_dicts(D_OPTS, opts)
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
@@ -648,7 +705,8 @@ def sources_generic(
             data_dirpath, opts['data_ext'], pattern)
         for data_filepath in data_filepath_list:
             info = mru.parse_filename(
-                mrb.change_ext(mrb.os.path.basename(data_filepath), ''))
+                mrb.change_ext(mrb.os.path.basename(data_filepath), '',
+                               mrb.EXT['img']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None

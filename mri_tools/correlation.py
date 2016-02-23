@@ -106,10 +106,10 @@ MP2RAGE_ID = {
     'uni': 'UNI_Images'}
 
 # useful groupings
-SRC_IMG_TYPE = set(MAP_ID.values() + [TYPE_ID['none']])
+SRC_IMG_TYPE = set(list(MAP_ID.values()) + [TYPE_ID['none']])
 KNOWN_IMG_TYPES = set(
-    MAP_ID.values() + TYPE_ID.values() + SERVICE_ID.values() +
-    MP2RAGE_ID.values())
+    list(MAP_ID.values()) + list(TYPE_ID.values()) +
+    list(SERVICE_ID.values()) + list(MP2RAGE_ID.values()))
 
 # suffix of new reconstructed image from Siemens
 NEW_RECO_ID = 'rr'
@@ -159,8 +159,8 @@ def _get_ref_list(
             if subdir:
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
-            ref_filename = mrio.filename_addext(
-                os.path.basename(ref_src)[:-len(mrb.add_extsep(ref_ext))])
+            ref_filename = mrb.change_ext(
+                os.path.basename(ref_src), mrb.EXT['img'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepath_list.append(ref_filepath)
     elif target_list:
@@ -394,7 +394,7 @@ def register(
         return img
 
     if mrb.check_redo([in_filepath, ref_filepath], [out_filepath], force):
-        mrio.simple_filter_n(
+        mrio.simple_filter_n_1(
             [in_filepath, ref_filepath], out_filepath, _quick_reg,
             transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
@@ -445,7 +445,7 @@ def apply_mask(
     if mrb.check_redo([in_filepath, mask_filepath], [out_filepath], force):
         if verbose > VERB_LVL['none']:
             print('RunMsk:\t{}'.format(os.path.basename(out_filepath)))
-        mrio.simple_filter_n(
+        mrio.simple_filter_n_1(
             [in_filepath, mask_filepath], out_filepath,
             _mask_reframe, mask_val)
 
@@ -582,7 +582,7 @@ def calc_mask(
             print('I: compute_mask params: ', _calc_mask_kwargs.items())
         if verbose > VERB_LVL['none']:
             print('GetMsk:\t{}'.format(os.path.basename(out_filepath)))
-        mrio.simple_filter(
+        mrio.simple_filter_1_1(
             in_tmp_filepath, out_filepath, _calc_mask, **_calc_mask_kwargs)
     return out_filepath
 
@@ -611,7 +611,7 @@ def calc_difference(
     if mrb.check_redo([in1_filepath, in2_filepath], [out_filepath], force):
         if verbose > VERB_LVL['none']:
             print('DifImg:\t{}'.format(os.path.basename(out_filepath)))
-        mrio.simple_filter_n(
+        mrio.simple_filter_n_1(
             [in1_filepath, in2_filepath], out_filepath,
             (lambda images: images[1] - images[0]))
 
@@ -735,15 +735,15 @@ def calc_correlation(
                          #                theil_coeff, theil_offset,
                          num, num_tot, num_ratio]]
         labels = \
-            ['{: <{size}s}'.format('x_corr_file', size=filename_max_len),
-             '{: <{size}s}'.format('y_corr_file', size=filename_max_len)] + \
+            ['{: <{size}s}'.format('x_corr_file', size=lbl_len),
+             '{: <{size}s}'.format('y_corr_file', size=lbl_len)] + \
             ['D-' + lbl for lbl in label_list] + \
             ['E-' + lbl for lbl in label_list] + \
             ['r', 'r2', 'p-val',
              'lin-cof', 'lin-off',
              #             'thl-cof', 'thl-off',
              'N_eff', 'N_tot', 'N_ratio']
-        with open(out_filepath, 'wb') as csvfile:
+        with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             csvwriter.writerow([mrb.COMMENT_TOKEN + in2_filepath])
             csvwriter.writerow([mrb.COMMENT_TOKEN + in1_filepath])
@@ -792,7 +792,7 @@ def combine_correlation(
     # :: get base dir
     base_dir = ''
     for filepath in filepath_list:
-        with open(filepath, 'rb') as csvfile:
+        with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             for row in csvreader:
                 if row[0].startswith(mrb.COMMENT_TOKEN):
@@ -802,7 +802,7 @@ def combine_correlation(
     # :: summarize correlation results
     labels, rows, max_cols = [], [], []
     for filepath in filepath_list:
-        with open(filepath, 'rb') as csvfile:
+        with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             for row in csvreader:
                 if row[0].startswith(mrb.COMMENT_TOKEN):
@@ -830,7 +830,7 @@ def combine_correlation(
     out_filepath = os.path.join(
         out_dirpath, out_filename + mrb.add_extsep(mrb.EXT['tab']))
     if mrb.check_redo(filepath_list, [out_filepath], force):
-        with open(out_filepath, 'wb') as csvfile:
+        with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=str(mrb.CSV_DELIMITER))
             if not selected_cols:
                 selected_cols = range(len(labels))
@@ -1436,7 +1436,7 @@ def check_correlation(
             ref_list, ref_src_list = \
                 _get_ref_list(dirpath, source_list, None, reg_ref_ext)
             ref = ref_list[0]
-            ref_src = ref_src_list[0]
+            ref_src = ref_src_list[0] if len(ref_src_list) > 0 else ''
             # registration instructions
             if verbose >= VERB_LVL['medium']:
                 print('I: RegRefSrs: {}'.format(ref_src))
@@ -1454,7 +1454,8 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filepath = mrio.filename_addext(MASK_FILENAME)
+                    mask_filepath = mrb.change_ext(
+                        MASK_FILENAME, mrb.EXT['img'])
                 # add current directory if it was not specified
                 if not os.path.exists(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)

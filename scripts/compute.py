@@ -61,7 +61,7 @@ import mri_tools.computation as mrc
 # import mri_tools.correlate as mrr
 # import mri_tools.geometry as mrg
 # from mri_tools.sequences import mp2rage
-import dcmpi.common as dcmlib
+# import dcmpi.common as dcmlib
 
 from mri_tools import INFO
 from mri_tools import VERB_LVL
@@ -79,21 +79,6 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = D_VERB_LVL
-    # input directory
-    d_input_dir = '.'
-    # output directory
-    d_output_dir = '.'
-    # calculation method
-    d_method = 'generic'
-    # method options
-    d_options = '{}'
-    # extra metadata subpath
-    d_meta_subpath = dcmlib.ID['info']
-    # extra data subpath
-    d_data_subpath = dcmlib.ID['nifti']
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -112,7 +97,7 @@ def handle_arg():
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
@@ -121,11 +106,11 @@ def handle_arg():
         help='force new processing [%(default)s]')
     arg_parser.add_argument(
         '-i', '--input', metavar='DIR',
-        default=d_input_dir,
+        default='.',
         help='set input directory [%(default)s]')
     arg_parser.add_argument(
         '-o', '--output', metavar='DIR',
-        default=d_output_dir,
+        default='.',
         help='set output directory [%(default)s]')
     arg_parser.add_argument(
         '-r', '--recursive',
@@ -133,19 +118,19 @@ def handle_arg():
         help='Force descending into subdirectories [%(default)s]')
     arg_parser.add_argument(
         '-e', '--meta_subpath', metavar='DIR',
-        default=d_meta_subpath,
+        default=mrc.META_EXT,
         help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
         '-a', '--data_subpath', metavar='DIR',
-        default=d_data_subpath,
+        default='nii',
         help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
         '-m', '--method', metavar='METHOD',
-        default=d_method,
+        default='generic',
         help='set computation target and method [%(default)s]')
     arg_parser.add_argument(
         '-n', '--options', metavar='OPTS',
-        default=d_options,
+        default='{}',
         help='set JSON-formatted options dictionary [%(default)s]')
     return arg_parser
 

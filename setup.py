@@ -133,7 +133,7 @@ setup(
         'console_scripts': [
             'mrt_calc_mask=scripts.calc_mask:main',
             'mrt_geom_phantom=scripts.geom_phantom:main',
-            'mrt_extract_nifti_bruker=scripts.extract_nifti_bruker:main'
+            'mrt_extract_nifti_bruker=scripts.extract_nifti_bruker:main',
 
             'mrt_compute=scripts.compute:main',
             'mrt_correlate=scripts.correlate:main',

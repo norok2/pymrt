@@ -131,7 +131,8 @@ def postprocess_nii_mag(
     receiver_gain = params_ldr_dict['RG'] / 1000.0  # in Volts
     # correction factor
     factor = num_avgs * receiver_gain
-    mrio.simple_filter(in_filepath, out_filepath, (lambda img: img / factor), [])
+    mrio.simple_filter_1_1(
+        in_filepath, out_filepath, (lambda img: img / factor), [])
 
 
 # ======================================================================

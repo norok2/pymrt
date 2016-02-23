@@ -219,7 +219,7 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
-        ext=mrio.D_EXT):
+        ext=mrb.EXT['img']):
     """
     Reconstruct file name/path with SIEMENS-like structure.
     Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
@@ -580,7 +580,7 @@ def filename2label(
 ##            os.path.join(
 ##            tmp_dirpath,
 ##            mrio.del_ext(os.path.basename(img_tuple[0])) +
-##            mrb.add_extsep(mrb.TXT_EXT))
+##            mrb.add_extsep(mrb.EXT['txt']))
 ##            for img_tuple in img_tuple_list]
 ##        iter_param_list = [
 ##            (img_tuple[0], img_tuple_list[0][0], regmat)

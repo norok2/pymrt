@@ -265,12 +265,13 @@ def _shape_from_file(
     tmp_dirpaths = [
         os.path.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
-        ]
+    ]
     for tmp_dirpath in tmp_dirpaths:
         if os.path.isdir(tmp_dirpath):
             dirpath = tmp_dirpath
             break
-    filepath = os.path.join(dirpath, filename + mrb.add_extsep(mrb.CSV_EXT))
+    filepath = os.path.join(
+        dirpath, filename + mrb.add_extsep(mrb.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr

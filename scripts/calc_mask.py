@@ -121,8 +121,12 @@ def handle_arg():
         type=float, default=0.1,
         help='value threshold (relative to values range) [%(default)s]')
     arg_parser.add_argument(
-        '-c', '--comparison', metavar='STR',
+        '-c', '--comparison', metavar='">"|">="|"<"|"<="|"="|"!="',
         default='>',
+        help='comparison directive [%(default)s]')
+    arg_parser.add_argument(
+        '-m', '--mode', metavar='absolute|relative|percentile',
+        default='absolute',
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-z', '--size_threshold', metavar='Z',
@@ -161,11 +165,12 @@ def main():
         args.output,
         args.val_threshold,
         args.comparison,
-        'absolute',
+        args.mode,
         args.smoothing,
         args.erosion_iter,
         args.dilation_iter,
         args.bet_params,
+        '',
         args.force,
         args.verbose)
 
