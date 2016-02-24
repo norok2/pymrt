@@ -32,7 +32,7 @@ import itertools  # Functions creating iterators for efficient looping
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
-import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
+# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
@@ -42,8 +42,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -95,29 +94,26 @@ def quick(array):
         plt.draw()
         plt.show()
     elif array.ndim == 2:
-        # # using Matplotlib
-        # fig = plt.subplots()
-        # plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        # plt.draw()
-
-        # using Mayavi2
-        mlab.figure()
-        mlab.imshow(array.astype(float))
-        mlab.draw()
-        mlab.show()
+        # using Matplotlib
+        fig = plt.subplots()
+        plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        plt.draw()
     elif array.ndim == 3:
-        # # using Matplotlib
-        # fig = plt.subplots()
-        # ax = mpl3.Axes3D(fig)
-        # fig.colorbar(plot)
+        # using Matplotlib
+        from skimage import measure
 
-        # using Mayavi2
-        mlab.figure()
-        mlab.contour3d(array.astype(float))
-        mlab.draw()
-        mlab.show()
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+        # zz, xx, yy = array.nonzero()
+        # ax.scatter(xx, yy, zz, cmap=plt.cm.hot)
+
+        verts, faces = measure.marching_cubes(array, 0.5, (2,) * 3)
+        ax.plot_trisurf(
+            verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral',
+            antialiased=False, linewidth=0.0)
     else:
         print('W: cannot plot more than 3 dimension.')
+    plt.show()
 
 
 # ======================================================================
@@ -140,30 +136,29 @@ def quick_1d(array):
         # using Matplotlib
         plt.figure()
         plt.plot(np.arange(len(array)), array.astype(float))
-        plt.draw()
         plt.show()
     elif array.ndim == 2:
-        # # using Matplotlib
-        # fig = plt.subplots()
-        # plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        # plt.draw()
+        # using Matplotlib
+        fig = plt.subplots()
+        plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        plt.show()
 
-        # using Mayavi2
-        mlab.figure()
-        mlab.imshow(array.astype(float))
-        mlab.draw()
-        mlab.show()
+        # # using Mayavi2
+        # mlab.figure()
+        # mlab.imshow(array.astype(float))
+        # mlab.draw()
+        # mlab.show()
     elif array.ndim == 3:
-        # # using Matplotlib
-        # fig = plt.subplots()
-        # ax = mpl3.Axes3D(fig)
-        # fig.colorbar(plot)
+        # using Matplotlib
+        fig = plt.subplots()
+        ax = mpl3.Axes3D(fig)
+        fig.colorbar(plot)
 
-        # using Mayavi2
-        mlab.figure()
-        mlab.contour3d(array.astype(float))
-        mlab.draw()
-        mlab.show()
+        # # using Mayavi2
+        # mlab.figure()
+        # mlab.contour3d(array.astype(float))
+        # mlab.draw()
+        # mlab.show()
     else:
         print('W: cannot plot more than 3 dimension.')
 
@@ -207,7 +202,7 @@ def sample2d(
         axis=None,
         index=None,
         title=None,
-        array_range=None,
+        array_interval=None,
         ticks_limit=None,
         orientation=None,
         cmap=None,
@@ -231,8 +226,8 @@ def sample2d(
         The slicing index. If None, mid-value is taken.
     title : str (optional)
         The title of the plot.
-    array_range : 2-tuple (optional)
-        The (min, max) values range.
+    array_interval : 2-tuple (optional)
+        The (min, max) values interval.
     cmap : MatPlotLib ColorMap (optional)
         The colormap to be used for displaying the histogram.
     use_new_figure : bool (optional)
@@ -261,10 +256,10 @@ def sample2d(
     sample = mrb.slice_array(array, axis, index)
     if title:
         ax.set_title(title)
-    if array_range is None:
-        array_range = mrb.range_array(array)
+    if array_interval is None:
+        array_interval = mrb.minmax(array)
     if not cmap:
-        if array_range[0] * array_range[1] < 0:
+        if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.seismic
         else:
             cmap = plt.cm.binary
@@ -272,8 +267,8 @@ def sample2d(
     if (orientation == 'portrait' and sample.shape[0] < sample.shape[1]) or \
             (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
         sample = sample.transpose()
-    plot = ax.imshow(sample, cmap=cmap, vmin=array_range[0],
-                     vmax=array_range[1])
+    plot = ax.imshow(sample, cmap=cmap, vmin=array_interval[0],
+                     vmax=array_interval[1])
     if ticks_limit is not None:
         if ticks_limit > 0:
             ax.locator_params(nbins=ticks_limit)
@@ -300,9 +295,9 @@ def sample2d(
 def histogram1d(
         array,
         bin_size=1,
-        hist_range=(0.0, 1.0),
+        hist_interval=(0.0, 1.0),
         bins=None,
-        array_range=None,
+        array_interval=None,
         ticks_limits=None,
         scale='linear',
         title='Histogram',
@@ -322,11 +317,11 @@ def histogram1d(
         The array for which histogram is to be plotted.
     bin_size : int or float or float (optional)
         The size of the bins.
-    hist_range : float 2-tuple (optional)
+    hist_interval : float 2-tuple (optional)
         The range of the histogram to display in percentage.
     bins : int (optional)
         The number of bins to use. If set, it overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
+    array_interval : float 2-tuple (optional)
         Theoretical range of values for the array. If unset, uses min and max.
     scale : ['linear'|'log'|'log10'|'normed'] string (optional)
         The frequency value scaling.
@@ -354,14 +349,14 @@ def histogram1d(
 
     """
     # setup array range
-    if not array_range:
-        array_range = (np.nanmin(array), np.nanmax(array))
+    if not array_interval:
+        array_interval = (np.nanmin(array), np.nanmax(array))
     # setup bins
     if not bins:
-        bins = int(mrb.range_size(array_range) / bin_size + 1)
+        bins = int(mrb.interval_size(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_range = tuple([mrb.to_range(val, out_range=array_range)
-                        for val in hist_range])
+    hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
+                           for val in hist_interval])
     # calculate histogram
     if scale == 'normed':
         is_normed = True
@@ -372,7 +367,7 @@ def histogram1d(
         fig = plt.figure()
     # create histogram
     hist, bin_edges = np.histogram(
-        array, bins=bins, range=hist_range, normed=is_normed)
+        array, bins=bins, range=hist_interval, normed=is_normed)
     # adjust scale
     hist = hist.astype(float)
     if scale == 'log':
@@ -382,7 +377,7 @@ def histogram1d(
     # plot figure
     if ax is None:
         ax = plt.gca()
-    plot = ax.plot(mrb.mid_val_array(bin_edges), hist, style)
+    plot = ax.plot(mrb.midval(bin_edges), hist, style)
     # setup title and labels
     if title:
         ax.set_title(title)
@@ -406,9 +401,9 @@ def histogram1d(
 def histogram1d_list(
         arrays,
         bin_size=1,
-        hist_range=(0.0, 1.0),
+        hist_interval=(0.0, 1.0),
         bins=None,
-        array_range=None,
+        array_interval=None,
         ticks_limit=None,
         scale='linear',
         title='Histogram',
@@ -426,9 +421,9 @@ def histogram1d_list(
     Args:
         arrays list[ndarray]: The array for which histogram is to be plotted.
         bin_size [int|float]: The size of the bins.
-        hist_range:
+        hist_interval:
         bins:
-        array_range:
+        array_interval:
         scale:
         title:
         labels:
@@ -452,11 +447,11 @@ def histogram1d_list(
         The array for which histogram is to be plotted.
     bin_size : int or float (optional)
         The size of the bins.
-    hist_range : float 2-tuple (optional)
+    hist_interval : float 2-tuple (optional)
         The range of the histogram to display in percentage.
     bins : int (optional)
         The number of bins to use. If set, it overrides bin_size parameter.
-    array_range : float 2-tuple (optional)
+    array_interval : float 2-tuple (optional)
         Theoretical range of values for the array. If unset, uses min and max.
     scale : ['linear'|'log'|'log10'|'normed'] string (optional)
         The frequency value scaling.
@@ -486,18 +481,18 @@ def histogram1d_list(
 
     """
     # setup array range
-    if not array_range:
-        array_range = (np.nanmin(arrays[0]), np.nanmax(arrays[0]))
+    if not array_interval:
+        array_interval = (np.nanmin(arrays[0]), np.nanmax(arrays[0]))
         for array in arrays[1:]:
-            array_range = (
-                min(np.nanmin(array), array_range[0]),
-                max(np.nanmax(array), array_range[1]))
+            array_interval = (
+                min(np.nanmin(array), array_interval[0]),
+                max(np.nanmax(array), array_interval[1]))
     # setup bins
     if not bins:
-        bins = int(mrb.range_size(array_range) / bin_size + 1)
+        bins = int(mrb.interval_size(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_range = tuple([mrb.to_range(val, out_range=array_range)
-                        for val in hist_range])
+    hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
+                           for val in hist_interval])
     # calculate histogram
     if scale == 'normed':
         is_normed = True
@@ -519,7 +514,7 @@ def histogram1d_list(
     plots = []
     for i, array in enumerate(arrays):
         hist, bin_edges = np.histogram(
-            array, bins=bins, range=hist_range, normed=is_normed)
+            array, bins=bins, range=hist_interval, normed=is_normed)
         # adjust scale
         hist = hist.astype(float)
         if scale == 'log':
@@ -533,7 +528,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         plot = ax.plot(
-            mrb.mid_val_array(bin_edges), hist, next(style_cycler),
+            mrb.midval(bin_edges), hist, next(style_cycler),
             label=legend)
         plots.append(plot)
     # create the legend for the first line.
@@ -569,12 +564,12 @@ def histogram2d(
         array1,
         array2,
         bin_size=1,
-        hist_range=(0.0, 1.0),
+        hist_interval=(0.0, 1.0),
         bins=None,
-        array_range=None,
-        use_separate_range=False,
+        array_interval=None,
+        use_separate_interval=False,
         scale='linear',
-        hist_val_range=None,
+        hist_val_interval=None,
         ticks_limit=None,
         interpolation='bicubic',
         title='2D Histogram',
@@ -595,12 +590,12 @@ def histogram2d(
         array1 (ndarray):
         array2:
         bin_size:
-        hist_range:
+        hist_interval:
         bins:
-        array_range:
-        use_separate_range:
+        array_interval:
+        use_separate_interval:
         scale:
-        hist_val_range:
+        hist_val_interval:
         ticks_limit:
         interpolation:
         title:
@@ -631,17 +626,17 @@ def histogram2d(
         The array 1 for which the 2D histogram is to be plotted.
     bin_size : int or float | int 2-tuple (optional)
         The size of the bins.
-    hist_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
+    hist_interval : float 2-tuple | 2-tuple of float 2-tuple (optional)
         The range of the histogram to display in percentage.
     bins : int | int 2-tuple (optional)
         The number of bins to use. If set, it overrides bin_size parameter.
-    array_range : float 2-tuple | 2-tuple of float 2-tuple (optional)
+    array_interval : float 2-tuple | 2-tuple of float 2-tuple (optional)
         Theoretical range of values for the array. If unset, uses min and max.
-    use_separate_range : bool (optional)
+    use_separate_interval : bool (optional)
         Select if display ranges in each dimension are determined separately.
     scale : ['linear'|'log'|'log10'|'normed'] string (optional)
         The frequency value scaling.
-    hist_val_range : float 2-tuple (optional)
+    hist_val_interval : float 2-tuple (optional)
         The range of histogram values. If None, it is calculated automatically.
     interpolation : str (optional)
         Interpolation method (see imshow()).
@@ -673,23 +668,23 @@ def histogram2d(
 
     """
     # setup array range
-    if not array_range:
-        if use_separate_range:
-            array_range = (
+    if not array_interval:
+        if use_separate_interval:
+            array_interval = (
                 (np.nanmin(array1), np.nanmax(array1)),
                 (np.nanmin(array2), np.nanmax(array2)))
         else:
-            array_range = (
+            array_interval = (
                 min(np.nanmin(array1), np.nanmin(array2)),
                 max(np.nanmax(array1), np.nanmax(array2)))
     try:
-        array_range[0].__iter__
+        array_interval[0].__iter__
     except AttributeError:
-        array_range = (array_range, array_range)
+        array_interval = (array_interval, array_interval)
     # setup bins
     if not bins:
-        bins = tuple([int(mrb.range_size(a_range) / bin_size + 1)
-                      for a_range in array_range])
+        bins = tuple([int(mrb.interval_size(val) / bin_size + 1)
+                      for val in array_interval])
     else:
         try:
             bins.__iter__
@@ -697,15 +692,15 @@ def histogram2d(
             bins = (bins, bins)
     # setup histogram range
     try:
-        hist_range[0].__iter__
+        hist_interval[0].__iter__
     except AttributeError:
-        hist_range = (hist_range, hist_range)
-    hist_range = list(hist_range)
+        hist_interval = (hist_interval, hist_interval)
+    hist_interval = list(hist_interval)
     for i in range(2):
-        hist_range[i] = tuple(
-            [mrb.to_range(val, out_range=array_range[i])
-             for val in hist_range[i]])
-    hist_range = tuple(hist_range)
+        hist_interval[i] = tuple(
+            [mrb.scale(val, out_interval=array_interval[i])
+             for val in hist_interval[i]])
+    hist_interval = tuple(hist_interval)
     # calculate histogram
     if scale == 'normed':
         is_normed = True
@@ -714,7 +709,7 @@ def histogram2d(
     # prepare histogram
     hist, x_edges, y_edges = np.histogram2d(
         array1.ravel(), array2.ravel(),
-        bins=bins, range=hist_range, normed=is_normed)
+        bins=bins, range=hist_interval, normed=is_normed)
     hist = hist.transpose()
     # adjust scale
     hist = hist.astype(float)
@@ -723,8 +718,8 @@ def histogram2d(
     elif scale == 'log10':
         hist[hist > 0.0] = np.log10(hist[hist > 0.0])
     # adjust histogram intensity range
-    if hist_val_range is None:
-        hist_val_range = (np.floor(np.min(hist)), np.ceil(np.max(hist)))
+    if hist_val_interval is None:
+        hist_val_interval = (np.floor(np.min(hist)), np.ceil(np.max(hist)))
     # prepare figure
     if use_new_figure:
         fig = plt.figure()
@@ -733,7 +728,7 @@ def histogram2d(
     # plot figure
     plot = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
-        vmin=hist_val_range[0], vmax=hist_val_range[1],
+        vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
     if colorbar_opts is not None:
@@ -749,13 +744,14 @@ def histogram2d(
     # plot first bisector
     if bisector:
         ax.autoscale(False)
-        ax.plot(array_range[0], array_range[1], bisector, label='bisector')
+        ax.plot(array_interval[0], array_interval[1], bisector,
+                label='bisector')
     if stats_opts is not None:
         mask = np.ones_like(array1 * array2).astype(bool)
-        mask *= (array1 > hist_range[0][0]).astype(bool)
-        mask *= (array1 < hist_range[0][1]).astype(bool)
-        mask *= (array2 > hist_range[1][0]).astype(bool)
-        mask *= (array2 < hist_range[1][1]).astype(bool)
+        mask *= (array1 > hist_interval[0][0]).astype(bool)
+        mask *= (array1 < hist_interval[0][1]).astype(bool)
+        mask *= (array2 > hist_interval[1][0]).astype(bool)
+        mask *= (array2 < hist_interval[1][1]).astype(bool)
         stats_dict = mrb.calc_stats(
             array1[mask] - array2[mask], **stats_opts)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(

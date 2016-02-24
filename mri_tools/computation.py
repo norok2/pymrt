@@ -45,7 +45,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -315,7 +314,7 @@ def calc_afi(
     """
 
     y_arr = mrb.ndstack(images)
-    s_arr = mrb.polar2complex(y_arr[..., 0], ensure_phase_range(y_arr[..., 1]))
+    s_arr = mrb.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
     nominal_fa = params[fa_label]
@@ -363,7 +362,7 @@ def rate_to_time(
 
 
 # ======================================================================
-def ensure_phase_range(array):
+def fix_phase_interval(array):
     """
     Ensure that the range of values is interpreted as valid phase information.
 
@@ -381,8 +380,8 @@ def ensure_phase_range(array):
 
     """
     # correct phase value range (useful for DICOM-converted images)
-    if mrb.range_size(mrb.range_array(array)) > 2.0 * np.pi:
-        array = mrb.to_range(array, mrb.range_array(array), (-np.pi, np.pi))
+    if np.ptp(array) > 2.0 * np.pi:
+        array = mrb.scale(array, mrb.minmax(array), (-np.pi, np.pi))
     return array
 
 
@@ -986,13 +985,12 @@ def compute(
         if meta_dirpath and verbose >= VERB_LVL['medium']:
             print('Meta subpath:\t{}'.format(meta_subpath))
         for sources, params in zip(sources_list, params_list):
-            begin_time = time.time()
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kwargs)
-            end_time = time.time()
+            mrb.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                print('Time:\t', datetime.timedelta(0, end_time - begin_time))
+                mrb.print_elapsed(only_last=True)
     else:
         recursive = True
 

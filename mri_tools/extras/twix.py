@@ -47,7 +47,6 @@ import pyparsing as pp  # A Python Parsing Module
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants

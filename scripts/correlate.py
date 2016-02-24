@@ -39,7 +39,6 @@ import argparse  # Parser for command-line options, arguments and subcommands
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -98,7 +97,7 @@ def handle_arg():
         default=None,
         help='set data type [%(default)s]')
     arg_parser.add_argument(
-        '-a', '--range', metavar=('MIN', 'MAX'),
+        '-a', '--interval', metavar=('MIN', 'MAX'),
         type=float, nargs=2, default=None,
         help='set parameters for the range of values [%(default)s]')
     arg_parser.add_argument(
@@ -155,7 +154,7 @@ def main():
     kwargs = {
         'dirpath': args.dirpath,
         'val_type': args.type,
-        'val_range': args.range,
+        'val_interval': args.interval,
         'val_units': args.units,
         'mask_filepath': args.mask,
         'reg_ref_ext': args.reg_ref_ext,

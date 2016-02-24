@@ -47,14 +47,13 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.base as mrb
+import mri_tools.base as mrb
 # import mri_tools.utils as mru
 # import mri_tools.input_output as mrio
 import mri_tools.computation as mrc
@@ -66,7 +65,6 @@ import mri_tools.computation as mrc
 from mri_tools import INFO
 from mri_tools import VERB_LVL
 from mri_tools import D_VERB_LVL
-from mri_tools.base import elapsed, print_elapsed
 
 
 # ======================================================================
@@ -188,9 +186,9 @@ def main():
     else:
         print('WW: Method not specified.')
 
-    elapsed('compute')
+    mrb.elapsed('compute')
     if args.verbose > VERB_LVL['none']:
-        print_elapsed()
+        mrb.print_elapsed()
 
 
 # ======================================================================

@@ -65,8 +65,6 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-# TODO: replace mlab by visvis
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematical and Physical Constants
@@ -1483,16 +1481,13 @@ def realign(
 # ======================================================================
 def _self_test_interactive():
     """
-    Test all functions available in the package.
+    Test the functions available in the package.
 
-    Parameters
-    ==========
-    None
+    Args:
+        None
 
-    Returns
-    =======
-    None
-
+    Returns:
+        None
     """
     # :: 2D Tests
     shape_2d = tuple([D_SHAPE] * 2)
@@ -1523,7 +1518,6 @@ def _self_test_interactive():
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
-    begin_time = time.time()
-    # _self_test_interactive()
-    end_time = time.time()
-    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+    _self_test_interactive()
+    mrb.elapsed('self_test_interactive')
+    mrb.print_elapsed()

@@ -43,7 +43,6 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
@@ -625,7 +624,7 @@ def calc_correlation(
         mask_nan=True,
         mask_inf=True,
         mask_val_list=None,
-        val_range=None,
+        val_interval=None,
         trunc=None,
         force=False,
         verbose=D_VERB_LVL):
@@ -651,7 +650,7 @@ def calc_correlation(
         Mask Inf values.
     mask_val_list : list of int or float
         List of values to mask.
-    val_range : 2-tuple (optional)
+    val_interval : 2-tuple (optional)
         The (min, max) values range.
     trunc : int or None (optional)
         Defines the maximum length to be used by numeric values in output.
@@ -685,10 +684,10 @@ def calc_correlation(
             mask = mask_nii.get_data().astype(bool)
         else:
             mask = np.ones_like(img1 * img2).astype(bool)
-        mask *= (img1 > val_range[0]).astype(bool)
-        mask *= (img1 < val_range[1]).astype(bool)
-        mask *= (img2 > val_range[0]).astype(bool)
-        mask *= (img2 < val_range[1]).astype(bool)
+        mask *= (img1 > val_interval[0]).astype(bool)
+        mask *= (img1 < val_interval[1]).astype(bool)
+        mask *= (img2 > val_interval[0]).astype(bool)
+        mask *= (img2 < val_interval[1]).astype(bool)
         if not mask_val_list:
             mask_val_list = []
         # calculate stats of difference image
@@ -851,7 +850,7 @@ def plot_correlation(
         img2_filepath,
         mask_filepath,
         val_type,
-        val_range,
+        val_interval,
         val_units,
         out_dirpath,
         corr_prefix='corr',
@@ -868,8 +867,8 @@ def plot_correlation(
         Path to mask file.
     val_type : str
         Name of the data to be processed.
-    val_range : float 2-tuple
-        Range of the data to be processed.
+    val_interval : float 2-tuple
+        Interval of the data to be processed.
     val_units : str
         Units of measurements of the data to be processed.
     out_dirpath : str
@@ -904,7 +903,7 @@ def plot_correlation(
         # plot the 2D histogram
         mrio.plot_histogram2d(
             img1_filepath, img2_filepath, mask_filepath, mask_filepath,
-            hist_range=(0.0, 1.0), bins=512, array_range=val_range,
+            hist_interval=(0.0, 1.0), bins=512, array_interval=val_interval,
             scale='log10', title=title, cmap=plt.cm.hot_r,
             labels=(x_lbl, y_lbl), bisector=':k',
             colorbar_opts={},
@@ -916,7 +915,7 @@ def plot_histogram(
         img_filepath,
         mask_filepath,
         val_type,
-        val_range,
+        val_interval,
         val_units,
         out_dirpath,
         out_filepath_prefix='hist',
@@ -933,8 +932,8 @@ def plot_histogram(
         Path to mask file.
     val_type : str
         Name of the data to be processed.
-    val_range : float 2-tuple
-        Range of the data to be processed.
+    val_interval : float 2-tuple
+        Interval of the data to be processed.
     val_units : str
         Units of measurements of the data to be processed.
     out_dirpath : str
@@ -967,8 +966,8 @@ def plot_histogram(
         plot_title = '{} ({})'.format(
             val_type, mru.filename2label(img_filepath, max_length=32))
         mrio.plot_histogram1d(
-            img_filepath, mask_filepath, hist_range=(0.0, 1.0), bins=1024,
-            array_range=val_range, title=plot_title,
+            img_filepath, mask_filepath, hist_interval=(0.0, 1.0), bins=1024,
+            array_interval=val_interval, title=plot_title,
             labels=(val_units, None), save_path=save_path,
             close_figure=not plt.isinteractive())
 
@@ -977,7 +976,7 @@ def plot_histogram(
 def plot_sample(
         img_filepath,
         val_type,
-        val_range,
+        val_interval,
         val_units,
         out_dirpath,
         out_filepath_prefix='sample',
@@ -994,8 +993,8 @@ def plot_sample(
         Path to image file to use for plotting.
     val_type : str
         Name of the data to be processed.
-    val_range : float 2-tuple
-        Range of the data to be processed.
+    val_interval : float 2-tuple
+        Interval of the data to be processed.
     val_units : str
         Units of measurements of the data to be processed.
     out_dirpath : str
@@ -1031,7 +1030,7 @@ def plot_sample(
             mru.filename2label(img_filepath, max_length=32))
         mrio.plot_sample2d(
             img_filepath, axis, index, title=plot_title,
-            array_range=val_range,
+            array_interval=val_interval,
             colorbar_opts={},
             close_figure=not plt.isinteractive(), save_path=save_path)
 
@@ -1252,7 +1251,7 @@ def comparing(
         mask_nan=True,
         mask_inf=True,
         mask_vals=None,
-        val_range=None,
+        val_interval=None,
         trunc=None,
         diff_prefix='diff',
         corr_prefix='corr',
@@ -1281,7 +1280,7 @@ def comparing(
         Mask Inf values.
     mask_vals : list of int or float
         List of values to mask.
-    val_range : 2-tuple (optional)
+    val_interval : 2-tuple (optional)
         The (min, max) values range.
     trunc : int or None (optional)
         Defines the maximum length to be used by numeric values in output.
@@ -1330,7 +1329,7 @@ def comparing(
             proc_result = pool.apply_async(
                 calc_correlation,
                 (in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                 mask_nan, mask_inf, mask_vals, val_range, trunc,
+                 mask_nan, mask_inf, mask_vals, val_interval, trunc,
                  force, verbose))
             proc_result_list.append(proc_result)
         else:
@@ -1339,7 +1338,7 @@ def comparing(
                 in_filepath, ref_filepath, diff_filepath, force, verbose)
             calc_correlation(
                 in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                mask_nan, mask_inf, mask_vals, val_range, trunc,
+                mask_nan, mask_inf, mask_vals, val_interval, trunc,
                 force, verbose)
     if use_mp:
         res_list = []
@@ -1352,7 +1351,7 @@ def comparing(
 def check_correlation(
         dirpath,
         val_type=None,
-        val_range=None,
+        val_interval=None,
         val_units=None,
         mask_filepath=None,
         reg_ref_ext=D_EXT['reg_ref'],
@@ -1370,7 +1369,8 @@ def check_correlation(
     Args:
         dirpath (str): Path to directory to process
         val_type (str): Name of the data to be processed
-        val_range (tuple[float]): Range (min, max) of the data to be processed
+        val_interval (tuple[float]): Interval (min, max) of the data to be
+        processed
         val_units (str): Units of measurements of the data to be processed
         mask_filepath (str): Path to mask file. If None, extract it
         reg_ref_ext (str): File extension of registration reference
@@ -1402,8 +1402,8 @@ def check_correlation(
             print('I: guessed image type: {}'.format(val_type))
     else:
         if verbose >= VERB_LVL['medium']:
-            print('I: ', val_type, val_range, val_units)
-    if not val_range:
+            print('I: ', val_type, val_interval, val_units)
+    if not val_interval:
         if verbose >= VERB_LVL['medium']:
             print('W: values range not specified.')
             print('I: values range not guessed. Using image-specific values.')
@@ -1502,7 +1502,7 @@ def check_correlation(
                     dirpath, target_list, msk_dir, corr_ref_ext)
                 cmp_list = comparing(
                     target_list, ref_list, cmp_path, mask_filepath,
-                    use_mp=False, val_range=val_range,
+                    use_mp=False, val_interval=val_interval,
                     force=force, verbose=verbose)
                 # group resulting correlations
                 corr_list = [item[3] for item in cmp_list]
@@ -1512,30 +1512,31 @@ def check_correlation(
             if fig_path:
                 for target in target_list:
                     plot_sample(
-                        target, val_type, val_range, val_units, fig_path,
+                        target, val_type, val_interval, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
-                        target, mask_filepath, val_type, val_range,
+                        target, mask_filepath, val_type, val_interval,
                         val_units, fig_path,
                         force=force, verbose=verbose)
-                # use last plotted image to calculate approximate diff_range
-                if val_range is None:
+                # use last plotted image to calculate approximate diff_interval
+                if val_interval is None:
                     stats_dict = mrio.calc_stats(target)
-                    val_range = (stats_dict['min'], stats_dict['max'])
-                diff_range = mrb.combined_range(val_range, val_range, '-')
+                    val_interval = (stats_dict['min'], stats_dict['max'])
+                diff_interval = mrb.combine_interval(
+                    val_interval, val_interval, '-')
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
                     plot_sample(
-                        diff_filepath, val_type, diff_range, val_units,
+                        diff_filepath, val_type, diff_interval, val_units,
                         fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
                         diff_filepath, mask_filepath,
-                        val_type, diff_range, val_units, fig_path,
+                        val_type, diff_interval, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_correlation(
                         in_filepath, ref_filepath, mask_filepath,
-                        val_type, val_range, val_units,
+                        val_type, val_interval, val_units,
                         fig_path,
                         force=force, verbose=verbose)
         else:
@@ -1546,7 +1547,7 @@ def check_correlation(
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,
-                    val_type, val_range, val_units,
+                    val_type, val_interval, val_units,
                     mask_filepath,
                     reg_ref_ext, corr_ref_ext,
                     tmp_dir, reg_dir, msk_dir, cmp_dir, fig_dir,

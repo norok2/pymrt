@@ -4,21 +4,7 @@
 mri_tools: data analysis for quantitative MRI
 """
 
-# Copyright (C) 2015 Riccardo Metere <metere@cbs.mpg.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+# Copyright (c) Riccardo Metere <rick@metere.it>
 
 # ======================================================================
 # :: Future Imports
@@ -33,7 +19,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.2.0.1.dev4+ng82652d8.d20160222'
+__version__ = '0.2.0.1.dev5+ng0bba04f.d20160223'
 
 # ======================================================================
 # :: Project Details

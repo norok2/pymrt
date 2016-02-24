@@ -112,9 +112,9 @@ def superlorentz(x):
 
 # ======================================================================
 # todo: check that the sampling rate is appropriate: 1024 is usually enough
-_SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 256)
+_SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 1024)
 _SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-elapsed('Superlorentz Approx.')
+mrb.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -997,6 +997,8 @@ class PulseExc:
         Returns:
             None
         """
+        # todo: add something to memorize shape
+        # so that setting flip angle to 0 does not munge the shape
         self.shape = 'custom'
         self.duration = duration
         self.w_c = w_c
@@ -1723,20 +1725,40 @@ def test_fit_spin_model(
     """
     w_c = GAMMA * B0
 
+    # mt_flash = MtFlash(
+    #     PulseList([
+    #         Delay(16610.0e-6),
+    #         Spoiler(0.0),
+    #         Delay(160.0e-6),
+    #         PulseExc.shaped(10000.0e-6, 90.0, 0, '_from_GAUSS5120', {},
+    #                         0.0, 'poly', {'fit_order': 3}),
+    #         Delay(160.0e-6 + 970.0e-6),
+    #         Spoiler(1.0),
+    #         Delay(160.0e-6),
+    #         PulseExc.shaped(100e-6, 11.0, 1, 'rect', {}),
+    #         Delay(4900.0e-6)],
+    #         w_c=w_c),
+    #     300)
+
+    t_e = 1.7e-3
+    t_r = 70.0e-3
+    w_c = 297220696
     mt_flash = MtFlash(
         PulseList([
-            Delay(16610.0e-6),
+            Delay(
+                t_r - (t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 + 100e-6)),
             Spoiler(0.0),
             Delay(160.0e-6),
-            PulseExc.shaped(10000.0e-6, 90.0, 0, '_from_GAUSS5120', {},
-                            0.0, 'poly', {'fit_order': 3}),
+            PulseExc.shaped(
+                20000.0e-6, 90.0, 0, '_from_GAUSS5120', {}, 0.0,
+                'linear', {'num_samples': 15}),
             Delay(160.0e-6 + 970.0e-6),
             Spoiler(1.0),
             Delay(160.0e-6),
-            PulseExc.shaped(100e-6, 11.0, 1, 'rect', {}),
-            Delay(4900.0e-6)],
+            PulseExc.shaped(100e-6, 30.0, 1, 'rect', {}),
+            Delay(t_e)],
             w_c=w_c),
-        300)
+        num_repetitions=100 * 100)
 
     def mt_signal(x_arr, s0, mc_a, r1a, r2a, r2b, k_ab):
         spin_model = SpinModel(
@@ -1810,23 +1832,23 @@ def test_fit_spin_model(
 if __name__ == '__main__':
     print(__doc__)
     # test_dynamics_operator_symbolic()
-    # elapsed('test_symbolic')
+    # mrb.elapsed'test_symbolic')
     # test_dynamics_operator()
-    # elapsed('test_dynamics_operator')
+    # mrb.elapsed'test_dynamics_operator')
     # test_mt_sequence()
-    # elapsed('test_mt_sequence')
+    # mrb.elapsed'test_mt_sequence')
     # test_approx_propagator()
-    # elapsed('test_approx_propagator')
+    # mrb.elapsed'test_approx_propagator')
     # test_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA * B0,) * 4,
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
     #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
     # test_z_spectrum()
-    # elapsed('test_z_spectrum')
+    # mrb.elapsed'test_z_spectrum')
     test_fit_spin_model()
-    elapsed('test_fit_spin_model')
+    mrb.elapsed('test_fit_spin_model')
 
-    print_elapsed()
+    mrb.print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

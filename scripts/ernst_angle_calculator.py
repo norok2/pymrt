@@ -27,7 +27,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper

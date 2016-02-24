@@ -70,7 +70,6 @@ import sympy as sym  # SymPy (symbolic CAS library)
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -79,7 +78,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 
 # ======================================================================
 # :: Default values
-D_T1_RANGE = (400.0, 4000.0)
+D_T1_INTERVAL = (400.0, 4000.0)
 D_EFF = 1.0
 D_N = 160
 D_TR_GRE = 7.0
@@ -93,9 +92,9 @@ D_TB = 1180.0
 D_TC = 4140.0
 
 # signal ranges
-#NAT_RANGE = (-0.5, 0.5)
-STD_RANGE = (-0.5, 0.5)
-DICOM_RANGE = (0, 4096)
+#NAT_INTERVAL = (-0.5, 0.5)
+STD_INTERVAL = (-0.5, 0.5)
+DICOM_INTERVAL = (0, 4096)
 
 
 # ======================================================================

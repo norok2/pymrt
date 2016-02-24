@@ -45,7 +45,6 @@ import scipy as sp  # SciPy (signal and image processing library)
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -67,7 +66,7 @@ from mri_tools import _EVENTS
 # :: Default values usable in functions.
 COMMENT_TOKEN = '#'
 CSV_DELIMITER = '\t'
-PNG_RANGE = (0.0, 255.0)
+PNG_INTERVAL = (0.0, 255.0)
 EXT = {
     'plot': 'png',
     'img': 'nii.gz',
@@ -1018,21 +1017,21 @@ def sgnlogspace(
 
 
 # ======================================================================
-def to_range(
+def scale(
         val,
-        in_range=(0.0, 1.0),
-        out_range=(0.0, 1.0)):
+        in_interval=(0.0, 1.0),
+        out_interval=(0.0, 1.0)):
     """
-    Linear convert value from input range to output range.
+    Linear convert the value from input interval to output interval.
 
     Parameters
     ==========
     val : float
         Value to convert.
-    in_range : float 2-tuple (optional)
-        Range of the input value.
-    out_range : float 2-tuple (optional)
-        Range of the output value.
+    in_interval : float 2-tuple (optional)
+        Interval of the input value.
+    out_interval : float 2-tuple (optional)
+        Interval of the output value.
 
     Returns
     =======
@@ -1040,20 +1039,20 @@ def to_range(
         The converted value.
 
     """
-    in_min, in_max = in_range
-    out_min, out_max = out_range
+    in_min, in_max = in_interval
+    out_min, out_max = out_interval
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
 # ======================================================================
-def range_size(val_range):
+def interval_size(interval):
     """
-    Calculate the size of a range given as a 2-tuple (A,B).
+    Calculate the (signed) size of an interval given as a 2-tuple (A,B).
 
     Parameters
     ==========
-    val_range : float 2-tuple
-        Range for computation
+    interval : float 2-tuple
+        Interval for computation
 
     Returns
     =======
@@ -1061,18 +1060,18 @@ def range_size(val_range):
         The converted value.
 
     """
-    return val_range[1] - val_range[0]
+    return interval[1] - interval[0]
 
 
 # ======================================================================
-def range_array(array):
+def minmax(array):
     """
-    Calculate the range of an array: (min, max).
+    Calculate the minimum and maximum of an array: (min, max).
 
     Parameters
     ==========
     array : ndarray
-        Array for the computation of the range.
+        The input array
 
     Returns
     =======
@@ -1080,24 +1079,23 @@ def range_array(array):
         max(array), min(array)
 
     """
-    range_arr = (np.min(array), np.max(array))
-    return range_arr
+    return np.min(array), np.max(array)
 
 
 # ======================================================================
-def combined_range(
-        range1,
-        range2,
+def combine_interval(
+        interval1,
+        interval2,
         operation):
     """
-    Combine two ranges with some operation to obtain a new range.
+    Combine two intervals with some operation to obtain a new interval.
 
     Parameters
     ==========
-    range1 : float 2-tuple
-        Range of first operand.
-    range2 : float 2-tuple
-        Range of second operand.
+    interval1 : float 2-tuple
+        Interval of first operand.
+    interval2 : float 2-tuple
+        Interval of second operand.
     operation : str
         String with operation to perform. Supported operations are:
             | '+' : addition
@@ -1105,21 +1103,21 @@ def combined_range(
 
     Returns
     =======
-    new_range : float 2-tuple
-        Range resulting from operation.
+    new_interval : float 2-tuple
+        Interval resulting from operation.
 
     """
     if operation == '+':
-        new_range = (range1[0] + range2[0], range1[1] + range2[1])
+        new_interval = (interval1[0] + interval2[0], interval1[1] + interval2[1])
     elif operation == '-':
-        new_range = (range1[0] - range2[1], range1[1] - range2[0])
+        new_interval = (interval1[0] - interval2[1], interval1[1] - interval2[0])
     else:
-        new_range = (-np.inf, np.inf)
-    return new_range
+        new_interval = (-np.inf, np.inf)
+    return new_interval
 
 
 # ======================================================================
-def mid_val_array(array):
+def midval(array):
     """
     Calculate the middle value vector.
     For example: [0, 1, 2, 3, 4] -> [0.5, 1.5, 2.5, 3.5]
@@ -1266,7 +1264,7 @@ def calc_stats(
         mask_nan=True,
         mask_inf=True,
         mask_vals=None,
-        val_range=None,
+        val_interval=None,
         save_path=None,
         title=None,
         compact=False):
@@ -1284,8 +1282,8 @@ def calc_stats(
         Mask Inf values.
     mask_vals : list of int or float or None
         List of values to mask.
-    val_range : 2-tuple (optional)
-        The (min, max) values range.
+    val_interval : 2-tuple (optional)
+        The (min, max) values interval.
     save_path : str or None (optional)
         The path to which the plot is to be saved. If unset, no output.
     title : str or None (optional)
@@ -1312,10 +1310,10 @@ def calc_stats(
         mask_vals = []
     for val in mask_vals:
         array = array[array != val]
-    if val_range is None:
-        val_range = range_array(array)
-    array = array[array > val_range[0]]
-    array = array[array < val_range[1]]
+    if val_interval is None:
+        val_interval = minmax(array)
+    array = array[array > val_interval[0]]
+    array = array[array < val_interval[1]]
     if len(array) > 0:
         stats_dict = {
             'avg': np.mean(array),
@@ -1561,7 +1559,7 @@ def curve_fit(param_list):
 # ======================================================================
 def elapsed(
         name,
-        time_point=time.time(),
+        time_point=None,
         events=_EVENTS):
     """
     Append a named event point to the events list.
@@ -1575,36 +1573,49 @@ def elapsed(
     Returns:
         None
     """
+    if not time_point:
+        time_point = time.time()
     events.append((name, time_point))
 
 
 # ======================================================================
 def print_elapsed(
         events=_EVENTS,
-        label='\nElapsed Time(s): '):
+        label='\nElapsed Time(s): ',
+        only_last=False):
     """
     Print quick-and-dirty elapsed times between named event points.
 
     Args:
         events (list[str,time]): A list of named event time points.
-            Each event is a 2-tuple: (label, time).
-        label (str): heading of the elapsed time table.
+            Each event is a 2-tuple: (label, time)
+        label (str): heading of the elapsed time table
+        only_last (bool): print only the last event (useful inside a loop).
 
     Returns:
         None
     """
-    print(label, end='\n' if len(events) > 2 else '')
-    first_elapsed = events[0][1]
-    for i in range(len(events) - 1):
-        name = events[i + 1][0]
-        curr_elapsed = events[i + 1][1]
-        last_elapsed = events[i][1]
-        diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
-        diff_last = datetime.timedelta(0, curr_elapsed - last_elapsed)
-        if diff_first == diff_last:
-            diff_first = '-'
-        print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-            name, diff_last, diff_first))
+    if not only_last:
+        print(label, end='\n' if len(events) > 2 else '')
+        first_elapsed = events[0][1]
+        for i in range(len(events) - 1):
+            _id = i + 1
+            name = events[_id][0]
+            curr_elapsed = events[_id][1]
+            prev_elapsed = events[_id - 1][1]
+            diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
+            diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
+            if diff_first == diff_last:
+                diff_first = '-'
+            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
+                name, diff_last, diff_first))
+    else:
+        _id = -1
+        name = events[_id][0]
+        curr_elapsed = events[_id][1]
+        prev_elapsed = events[_id - 1][1]
+        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
+        print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 
 # ======================================================================
@@ -1613,16 +1624,3 @@ if __name__ == '__main__':
 
 # ======================================================================
 elapsed('mri_tools.base')
-
-# shape = np.array((100000, 20, 20))
-# dim = 0
-# arr = np.arange(np.prod(shape)).reshape(shape)
-# print(arr.shape)
-# _EVENTS += [('created', time.time())]
-# prod1 = mdot(*[arr[j, :, :] for j in range(shape[dim])][::-1])
-# _EVENTS += [('mdot', time.time())]
-# prod2 = ndot(arr, dim, -1)
-# _EVENTS += [('ndot', time.time())]
-# print(np.sum(np.abs(prod1 - prod2)))
-# print_elapsed()
-# quit()

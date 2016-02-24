@@ -52,7 +52,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
@@ -85,8 +84,8 @@ D_TB = mp2rage.D_TB  # ms
 D_TC = mp2rage.D_TC  # ms
 # :: GUI constants
 T1_NUM = 256.0
-T1_RANGE = (100.0, 5000.0)
-T1_LINSPACE = T1_RANGE + (T1_NUM,)
+T1_INTERVAL = (100.0, 5000.0)
+T1_LINSPACE = T1_INTERVAL + (T1_NUM,)
 EFF_SLIDER = (0.0, 1.0, D_EFF)  # %
 N_SLIDER = (64, 512, D_N)  # #
 TR_GRE_SLIDER = (0.1, 30.0, D_TR_GRE)  # ms
@@ -104,9 +103,9 @@ TB_SLIDER = (10.0, 2000.0, D_TB)  # ms
 TC_SLIDER = (10.0, 8000.0, D_TC)  # ms
 
 # optimization parameters
-OPTIM_T1_RANGE = (1.0, 4000.0)
-OPTIM_S_RANGE = (-0.4, 0.4)
-OPTIM_A1_RANGE = (1.5, 90.0 / 5)
+OPTIM_T1_INTERVAL = (1.0, 4000.0)
+OPTIM_S_INTERVAL = (-0.4, 0.4)
+OPTIM_A1_INTERVAL = (1.5, 90.0 / 5)
 
 # Turn OFF interactive mode in MatPlotLib
 #plt.ion()
@@ -115,7 +114,7 @@ OPTIM_A1_RANGE = (1.5, 90.0 / 5)
 # ======================================================================
 # :: Create the GUI plot
 def ui_plot(
-        t1_linspace, is_direct, use_dicom_range, optim_a1, optim_t1_range):
+        t1_linspace, is_direct, use_dicom_INTERVAL, optim_a1, optim_t1_INTERVAL):
     """
     User-interface and plot.
     """
@@ -152,11 +151,11 @@ def ui_plot(
         ii_m_val = mp2rage_ii(t1_val, *(par[:-2] + par_m))
         ii_p2_val = mp2rage_ii(t1_val, *(par[:-2] + par_p2))
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
-        if use_dicom_range:
+        if use_dicom_INTERVAL:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, \
             ii_m2_val = [
-                mrb.to_range(
-                    ii, mp2rage.STD_RANGE, mp2rage.DICOM_RANGE)
+                mrb.scale(
+                    ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, \
                           ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
@@ -212,8 +211,8 @@ def ui_plot(
             calc_mp2rage(par, par_p, par_m, par_p2, par_m2)
         # determine mask
         mask = np.ones_like(t1_val)
-        mask *= t1_val > optim_t1_range[0]
-        mask *= t1_val < optim_t1_range[1]
+        mask *= t1_val > optim_t1_INTERVAL[0]
+        mask *= t1_val < optim_t1_INTERVAL[1]
         mask = mask.astype(np.bool)
         # calculate the spread integral
         return np.sum(np.abs(ii_p_val[mask] - ii_m_val[mask]))
@@ -224,7 +223,7 @@ def ui_plot(
         #        a1 = sld_params_list[a1_idx].val
         #        print("Optimizing: a1={:<8.2f}, sum={:<8.2f}".format(
         #            a1, mp2rage_b1t_spread(a1)))
-        a1 = sp.optimize.fminbound(mp2rage_b1t_spread, *OPTIM_A1_RANGE)
+        a1 = sp.optimize.fminbound(mp2rage_b1t_spread, *OPTIM_A1_INTERVAL)
         print("Optimized:  a1={:<8.2f}, sum={:<8.2f}".format(
             a1, mp2rage_b1t_spread(a1)))
         sld_params_list[a1_idx].set_val(a1)
@@ -267,11 +266,11 @@ def ui_plot(
     ax_main.set_xlabel('MP2RAGE signal (a.u.)')
     ax_main.set_ylabel('T1 (ms)')
     # set xy-ranges
-    plt.ylim(T1_RANGE)
-    if use_dicom_range:
-        plt.xlim(mp2rage.DICOM_RANGE)
+    plt.ylim(T1_INTERVAL)
+    if use_dicom_INTERVAL:
+        plt.xlim(mp2rage.DICOM_INTERVAL)
     else:
-        plt.xlim(mp2rage.STD_RANGE)
+        plt.xlim(mp2rage.STD_INTERVAL)
     # adjust subplot to include sliders
     ui_plt_main_b = 0.125
     ui_sld_params_h = 0.25
@@ -283,7 +282,7 @@ def ui_plot(
     plt_p2, = plt.plot(t1_val, t1_val, color='y', label='B1+ +2x%')
     plt_m2, = plt.plot(t1_val, t1_val, color='c', label='B1+ -2x%')
     # plot optimized goal
-    plt.plot(OPTIM_T1_RANGE, OPTIM_S_RANGE, '-k', label='optim')
+    plt.plot(OPTIM_T1_INTERVAL, OPTIM_S_INTERVAL, '-k', label='optim')
     ax_main.legend()
     # :: create a slider for each MP2RAGE parameters and B1T tuning
     ax_params_list = []
@@ -337,7 +336,7 @@ def handle_arg():
     # T1 range to explore and number of points
     d_t1 = T1_LINSPACE  # ms
     # T1 range to explore and number of points
-    d_ot1 = OPTIM_T1_RANGE  # ms
+    d_ot1 = OPTIM_T1_INTERVAL  # ms
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -368,10 +367,10 @@ def handle_arg():
 
         help='use TA, TB, TC direct parameters instead of TI1, TI2, TR_tot')
     arg_parser.add_argument(
-        '--dicom_range',
+        '--dicom_INTERVAL',
         action='store_true',
         help='use {} intensity interval instead of {}.'. \
-        format(mp2rage.DICOM_RANGE, mp2rage.STD_RANGE))
+        format(mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL))
     arg_parser.add_argument(
         '--no_optim_a1',
         action='store_false',
@@ -393,4 +392,4 @@ if __name__ == '__main__':
         arg_parser.print_help()
         print()
         print('II:', 'Parsed Arguments:', args)
-    ui_plot(args.t1, args.direct, args.dicom_range, args.no_optim_a1, args.ot1)
+    ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1, args.ot1)

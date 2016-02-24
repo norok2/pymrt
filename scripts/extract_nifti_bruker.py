@@ -18,22 +18,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-__version__ = '0.0.0.1'
-# $Source$
-
-
-# ======================================================================
-# :: Custom Module Details
-AUTHOR = 'Riccardo Metere'
-CONTACT = 'metere@cbs.mpg.de'
-DATE_INFO = {'day': 18, 'month': 'Sep', 'year': 2014}
-DATE = ' '.join([str(v) for k, v in sorted(DATE_INFO.items())])
-LICENSE = 'License GPLv3: GNU General Public License version 3'
-COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
-# first non-empty line of __doc__
-DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
-
-
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
@@ -62,7 +46,6 @@ import subprocess  # Subprocess management
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -76,11 +59,9 @@ import mri_tools.extras as mre
 # import mri_tools.geometry as mrg
 # from mri_tools.sequences import mp2rage
 
-
-# ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
-D_VERB_LVL = VERB_LVL['low']
+from mri_tools import INFO
+from mri_tools import VERB_LVL
+from mri_tools import D_VERB_LVL
 
 
 # ======================================================================
@@ -285,16 +266,20 @@ def handle_arg():
     # extra input subdirectory
     d_extra_dir = 'nifti'
     # :: Create Argument Parser
+    # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {} {} <{}>\n{}'.format(
-            __version__, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s {}\n{}\n{} {} <{}>\n{}'.format(
-            __version__, DOC_FIRSTLINE, COPYRIGHT, AUTHOR, CONTACT, LICENSE),
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
+            INFO['copyright'], ', '.join(INFO['authors']),
+            INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
