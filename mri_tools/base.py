@@ -1108,9 +1108,11 @@ def combine_interval(
 
     """
     if operation == '+':
-        new_interval = (interval1[0] + interval2[0], interval1[1] + interval2[1])
+        new_interval = (
+        interval1[0] + interval2[0], interval1[1] + interval2[1])
     elif operation == '-':
-        new_interval = (interval1[0] - interval2[1], interval1[1] - interval2[0])
+        new_interval = (
+        interval1[0] - interval2[1], interval1[1] - interval2[0])
     else:
         new_interval = (-np.inf, np.inf)
     return new_interval

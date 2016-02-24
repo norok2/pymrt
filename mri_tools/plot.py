@@ -28,6 +28,7 @@ import itertools  # Functions creating iterators for efficient looping
 # import fractions  # Rational numbers
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -71,6 +72,20 @@ PLOT_LINESTYLES = ('-', '--', '-.', ':')
 # TODO: make a plot with possibility to adjust params
 
 
+def explore(array):
+    """
+    Generate a visualization of an ND-array.
+
+    Args:
+        array:
+
+    Returns:
+        None
+    """
+    # todo: implement!
+    pass
+
+
 # ======================================================================
 def quick(array):
     """
@@ -88,31 +103,13 @@ def quick(array):
     """
 
     if array.ndim == 1:
-        # using Matplotlib
-        plt.figure()
-        plt.plot(np.arange(len(array)), array.astype(float))
-        plt.draw()
-        plt.show()
+        quick_1d(array)
     elif array.ndim == 2:
-        # using Matplotlib
-        fig = plt.subplots()
-        plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        plt.draw()
+        quick_2d(array)
     elif array.ndim == 3:
-        # using Matplotlib
-        from skimage import measure
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1, projection='3d')
-        # zz, xx, yy = array.nonzero()
-        # ax.scatter(xx, yy, zz, cmap=plt.cm.hot)
-
-        verts, faces = measure.marching_cubes(array, 0.5, (2,) * 3)
-        ax.plot_trisurf(
-            verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral',
-            antialiased=False, linewidth=0.0)
+        quick_3d(array)
     else:
-        print('W: cannot plot more than 3 dimension.')
+        warnings.warn('cannot quickly plot this array (try `explore`)')
     plt.show()
 
 
@@ -131,36 +128,15 @@ def quick_1d(array):
     None
 
     """
-    # todo: plot 1d projections (use Qt)
     if array.ndim == 1:
         # using Matplotlib
         plt.figure()
         plt.plot(np.arange(len(array)), array.astype(float))
-        plt.show()
-    elif array.ndim == 2:
-        # using Matplotlib
-        fig = plt.subplots()
-        plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        plt.show()
-
-        # # using Mayavi2
-        # mlab.figure()
-        # mlab.imshow(array.astype(float))
-        # mlab.draw()
-        # mlab.show()
-    elif array.ndim == 3:
-        # using Matplotlib
-        fig = plt.subplots()
-        ax = mpl3.Axes3D(fig)
-        fig.colorbar(plot)
-
-        # # using Mayavi2
-        # mlab.figure()
-        # mlab.contour3d(array.astype(float))
-        # mlab.draw()
-        # mlab.show()
+    elif array.ndim > 1:
+        # todo: 1D projection
+        pass
     else:
-        print('W: cannot plot more than 3 dimension.')
+        warnings.warn('cannot plot (1D projection of) current array')
 
 
 # ======================================================================
@@ -178,22 +154,45 @@ def quick_2d(array):
     None
 
     """
-    # todo: plot 2d projections (use Qt)
     if array.ndim == 2:
         # using Matplotlib
         fig = plt.subplots()
         plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        plt.draw()
-        plt.show()
-    elif 2 < array.ndim <= 4:
-        # using Matplotlib
-        nrows = 1
-        fig = plt.subplots()
-        plt.imshow(array.astype(float), cmap=plt.cm.binary)
-        plt.draw()
-        plt.show()
+    elif array.ndim > 2:
+        # todo: 2D projection
+        pass
     else:
-        print('W: cannot plot current array with 2d projections.')
+        warnings.warn('cannot plot (2D projection of) current array')
+
+
+def quick_3d(array):
+    """
+
+    Args:
+        array:
+
+    Returns:
+        None
+    """
+    warnings.warn('3D-support plots might be slow (consider using `explore`)')
+    if array.ndim == 3:
+        # using Matplotlib
+        from skimage import measure
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+        # zz, xx, yy = array.nonzero()
+        # ax.scatter(xx, yy, zz, cmap=plt.cm.hot)
+
+        verts, faces = measure.marching_cubes(array, 0.5, (2,) * 3)
+        ax.plot_trisurf(
+            verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral',
+            antialiased=False, linewidth=0.0)
+    elif array.ndim > 3:
+        # todo: 3D projection
+        pass
+    else:
+        warnings.warn('cannot plot (3D projection of) current array')
 
 
 # ======================================================================

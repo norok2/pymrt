@@ -19,8 +19,8 @@ from __future__ import unicode_literals
 import os  # Miscellaneous operating system interfaces
 import shutil  # High-level file operations
 # import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
