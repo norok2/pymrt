@@ -96,6 +96,11 @@ def main():
     plt.show(block=True)
     print(T1_val.shape)
 
+    import tkinter
+    top = tkinter.Tk()
+    # Code to add widgets will go here...
+    top.mainloop()
+
 # ======================================================================
 if __name__ == '__main__':
     main()

@@ -191,7 +191,6 @@ def main():
     optimize_sampling()
     optimize_interpolation()
 
-
     # plotting two different approximations
     # fig = plt.figure()
     # plt.plot(x, y)

@@ -131,14 +131,18 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'mrt_calc_mask=scripts.calc_mask:main',
-            'mrt_geom_phantom=scripts.geom_phantom:main',
-            'mrt_extract_nifti_bruker=scripts.extract_nifti_bruker:main',
+            'mrt_compute=scripts_cli.compute:main',
+            'mrt_correlate=scripts_cli.correlate:main',
 
-            'mrt_compute=scripts.compute:main',
-            'mrt_correlate=scripts.correlate:main',
+            'mrt_calc_mask=scripts_cli.calc_mask:main',
+            'mrt_geom_phantom=scripts_cli.geom_phantom:main',
 
-            'mrt_ernst_angle=scripts.ernst_angle_calculator:main',
+            'mrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
+        ],
+
+        'gui_scripts': [
+            'mrt_ernst_calc=scripts_gui.ernst_angle_calculator:main',
+            'mrt_mp2rage=scripts_gui.mp2rage_sim_optim:main',
         ],
     },
 )
