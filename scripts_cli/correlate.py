@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
+import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 import argparse  # Parser for command-line options, arguments and subcommands
 # import itertools  # Functions creating iterators for efficient looping
@@ -45,7 +45,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.base as mrb
+import mri_tools.base as mrb
 # import mri_tools.utils as mru
 # import mri_tools.input_output as mrio
 # import mri_tools.compute as mrc
@@ -150,7 +150,7 @@ def main():
         print('II:', 'Parsed Arguments:', args)
     if args.verbose > VERB_LVL['low']:
         print(__doc__)
-    begin_time = time.time()
+
     kwargs = {
         'dirpath': args.dirpath,
         'val_type': args.type,
@@ -168,9 +168,10 @@ def main():
         'verbose': args.verbose,
     }
     mrl.check_correlation(**kwargs)
-    end_time = time.time()
+
     if args.verbose > VERB_LVL['low']:
-        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+        mrb.elapsed(os.path.basename(__file__))
+        mrb.print_elapsed()
 
 
 # ======================================================================
