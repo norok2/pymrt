@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-import functools
 import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
@@ -23,7 +22,7 @@ import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
-# import functools  # Higher-order functions and operations on callable objects
+import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command
 import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
@@ -31,6 +30,7 @@ import fractions  # Rational numbers
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
+import stat  # Interpreting stat() results
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -81,6 +81,32 @@ TTY_COLORS = {
     'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
     'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
 }
+
+
+# ======================================================================
+def _is_hidden(filepath):
+    # if sys.version_info[0] > 2:
+    #     filepath = filepath.encode('utf-8')
+    # filepath = filepath.decode('utf-8')
+    return os.path.basename(filepath).startswith('.')
+
+
+# ======================================================================
+def _is_special(stats_mode):
+    is_special = not stat.S_ISREG(stats_mode) and \
+                 not stat.S_ISDIR(stats_mode) and \
+                 not stat.S_ISLNK(stats_mode)
+    return is_special
+
+
+# ======================================================================
+def _or_not_and(flag, check):
+    return flag or not flag and check
+
+
+# ======================================================================
+def _or_not_and_not(flag, check):
+    return flag or not flag and not check
 
 
 # ======================================================================
@@ -267,6 +293,7 @@ def set_keyword_parameters(
     globals
 
     """
+    # todo: refactor to get rid of deprecated getargspec
     inspected = inspect.getargspec(func)
     defaults = dict(
         zip(reversed(inspected.args), reversed(inspected.defaults)))
@@ -323,6 +350,61 @@ def anticommutator(a, b):
     """
     # todo: fix doc
     return a.dot(b) + b.dot(a)
+
+
+# ======================================================================
+def walk2(
+        base,
+        follow_links=False,
+        follow_mounts=False,
+        allow_special=False,
+        allow_hidden=True,
+        max_depth=-1,
+        on_error=None):
+    """
+    Recursively walk through sub paths of a base directory
+
+    Args:
+        base (str): directory where to operate
+        follow_links (bool): follow links during recursion
+        follow_mounts (bool): follow mount points during recursion
+        allow_special (bool): include special files
+        allow_hidden (bool): include hidden files
+        max_depth (int):
+        on_error (callable): function to call on error
+
+    Returns:
+        path, stats (str, stat_result):
+
+            path (str): path to the next object
+            stats (stat_result): structure containing file stats information
+    """
+    try:
+        for name in os.listdir(base):
+            path = os.path.join(base, name)
+            stats = os.stat(path)
+            mode = stats.st_mode
+            # for some reasons, stat.S_ISLINK and os.path.islink results differ
+            allow = \
+                _or_not_and_not(follow_links, os.path.islink(path)) and \
+                _or_not_and_not(follow_mounts, os.path.ismount(path)) and \
+                _or_not_and_not(allow_special, _is_special(mode)) and \
+                _or_not_and_not(allow_hidden, _is_hidden(path))
+            if allow:
+                yield path, stats
+                if os.path.isdir(path):
+                    if max_depth != 0:
+                        next_level = walk2(
+                            path, follow_links, follow_mounts,
+                            allow_special, allow_hidden, max_depth - 1,
+                            on_error)
+                        for next_path, next_stats in next_level:
+                            yield next_path, next_stats
+
+    except OSError as error:
+        if on_error is not None:
+            on_error(error)
+        return
 
 
 # ======================================================================
@@ -1109,10 +1191,10 @@ def combine_interval(
     """
     if operation == '+':
         new_interval = (
-        interval1[0] + interval2[0], interval1[1] + interval2[1])
+            interval1[0] + interval2[0], interval1[1] + interval2[1])
     elif operation == '-':
         new_interval = (
-        interval1[0] - interval2[1], interval1[1] - interval2[0])
+            interval1[0] - interval2[1], interval1[1] - interval2[0])
     else:
         new_interval = (-np.inf, np.inf)
     return new_interval

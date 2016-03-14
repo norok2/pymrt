@@ -183,21 +183,21 @@ def filter_1_1(
 
 # ======================================================================
 def filter_n_1(
-        in_filepath_list,
+        in_filepaths,
         out_filepath,
         func,
         *args,
         **kwargs):
     """
     Interface to generic n-1 filter.
-    filter(in_filepath_list) -> out_filepath
+    filter(in_filepaths) -> out_filepath
 
     Note that the function must return the affine matrix and the header.
     If the affine matrix is None, it is assumed to be the identity.
     If the returned header is None, it is autocalculated.
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
         out_filepath (str): Output file path
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
@@ -209,7 +209,7 @@ def filter_n_1(
         None
     """
     input_list = []
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
     img, aff, hdr = func(input_list, *args, **kwargs)
@@ -218,24 +218,24 @@ def filter_n_1(
 
 # ======================================================================
 def filter_n_m(
-        in_filepath_list,
-        out_filepath_list,
+        in_filepaths,
+        out_filepaths,
         func,
         *args,
         **kwargs):
     """
     Interface to generic n-m filter:
-    filter(in_filepath_list) -> out_filepath_list
+    filter(in_filepaths) -> out_filepaths
 
     Note that the function must return the list of affine matrices and headers.
     If the affine matrix is None, it is assumed to be the identity.
     If the returned header is None, it is autocalculated.
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
             The affine matrix is taken from the last item
-        out_filepath_list (list[str]): List of output file paths
+        out_filepaths (list[str]): List of output file paths
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(list[img, aff, hdr], *args, *kwargs)) -> list[img, aff, hdr]
@@ -246,24 +246,24 @@ def filter_n_m(
         None
     """
     input_list = []
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
     output_list = func(input_list, *args, **kwargs)
-    for (img, aff, hdr), out_filepath in zip(output_list, out_filepath_list):
+    for (img, aff, hdr), out_filepath in zip(output_list, out_filepaths):
         save(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
 def filter_n_x(
-        in_filepath_list,
+        in_filepaths,
         out_filepath_template,
         func,
         *args,
         **kwargs):
     """
     Interface to generic n-x filter:
-    calculation(i_filepath_list) -> o_filepath_list
+    calculation(i_filepaths) -> o_filepaths
 
     Note that the function must return the list of affine matrices and headers.
     If the affine matrix is None, it is assumed to be the identity.
@@ -271,7 +271,7 @@ def filter_n_x(
     The number of output image is not known in advance.
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
             The affine matrix is taken from the last item
         out_filepath_template (str): Output file path template
@@ -319,17 +319,17 @@ def simple_filter_1_1(
 
 # ======================================================================
 def simple_filter_n_1(
-        in_filepath_list,
+        in_filepaths,
         out_filepath,
         func,
         *args,
         **kwargs):
     """
     Interface to simplified n-1 filter.
-    filter(in_filepath_list) -> out_filepath
+    filter(in_filepaths) -> out_filepath
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The affine matrix is taken from the last item.
             The header is calculated automatically.
         out_filepath (str): Output file path
@@ -343,7 +343,7 @@ def simple_filter_n_1(
     """
     img_list = []
     aff_list = []
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         img_list.append(obj.get_data())
         aff_list.append(obj.get_affine())
@@ -354,21 +354,21 @@ def simple_filter_n_1(
 
 # ======================================================================
 def simple_filter_n_m(
-        in_filepath_list,
-        out_filepath_list,
+        in_filepaths,
+        out_filepaths,
         func,
         *args,
         **kwargs):
     """
     Interface to simplified n-m filter.
-    filter(in_filepath_list) -> out_filepath_list
+    filter(in_filepaths) -> out_filepaths
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
             The affine matrix is taken from the last item.
             The header is calculated automatically.
-        out_filepath_list (list[str]): List of output file paths.
+        out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs) -> list[ndarray]
         args (tuple): Positional arguments passed to the filtering function
@@ -379,34 +379,34 @@ def simple_filter_n_m(
     """
     i_img_list = []
     aff_list = []
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         i_img_list.append(obj.get_data())
         aff_list.append(obj.get_affine())
     o_img_list = func(i_img_list, *args, **kwargs)
     aff = aff_list[0]  # the affine of the first image
-    for img, out_filepath in zip(o_img_list, out_filepath_list):
+    for img, out_filepath in zip(o_img_list, out_filepaths):
         save(out_filepath, img, aff)
 
 
 # ======================================================================
 def simple_filter_n_x(
-        in_filepath_list,
+        in_filepaths,
         out_filepath_template,
         func,
         *args,
         **kwargs):
     """
     Interface to simplified n-x filter.
-    filter(in_filepath_list) -> out_filepath_list
+    filter(in_filepaths) -> out_filepaths
 
     Note that the number of output image is not known in advance.
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
             The affine matrix is taken from the last item
-        out_filepath_list (list[str]): List of output file paths.
+        out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs) -> list[ndarray]
         args (tuple): Positional arguments passed to the filtering function
@@ -420,14 +420,14 @@ def simple_filter_n_x(
 
 # ======================================================================
 def join(
-        in_filepath_list,
+        in_filepaths,
         out_filepath,
         axis=-1):
     """
     Join images together.
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
+        in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
             The affine matrix is taken from the last item.
         out_filepath (str): Output file path.
@@ -437,7 +437,7 @@ def join(
     Returns:
         None
     """
-    simple_filter_n_1(in_filepath_list, out_filepath, mrb.ndstack, axis)
+    simple_filter_n_1(in_filepaths, out_filepath, mrb.ndstack, axis)
 
 
 # ======================================================================
@@ -458,7 +458,7 @@ def split(
         out_filename (str): Output filename (without extension)
 
     Returns:
-        out_filepath_list (list[str]): List of output file paths
+        out_filepaths (list[str]): List of output file paths
     """
     # todo: refactor to use simple_filter_n_x
     if not out_dirpath or not os.path.exists(out_dirpath):
@@ -466,7 +466,7 @@ def split(
     if not out_basename:
         out_basename = mrb.change_ext(
             os.path.basename(in_filepath), '', mrb.EXT['img'])
-    out_filepath_list = []
+    out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
     img = obj.get_data()
@@ -479,8 +479,8 @@ def split(
             out_dirpath,
             mrb.change_ext(out_basename + '-' + i_str, mrb.EXT['img'], ''))
         save(out_filepath, image, obj.get_affine())
-        out_filepath_list.append(out_filepath)
-    return out_filepath_list
+        out_filepaths.append(out_filepath)
+    return out_filepaths
 
 
 # ======================================================================
@@ -615,8 +615,8 @@ def reframe(
 
 # ======================================================================
 def common_sampling(
-        in_filepath_list,
-        out_filepath_list=None,
+        in_filepaths,
+        out_filepaths=None,
         new_shape=None,
         lossless=False,
         extra_dim=True,
@@ -630,8 +630,8 @@ def common_sampling(
         - the support space / field-of-view will NOT change
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
-        out_filepath_list (list[str]): List of output file paths.
+        in_filepaths (list[str]): List of input file paths.
+        out_filepaths (list[str]): List of output file paths.
         new_shape (tuple[int]): The new shape of the images
         lossless (bool): allow for lossy resampling
         extra_dim (bool): Force extra dimensions in the zoom parameters
@@ -655,7 +655,7 @@ def common_sampling(
     # calculate new shape
     if new_shape is None:
         shape_list = []
-        for in_filepath in in_filepath_list:
+        for in_filepath in in_filepaths:
             obj = nib.load(in_filepath)
             shape_list.append(obj.get_data().shape)
         new_shape = combine_shape(shape_list)
@@ -664,22 +664,22 @@ def common_sampling(
     interpolation_order = 0 if lossless else 1
 
     # when output files are not specified, modify inputs
-    if out_filepath_list is None:
-        out_filepath_list = in_filepath_list
+    if out_filepaths is None:
+        out_filepaths = in_filepaths
 
-    for in_filepath, out_filepath in zip(in_filepath_list, out_filepath_list):
+    for in_filepath, out_filepath in zip(in_filepaths, out_filepaths):
         # ratio should not be kept: keep_ratio_method=None
         resample(
             in_filepath, out_filepath, new_shape, None,
             interpolation_order,
             extra_dim, fill_dim)
-    return out_filepath_list
+    return out_filepaths
 
 
 # ======================================================================
 def common_support(
-        in_filepath_list,
-        out_filepath_list=None,
+        in_filepaths,
+        out_filepaths=None,
         new_shape=None,
         background=0):
     """
@@ -691,8 +691,8 @@ def common_support(
         - the support space / field-of-view will change
 
     Args:
-        in_filepath_list (list[str]): List of input file paths.
-        out_filepath_list (list[str]): List of output file paths.
+        in_filepaths (list[str]): List of input file paths.
+        out_filepaths (list[str]): List of output file paths.
         new_shape (tuple[int]): The new shape of the images
         background (int|float|complex): The value used for the frame
 
@@ -715,18 +715,18 @@ def common_support(
     # calculate new shape
     if new_shape is None:
         shape_list = []
-        for in_filepath in in_filepath_list:
+        for in_filepath in in_filepaths:
             obj = nib.load(in_filepath)
             shape_list.append(obj.get_data().shape)
         new_shape = combine_shape(shape_list)
 
-    if out_filepath_list is None:
-        out_filepath_list = in_filepath_list
+    if out_filepaths is None:
+        out_filepaths = in_filepaths
 
-    for in_filepath, out_filepath in zip(in_filepath_list, out_filepath_list):
+    for in_filepath, out_filepath in zip(in_filepaths, out_filepaths):
         reframe(in_filepath, out_filepath, new_shape, background)
 
-    return out_filepath_list
+    return out_filepaths
 
 
 # ======================================================================
@@ -942,7 +942,7 @@ def plot_histogram1d(
 
 # ======================================================================
 def plot_histogram1d_list(
-        in_filepath_list,
+        in_filepaths,
         mask_filepath=None,
         *args,
         **kwargs):
@@ -952,7 +952,7 @@ def plot_histogram1d_list(
     Uses the function: mri_tools.plot.histogram1d_list
 
     Args:
-        in_filepath_list (str): The list of input file paths
+        in_filepaths (str): The list of input file paths
         mask_filepath (str): The mask file path
         args (tuple): Positional arguments passed to the plot function
         kwargs (dict): Keyword arguments passed to the plot function
@@ -969,7 +969,7 @@ def plot_histogram1d_list(
     else:
         mask = slice(None)
     img_list = []
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         img = obj.get_data()
         img_list.append(img[mask])

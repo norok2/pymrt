@@ -198,6 +198,10 @@ def handle_arg():
         '-v', '--verbose',
         action='count', default=d_verbose,
         help='increase the level of verbosity [%(default)s]')
+    arg_parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='override verbosity settings to suppress output [%(default)s]')
     # :: Add additional arguments
     group_input = arg_parser.add_mutually_exclusive_group()
     group_input.add_argument(
@@ -246,6 +250,9 @@ def main():
     # handle program parameters
     arg_parser = handle_arg()
     args = arg_parser.parse_args()
+    # fix verbosity in case of 'quiet'
+    if args.quiet:
+        args.verbose = VERB_LVL['none']
     # :: print debug info
     if args.verbose == VERB_LVL['debug']:
         arg_parser.print_help()

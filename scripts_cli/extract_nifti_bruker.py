@@ -9,14 +9,12 @@ Correction for number of averages is applied.
 A tentative receiver gain correction is also performed.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -72,11 +70,11 @@ def calc_nii(in_dirpath, compress=True, force=False, verbose=D_VERB_LVL):
     data_filepath = os.path.join(in_dirpath, 'fid')
     in_filename_list = 'method', 'acqp'
     in_filepath_list = [os.path.join(in_dirpath, in_filename)
-        for in_filename in in_filename_list]
+                        for in_filename in in_filename_list]
     out_dirpath = os.path.join(in_dirpath, 'pdata/1')
     out_filename_list = 'bildabs.nii.gz', 'bildphs.nii.gz'
     out_filepath_list = [os.path.join(out_dirpath, out_filename)
-        for out_filename in out_filename_list]
+                         for out_filename in out_filename_list]
     if os.path.exists(data_filepath):
         if mrb.check_redo(in_filepath_list, out_filepath_list, force):
             # remove files checked by matlab reco to avoid new folders
@@ -174,9 +172,9 @@ def extract_nii(dirpath, extradir, force, verbose):
             base_protocol = info_dict['protocol']
             for i, (mt_freq, mt_power, old_mag_filepath, old_phs_filepath) \
                     in enumerate(zip(
-                    method_ldr_dict['MT_superlist_freq'].ravel().tolist(),
-                    method_ldr_dict['MT_superlist_power'].ravel().tolist(),
-                    old_mag_filepath_list, old_phs_filepath_list)):
+                method_ldr_dict['MT_superlist_freq'].ravel().tolist(),
+                method_ldr_dict['MT_superlist_power'].ravel().tolist(),
+                old_mag_filepath_list, old_phs_filepath_list)):
                 param_dict = {
                     'id': i,
                     'mtfreq': float(mt_freq),
@@ -201,7 +199,7 @@ def extract_nii(dirpath, extradir, force, verbose):
             old_phs_filepath_list = mrio.split(phs_filepath)
             for te_val, old_mag_filepath, old_phs_filepath in \
                     zip(method_ldr_dict['EffectiveTE'], old_mag_filepath_list,
-                    old_phs_filepath_list):
+                        old_phs_filepath_list):
                 info_dict['te_val'] = te_val
                 info_dict['img_type'] = mru.TYPE_ID['mag']
                 new_mag_filepath = mru.to_filename(info_dict, dest_dirpath)
@@ -258,14 +256,6 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = D_VERB_LVL
-    # working directory
-    d_working_dir = '.'
-    # extra input subdirectory
-    d_extra_dir = 'nifti'
-    # :: Create Argument Parser
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -283,8 +273,12 @@ def handle_arg():
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
+    arg_parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='override verbosity settings to suppress output [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
         '-f', '--force',
@@ -292,19 +286,23 @@ def handle_arg():
         help='force new processing [%(default)s]')
     arg_parser.add_argument(
         '-d', '--dir', metavar='DIR',
-        default=d_working_dir,
+        default='.',
         help='set working directory [%(default)s]')
     arg_parser.add_argument(
         '-e', '--extradir', metavar='FOLDER',
-        default=d_extra_dir,
+        default='nifti',
         help='set output subdirectory [%(default)s]')
     return arg_parser
 
+
 # ======================================================================
 def main():
-        # :: handle program parameters
+    # :: handle program parameters
     arg_parser = handle_arg()
     args = arg_parser.parse_args()
+    # fix verbosity in case of 'quiet'
+    if args.quiet:
+        args.verbose = VERB_LVL['none']
     # :: print debug info
     if args.verbose == VERB_LVL['debug']:
         arg_parser.print_help()
@@ -317,6 +315,7 @@ def main():
     end_time = time.time()
     if args.verbose > VERB_LVL['low']:
         print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+
 
 # ======================================================================
 if __name__ == '__main__':

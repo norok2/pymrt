@@ -27,8 +27,7 @@ import matplotlib.pyplot as plt
 
 import mri_tools.base as mrb
 import mri_tools.input_output as mrio
-from mri_tools.sequences import matrix_algebra as ma
-from mri_tools.base import elapsed, print_elapsed
+import mri_tools.sequences.matrix_algebra as ma
 
 from mri_tools import INFO
 from mri_tools import VERB_LVL
@@ -50,22 +49,17 @@ def _extract_mt_mask(d=1, n=96, l=1):
 # ======================================================================
 def mt_fit_quick(
         dirpath,
-        data_subdir='mt_list',
-        filenames=None,
-        fitting_names=('m0', 'm_a', 'r2_a', 'r2_b', 'k_ab'),
-        verbose=D_VERB_LVL):
+        data_subpath,
+        cache_subpath,
+        filenames,
+        fitting_names,
+        verbose):
     """
 
     Args:
         dirpath:
-        data_subdir:
-        config_filename:
-        target_filename:
-        mask_filename:
-        b1t_filename:
-        b0_filename:
-        t1_filename:
-        t2s_filename:
+        data_subpath:
+        filenames:
         fitting_names:
         verbose:
 
@@ -90,6 +84,11 @@ def mt_fit_quick(
         if not os.path.exists(filepaths[item]):
             filepaths[item] = os.path.join(
                 os.path.dirname(__file__), filename)
+    if verbose >= VERB_LVL['medium']:
+        print('Dirpath: ', dirpath)
+        print('Data subpath: ', data_subpath)
+        for k, v in filepaths.items():
+            print('Path[{}]: {}'.format(k, v))
 
     with open(filepaths['data_sources'], 'r') as src_file:
         data_sources = json.load(src_file)
@@ -120,26 +119,29 @@ def mt_fit_quick(
 
     tmp_name = hashlib.md5(
         (str(data_sources) + str(mask.tostring())).encode()).hexdigest()
-    tmp_dirpath = os.path.join(dirpath, 'cache/{}'.format(tmp_name))
-    if not os.path.isdir(tmp_dirpath):
-        os.makedirs(tmp_dirpath)
+    cache_dirpath = os.path.join(dirpath, cache_subpath, tmp_name)
+    if not os.path.isdir(cache_dirpath):
+        os.makedirs(cache_dirpath)
 
-    mt_data_filepath = os.path.join(tmp_dirpath, 'mt_data.h5')
+    mt_data_filepath = os.path.join(cache_dirpath, 'mt_data.h5')
     if os.path.isfile(mt_data_filepath):
+        if verbose >= VERB_LVL['low']:
+            print('cached: {}'.format(mt_data_filepath))
         h5f = h5py.File(mt_data_filepath, 'r')
         h5d = h5f['mt_data']
-        mt_arr = h5d[:]
-        freqs = h5d.attrs['freqs']
-        flip_angles = h5d.attrs['flip_angles']
+        mt_arr = h5d[:].astype(float)
+        flip_angles = h5d.attrs['flip_angles'].astype(float)
+        freqs = h5d.attrs['freqs'].astype(float)
         h5f.close()
     else:
         p_imgs, flip_angles, freqs = [], [], []
         for filename, flip_angle, freq in data_sources:
-            p_filepath = os.path.join(dirpath, data_subdir, filename)
-            if not os.path.isfile(p_filepath):
-                print(p_filepath, ': not found!')
-            else:
-                print(': {} {} {}'.format(filename, flip_angle, freq))
+            p_filepath = os.path.join(dirpath, data_subpath, filename)
+            if verbose >= VERB_LVL['low']:
+                if not os.path.isfile(p_filepath):
+                    print(p_filepath, ': not found!')
+                else:
+                    print(': {} {} {}'.format(filename, flip_angle, freq))
             img, aff, hdr = mrio.load(p_filepath, True)
             p_imgs.append(img[mask])
             flip_angles.append(flip_angle)
@@ -148,16 +150,17 @@ def mt_fit_quick(
 
         h5f = h5py.File(mt_data_filepath, 'w')
         h5d = h5f.create_dataset('mt_data', data=mt_arr)
-        h5d.attrs['freqs'] = freqs
         h5d.attrs['flip_angles'] = flip_angles
+        h5d.attrs['freqs'] = freqs
         h5f.close()
+        if verbose >= VERB_LVL['low']:
+            print('caching: {}'.format(mt_data_filepath))
 
     x_data = np.array(list(zip(flip_angles, freqs)))
 
-    # the starting point for the estimation parameters
-    p0 = 12000, 0.9, 60, 11e4, 0.5
-    bounds = [
-        [1000, 100000], [0, 1], [1, 200], [5e4, 15e4], [0, 2.0]]
+    # the bounds for the estimation parameters
+    p0 = (10000, 0.5, 100, 10e4, 0.5)
+    bounds = [[1000, 100000], [0, 1], [1, 200], [5e4, 15e4], [0, 2.0]]
 
     num_par = len(p0)
 
@@ -167,22 +170,25 @@ def mt_fit_quick(
     data = (mt_arr, r1a_arr, r2a_arr, b1t_arr, b0_arr)
 
     # :: define the sequence
-    t_e = 1.7e-3
-    t_r = 70.0e-3
-    w_c = 297220696
+    t_e = 1.7e-3  # TE / s
+    t_r = 70.0e-3  # TR / s
+    w_c = 297220696  # imaging frequency / s
 
     pos_arr = np.zeros_like(mask, int)
     pos_arr[mask] = np.arange(mask_size) + 1
-    # pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
     for i, (mt_data, r1a, r2a, b1t, b0) in enumerate(zip(*data)):
         if verbose >= VERB_LVL['low']:
             pos = tuple(np.hstack(np.where(pos_arr == i + 1)))
             print('Voxel: {} / {} {}'.format(i + 1, mask_size, pos))
 
         if verbose >= VERB_LVL['medium']:
-            print(r1a, r2a, b1t, b0)
+            print('r1: {} Hz, r2: {} Hz, b1t: {}, b0: {} Hz'.format(
+                r1a, r2a, b1t, b0))
+        if verbose >= VERB_LVL['high']:
+            print('MT: ', mt_data)
+            print('FA: ', flip_angles)
+            print('Df: ', freqs)
         if verbose >= VERB_LVL['debug']:
-            # plt.ion()
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -192,11 +198,13 @@ def mt_fit_quick(
                 flip_angles, mrb.sgnlog(freqs, 10), mt_data, c='b', marker='o')
             plt.show(block=False)
 
+        # :: the definition of the sequence
         mt_flash = ma.MtFlash(
             ma.PulseList([
                 ma.Delay(
                     t_r - (
-                        t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 + 100e-6)),
+                        t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 +
+                        100e-6)),
                 ma.Spoiler(0.0),
                 ma.Delay(160.0e-6),
                 ma.PulseExc.shaped(
@@ -210,7 +218,12 @@ def mt_fit_quick(
                 w_c=w_c),
             num_repetitions=np.min(r1a_arr.shape) ** 2)
 
-        def mt_signal(x_arr, s0, mc_a, r2a, r2b, k_ab):
+        def mt_signal(x_arr, s0, mc_a, r2a, r2b, k_ab, bounds=bounds):
+            if bounds:
+                pars = s0, mc_a, r2a, r2b, k_ab
+                for par, bound in zip(pars, bounds):
+                    if not bound[0] < par < bound[1]:
+                        return np.ones_like(x_arr[:, 0]) * np.inf
             spin_model = ma.SpinModel(
                 s0=s0,
                 mc=(mc_a, 1.0 - mc_a),
@@ -237,6 +250,12 @@ def mt_fit_quick(
                 c='g', marker='s')
             plt.show(block=False)
 
+        p0 = round(np.max(mt_data) * 5), 0.5, round(r2a * 0.9), 11e4, 0.5
+        if verbose >= VERB_LVL['high']:
+            print(':: ', end='')
+            for name, val in zip(fitting_names, p0):
+                print('{}: {}'.format(name, val), end=', ')
+            print()
         # def sum_of_squares(params, x_data, m_data):
         #     e_data = mt_signal(x_data, *params)
         #     return np.sum((m_data - e_data) ** 2.0)
@@ -256,9 +275,11 @@ def mt_fit_quick(
         success = True
         error_msg = 'Fit converged.'
         try:
+            # curve_fit_kwargs = {
+            #     'method': 'trf', 'bounds': list(zip(*bounds))}
+            curve_fit_kwargs = {'method': 'lm'}
             p_opt, p_cov = scipy.optimize.curve_fit(
-                mt_signal, x_data, mt_data, p0,
-                method='trf', bounds=list(zip(*bounds)))
+                mt_signal, x_data, mt_data, p0, **curve_fit_kwargs)
             p_err = np.sqrt(np.diag(p_cov))
         except scipy.optimize.OptimizeWarning:
             success = False
@@ -266,6 +287,15 @@ def mt_fit_quick(
             p_err = np.zeros_like(p0)
             error_msg = 'Fit failed.'
 
+        if any(np.abs(p_opt) < 2 * np.abs(p_err)):
+            if verbose >= VERB_LVL['low']:
+                print(':: poor parameter estimate')
+
+        if verbose >= VERB_LVL['medium']:
+            print(':: ', end='')
+            for name, val, err in zip(fitting_names, p_opt, p_err):
+                print('{}: {} ({})'.format(name, val, err), end=', ')
+            print()
         if verbose >= VERB_LVL['debug']:
             ax.scatter(
                 flip_angles, mrb.sgnlog(freqs, 10), mt_signal(x_data, *p_opt),
@@ -283,19 +313,19 @@ def mt_fit_quick(
         os.makedirs(dirpath)
     p_imgs, dp_imgs = [], []
     fit_results = fitting_names, mrb.ndsplit(p_arr), mrb.ndsplit(dp_arr)
-    for fitted_name, image_flat, error_flat in zip(*fit_results):
+    for fitting_name, image_flat, error_flat in zip(*fit_results):
         # save the parameter map
         p_img = np.zeros_like(mask, float)
         p_img[mask] = image_flat
         p_filepath = os.path.join(
-            dirpath, mrb.change_ext('p_' + fitted_name, mrb.EXT['img']))
+            dirpath, mrb.change_ext('p_' + fitting_name, mrb.EXT['img']))
         mrio.save(p_filepath, p_img, aff_mask)
         p_imgs.append(p_img)
         # save the error map
         dp_img = np.zeros_like(mask, float)
         dp_img[mask] = error_flat
         dp_filepath = os.path.join(
-            dirpath, mrb.change_ext('dp_' + fitted_name, mrb.EXT['img']))
+            dirpath, mrb.change_ext('dp_' + fitting_name, mrb.EXT['img']))
         mrio.save(dp_filepath, dp_img, aff_mask)
         dp_imgs.append(dp_img)
     # save combined
@@ -331,6 +361,10 @@ def handle_arg():
         '-v', '--verbose',
         action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
+    arg_parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='override verbosity settings to suppress output [%(default)s]')
     # :: Add additional arguments
     # arg_parser.add_argument(
     #     '-f', '--force',
@@ -341,9 +375,13 @@ def handle_arg():
         default='.',
         help='set working directory [%(default)s]')
     arg_parser.add_argument(
-        '-s', '--data_subdir', metavar='SUBPATH',
+        '-s', '--data_subpath', metavar='SUBPATH',
         default='mt_list',
         help='set data subpath [%(default)s]')
+    arg_parser.add_argument(
+        '-c', '--cache_subpath', metavar='SUBPATH',
+        default='cache',
+        help='set cache subpath [%(default)s]')
     arg_parser.add_argument(
         '-a', '--data_sources', metavar='FILE',
         default='data_sources.json',
@@ -385,6 +423,8 @@ def main():
     # :: handle program parameters
     arg_parser = handle_arg()
     args = arg_parser.parse_args()
+    if args.quiet:
+        args.verbose = VERB_LVL['none']
     # :: print debug info
     if args.verbose == VERB_LVL['debug']:
         arg_parser.print_help()
@@ -394,7 +434,8 @@ def main():
 
     args = {
         'dirpath': args.dirpath,
-        'data_subdir': args.data_subdir,
+        'data_subpath': args.data_subpath,
+        'cache_subpath': args.cache_subpath,
         'filenames': {
             'data_sources': args.data_sources,
             'target': args.target,
@@ -409,8 +450,8 @@ def main():
     }
     mt_fit_quick(**args)
 
-    elapsed(os.path.basename(__file__))
-    print_elapsed()
+    mrb.elapsed(os.path.basename(__file__))
+    mrb.print_elapsed()
 
 
 # ======================================================================
