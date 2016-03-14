@@ -79,6 +79,9 @@ INFO_SEP = '__'
 NEW_RECO_ID = 'rr'
 SERIES_NUM_ID = 's'
 
+COMMON_TYPES = (
+    'MAG', 'PHS', 'PD', 'T1', 'T2', 'T2S', 'CHI', 'B1', 'B0', 'MSK')
+
 
 # ======================================================================
 def get_param_val(
@@ -165,51 +168,79 @@ def parse_filename(
         b_sep=PARAM_BASE_SEP):
     """
     Extract specific information from SIEMENS data file name/path.
-    Expected format is: [s<###>__]<series_name>[__<#>][__<type>].nii.gz
 
-    Parameters
-    ==========
-    filepath : str
-        Full path of the image filename.
+    Expected format is:
+        [s<###><i_sep>]<series_name>[<i_sep><#>][<i_sep><type>].nii.gz
 
-    Returns
-    =======
-    info : dictionary
-        Dictionary containing:
-            | 'num' : int : identification number of the series.
-            | 'name' : str : series name.
-            | 'seq' : int or None : sequential number of the series.
-            | 'type' : str : image type
+    Args:
+        filepath (str): Full path of the image filename.
+        i_sep (str): information separator
+        p_sep (str): parameters separator (in series_name)
+        kv_sep (str): key-value separator (in series_name)
+        b_sep (str): basename separator (in series_name)
 
-    See Also
-    ========
-    to_filename
+    Returns:
+        info (dict): Dictionary containing the information:
 
+            - 'num' (int): identification number of the series.
+            - 'name' (str): series name.
+            - 'seq' (int|None): sequential number of the series.
+            - 'type' (str): image type
+
+    See Also:
+        to_filename
     """
     filename = os.path.basename(filepath)
     filename_noext = mrn.filename_noext(filename)
-    if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
+    # if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
+    #     tokens = filename_noext.split(i_sep)
+    #     info = {}
+    #     # initialize end of name indexes
+    #     idx_begin_name = 0
+    #     idx_end_name = len(tokens)
+    #     # check if contains scan ID
+    #     info['num'] = mrb.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID))
+    #     idx_begin_name += (1 if info['num'] is not None else 0)
+    #     # check if contains Sequential Number
+    #     info['seq'] = None
+    #     if len(tokens) > 1:
+    #         for token in tokens[-1:-3:-1]:
+    #             if mrb.is_number(token):
+    #                 info['seq'] = mrb.auto_convert(token)
+    #                 break
+    #     idx_end_name -= (1 if info['seq'] is not None else 0)
+    #     # check if contains Image type
+    #     info['type'] = tokens[-1] if idx_end_name - idx_begin_name > 1 else None
+    #     idx_end_name -= (1 if info['type'] is not None else 0)
+    #     # determine series name
+    #     info['name'] = i_sep.join(tokens[idx_begin_name:idx_end_name])
+    if (i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep) or \
+            (i_sep == p_sep and i_sep == b_sep):
         tokens = filename_noext.split(i_sep)
-        info = {}
-        # initialize end of name indexes
-        idx_begin_name = 0
-        idx_end_name = len(tokens)
+        info = {
+            'num': mrb.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID)),
+            'seq': None,
+            'type': None,
+            'name': None}
         # check if contains scan ID
-        info['num'] = mrb.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID))
-        idx_begin_name += (1 if info['num'] is not None else 0)
+        if info['num'] is not None:
+            tokens.pop(0)
         # check if contains Sequential Number
-        info['seq'] = None
         if len(tokens) > 1:
-            for token in tokens[-1:-3:-1]:
+            for token in tokens[::-1]:
                 if mrb.is_number(token):
                     info['seq'] = mrb.auto_convert(token)
+                    tokens.remove(token)
                     break
-        idx_end_name -= (1 if info['seq'] is not None else 0)
         # check if contains Image type
-        info['type'] = tokens[-1] if idx_end_name - idx_begin_name > 1 else None
-        idx_end_name -= (1 if info['type'] is not None else 0)
+        if len(tokens) > 1:
+            for token in tokens[::-1]:
+                if token in COMMON_TYPES:
+                    info['type'] = mrb.auto_convert(token)
+                    tokens.remove(token)
+                    break
         # determine series name
-        info['name'] = i_sep.join(tokens[idx_begin_name:idx_end_name])
+        info['name'] = i_sep.join(tokens)
     else:
         raise TypeError('Cannot parse this file name.')
     return info
@@ -219,10 +250,11 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
+        i_sep=INFO_SEP,
         ext=mrn.D_EXT):
     """
     Reconstruct file name/path with SIEMENS-like structure.
-    Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
+    Produced format is: [s<num><i_sep>]<series_name>[<i_sep><seq>][<i_sep><type>].nii.gz
 
     Parameters
     ==========
@@ -257,7 +289,7 @@ def to_filename(
         tokens.append('{:d}'.format(info['seq']))
     if 'type' in info and info['type'] is not None:
         tokens.append(info['type'])
-    filepath = INFO_SEP.join(tokens)
+    filepath = i_sep.join(tokens)
     filepath += (mrb.add_extsep(ext) if ext else '')
     filepath = os.path.join(dirpath, filepath) if dirpath else filepath
     return filepath
@@ -368,6 +400,52 @@ def to_series_name(
 
 
 # ======================================================================
+def std_series_name(
+        name,
+        p_sep=PARAM_SEP,
+        kv_sep=PARAM_KEY_VAL_SEP,
+        b_sep=PARAM_BASE_SEP):
+    """
+
+    Args:
+        name:
+        p_sep:
+        kv_sep:
+        b_sep:
+
+    Returns:
+
+    """
+    base, params = parse_series_name(name, p_sep, kv_sep, b_sep)
+    return to_series_name(base, params)
+
+# ======================================================================
+def std_filename(
+        filepath,
+        i_sep=INFO_SEP,
+        p_sep=PARAM_SEP,
+        kv_sep=PARAM_KEY_VAL_SEP,
+        b_sep=PARAM_BASE_SEP):
+    """
+
+    Args:
+        filepath:
+        i_sep:
+        p_sep:
+        kv_sep:
+        b_sep:
+
+    Returns:
+
+    """
+
+    dirpath = os.path.dirname(filepath)
+    info = parse_filename(filepath, i_sep, p_sep, kv_sep, b_sep)
+    info['name'] = std_series_name(info['name'], p_sep, kv_sep, b_sep)
+    filepath = to_filename(info, dirpath)
+    return filepath
+
+# ======================================================================
 def change_img_type(
         filepath,
         img_type):
@@ -398,28 +476,29 @@ def change_img_type(
 def change_param_val(
         filepath,
         param_key,
-        param_val):
+        param_val,
+        i_sep=INFO_SEP,
+        p_sep=PARAM_SEP,
+        kv_sep=PARAM_KEY_VAL_SEP,
+        b_sep=PARAM_BASE_SEP):
     """
     Change the parameter value of an image filename in a filepath.
 
-    Parameters
-    ==========
-    filepath : str
-        The image filepath.
-    param_key : str
-        The identifier of the parameter to change.
-    new_param_val : str
-        The new value of the parameter to change.
+    Args:
+        filepath (str): The image filepath.
+        param_key (str): The identifier of the parameter to change.
+        new_param_val (str): The new value of the parameter to change.
+        i_sep (str): information separator
+        p_sep (str): parameters separator (in series_name)
+        kv_sep (str): key-value separator (in series_name)
+        b_sep (str): basename separator (in series_name)
 
-    Returns
-    =======
-    new_name : str
-        The filepath of the image with new type.
-
+    Returns:
+        new_name (str): The filepath of the image with new type.
     """
     dirpath = os.path.dirname(filepath)
-    info = parse_filename(filepath)
-    base, params = parse_series_name(info['name'])
+    info = parse_filename(filepath, i_sep, p_sep, kv_sep, b_sep)
+    base, params = parse_series_name(info['name'], p_sep, kv_sep, b_sep)
     params[param_key] = param_val
     info['name'] = to_series_name(base, params)
     filepath = to_filename(info, dirpath)

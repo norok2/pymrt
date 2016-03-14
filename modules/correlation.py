@@ -1438,14 +1438,14 @@ def check_correlation(
             ref_list, ref_src_list = \
                 _get_ref_list(dirpath, source_list, None, reg_ref_ext)
             ref = ref_list[0]
-            ref_src = ref_src_list[0]
+            ref_src = ref_src_list[0] if ref_src_list else None
             # registration instructions
             if verbose >= VERB_LVL['medium']:
                 print('I: RegRefSrs: {}'.format(ref_src))
             try:
                 with open(ref_src, 'r') as ref_file:
                     reg_info = json.load(ref_file)
-            except (IOError, ValueError) as msg:
+            except (IOError, ValueError, TypeError) as msg:
                 if verbose >= VERB_LVL['low']:
                     print("W: loading JSON: {}".format(msg))
                 reg_info = {}
