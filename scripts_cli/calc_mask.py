@@ -52,18 +52,18 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mri_tools.base as mrb
-# import mri_tools.utils as mru
-# import mri_tools.input_output as mrio
-# import mri_tools.computation as mrc
-import mri_tools.correlation as mrl
-# import mri_tools.geometry as mrg
-# from mri_tools.sequences import mp2rage
+# import pymrt.base as mrb
+# import pymrt.utils as mru
+# import pymrt.input_output as mrio
+# import pymrt.computation as mrc
+import pymrt.correlation as mrl
+# import pymrt.geometry as mrg
+# from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================

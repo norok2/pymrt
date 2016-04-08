@@ -16,12 +16,12 @@ import os
 import functools
 import argparse
 
-import mri_tools.base as mrb
-import mri_tools.input_output as mrio
+import pymrt.base as mrb
+import pymrt.input_output as mrio
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================

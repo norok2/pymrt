@@ -86,36 +86,36 @@ mt_list = [
     ('s161__gre_qmri_0.6mm_FA30_MT300.nii.gz', 200, 5623),
     ('s163__gre_qmri_0.6mm_FA30_MT300.nii.gz', 200, 10000),
 
-    # from F7T_2010_05_119a
-    ('s007__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -316),
-    ('s009__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -562),
-    ('s011__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -1000),
-    ('s013__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -1778),
-    ('s015__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -3162),
-    ('s017__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -5623),
-    ('s019__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -10000),
-    ('s021__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -17783),
-    ('s023__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -31623),
-    ('s025__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -56234),
-    ('s027__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -100000),
-
-    ('s079__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -316),
-    ('s081__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -562),
-    ('s083__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -1000),
-    ('s085__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -1778),
-    # ('s087__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -3162),
-
-    ('s102__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -316),
-    ('s104__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -562),
-    ('s106__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -1000),
-
-    ('s108__gre_qmri_0.6mm_FA30_MT300.nii.gz', 200, -562),
-
-    ('s126__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -1000),
-    ('s128__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -1778),
-    ('s130__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -3162),
-    ('s132__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -5623),
-    ('s134__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -10000),
+    # # from F7T_2010_05_119a
+    # ('s007__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -316),
+    # ('s009__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -562),
+    # ('s011__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -1000),
+    # ('s013__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -1778),
+    # ('s015__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -3162),
+    # ('s017__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -5623),
+    # ('s019__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -10000),
+    # ('s021__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -17783),
+    # ('s023__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -31623),
+    # ('s025__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -56234),
+    # ('s027__gre_qmri_0.6mm_FA30_MT1100.nii.gz', 1100, -100000),
+    #
+    # ('s079__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -316),
+    # ('s081__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -562),
+    # ('s083__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -1000),
+    # ('s085__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -1778),
+    # # ('s087__gre_qmri_0.6mm_FA30_MT400.nii.gz', 400, -3162),
+    #
+    # ('s102__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -316),
+    # ('s104__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -562),
+    # ('s106__gre_qmri_0.6mm_FA30_MT300.nii.gz', 300, -1000),
+    #
+    # ('s108__gre_qmri_0.6mm_FA30_MT300.nii.gz', 200, -562),
+    #
+    # ('s126__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -1000),
+    # ('s128__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -1778),
+    # ('s130__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -3162),
+    # ('s132__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -5623),
+    # ('s134__gre_qmri_0.6mm_FA30_MT200.nii.gz', 200, -10000),
 ]
 
 with open('data_sources.json', 'w') as out_file:

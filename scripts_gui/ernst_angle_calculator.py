@@ -35,13 +35,13 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import mri_tools.base as mrb
-# import mri_tools.utils as mru
-# import mri_tools.input_output as mrio
-# import mri_tools.geometry as mrg
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+# import pymrt.base as mrb
+# import pymrt.utils as mru
+# import pymrt.input_output as mrio
+# import pymrt.geometry as mrg
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================

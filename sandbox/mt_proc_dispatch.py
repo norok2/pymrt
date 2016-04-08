@@ -18,12 +18,12 @@ from math import ceil, log10
 
 import numpy as np
 
-import mri_tools.base as mrb
-import mri_tools.input_output as mrio
+import pymrt.base as mrb
+import pymrt.input_output as mrio
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================
@@ -114,7 +114,7 @@ def mt_proc_dispatch(
             chunk_filepath = filepaths['chunk'].format(
                 name=mrb.change_ext(filenames['target'], '', mrb.EXT['img']),
                 id='{:0{len}d}o{:0{len}d}'.format(
-                    i + 1, num_chunks, len=ceil(log10(num_chunks + 1))))
+                    i + 1, num_chunks, len=int(ceil(log10(num_chunks + 1)))))
             chunk_dirpath = mrb.change_ext(chunk_filepath, '', mrb.EXT['img'])
             if not os.path.isfile(chunk_filepath):
                 mrio.save(chunk_filepath, chunk.astype(int), aff)
@@ -132,7 +132,7 @@ def mt_proc_dispatch(
             else:
                 if verbose >= VERB_LVL['low']:
                     print('{}: already processed'.format(
-                          os.path.basename(chunk_filepath)))
+                        os.path.basename(chunk_filepath)))
     return chunk_filepaths
 
 
@@ -192,11 +192,13 @@ def handle_arg():
     arg_parser.add_argument(
         '-p', '--cmd_dispatch', metavar='CMD',
         # default='',
-        default='fsl_sub -q short.q',
+        default='',
         help='set the dispatcher command [%(default)s]')
     arg_parser.add_argument(
         '-x', '--cmd_script', metavar='CMD',
-        default='python -u mt_fit_quick.py -v --target {chunk}',
+        default='/home/raid1/metere/Documents/workspace/pymrt/sandbox'
+                '/mt_fit_quick.py -v '
+                '--target {chunk}',
         help='set script to run on each chunk [%(default)s]')
     arg_parser.add_argument(
         '-b', '--bg_run',

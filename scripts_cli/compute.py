@@ -8,7 +8,7 @@ appropriate combination of values in the 'options' command-line argument.
 Some computations, that are of particular interest in MRI, are readily
 available through the 'method' command-line argument.
 
-See also: mri_tools.compute
+See also: pymrt.compute
 """
 
 # ======================================================================
@@ -53,18 +53,18 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import mri_tools.base as mrb
-# import mri_tools.utils as mru
-# import mri_tools.input_output as mrio
-import mri_tools.computation as mrc
-# import mri_tools.correlate as mrr
-# import mri_tools.geometry as mrg
-# from mri_tools.sequences import mp2rage
+import pymrt.base as mrb
+# import pymrt.utils as mru
+# import pymrt.input_output as mrio
+import pymrt.computation as mrc
+# import pymrt.correlate as mrr
+# import pymrt.geometry as mrg
+# from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================

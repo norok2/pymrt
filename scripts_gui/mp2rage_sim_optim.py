@@ -30,14 +30,12 @@ timing parameters are positive.
 [ref: J. P. Marques at al., NeuroImage 49 (2010) 1271-1281]
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals  # DEBUG: sympy complains about it
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -61,13 +59,12 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.optimize
 
 # :: Local Imports
-import mri_tools.base as mrb
-import mri_tools.sequences.mp2rage as mp2rage
+import pymrt.base as mrb
+import pymrt.sequences.mp2rage as mp2rage
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
-
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 # ======================================================================
 # :: sequence default parameters (MARQUES TR8)
@@ -87,19 +84,19 @@ T1_NUM = 256.0
 T1_INTERVAL = (100.0, 5000.0)
 T1_LINSPACE = T1_INTERVAL + (T1_NUM,)
 EFF_SLIDER = (0.0, 1.0, D_EFF)  # %
-N_SLIDER = (64, 512, D_N)  # #
-TR_GRE_SLIDER = (0.1, 30.0, D_TR_GRE)  # ms
+N_SLIDER = (32, 512, D_N)  # #
+TR_GRE_SLIDER = (0.1, 50.0, D_TR_GRE)  # ms
 A1_SLIDER = (0.1, 90.0 / 4, D_A1)  # deg
 A2_SLIDER = (0.1, 90.0 / 4, D_A2)  # deg
 B1T_PLUS_SLIDER = (0.0 + 0.001, 0.5 - 0.001, 0.2)  # %
 B1T_MINUS_SLIDER = (0.0 + 0.001, 0.5 - 0.001, 0.2)  # %
 # only in indirect mode
 TR_SEQ_SLIDER = (1000.0, 10000.0, D_TR_SEQ)  # ms
-TI1_SLIDER = (10.0, 4000.0, D_TI1)  # ms
-TI2_SLIDER = (10.0, 8000.0, D_TI2)  # ms
+TI1_SLIDER = (10.0, 5000.0, D_TI1)  # ms
+TI2_SLIDER = (10.0, 10000.0, D_TI2)  # ms
 # only in direct mode
-TA_SLIDER = (10.0, 2000.0, D_TA)  # ms
-TB_SLIDER = (10.0, 2000.0, D_TB)  # ms
+TA_SLIDER = (10.0, 8000.0, D_TA)  # ms
+TB_SLIDER = (10.0, 8000.0, D_TB)  # ms
 TC_SLIDER = (10.0, 8000.0, D_TC)  # ms
 
 # optimization parameters
@@ -107,14 +104,16 @@ OPTIM_T1_INTERVAL = (1.0, 4000.0)
 OPTIM_S_INTERVAL = (-0.4, 0.4)
 OPTIM_A1_INTERVAL = (1.5, 90.0 / 5)
 
+
 # Turn OFF interactive mode in MatPlotLib
-#plt.ion()
+# plt.ion()
 
 
 # ======================================================================
 # :: Create the GUI plot
 def ui_plot(
-        t1_linspace, is_direct, use_dicom_INTERVAL, optim_a1, optim_t1_INTERVAL):
+        t1_linspace, is_direct, use_dicom_INTERVAL, optim_a1,
+        optim_t1_INTERVAL):
     """
     User-interface and plot.
     """
@@ -134,7 +133,7 @@ def ui_plot(
         return par, b1t_tune
 
     def adjust_params(par, b1t_tune):
-        """Adjust parameters according to B1t tuning."""
+        """Adjust parameters according to B1+ tuning."""
         # adjust parameters for B1T tunes
         par_p = [param * (1.0 + b1t_tune[0]) for param in par[-2:]]
         par_m = [param * (1.0 - b1t_tune[1]) for param in par[-2:]]
@@ -152,12 +151,10 @@ def ui_plot(
         ii_p2_val = mp2rage_ii(t1_val, *(par[:-2] + par_p2))
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
         if use_dicom_INTERVAL:
-            ii_val, ii_p_val, ii_m_val, ii_p2_val, \
-            ii_m2_val = [
+            ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
                 mrb.scale(
                     ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
-                for ii in (ii_val, ii_p_val, ii_m_val, \
-                          ii_p2_val, ii_m2_val)]
+                for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
 
     def ui_update(event=None):
@@ -244,18 +241,18 @@ def ui_plot(
     else:
         mp2rage_ii = mp2rage.calc_signal2
         param_list = [
-            ['eff / #', EFF_SLIDER],
-            ['n_GRE / #', N_SLIDER],
-            ['TR_GRE / ms', TR_GRE_SLIDER],
-            ['TR_SEQ / ms', TR_SEQ_SLIDER],
-            ['TI1 / ms', TI1_SLIDER],
-            ['TI2 / ms', TI2_SLIDER],
-            ['a1 / deg', A1_SLIDER],
-            ['a2 / deg', A2_SLIDER]]
+            ['$\\eta$ / #', EFF_SLIDER],
+            ['$n_{GRE}$ / #', N_SLIDER],
+            ['$T_{R,GRE}$ / ms', TR_GRE_SLIDER],
+            ['$T_{R,seq}$ / ms', TR_SEQ_SLIDER],
+            ['$T_{I,1}$ / ms', TI1_SLIDER],
+            ['$T_{I,2}$ / ms', TI2_SLIDER],
+            ['$\\alpha_1$ / deg', A1_SLIDER],
+            ['$\\alpha_2$ / deg', A2_SLIDER]]
     num_params = len(param_list)
     b1t_tune_list = [
-        ['B1T+', B1T_PLUS_SLIDER],
-        ['B1T-', B1T_MINUS_SLIDER]]
+        ['$B_1^+$ +', B1T_PLUS_SLIDER],
+        ['$B_1^+$ -', B1T_MINUS_SLIDER]]
     slider_list = param_list + b1t_tune_list
     num_sliders = len(slider_list)
     # :: Calculate plotting values
@@ -277,10 +274,10 @@ def ui_plot(
     plt.subplots_adjust(bottom=ui_plt_main_b + ui_sld_params_h)
     # plot graph (with dummy values)
     plt_base, = plt.plot(t1_val, t1_val, color='g', label='MP2RAGE')
-    plt_p, = plt.plot(t1_val, t1_val, color='r', label='B1+ +x%')
-    plt_m, = plt.plot(t1_val, t1_val, color='b', label='B1+ -x%')
-    plt_p2, = plt.plot(t1_val, t1_val, color='y', label='B1+ +2x%')
-    plt_m2, = plt.plot(t1_val, t1_val, color='c', label='B1+ -2x%')
+    plt_p, = plt.plot(t1_val, t1_val, color='r', label='$B_1^+$ +x%')
+    plt_m, = plt.plot(t1_val, t1_val, color='b', label='$B_1^+$ -x%')
+    plt_p2, = plt.plot(t1_val, t1_val, color='y', label='$B_1^+$ +2x%')
+    plt_m2, = plt.plot(t1_val, t1_val, color='c', label='$B_1^+$ -2x%')
     # plot optimized goal
     plt.plot(OPTIM_T1_INTERVAL, OPTIM_S_INTERVAL, '-k', label='optim')
     ax_main.legend()
@@ -330,13 +327,6 @@ def handle_arg():
     """
     Handle command-line application arguments.
     """
-    # :: Define DEFAULT values
-    # verbosity
-    d_verbose = VERB_LVL['none']
-    # T1 range to explore and number of points
-    d_t1 = T1_LINSPACE  # ms
-    # T1 range to explore and number of points
-    d_ot1 = OPTIM_T1_INTERVAL  # ms
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -354,7 +344,7 @@ def handle_arg():
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
-        action='count', default=d_verbose,
+        action='count', default=D_VERB_LVL,
         help='increase the level of verbosity [%(default)s]')
     arg_parser.add_argument(
         '-q', '--quiet',
@@ -363,31 +353,29 @@ def handle_arg():
     # :: Add additional arguments
     arg_parser.add_argument(
         '--t1', metavar=('MIN', 'MAX', 'N_PT'),
-        type=int, nargs=3, default=d_t1,
+        type=int, nargs=3, default=T1_LINSPACE,
         help='set parameters for the values of T1 in ms [%(default)s]')
     arg_parser.add_argument(
         '-d', '--direct',
         action='store_true',
-
         help='use TA, TB, TC direct parameters instead of TI1, TI2, TR_tot')
     arg_parser.add_argument(
         '--dicom_INTERVAL',
         action='store_true',
         help='use {} intensity interval instead of {}.'. \
-        format(mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL))
+            format(mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL))
     arg_parser.add_argument(
         '--no_optim_a1',
         action='store_false',
         help='disable a1 optimization [%(default)s]')
     arg_parser.add_argument(
         '--ot1', metavar=('MIN', 'MAX'),
-        type=int, nargs=2, default=d_ot1,
+        type=int, nargs=2, default=OPTIM_T1_INTERVAL,
         help='set the optimization range for T1 in ms [%(default)s]')
     return arg_parser
 
 
-# ======================================================================
-if __name__ == '__main__':
+def main():
     # :: handle program parameters
     arg_parser = handle_arg()
     args = arg_parser.parse_args()
@@ -399,4 +387,10 @@ if __name__ == '__main__':
         arg_parser.print_help()
         print()
         print('II:', 'Parsed Arguments:', args)
-    ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1, args.ot1)
+    ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1,
+            args.ot1)
+
+
+# ======================================================================
+if __name__ == '__main__':
+    main()

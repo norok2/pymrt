@@ -25,13 +25,13 @@ import h5py
 import scipy.optimize
 import matplotlib.pyplot as plt
 
-import mri_tools.base as mrb
-import mri_tools.input_output as mrio
-import mri_tools.sequences.matrix_algebra as ma
+import pymrt.base as mrb
+import pymrt.input_output as mrio
+import pymrt.sequences.matrix_algebra as ma
 
-from mri_tools import INFO
-from mri_tools import VERB_LVL
-from mri_tools import D_VERB_LVL
+from pymrt import INFO
+from pymrt import VERB_LVL
+from pymrt import D_VERB_LVL
 
 
 # ======================================================================
@@ -182,7 +182,7 @@ def mt_fit_quick(
             print('Voxel: {} / {} {}'.format(i + 1, mask_size, pos))
 
         if verbose >= VERB_LVL['medium']:
-            print('r1: {} Hz, r2: {} Hz, b1t: {}, b0: {} Hz'.format(
+            print('r1: {} Hz, r2: {} Hz, b1t: {}, b0: {} µT'.format(
                 r1a, r2a, b1t, b0))
         if verbose >= VERB_LVL['high']:
             print('MT: ', mt_data)
@@ -205,13 +205,13 @@ def mt_fit_quick(
                     t_r - (
                         t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 +
                         100e-6)),
-                ma.Spoiler(0.0),
+                ma.Spoiler(1.0),  # check?
                 ma.Delay(160.0e-6),
                 ma.PulseExc.shaped(
                     20000.0e-6, 90.0, 0, '_from_GAUSS5120', {}, 0.0,
                     'linear', {'num_samples': 15}),
                 ma.Delay(160.0e-6 + 970.0e-6),
-                ma.Spoiler(1.0),
+                ma.Spoiler(1.0),  # check?
                 ma.Delay(160.0e-6),
                 ma.PulseExc.shaped(100e-6, 30.0 * b1t, 1, 'rect', {}),
                 ma.Delay(t_e)],
@@ -228,7 +228,7 @@ def mt_fit_quick(
                 s0=s0,
                 mc=(mc_a, 1.0 - mc_a),
                 # w0=(w_c, w_c * (1 - 3.5e-6)),
-                w0=((w_c + b0,) * 2),
+                w0=((w_c + (b0 * ma.GAMMA_BAR * 1.0e-9),) * 2),
                 r1=(r1a, 1.0),
                 r2=(r2a, r2b),
                 k=(k_ab,),

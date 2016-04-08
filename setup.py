@@ -26,7 +26,7 @@ from setuptools import find_packages
 
 # ======================================================================
 # project specific variables
-VERSION_SOURCE_FILEPATH = 'mri_tools/__init__.py'
+VERSION_SOURCE_FILEPATH = 'pymrt/__init__.py'
 README_SOURCE_FILE = 'README.rst'
 
 # get the working directory for the setup script
@@ -72,14 +72,14 @@ def fix_version(
 # ======================================================================
 # :: call the setup tool
 setup(
-    name='mri_tools',
+    name='pymrt',
 
     description='Data analysis for quantitative MRI',
     long_description=LONG_DESCRIPTION_TEXT,
 
     version=fix_version(),
 
-    url='https://bitbucket.org/norok2/mri_tools',
+    url='https://bitbucket.org/norok2/pymrt',
 
     author='Riccardo Metere',
     author_email='rick@metere.it',
@@ -124,25 +124,25 @@ setup(
     ],
 
     package_data={
-        'mri_tools': ['sequences/pulses/*.csv', ],
+        'pymrt': ['sequences/pulses/*.csv', ],
     },
 
     # data_files=[('my_data', ['data/data_file'])],
 
     entry_points={
         'console_scripts': [
-            'mrt_compute=scripts_cli.compute:main',
-            'mrt_correlate=scripts_cli.correlate:main',
+            'pymrt_compute=scripts_cli.compute:main',
+            'pymrt_correlate=scripts_cli.correlate:main',
 
-            'mrt_calc_mask=scripts_cli.calc_mask:main',
-            'mrt_geom_phantom=scripts_cli.geom_phantom:main',
+            'pymrt_calc_mask=scripts_cli.calc_mask:main',
+            'pymrt_geom_phantom=scripts_cli.geom_phantom:main',
 
-            'mrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
+            'pymrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
         ],
 
         'gui_scripts': [
-            'mrt_ernst_calc=scripts_gui.ernst_angle_calculator:main',
-            'mrt_mp2rage=scripts_gui.mp2rage_sim_optim:main',
+            'pymrt_ernst_calc=scripts_gui.ernst_angle_calculator:main',
+            'pymrt_mp2rage=scripts_gui.mp2rage_sim_optim:main',
         ],
     },
 )

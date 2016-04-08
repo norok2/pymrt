@@ -59,17 +59,17 @@ from numpy import pi, sin, cos, exp, sqrt
 # from sympy import pi, sin, cos, exp, sqrt, re, im
 
 # :: Local Imports
-import mri_tools.base as mrb
+import pymrt.base as mrb
 
 
-# import mri_tools.geometry as mrg
-# import mri_tools.plot as mrp
-# import mri_tools.segmentation as mrs
+# import pymrt.geometry as mrg
+# import pymrt.plot as mrp
+# import pymrt.segmentation as mrs
 
-# from mri_tools import INFO
-# from mri_tools import VERB_LVL
-# from mri_tools import D_VERB_LVL
-# from mri_tools import get_first_line
+# from pymrt import INFO
+# from pymrt import VERB_LVL
+# from pymrt import D_VERB_LVL
+# from pymrt import get_first_line
 
 
 # ======================================================================
