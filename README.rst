@@ -1,13 +1,17 @@
-=============================================
-MRI Tools: data analysis for quantitative MRI
-=============================================
+==========================================================
+pymrt: Python MRI Tools for quantitative MRI data analysis
+==========================================================
 
 Overview
 --------
 This software provides a support Python library and auxiliary console based
 tools to perform common tasks for the analysis of quantitative MRI data.
 
-It is relatively easy to extend and users are encouraged
+It is relatively easy to extend and users are encouraged to tweak with it.
+
+As a result of the code maturity, some of the library components may undergo
+(eventually heavy) refactoring, although this is currently unexpected.
+
 
 Releases information are available through ``NEWS.rst``.
 
@@ -21,16 +25,16 @@ The recommended way of installing the software is through
 
 .. code:: shell
 
-    $ pip install mri_tools
+    $ pip install pymrt
 
 Alternatively, you can the clone the source repository from
 `Bitbucket <https://bitbucket.org/norok2/hdu>`_:
 
 .. code:: shell
 
-    $ mkdir mri_tools
-    $ cd mri_tools
-    $ git clone git@bitbucket.org:norok2/mri_tools.git
+    $ mkdir pymrt
+    $ cd pymrt
+    $ git clone git@bitbucket.org:norok2/pymrt.git
     $ python setup.py install
 
 For more details see also ``INSTALL.rst``.
