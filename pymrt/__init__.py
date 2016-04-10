@@ -19,7 +19,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.1.dev51+nf4e0c9a'
+__version__ = '0.0.1.3.dev0+ng4dbebbd.d20160410'
 
 # ======================================================================
 # :: Project Details
@@ -69,13 +69,14 @@ _EVENTS = []
 # ======================================================================
 # Greetings
 MY_GREETINGS = r"""
-                _   _              _
- _ __ ___  _ __(_) | |_ ___   ___ | |___
-| '_ ` _ \| '__| | | __/ _ \ / _ \| / __|
-| | | | | | |  | | | || (_) | (_) | \__ \
-|_| |_| |_|_|  |_|  \__\___/ \___/|_|___/
+ ____        __  __ ____ _____
+|  _ \ _   _|  \/  |  _ \_   _|
+| |_) | | | | |\/| | |_) || |
+|  __/| |_| | |  | |  _ < | |
+|_|    \__, |_|  |_|_| \_\|_|
+       |___/
 """
-# generated with: figlet 'mri tools' -f standard
+# generated with: figlet 'PyMRT' -f standard
 
 # :: Causes the greetings to be printed any time the library is loaded.
 print(MY_GREETINGS)
