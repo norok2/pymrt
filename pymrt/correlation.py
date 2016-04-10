@@ -435,9 +435,10 @@ def apply_mask(
 
     def _mask_reframe(arr_list, mask_val):
         img, mask = arr_list
-        container = sp.ndimage.find_objects(mask.astype(int))[0]
+        container = sp.ndimage.find_objects(mask.astype(bool).astype(int))[0]
         img[~mask.astype(bool)] = mask_val
-        img = img[container]
+        if container:
+            img = img[container]
         img = mrg.frame(img, 0.1, 0.0)
         return img
 
