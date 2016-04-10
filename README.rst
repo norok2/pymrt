@@ -43,8 +43,8 @@ License
 -------
 This work is licensed through the terms and conditions of the
 `GPLv3+ <http://www.gnu.org/licenses/gpl-3.0.html>`_
-The use of this software for scientific purpose is gratefully acknowledged
-through citation of the following.
+The use of this software for scientific purpose leading to a publication
+should be acknowledged through citation of the upcoming paper.
 
 Acknowledgements
 ----------------
@@ -57,7 +57,7 @@ For a complete list of authors please see ``AUTHORS.rst``.
 
 People who have influenced this work are acknowledged in ``THANKS.rst``.
 
-This work was partly funded by the European Union through the
-
-
-
+This work was partly funded by the European Union
+through the Seventh Framework Programme Marie Curie Actions
+via the "Ultra-High Field Magnetic Resonance Imaging: HiMR"
+Initial Training Network (FP7-PEOPLE-2012-ITN-316716).
