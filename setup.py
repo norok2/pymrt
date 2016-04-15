@@ -118,7 +118,7 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
 
-    keywords='dicom dcm preprocessing',
+    keywords='quantitative MRI qMRI MT susceptibility relaxometry qMT neurophysics neurology physics imaging data analysis',
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
