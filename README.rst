@@ -21,14 +21,14 @@ For a more comprehensive list of changes see ``CHANGELOG.rst``.
 Installation
 ------------
 The recommended way of installing the software is through
-`PyPI <https://pypi.python.org/pypi/hdu>`_:
+`PyPI <https://pypi.python.org/pypi/pymrt>`_:
 
 .. code:: shell
 
     $ pip install pymrt
 
 Alternatively, you can the clone the source repository from
-`Bitbucket <https://bitbucket.org/norok2/hdu>`_:
+`Bitbucket <https://bitbucket.org/norok2/pymrt>`_:
 
 .. code:: shell
 
