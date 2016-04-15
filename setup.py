@@ -91,7 +91,7 @@ setup(
         'Development Status :: 3 - Alpha',
 
         'Environment :: Console',
-        'Environment:: X11 Applications:: Qt',
+        'Environment:: X11 Applications :: Qt',
 
         'Intended Audience :: Science/Research',
         'Intended Audience :: Healthcare Industry',
