@@ -1,5 +1,5 @@
 ==========================================================
-pymrt: Python MRI Tools for quantitative MRI data analysis
+PyMRT: Python MRI Tools for quantitative MRI data analysis
 ==========================================================
 
 Overview

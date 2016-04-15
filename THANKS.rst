@@ -1,10 +1,14 @@
+======
 Thanks
 ======
 
-Andreas Schäfer
-André Pampel
-Harald E. Möller
+:Note: This list is maintained alphabetically
+
 Pierre-Louis Bazin
 Samuel A. Hurley
 Tobias Lenich
 Toralf Mildner
+Harald E. Möller
+André Pampel
+Andreas Schäfer
+

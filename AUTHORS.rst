@@ -1,4 +1,5 @@
+=======
 Authors
 =======
 
-Riccardo Metere <rick@metere.it>
+Riccardo Metere <metere@cbs.mpg.de>
