@@ -957,7 +957,7 @@ def plot_histogram1d_list(
     Uses the function: pymrt.plot.histogram1d_list
 
     Args:
-        in_filepaths (str): The list of input file paths
+        in_filepaths (list[str]): The list of input file paths
         mask_filepath (str): The mask file path
         args (tuple): Positional arguments passed to the plot function
         kwargs (dict): Keyword arguments passed to the plot function
