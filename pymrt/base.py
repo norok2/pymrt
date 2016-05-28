@@ -85,6 +85,18 @@ TTY_COLORS = {
 
 # ======================================================================
 def _is_hidden(filepath):
+    """
+    Heuristic to determine hidden files
+
+    Args:
+        filepath (str): the input file path
+
+    Returns:
+        is_hidden (bool): True if is hidden, False otherwise
+
+    Notes:
+        Only works with UNIX-like files, relying on prepended '.'
+    """
     # if sys.version_info[0] > 2:
     #     filepath = filepath.encode('utf-8')
     # filepath = filepath.decode('utf-8')
@@ -93,6 +105,18 @@ def _is_hidden(filepath):
 
 # ======================================================================
 def _is_special(stats_mode):
+    """
+    Heuristic to determine non-standard files
+
+    Args:
+        filepath (str): the input file path
+
+    Returns:
+        is_special (bool): True if is hidden, False otherwise
+
+    Notes:
+        Its working relies on Python stat module implementation
+    """
     is_special = not stat.S_ISREG(stats_mode) and \
                  not stat.S_ISDIR(stats_mode) and \
                  not stat.S_ISLNK(stats_mode)
@@ -112,18 +136,18 @@ def _or_not_and_not(flag, check):
 # ======================================================================
 def gcd(*num_list):
     """
-    Find the greatest common divisor (GCD) of a list of numbers.
+    Find the greatest common divisor (GCD) of a list of numbers
 
     Args:
-        num_list (list[int]): The input numbers
+        *num_list (tuple[int]): The input numbers
 
     Returns:
-        val (int): The value of the greatest common divisor (GCD).
+        gcd_val (int): The value of the greatest common divisor (GCD)
     """
-    val = num_list[0]
+    gcd_val = num_list[0]
     for num in num_list[1:]:
-        val = math.gcd(val, num)
-    return val
+        gcd_val = math.gcd(gcd_val, num)
+    return gcd_val
 
 
 # ======================================================================
@@ -131,16 +155,11 @@ def lcm(*num_list):
     """
     Find the least common multiple (LCM) of a list of numbers.
 
-    Parameters
-    ==========
-    *num_list : list of int
-        The input numbers.
+    Args:
+        *num_list (tuple[int]): The input numbers.
 
-    Returns
-    =======
-    lcm_val : int
-        The value of the least common multiple (LCM)).
-
+    Returns:
+        gcd_val (int): The value of the least common multiple (LCM)
     """
     lcm_val = num_list[0]
     for num in num_list[1:]:
@@ -151,17 +170,13 @@ def lcm(*num_list):
 # ======================================================================
 def merge_dicts(*dicts):
     """
-    Merge dictionaries into a new dict (new keys overwrite the old ones).
+    Merge dictionaries into a new dict (new keys overwrite the old ones)
 
-    Parameters
-    ==========
-    dicts : dict tuple
-       Dictionaries to be merged together.
+    Args:
+        dicts (tuple[dict]): Dictionaries to be merged together.
 
-    Returns
-    =======
-    merged : dict
-         The merged dict (new keys overwrite the old ones).
+    Returns:
+        merged (dict): The merged dict (new keys overwrite the old ones)
 
     """
     merged = {}
@@ -175,22 +190,17 @@ def accumulate(lst, func=lambda x, y: x + y):
     """
     Cumulatively apply the specified function to the elements of the list.
 
-    Parameters
-    ==========
-    lst : list
-        The list to process.
-    func : func(x,y) -> z (optional)
-        The function applied cumulatively to the first n items of the list.
-        Defaults to cumulative sum.
+    Args:
+        lst (list): The list to process.
+        func (callable): func(x,y) -> z
+            The function applied cumulatively to the first n items of the list.
+            Defaults to cumulative sum.
 
-    Returns
-    =======
-    lst : list
-        The cumulative list.
+    Returns:
+        lst (list): The cumulative list.
 
-    See Also
-    ========
-    itertools.accumulate
+    See Also:
+        itertools.accumulate
 
     """
     return [functools.reduce(func, lst[:idx + 1]) for idx in range(len(lst))]
@@ -201,19 +211,13 @@ def multi_replace(text, replace_list):
     """
     Perform multiple replacements in a string.
 
-    Parameters
-    ==========
-    text : str
-        The input string.
-    replace_list : (2-str tuple) tuple
-        The listing of the replacements.
-        Format: ((<old>, <new>), ...)
+    Args:
+        text (str): The input string
+        replace_list (tuple[str,str]): The listing of the replacements.
+            Format: ((<old>, <new>), ...)
 
-    Returns
-    =======
-    text : str
-        The string after the performed replacements.
-
+    Returns:
+        text (str): The string after the performed replacements
     """
     return functools.reduce(lambda s, r: s.replace(*r), replace_list, text)
 
@@ -223,31 +227,27 @@ def cartesian(*arrays):
     """
     Generate a cartesian product of input arrays.
 
-    Parameters
-    ----------
-    arrays (list of arrays): 1-D arrays to form the cartesian product of
+    Args:
+        *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
 
-    Returns
-    -------
-    out (ndarray): 2-D array of shape (M, len(arrays)) containing cartesian
-        products formed of input arrays.
+    Returns:
+        out (ndarray): 2-D array of shape (M, len(arrays)) containing
+            cartesian products formed of input arrays.
 
-    Examples
-    --------
-    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
-    array([[1, 4, 6],
-           [1, 4, 7],
-           [1, 5, 6],
-           [1, 5, 7],
-           [2, 4, 6],
-           [2, 4, 7],
-           [2, 5, 6],
-           [2, 5, 7],
-           [3, 4, 6],
-           [3, 4, 7],
-           [3, 5, 6],
-           [3, 5, 7]])
-
+    Examples:
+        >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+        array([[1, 4, 6],
+               [1, 4, 7],
+               [1, 5, 6],
+               [1, 5, 7],
+               [2, 4, 6],
+               [2, 4, 7],
+               [2, 5, 6],
+               [2, 5, 7],
+               [3, 4, 6],
+               [3, 4, 7],
+               [3, 5, 6],
+               [3, 5, 7]])
     """
 
     arrays = [np.asarray(x) for x in arrays]
@@ -272,26 +272,17 @@ def set_keyword_parameters(
     """
     Set keyword parameters of a function to specific or default values.
 
-    Parameters
-    ==========
-    func : function
-        The function to be inspected.
-    values : dict
-        A dictionary containing the values to set.
-        If a value is set to None, it will be replaced by the default value.
-        To use the names defined locally, use: `locals()`
+    Args:
+        func (callable): The function to be inspected.
+        values (dict): The (key, value) pairs to set.
+            If a value is None, it will be replaced by the default value.
+            To use the names defined locally, use: `locals()`
 
-    Results
-    =======
-    kw_params : dict
-        A dictionary of the keyword parameters to set.
+    Results:
+        kw_params (dict): A dictionary of the keyword parameters to set.
 
-    See Also
-    ========
-    inspect.getargspec,
-    locals,
-    globals
-
+    See Also:
+        inspect.getargspec, locals, globals
     """
     # todo: refactor to get rid of deprecated getargspec
     inspected = inspect.getargspec(func)
@@ -307,13 +298,18 @@ def set_keyword_parameters(
 
 
 # ======================================================================
-def mdot(*array_list):
+def mdot(*arrays):
     """
-    Cumulative application of `numpy.dot` operation.
+    Cumulative application of `numpy.dot` operation
+
+    Args:
+        arrays (tuple[ndarray]): List of input arrays
+
+    Returns:
+        array (ndarray): The result of the tensor product
     """
-    # todo: fix doc
-    array = array_list[0]
-    for item in array_list[1:]:
+    array = arrays[0]
+    for item in arrays[1:]:
         array = np.dot(array, item)
     return array
 
@@ -321,9 +317,14 @@ def mdot(*array_list):
 # ======================================================================
 def ndot(array, dim=-1, step=1):
     """
-    Cumulative application of `numpy.dot` operation.
-    """
+    Cumulative application of `numpy.dot` operation over a given axis
 
+    Args:
+        array (ndarray): The input array
+
+    Returns:
+        array (ndarray): The result of the tensor product
+    """
     if dim < 0:
         dim += array.ndim
     start = 0 if step > 0 else array.shape[dim] - 1
@@ -339,16 +340,28 @@ def ndot(array, dim=-1, step=1):
 def commutator(a, b):
     """
     Calculate the commutator of two arrays: [A,B] = AB - BA
+
+    Args:
+        a (ndarray): The first operand
+        b (ndarray): The second operand
+
+    Returns:
+        c (ndarray): The operation result
     """
-    # todo: fix doc
     return a.dot(b) - b.dot(a)
 
 
 def anticommutator(a, b):
     """
     Calculate the anticommutator of two arrays: [A,B] = AB + BA
+
+    Args:
+        a (ndarray): The first operand
+        b (ndarray): The second operand
+
+    Returns:
+        c (ndarray): The operation result
     """
-    # todo: fix doc
     return a.dot(b) + b.dot(a)
 
 
@@ -370,14 +383,12 @@ def walk2(
         follow_mounts (bool): follow mount points during recursion
         allow_special (bool): include special files
         allow_hidden (bool): include hidden files
-        max_depth (int):
+        max_depth (int): maximum depth to reach. Negative for unlimited
         on_error (callable): function to call on error
 
     Returns:
-        path, stats (str, stat_result):
-
-            path (str): path to the next object
-            stats (stat_result): structure containing file stats information
+        path (str): path to the next object
+        stats (stat_result): structure containing file stats information
     """
     try:
         for name in os.listdir(base):
@@ -410,18 +421,17 @@ def walk2(
 # ======================================================================
 def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
-    Execute command and retrieve output at the end of execution.
+    Execute command and retrieve output at the end of execution
 
     Args:
         command (str): Command to execute.
-        use_pipes (bool): Get stdout and stderr streams from the process.
-        dry (bool): Print rather than execute the command (dry run).
+        use_pipes (bool): Get stdout and stderr streams from the process
+        dry (bool): Print rather than execute the command (dry run)
         verbose (int): Set level of verbosity
 
     Returns:
         p_stdout (str|None): if use_pipes the stdout of the process
         p_stderr (str|None): if use_pipes the stderr of the process
-
     """
     p_stdout = p_stderr = None
     if dry:
@@ -456,20 +466,14 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
 # ======================================================================
 def groups_from(lst, grouping):
     """
-    Generate a list of lists from a source list and grouping specifications.
+    Generate a list of lists from a source list and grouping specifications
 
-    Parameters
-    ==========
-    lst : list
-        The source list.
-    grouping : (int)-list
-        List of the number of elements that each group should contain.
+    Args:
+        lst (list): The source list.
+        grouping (list[int]): number of elements that each group contains
 
-    Returns
-    =======
-    groups : list
-        List of lists obtained by grouping the elements of the source list.
-
+    Returns:
+        groups (list[list]): Grouped elements from the source list
     """
     group, groups = [], []
     j = 0
@@ -505,15 +509,15 @@ def listdir(
     Retrieve a sorted list of files matching specified extension and pattern.
 
     Args:
-        path (str): Path to search.
+        path (str): Path to search
         file_ext (str|None): File extension. Empty string for all files.
-            None for directories.
-        pattern (slice): Selection pattern (assuming alphabetical ordering).
-        full_path (bool): Include the full path.
-        verbose (int): Set level of verbosity.
+            None for directories
+        pattern (slice): Selection pattern (assuming alphabetical ordering)
+        full_path (bool): Include the full path
+        verbose (int): Set level of verbosity
 
     Returns:
-        list[str]: List of file names/paths.
+        list[str]: List of file names/paths
     """
     if file_ext is None:
         if verbose >= VERB_LVL['debug']:
@@ -533,46 +537,46 @@ def listdir(
     return sorted(filepath_list)[pattern]
 
 
-# ======================================================================
-def tty_colorify(
-        text,
-        color=None):
-    """
-    Add color TTY-compatible color code to a string, for pretty-printing.
-
-    Parameters
-    ==========
-    text: str
-        The text to be colored.
-    color : str or int or None
-        | A string or number for the color coding.
-        | Lowercase letters modify the forground color.
-        | Uppercase letters modify the background color.
-        | Available colors:
-        * r/R: red
-        * g/G: green
-        * b/B: blue
-        * c/C: cyan
-        * m/M: magenta
-        * y/Y: yellow (brown)
-        * k/K: black (gray)
-        * w/W: white (gray)
-
-    Returns
-    =======
-        The colored string.
-
-    see also: TTY_COLORS
-    """
-    if color in TTY_COLORS:
-        tty_color = TTY_COLORS[color]
-    elif color in TTY_COLORS.values():
-        tty_color = color
-    else:
-        tty_color = None
-    if tty_color and sys.stdout.isatty():
-        text = '\x1b[1;{color}m{}\x1b[1;m'.format(text, color=tty_color)
-    return text
+# # ======================================================================
+# def tty_colorify(
+#         text,
+#         color=None):
+#     """
+#     Add color TTY-compatible color code to a string, for pretty-printing.
+#
+#     Parameters
+#     ==========
+#     text: str
+#         The text to be colored.
+#     color : str or int or None
+#         | A string or number for the color coding.
+#         | Lowercase letters modify the forground color.
+#         | Uppercase letters modify the background color.
+#         | Available colors:
+#         * r/R: red
+#         * g/G: green
+#         * b/B: blue
+#         * c/C: cyan
+#         * m/M: magenta
+#         * y/Y: yellow (brown)
+#         * k/K: black (gray)
+#         * w/W: white (gray)
+#
+#     Returns
+#     =======
+#         The colored string.
+#
+#     see also: TTY_COLORS
+#     """
+#     if color in TTY_COLORS:
+#         tty_color = TTY_COLORS[color]
+#     elif color in TTY_COLORS.values():
+#         tty_color = color
+#     else:
+#         tty_color = None
+#     if tty_color and sys.stdout.isatty():
+#         text = '\x1b[1;{color}m{}\x1b[1;m'.format(text, color=tty_color)
+#     return text
 
 
 # ======================================================================
@@ -580,16 +584,11 @@ def add_extsep(ext):
     """
     Add a extsep char to a filename extension, if it does not have one.
 
-    Parameters
-    ==========
-    ext : str
-        Filename extension to which the dot has to be added.
+    Args:
+        ext (str): Filename extension to which the dot has to be added
 
-    Returns
-    =======
-    dot_ext : str
-        Filename extension with a prepending dot.
-
+    Returns:
+        ext (str): Filename extension with a prepending dot
     """
     if not ext:
         ext = ''
@@ -607,20 +606,15 @@ def change_ext(
     """
     Substitute the old extension with a new one in a filepath.
 
-    Parameters
-    ==========
-    filepath : str
-        Input filepath.
-    new_ext : str
-        The new extension (with or without the dot).
-    old_ext : str (optional)
-        The old extension (with or without the dot). If None, will be guessed.
+    Args:
+        filepath (str): Input filepath
+        new_ext (str): The new extension (with or without the dot)
+        old_ext (str): The old extension (with or without the dot).
+            If None, it will be guessed.
+        case_sensitive (str): Case-sensitive match of old extension.
 
-    Returns
-    =======
-    filepath : str
-        Output filepath.
-
+    Returns:
+        filepath (str): Output filepath
     """
     if old_ext is None:
         filepath, old_ext = os.path.splitext(filepath)
@@ -640,22 +634,16 @@ def change_ext(
 # ======================================================================
 def compact_num_str(
         val,
-        max_limit=D_TAB_SIZE - 1):
+        max_lim=D_TAB_SIZE - 1):
     """
-    Convert a number into the most informative string within specified limit.
+    Convert a number into the most informative string within specified limit
 
-    Parameters
-    ==========
-    val : int or float
-        The number to be converted to string.
-    limit : int (optional
-        The maximum number of characters allowed for the string.
+    Args:
+        val (int|float): The number to be converted to string
+        max_lim (int): The maximum number of characters allowed for the string
 
-    Returns
-    =======
-    val_str : str
-        The string with the formatted number.
-
+    Returns:
+        val_str (str): The string with the formatted number
     """
     try:
         # this is to simplify formatting (and accepting even strings)
@@ -667,7 +655,7 @@ def compact_num_str(
         # 'order' of zero is 1 for our purposes, because needs 1 char
         order = np.log10(abs(val)) if abs(val) > 0.0 else 1
         # adjust limit for sign
-        limit = max_limit - extra_char_in_sign if val < 0.0 else max_limit
+        limit = max_lim - extra_char_in_sign if val < 0.0 else max_lim
         # perform the conversion
         if order > float(limit) or order < -float(extra_char_in_exp - 1):
             limit -= extra_char_in_exp + 1
@@ -693,7 +681,15 @@ def compact_num_str(
 # ======================================================================
 def has_decorator(text, pre_decor='"', post_decor='"'):
     """
-    Determine if a string is delimited by some characters (decorators).
+    Determine if a string is delimited by some characters (decorators)
+
+    Args:
+        text (str): The text input string
+        pre_decor (str): initial string decorator
+        post_decor (str): final string decorator
+
+    Returns:
+        has_decorator (bool): True if text is delimited by the specified chars
     """
     return text.startswith(pre_decor) and text.endswith(post_decor)
 
@@ -701,52 +697,63 @@ def has_decorator(text, pre_decor='"', post_decor='"'):
 # ======================================================================
 def strip_decorator(text, pre_decor='"', post_decor='"'):
     """
-    Strip specific character sequences (decorators) from a string.
+    Strip initial and final character sequences (decorators) from a string
+
+    Args:
+        text (str): The text input string
+        pre_decor (str): initial string decorator
+        post_decor (str): final string decorator
+
+    Returns:
+        text (str): the text without the specified decorators
     """
     return text[len(pre_decor):-len(post_decor)]
 
 
 # ======================================================================
-def auto_convert(val_str, pre_decor=None, post_decor=None):
+def auto_convert(text, pre_decor=None, post_decor=None):
     """
-    Convert value to numeric if possible, or strip delimiters from strings.
+    Convert value to numeric if possible, or strip delimiters from string
+
+    Args:
+        text (str): The text input string
+        pre_decor (str): initial string decorator
+        post_decor (str): final string decorator
+
+    Returns:
+        val (int|float|complex): The numeric value of the string
     """
     if pre_decor and post_decor and \
-            has_decorator(val_str, pre_decor, post_decor):
-        val = val_str[len(pre_decor):-len(post_decor)]
+            has_decorator(text, pre_decor, post_decor):
+        val = strip_decorator(text, pre_decor, post_decor)
     else:
         try:
-            val = int(val_str)
+            val = int(text)
         except (TypeError, ValueError):
             try:
-                val = float(val_str)
+                val = float(text)
             except (TypeError, ValueError):
                 try:
-                    val = complex(val_str)
+                    val = complex(text)
                 except (TypeError, ValueError):
-                    val = val_str
+                    val = text
     return val
 
 
 # ======================================================================
 def is_number(var):
     """
-    Determine if a variable contains a number.
+    Determine if a variable contains a number
 
-    Parameters
-    ==========
-    var : str
-        The var
+    Args:
+        var (str): The variable to test
 
-    Returns
-    =======
-    result : bool
-        True if the values can be converted, False otherwise.
-
+    Returns:
+        result (bool): True if the values can be converted, False otherwise
     """
     try:
         complex(var)
-    except:
+    except (TypeError, ValueError):
         result = False
     else:
         result = True
@@ -756,24 +763,17 @@ def is_number(var):
 # ======================================================================
 def significant_figures(val, num):
     """
-    Format a number with the correct number of significant figures.
+    Format a number with the correct number of significant figures
 
-    Parameters
-    ==========
-    val : str or float or int
-        The numeric value to be correctly formatted.
-    num : str or int
-        The number of significant figures to be displayed.
+    Args:
+        val (str|float|int): The numeric value to be correctly formatted
+        num (str|int): The number of significant figures to be displayed
 
-    Returns
-    =======
-    val : str
-        String containing the properly formatted number.
+    Returns:
+        val (str): String containing the properly formatted number
 
-    See Also
-    ========
-    The 'decimal' Python standard module.
-
+    See Also:
+        The 'decimal' Python standard module
     """
 
     val = float(val)
@@ -796,21 +796,14 @@ def format_value_error(
     """
     Write correct value/error pairs.
 
-    Parameters
-    ==========
-    val : str or float or int
-        The numeric value to be correctly formatted.
-    err : str or float or int
-        The numeric error to be correctly formatted.
-    num : str or int (optional)
-        The precision to be used for the error (usually 1 or 2).
+    Args:
+        val (str|float|int): The numeric value to be correctly formatted
+        err (str|float|int): The numeric error to be correctly formatted
+        num (str|int): The precision to be used for the error (usually 1 or 2)
 
-    Returns
-    =======
-    val : str or float or int
-        The numeric value correctly formatted.
-    err : str or float or int
-        The numeric error correctly formatted.
+    Returns:
+        val_str (str): The string with the correctly formatted numeric value
+        err_str (str): The string with the correctly formatted numeric error
 
     """
     val = float(val)
@@ -838,38 +831,25 @@ def str2dict(
         strip_val_str=None,
         convert=True):
     """
-    Convert a string to a dictionary.
+    Convert a string to a dictionary
 
-    Parameters
-    ==========
-    in_str : str
-        The input string.
-    entry_sep : str (optional)
-        The entry separator.
-    key_val_sep : str (optional)
-        The key-value separator.
-    pre_decor : str (optional)
-        Beginning decorator string (starting the input string, not parsed).
-    post_decor
-        Ending decorator string (ending the input string, not parsed).
-    strip_key_str : str (optional)
-        | List of char to be stripped from both ends of the dictionary's key.
-        | If None, whitespaces are stripped. Empty string for no stripping.
-    strip_val_str : str (optional)
-        | List of char to be stripped from both ends of the dictionary's value.
-        | If None, whitespaces are stripped. Empty string for no stripping.
-    convert : bool (optional)
-        Enable automatic conversion of string to numeric.
+    Args:
+        in_str (str): The input string
+        entry_sep (str): The entry separator
+        key_val_sep (str): The key-value separator
+        pre_decor (str): initial decorator (to be removed before parsing)
+        post_decor (str): final decorator (to be removed before parsing)
+        strip_key_str (str): Chars to be stripped from both ends of the key.
+            If None, whitespaces are stripped. Empty string for no stripping
+        strip_val_str (str): Chars to be stripped from both ends of the value.
+            If None, whitespaces are stripped. Empty string for no stripping
+        convert (bool): Enable automatic conversion of string to numeric
 
-    Returns
-    =======
-    out_dict : dict
-        The output dictionary.
+    Returns:
+        out_dict (dict): The output dictionary generated from the string
 
-    See Also
-    ========
+    See Also:
         dict2str
-
     """
     if has_decorator(in_str, pre_decor, post_decor):
         in_str = strip_decorator(in_str, pre_decor, post_decor)
@@ -912,30 +892,24 @@ def dict2str(
     """
     Convert a dictionary to a string.
 
-    Parameters
-    ==========
-    in_dict : dict
-        The input string.
-    entry_sep : str (optional)
-        The entry separator.
-    key_val_sep : str (optional)
-        The key-value separator.
-    pre_decor : str (optional)
-        Beginning decorator string (to be appended to the output).
-    post_decor
-        Ending decorator string ((to be appended to the output).
-    convert : bool (optional)
-        Enable automatic conversion of string to numeric.
+    Args:
+        in_dict (dict): The input dictionary
+        entry_sep (str): The entry separator
+        key_val_sep (str): The key-value separator
+        pre_decor (str): initial decorator (to be appended to the output)
+        post_decor (str): final decorator (to be appended to the output)
+        strip_key_str (str): Chars to be stripped from both ends of the key.
+            If None, whitespaces are stripped. Empty string for no stripping
+        strip_val_str (str): Chars to be stripped from both ends of the value.
+            If None, whitespaces are stripped. Empty string for no stripping
+        sorting (callable): Function used as 'key' argument of 'sorted'
+            for sorting the dictionary keys.
 
-    Returns
-    =======
-    out_str : str
-        The output dictionary.
+    Returns:
+        out_str (str): The output string generated from the dictionary
 
-    See Also
-    ========
+    See Also:
         str2dict
-
     """
     key_list = sorted(in_dict.keys(), key=sorting)
     out_list = []
@@ -949,89 +923,77 @@ def dict2str(
 
 # ======================================================================
 def string_between(
-        in_str,
+        text,
         begin_str,
         end_str,
         incl_begin=False,
         incl_end=False,
         greedy=True):
     """
-    Isolate the string contained between two tokens.
+    Isolate the string contained between two tokens
 
-    Parameters
-    ==========
-    in_str : str
-        String to parse.
-    begin_string : str
-        Token at the beginning.
-    end_str : str
-        Token at the ending.
-    incl_begin : bool (optional)
-        If True, include begin_string in the result.
-    incl_end : bool (optional)
-        If True, include end_str in the result.
-    greedy : bool (optional)
-        If True, output largest possible string.
+    Args:
+        text (str): String to parse
+        begin_str (str): Token at the beginning
+        end_str (str): Token at the ending
+        incl_begin (bool): If True, include 'begin_string' in the result
+        incl_end (bool): If True, include 'end_str' in the result
+        greedy (bool): If True, output largest possible string
 
-    Returns
-    =======
-    out_str : str
-        The string contained between the specified tokens (if any).
+    Returns:
+        text (str): The string contained between the specified tokens (if any)
     """
     incl_begin = len(begin_str) if not incl_begin else 0
     incl_end = len(end_str) if incl_end else 0
-    if begin_str in in_str and end_str in in_str:
+    if begin_str in text and end_str in text:
         if greedy:
-            out_str = in_str[
-                      in_str.find(begin_str) + incl_begin:
-                      in_str.rfind(end_str) + incl_end]
+            text = text[
+                   text.find(begin_str) + incl_begin:
+                   text.rfind(end_str) + incl_end]
         else:
-            out_str = in_str[
-                      in_str.rfind(begin_str) + incl_begin:
-                      in_str.find(end_str) + incl_end]
+            text = text[
+                   text.rfind(begin_str) + incl_begin:
+                   text.find(end_str) + incl_end]
     else:
-        out_str = ''
-    return out_str
+        text = ''
+    return text
 
 
 # ======================================================================
 def check_redo(
-        in_filepath_list,
-        out_filepath_list,
+        in_filepaths,
+        out_filepaths,
         force=False):
     """
     Check if input files are newer than output files, to force calculation.
 
-    Parameters
-    ==========
-    in_filepath_list : str list
-        List of filepaths used as input of computation.
-    out_filepath_list : str list
-        List of filepaths used as output of computation.
-    force : boolean
-        Force computation to be re-done.
+    Args:
+        in_filepaths (list[str]): Filepaths used as input of computation.
+        out_filepaths (list[str]): Filepaths used as output of computation.
+        force (bool): Force computation to be re-done.
 
-    Returns
-    =======
-    force : boolean
-        Computation to be re-done.
+    Returns:
+        force (bool): True if the computation is to be re-done.
 
+    Raises:
+        IndexError: if the input filepath list is empty
+        IOError: if any of the input files do not exist
     """
     # todo: include output_dir autocreation
-    if not in_filepath_list:
+    if not in_filepaths:
         raise IndexError('List of input files is empty.')
-    for in_filepath in in_filepath_list:
+    for in_filepath in in_filepaths:
         if not os.path.exists(in_filepath):
             raise IOError('Input file does not exists.')
     if not force:
-        for out_filepath in out_filepath_list:
+        for out_filepath in out_filepaths:
             if out_filepath:
                 if not os.path.exists(out_filepath):
                     force = True
                     break
     if not force:
         for in_filepath, out_filepath in \
-                itertools.product(in_filepath_list, out_filepath_list):
+                itertools.product(in_filepaths, out_filepaths):
             if in_filepath and out_filepath:
                 if os.path.getmtime(in_filepath) \
                         > os.path.getmtime(out_filepath):
@@ -1099,27 +1061,35 @@ def sgnlogspace(
 
 
 # ======================================================================
+def minmax(array):
+    """
+    Calculate the minimum and maximum of an array: (min, max).
+
+    Args:
+        array (ndarray): The input array
+
+    Returns:
+        min, max (tuple[float]): the minimum and the maximum values of the
+            array
+    """
+    return np.min(array), np.max(array)
+
+
+# ======================================================================
 def scale(
         val,
         in_interval=(0.0, 1.0),
         out_interval=(0.0, 1.0)):
     """
-    Linear convert the value from input interval to output interval.
+    Linear convert the value from input interval to output interval
 
-    Parameters
-    ==========
-    val : float
-        Value to convert.
-    in_interval : float 2-tuple (optional)
-        Interval of the input value.
-    out_interval : float 2-tuple (optional)
-        Interval of the output value.
+    Args:
+        val (float): Value to convert
+        in_interval (float,float): Interval of the input value
+        out_interval (float,float): Interval of the output value.
 
-    Returns
-    =======
-    val : float
-        The converted value.
-
+    Returns:
+        val (float): The converted value
     """
     in_min, in_max = in_interval
     out_min, out_max = out_interval
@@ -1129,39 +1099,15 @@ def scale(
 # ======================================================================
 def interval_size(interval):
     """
-    Calculate the (signed) size of an interval given as a 2-tuple (A,B).
+    Calculate the (signed) size of an interval given as a 2-tuple (A,B)
 
-    Parameters
-    ==========
-    interval : float 2-tuple
-        Interval for computation
+    Args:
+        interval (float,float): Interval for computation
 
-    Returns
-    =======
-    val : float
-        The converted value.
-
+    Returns:
+        val (float): The converted value
     """
     return interval[1] - interval[0]
-
-
-# ======================================================================
-def minmax(array):
-    """
-    Calculate the minimum and maximum of an array: (min, max).
-
-    Parameters
-    ==========
-    array : ndarray
-        The input array
-
-    Returns
-    =======
-    (min, max) : 2-tuple
-        max(array), min(array)
-
-    """
-    return np.min(array), np.max(array)
 
 
 # ======================================================================
@@ -1172,22 +1118,16 @@ def combine_interval(
     """
     Combine two intervals with some operation to obtain a new interval.
 
-    Parameters
-    ==========
-    interval1 : float 2-tuple
-        Interval of first operand.
-    interval2 : float 2-tuple
-        Interval of second operand.
-    operation : str
-        String with operation to perform. Supported operations are:
-            | '+' : addition
-            | '-' : subtraction
+    Args:
+        interval1 (tuple[float]): Interval of first operand
+        interval2 (tuple[float]): Interval of second operand
+        operation (str): String with operation to perform. Supports:
 
-    Returns
-    =======
-    new_interval : float 2-tuple
-        Interval resulting from operation.
+            - '+' : addition
+            - '-' : subtraction
 
+    Returns:
+        new_interval (tuple[float]): Interval resulting from operation
     """
     if operation == '+':
         new_interval = (
@@ -1204,18 +1144,16 @@ def combine_interval(
 def midval(array):
     """
     Calculate the middle value vector.
-    For example: [0, 1, 2, 3, 4] -> [0.5, 1.5, 2.5, 3.5]
 
-    Parameters
-    ==========
-    array : N-array
-        The input array.
+    Args:
+        array (ndarray): The input N-dim array
 
-    Returns
-    =======
-    array : (N-1)-array
-        The output array.
+    Returns:
+        array (ndarray): The output (N-1)-dim array
 
+    Examples:
+        >>>> midval(np.array([0, 1, 2, 3, 4]))
+        array([ 0.5,  1.5,  2.5,  3.5])
     """
     return (array[1:] - array[:-1]) / 2.0 + array[:-1]
 
@@ -1223,41 +1161,30 @@ def midval(array):
 # ======================================================================
 def polar2complex(modulus, argument):
     """
-    Calculate complex number from the polar form.
+    Calculate complex number from the polar form:
+    z = R * exp(i * phi) = R * cos(phi) + i * R * sin(phi)
 
-    Parameters
-    ==========
-    modulus : float
-        The modulus R of the complex number.
-    argument : float
-        The argument phi or phase of the complex number.
+    Args:
+        modulus (float): The modulus R of the complex number
+        argument (float): The argument phi or phase of the complex number
 
-    Returns
-    =======
-    z : complex
-        The complex number: z = R * cos(phi) + i * R * sin(phi)
-
+    Returns:
+        z (complex): The complex number z = R * exp(i * phi)
     """
-    return modulus * (np.cos(argument) + 1j * np.sin(argument))
+    return modulus * np.exp(1j * argument)
 
 
 # ======================================================================
 def cartesian2complex(real, imag):
     """
-    Calculate the complex number from the cartesian form.
+    Calculate the complex number from the cartesian form: z = z' + i * z"
 
-    Parameters
-    ==========
-    real : float
-        The real part z' of the complex number.
-    imag : float
-        The imaginary part z" of the complex number.
+    Args:
+        real (float): The real part z' of the complex number
+        imag (float): The imaginary part z" of the complex number
 
-    Returns
-    =======
-    z : complex
-        The complex number: z = z' + i * z"
-
+    Returns:
+        z (complex): The complex number: z = z' + i * z"
     """
     return real + 1j * imag
 
@@ -1267,16 +1194,13 @@ def complex2cartesian(z):
     """
     Calculate the real and the imaginary part of a complex number.
 
-    Parameters
-    ==========
-    z : complex
-        The complex number: z = z' + i * z"
+    Args:
+        z (complex): The complex number: z = z' + i * z"
 
-    Returns
-    =======
-    (real, imag) : (float, float)
-        The real and imaginary part z' and z¨ of the complex number.
-
+    Returns:
+        tuple[float]:
+            - real (float): The real part z' of the complex number
+            - imag (float): The imaginary part z" of the complex number
     """
     return np.real(z), np.imag(z)
 
@@ -1284,18 +1208,15 @@ def complex2cartesian(z):
 # ======================================================================
 def complex2polar(z):
     """
-    Calculate the real and the imaginary part of a complex number.
+    Calculate the real and the imaginary part of a complex number
 
-    Parameters
-    ==========
-    z : complex
-        The complex number: z = z' + i * z"
+    Args:
+        z (complex): The complex number: z = z' + i * z"
 
-    Returns
-    =======
-    (modulus, argument) : (float, float)
-        The modulus R and argument phi of the complex number.
-
+    Returns:
+        tuple[float]:
+            - modulus (float): The modulus R of the complex number
+            - argument (float): The argument phi or phase of the complex number
     """
     return np.abs(z), np.angle(z)
 
@@ -1303,20 +1224,16 @@ def complex2polar(z):
 # ======================================================================
 def polar2cartesian(modulus, argument):
     """
-    Calculate the real and the imaginary part of a complex number.
+    Calculate the real and the imaginary part of a complex number
 
-    Parameters
-    ==========
-    modulus : float
-        The modulus R of the complex number.
-    argument : float
-        The argument phi or phase of the complex number.
+    Args:
+        modulus (float): The modulus R of the complex number
+        argument (float): The argument phi or phase of the complex number
 
-    Returns
-    =======
-    (real, imag) : (float, float)
-        The real and imaginary part z' and z¨ of the complex number.
-
+    Returns:
+        tuple[float]:
+            - real (float): The real part z' of the complex number
+            - imag (float): The imaginary part z" of the complex number
     """
     return modulus * np.cos(argument), modulus * np.sin(argument)
 
@@ -1326,18 +1243,14 @@ def cartesian2polar(real, imag):
     """
     Calculate the real and the imaginary part of a complex number.
 
-    Parameters
-    ==========
-    real : float
-        The real part z' of the complex number.
-    imag : float
-        The imaginary part z" of the complex number.
+    Args:
+        real (float): The real part z' of the complex number
+        imag (float): The imaginary part z" of the complex number
 
-    Returns
-    =======
-    (real, imag) : (float, float)
-        The modulus R and argument phi of the complex number.
-
+    Returns:
+        tuple[float]:
+            - modulus (float): The modulus R of the complex number
+            - argument (float): The argument phi or phase of the complex number
     """
     return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
 
@@ -1353,38 +1266,27 @@ def calc_stats(
         title=None,
         compact=False):
     """
-    Calculate array statistical information (min, max, avg, std, sum).
-    TODO: use a dictionary instead
+    Calculate array statistical information (min, max, avg, std, sum, num)
 
-    Parameters
-    ==========
-    array : ndarray
-        The array to be investigated.
-    mask_nan : bool (optional)
-        Mask NaN values.
-    mask_inf : bool (optional)
-        Mask Inf values.
-    mask_vals : list of int or float or None
-        List of values to mask.
-    val_interval : 2-tuple (optional)
-        The (min, max) values interval.
-    save_path : str or None (optional)
-        The path to which the plot is to be saved. If unset, no output.
-    title : str or None (optional)
-        If title is not None, stats are printed to screen.
-    compact : bool (optional)
-        Use a compact format string for displaying results.
+    Args:
+        array (ndarray): The array to be investigated
+        mask_nan (bool): Mask NaN values
+        mask_inf (bool): Mask Inf values
+        mask_vals (list[int|float]|None): List of values to mask
+        val_interval (tuple): The (min, max) values interval
+        save_path (str|None): The path to which the plot is to be saved
+            If None, no output
+        title (str|None): If title is not None, stats are printed to screen
+        compact (bool): Use a compact format string for displaying results
 
-    Returns
-    =======
-    stats_dict : dict
-        | 'min': minimum value
-        | 'max': maximum value
-        | 'avg': average or mean
-        | 'std': standard deviation
-        | 'sum': summation
-        | 'num': number of elements
-
+    Returns:
+        stats_dict (dict):
+            - 'min': minimum value
+            - 'max': maximum value
+            - 'avg': average or mean
+            - 'std': standard deviation
+            - 'sum': summation
+            - 'num': number of elements
     """
     if mask_nan:
         array = array[~np.isnan(array)]
@@ -1441,20 +1343,16 @@ def slice_array(
     """
     Slice a (N-1)D-array from an ND-array
 
-    Parameters
-    ==========
-    array : ndarray
-        The original array.
-    axis : int (optional)
-        The slicing axis.
-    index : int (optional)
-        The slicing index. If None, mid-value is taken.
+    Args:
+        array (ndarray): The input N-dim array
+        axis (int): The slicing axis
+        index (int): The slicing index. If None, mid-value is taken
 
-    Returns
-    =======
-    sliced : ndarray
-        The sliced (N-1)D-array.
+    Returns:
+        sliced (ndarray): The sliced (N-1)-dim array
 
+    Raises:
+        ValueError: if index is out of bounds
     """
     # initialize slice index
     slab = [slice(None)] * array.ndim
@@ -1476,36 +1374,28 @@ def rel_err(
         arr2,
         use_average=True):
     """
-    Calculate the element-wise relative error RE , i.e. the difference between
-    the two arrays divided by their average or by the value of the 1st array.
-        | E = (A2 - A1) / A1
-        | E = 2 * (A2 - A1) / (A2 + A1)
+    Calculate the element-wise relative error
 
-    Parameters
-    ==========
-    arr1 : ndarray
-        The first array.
-    arr2 : ndarray
-        The second array.
+    Args:
+        arr1 (ndarray): The input array with the exact values
+        arr2 (ndarray): The input array with the approximated values
+        use_average (bool): Use the input arrays average as the exact values
 
-    Returns
-    =======
-    arr : ndarray
-        The resulting array.
-
+    Returns:
+        array (ndarray): The relative error array
     """
     if arr2.dtype != np.complex:
-        arr = (arr2 - arr1).astype(np.float)
+        array = (arr2 - arr1).astype(np.float)
     else:
-        arr = (arr2 - arr1)
+        array = (arr2 - arr1)
     if use_average:
         div = (arr1 + arr2) / 2.0
     else:
         div = arr1
     mask = (div != 0.0)
-    arr[mask] = arr[mask] / div[mask]
-    arr[~mask] = 0.0
-    return arr
+    array[mask] = array[mask] / div[mask]
+    array[~mask] = 0.0
+    return array
 
 
 # ======================================================================
@@ -1517,50 +1407,36 @@ def euclid_dist(
     Calculate the element-wise correlation euclidean distance D,
     i.e. the distance between the identity line and the point of coordinates
     given by intensity.
-        | D = sqrt(((A1 - A2) / 2)^2 + ((A2 - A1) / 2)^2)
-        | D = abs(A2 - A1) / sqrt(2)
+        - D = abs(A2 - A1) / sqrt(2)
 
-    Parameters
-    ==========
-    arr1 : ndarray
-        The first array.
-    arr2 : ndarray
-        The second array.
-    signed : bool (optional)
-        Use signed distance.
+    Args:
+        arr1 (ndarray): The first array
+        arr2 (ndarray): The second array
+        signed (bool): Use signed distance
 
-    Returns
-    =======
-    arr : ndarray
-        The resulting array.
-
+    Returns:
+        array (ndarray): The resulting array
     """
-    arr = (arr2 - arr1) / np.sqrt(2.0)
+    array = (arr2 - arr1) / np.sqrt(2.0)
     if unsigned:
-        arr = np.abs(arr)
-    return arr
+        array = np.abs(array)
+    return array
 
 
 # ======================================================================
-def ndstack(arr_list, axis=-1):
+def ndstack(arrays, axis=-1):
     """
-    Stack a list of arrays of the same size along a specific axis.
+    Stack a list of arrays of the same size along a specific axis
 
-    Parameters
-    ==========
-    arr_list : (N-1)-dim nd-array list
-        A list of NumPy arrays of the same size.
-    axis : int [0,N] (optional)
-        Orientation along which array is concatenated in the N-dim space.
+    Args:
+        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+        axis (int): Direction for the concatenation of the arrays
 
-    Returns
-    =======
-    arr : N-dim nd-array
-        The concatenated array.
-
+    Returns:
+        array (ndarray): The concatenated N-dim array
     """
-    arr = arr_list[0]
-    n_dim = arr.ndim + 1
+    array = arrays[0]
+    n_dim = array.ndim + 1
     if axis < 0:
         axis += n_dim
     if axis < 0:
@@ -1568,72 +1444,60 @@ def ndstack(arr_list, axis=-1):
     if axis > n_dim:
         axis = n_dim
     # calculate new shape
-    shape = arr.shape[:axis] + tuple([len(arr_list)]) + arr.shape[axis:]
+    shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
     # stack arrays together
-    arr = np.zeros(shape, dtype=arr.dtype)
-    for i, src in enumerate(arr_list):
+    array = np.zeros(shape, dtype=array.dtype)
+    for i, src in enumerate(arrays):
         index = [slice(None)] * n_dim
         index[axis] = i
-        arr[tuple(index)] = src
-    return arr
+        array[tuple(index)] = src
+    return array
 
 
 # ======================================================================
-def ndsplit(arr, axis=-1):
+def ndsplit(array, axis=-1):
     """
-    Split an array along a specific axis into a list of arrays.
+    Split an array along a specific axis into a list of arrays
 
-    Parameters
-    ==========
-    arr : N-dim nd-array
-        The array to operate with.
-    axis : int [0,N] (optional)
-        Orientation along which array is split in the N-dim space.
+    Args:
+        array (ndarray): The N-dim array to split
+        axis (int): Direction for the splitting of the array
 
-    Returns
-    =======
-    arr_list : (N-1)-dim nd-array list
-        A list of NumPy arrays of the same size.
-
+    Returns:
+        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
     """
     # split array apart
-    arr_list = []
-    for i in range(arr.shape[axis]):
+    arrays = []
+    for i in range(array.shape[axis]):
         # determine index for slicing
-        index = [slice(None)] * arr.ndim
+        index = [slice(None)] * array.ndim
         index[axis] = i
-        arr_list.append(arr[index])
-    return arr_list
+        arrays.append(array[index])
+    return arrays
 
 
 # ======================================================================
-def curve_fit(param_list):
+def curve_fit(args):
     """
     Interface to use scipy.optimize.curve_fit with multiprocessing.
     If an error is encountered, optimized parameters and their covariance are
     set to 0.
 
-    Parameters
-    ==========
-    param_list : list
-        List of parameters to be passed to the function.
+    Args:
+        args (list): List of parameters to pass to the function
 
-    Returns
-    =======
-    par_fit : array
-        Optimized parameters minimizing least-square fitting.
-    par_cov : 2d-array
-        The estimated covariance of the optimized parameters.
-        The diagonals provide the variance of the parameter estimate.
-
+    Returns:
+        par_fit (ndarray): Optimized parameters
+        par_cov (ndarray): The covariance of the optimized parameters.
+            The diagonals provide the variance of the parameter estimate
     """
     try:
-        result = sp.optimize.curve_fit(*param_list)
+        result = sp.optimize.curve_fit(*args)
     except (RuntimeError, RuntimeWarning, ValueError):
         #        print('EE: Fitting error. Params were: {}', param_list)  #
         # DEBUG
         err_val = 0.0
-        n_fit_par = len(param_list[3])  # number of fitting parameters
+        n_fit_par = len(args[3])  # number of fitting parameters
         result = \
             np.tile(err_val, n_fit_par), \
             np.tile(err_val, (n_fit_par, n_fit_par))
