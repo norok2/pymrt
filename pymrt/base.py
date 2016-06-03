@@ -1349,7 +1349,7 @@ def calc_stats(
         mask_inf=True,
         mask_vals=None,
         val_interval=None,
-        save_path=None,
+        save_filepath=None,
         title=None,
         compact=False):
     """
@@ -1368,7 +1368,7 @@ def calc_stats(
         List of values to mask.
     val_interval : 2-tuple (optional)
         The (min, max) values interval.
-    save_path : str or None (optional)
+    save_filepath : str or None (optional)
         The path to which the plot is to be saved. If unset, no output.
     title : str or None (optional)
         If title is not None, stats are printed to screen.
@@ -1390,7 +1390,7 @@ def calc_stats(
         array = array[~np.isnan(array)]
     if mask_inf:
         array = array[~np.isinf(array)]
-    if not mask_vals:
+    if mask_vals is None:
         mask_vals = []
     for val in mask_vals:
         array = array[array != val]
@@ -1411,13 +1411,14 @@ def calc_stats(
             'avg': None, 'std': None,
             'min': None, 'max': None,
             'sum': None, 'num': None}
-    if save_path or title:
+    if save_filepath or title:
         label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
         val_list = []
         for label in label_list:
             val_list.append(compact_num_str(stats_dict[label]))
-    if save_path:
-        with open(save_path, 'wb') as csv_file:
+    if save_filepath:
+        print(save_filepath)
+        with open(save_filepath, 'wb') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=str(CSV_DELIMITER))
             csv_writer.writerow(label_list)
             csv_writer.writerow(val_list)
@@ -1459,7 +1460,7 @@ def slice_array(
     # initialize slice index
     slab = [slice(None)] * array.ndim
     # ensure index is meaningful
-    if not index:
+    if index is None:
         index = np.int(array.shape[axis] / 2.0)
     # check index
     if (index >= array.shape[axis]) or (index < 0):
@@ -1657,7 +1658,7 @@ def elapsed(
     Returns:
         None
     """
-    if not time_point:
+    if time_point is None:
         time_point = time.time()
     events.append((name, time_point))
 
