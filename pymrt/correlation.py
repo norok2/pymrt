@@ -676,6 +676,8 @@ def calc_correlation(
             mask = mask_nii.get_data().astype(bool)
         else:
             mask = np.ones_like(img1 * img2).astype(bool)
+        if val_interval is None:
+            val_interval = mrb.minmax(np.stack((img1, img2)))
         mask *= (img1 > val_interval[0]).astype(bool)
         mask *= (img1 < val_interval[1]).astype(bool)
         mask *= (img2 > val_interval[0]).astype(bool)
@@ -877,14 +879,14 @@ def plot_correlation(
     """
     filename = mru.combine_filename(
         corr_prefix, (img1_filepath, img2_filepath))
-    save_path = os.path.join(
+    save_filepath = os.path.join(
         out_dirpath, filename + mrb.add_extsep(mrb.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if mrb.check_redo(in_filepath_list, [save_path], force):
+    if mrb.check_redo(in_filepath_list, [save_filepath], force):
         if verbose > VERB_LVL['none']:
-            print('PltCor:\t{}'.format(os.path.basename(save_path)))
+            print('PltCor:\t{}'.format(os.path.basename(save_filepath)))
         img1_label = mru.filename2label(img1_filepath, max_length=32)
         img2_label = mru.filename2label(img2_filepath, max_length=32)
         title = 'Voxel-by-Voxel Correlation'
@@ -899,7 +901,7 @@ def plot_correlation(
             scale='log10', title=title, cmap=plt.cm.hot_r,
             labels=(x_lbl, y_lbl), bisector=':k',
             colorbar_opts={},
-            save_path=save_path, close_figure=not plt.isinteractive())
+            save_filepath=save_filepath, close_figure=not plt.isinteractive())
 
 
 # ======================================================================
@@ -942,7 +944,7 @@ def plot_histogram(
     None.
 
     """
-    save_path = os.path.join(
+    save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
@@ -950,9 +952,9 @@ def plot_histogram(
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if mrb.check_redo(in_filepath_list, [save_path], force):
+    if mrb.check_redo(in_filepath_list, [save_filepath], force):
         if verbose > VERB_LVL['none']:
-            print('PltHst:\t{}'.format(os.path.basename(save_path)))
+            print('PltHst:\t{}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = ''
         plot_title = '{} ({})'.format(
@@ -960,7 +962,7 @@ def plot_histogram(
         mrio.plot_histogram1d(
             img_filepath, mask_filepath, hist_interval=(0.0, 1.0), bins=1024,
             array_interval=val_interval, title=plot_title,
-            labels=(val_units, None), save_path=save_path,
+            labels=(val_units, None), save_filepath=save_filepath,
             close_figure=not plt.isinteractive())
 
 
@@ -1007,14 +1009,14 @@ def plot_sample(
     None.
 
     """
-    save_path = os.path.join(
+    save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
                        mrb.EXT['img']))
-    if mrb.check_redo([img_filepath], [save_path], force):
+    if mrb.check_redo([img_filepath], [save_filepath], force):
         if verbose > VERB_LVL['none']:
-            print('PltFig:\t{}'.format(os.path.basename(save_path)))
+            print('PltFig:\t{}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = 'Image'
         plot_title = '{} / {} ({})'.format(
@@ -1024,7 +1026,7 @@ def plot_sample(
             img_filepath, axis, index, title=plot_title,
             array_interval=val_interval,
             colorbar_opts={},
-            close_figure=not plt.isinteractive(), save_path=save_path)
+            close_figure=not plt.isinteractive(), save_filepath=save_filepath)
 
 
 # ======================================================================
@@ -1357,32 +1359,28 @@ def check_correlation(
     Check the voxel correlation for a list of homogeneous images.
 
     Args:
-        dirpath (str): Path to directory to process
-        val_type (str): Name of the data to be processed
-        val_interval (tuple[float]): Interval (min, max) of the data to be
-        processed
-        val_units (str): Units of measurements of the data to be processed
-        mask_filepath (str): Path to mask file. If None, extract it
-        reg_ref_ext (str): File extension of registration reference
-        corr_ref_ext (str): File extension of correlation reference(s)
-        tmp_dir (str): Subpath where to store temporary files
-        reg_dir (str): Subpath where to store registration files
-        msk_dir (str): Subpath where to store registration files
-        cmp_dir (str): Subpath where to store masking files
-        fig_dir (str): Subpath where to store plotting files (i.e. figures)
-        force (bool): Force calculation of output
-        verbose (int): Set level of verbosity
+        dirpath (str): Path to directory to process.
+        val_type (str): Name of the data to be processed.
+        val_interval (tuple[float]): Interval (min, max) of the processed data.
+        val_units (str): Units of measurements of the data to be processed.
+        mask_filepath (str): Path to mask file. If None, extract it.
+        reg_ref_ext (str): File extension of registration reference.
+        corr_ref_ext (str): File extension of correlation reference(s).
+        tmp_dir (str): Subpath where to store temporary files.
+        reg_dir (str): Subpath where to store registration files.
+        msk_dir (str): Subpath where to store registration files.
+        cmp_dir (str): Subpath where to store masking files.
+        fig_dir (str): Subpath where to store plotting files (i.e. figures).
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
     Returns:
-        (list[str], list[str]):
-
-            - *target_list*: List of processed image files.
-            - *corr_list*: List of files containing correlation computations.
-
+        target_list (list[str]): List of processed image files.
+        corr_list (list[str]): List of files containing correlation computations
     """
     if verbose > VERB_LVL['none']:
         print('Target: {}'.format(dirpath))
-    # :: manage image type, range and units
+    # :: manage image type, inteval and units
     if not val_type:
         val_type = os.path.split(dirpath)[-1]
         if val_type not in SRC_IMG_TYPE:
@@ -1395,8 +1393,14 @@ def check_correlation(
             print('I: ', val_type, val_interval, val_units)
     if not val_interval:
         if verbose >= VERB_LVL['medium']:
-            print('W: values range not specified.')
-            print('I: values range not guessed. Using image-specific values.')
+            print('W: values inteval not specified.')
+            print('I: values inteval guessed from image-specific values.')
+    else:
+        val_interval = sorted(val_interval)
+    if np.ptp(val_interval) == 0.0:
+        if verbose >= VERB_LVL['low']:
+            print('E: values inteval has size 0. Aborting!')
+        return
     if not val_units:
         val_units = 'a.u.'
         if verbose >= VERB_LVL['medium']:
@@ -1552,6 +1556,22 @@ def check_correlation(
 
 
 # todo: fix registration to (re)use FSL
+
+
+# ======================================================================
+# def bicorrelation(
+#         in1_filepath,
+#         in2_filepath,
+#         mask_filepath=None,
+#         in1_type=None,
+#         in1_interval=None,
+#         in1_units=None,
+#         in2_type=None,
+#         in2_interval=None,
+#         in2_units=None,
+#         ):
+
+
 
 # ======================================================================
 if __name__ == '__main__':

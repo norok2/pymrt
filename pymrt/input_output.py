@@ -67,7 +67,7 @@ import pymrt.segmentation as mrs
 # :: Custom defined constants
 
 # ======================================================================
-# :: Default values usable in functions.
+# :: Default values usable in functions
 
 
 # ======================================================================
@@ -802,20 +802,23 @@ def find_objects(
 def calc_stats(
         img_filepath,
         mask_filepath=None,
-        save_path=None,
-        mask_nan=True,
-        mask_inf=True,
-        mask_vals=(0.0,),
-        printing=None,
-        title=None,
-        compact=False):
+        *args,
+        **kwargs):
+    # save_filepath=None,
+    # mask_nan=True,
+    # mask_inf=True,
+    # mask_vals=(0.0,),
+    # printing=None,
+    # title=None,
+    # compact=False):
     """
     Calculate statistical information (min, max, avg, std, sum).
 
     Args:
         img_filepath (str): The image file path
         mask_filepath (str): The mask file path
-        save_path (str): The path where results are saved. If None, no output.
+        save_filepath (str): The path where results are saved. If None,
+        no output.
         mask_nan (bool): Mask NaN values.
         mask_inf (bool): Mask Inf values.
         mask_vals (iterable): List of values to mask out
@@ -841,22 +844,22 @@ def calc_stats(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    if not save_path and printing is not False:
-        printing = True
-    if printing:
-        if not title:
-            if save_path:
-                title = os.path.basename(save_path)
-            else:
-                title = os.path.basename(img_filepath)
-        print(save_path)
-        stats_dict = mrb.calc_stats(
-            img[mask], mask_nan, mask_inf, mask_vals, save_path, title)
-    else:
-        stats_dict = mrb.calc_stats(
-            img[mask], mask_nan, mask_inf, mask_vals, save_path, title,
-            compact)
-    return stats_dict
+    # if not save_filepath and printing is not False:
+    #     printing = True
+    # if printing:
+    #     if not title:
+    #         if save_filepath:
+    #             title = os.path.basename(save_filepath)
+    #         else:
+    #             title = os.path.basename(img_filepath)
+    #     print(save_filepath)
+    #     stats_dict = mrb.calc_stats(
+    #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
+    # else:
+    #     stats_dict = mrb.calc_stats(
+    #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
+    #         compact)
+    return mrb.calc_stats(img[mask], *args, **kwargs)
 
 
 # ======================================================================
@@ -909,6 +912,37 @@ def plot_sample2d(
         kwargs.update({'resolution': resolution})
     sample, plot = mrp.sample2d(img, *args, **kwargs)
     return sample, plot
+
+
+# ======================================================================
+def plot_sample2d_anim(
+        in_filepath,
+        *args,
+        **kwargs):
+    """
+    Plot a 2D sample image of a ND image.
+
+    Uses the function: pymrt.plot.sample2d
+
+    Args:
+        in_filepath (str): The input file path
+        args (tuple): Positional arguments passed to the plot function
+        kwargs (dict): Keyword arguments passed to the plot function
+
+    Returns:
+        The result of `pymrt.plot.sample2d`
+
+    See Also:
+        pymrt.plot
+    """
+    obj = nib.load(in_filepath)
+    img = obj.get_data()
+    if 'resolution' not in kwargs:
+        resolution = np.array(
+            [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
+        kwargs.update({'resolution': resolution})
+    mov = mrp.sample2d_anim(img, *args, **kwargs)
+    return mov
 
 
 # ======================================================================
