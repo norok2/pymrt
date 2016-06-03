@@ -2,6 +2,14 @@
 PyMRT: Python MRI Tools for quantitative MRI data analysis
 ==========================================================
 
+.. code::
+     ____        __  __ ____ _____
+    |  _ \ _   _|  \/  |  _ \_   _|
+    | |_) | | | | |\/| | |_) || |
+    |  __/| |_| | |  | |  _ < | |
+    |_|    \__, |_|  |_|_| \_\|_|
+           |___/
+
 Overview
 --------
 This software provides a support Python library and auxiliary console based
