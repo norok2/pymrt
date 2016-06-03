@@ -1408,12 +1408,10 @@ def check_correlation(
             print('I: values inteval guessed from image-specific values.')
     else:
         val_interval = sorted(val_interval)
-    print(val_interval)
     if np.ptp(val_interval) == 0.0:
         if verbose >= VERB_LVL['low']:
             print('E: values inteval has size 0. Aborting!')
         return
-        val_interval = sorted(val_interval)
     if not val_units:
         val_units = 'a.u.'
         if verbose >= VERB_LVL['medium']:
