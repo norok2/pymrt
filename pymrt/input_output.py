@@ -75,11 +75,11 @@ def load(
         in_filepath,
         full=False):
     """
-    Load a NiBabel-supported image
+    Load a NiBabel-supported image.
 
     Args:
-        in_filepath (str): The input file path
-        full (bool): If true, return the image data, the affine and the header
+        in_filepath (str): The input file path.
+        full (bool): Return the image data, the affine and the header.
 
     Returns:
         ndarray|[ndarray,ndarray,header]: Returns the image data, and,

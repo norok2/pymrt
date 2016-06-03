@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# todo: include kwargs to function calls
+# todo: use kwargs instead of opts
 # todo: get rid of tty colorify
 
 # ======================================================================
@@ -119,7 +119,7 @@ def preset_t2s_memp2rage_loglin2():
     Preset to get built-in T2* maps from the ME-MP2RAGE sequence.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
         'match': '(?i).*me-mp2rage.*_INV2(?!_PHS).*',
         'dtype': 'float',
@@ -127,7 +127,7 @@ def preset_t2s_memp2rage_loglin2():
         'compute_func': 'fit_monoexp_decay_loglin2',
         'compute_kwargs': {
             'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
     }
     return new_opts
 
@@ -138,7 +138,7 @@ def preset_t2s_flash_loglin2():
     Preset to get T2* maps from multi-echo data using a log-linear fit.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
         'match': '(?i).*(gre|flash).*',
         'dtype': 'float',
@@ -146,7 +146,7 @@ def preset_t2s_flash_loglin2():
         'compute_func': 'fit_monoexp_decay_loglin',
         'compute_kwargs': {
             'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
     }
     return new_opts
 
@@ -157,7 +157,7 @@ def preset_t2s_flash_builtin():
     Preset to get built-in T2* maps from the FLASH sequence.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', '_series'],
         'match': '.*T2Star_Images.*',
         'dtype': 'float',
@@ -171,7 +171,7 @@ def preset_t2s_multiecho_loglin():
     Preset to get T2* maps from multi-echo squared data using a log-linear fit.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
         'match': '(?i).*(gre|flash|me).*',
         'dtype': 'float',
@@ -179,7 +179,7 @@ def preset_t2s_multiecho_loglin():
         'compute_func': 'fit_monoexp_decay_loglin2',
         'compute_kwargs': {
             'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
     }
     return new_opts
 
@@ -190,7 +190,7 @@ def preset_t2s_multiecho_loglin2():
     Preset to get T2* maps from multi-echo squared data using a log-linear fit.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
         'match': '(?i).*(gre|flash|me).*',
         'dtype': 'float',
@@ -198,7 +198,7 @@ def preset_t2s_multiecho_loglin2():
         'compute_func': 'fit_monoexp_decay_loglin2',
         'compute_kwargs': {
             'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
     }
     return new_opts
 
@@ -209,7 +209,7 @@ def preset_t2s_multiecho_leasq():
     Preset to get T2* maps from multi-echo data using a least-squares fit.
     """
     new_opts = {
-        'types': ['T2S', 'PD'],
+        'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
         'match': '.*(FLASH|ME-MP2RAGE).*',
         'dtype': 'float',
@@ -217,7 +217,7 @@ def preset_t2s_multiecho_leasq():
         'compute_func': 'fit_monoexp_decay_leasq',
         'compute_kwargs': {
             'ti_label': 'EchoTime::ms',
-            'img_types': {'tau': 'T2S', 's_0': 'PD'}}
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
     }
     return new_opts
 
@@ -274,6 +274,18 @@ def ext_qsm_as_legacy(
         # b0_label,
         # th_label,
         img_types):
+    """
+
+    Args:
+        images ():
+        affines ():
+        params ():
+        te_label ():
+        img_types ():
+
+    Returns:
+
+    """
     # determine correct TE
     max_te = 25.0  # ms
     selected = len(params[te_label])
@@ -387,16 +399,11 @@ def fix_phase_interval(array):
 
     This is useful for DICOM-converted images (without post-processing).
 
-    Parameters
-    ==========
-    array : ndarray
-        Array to be processed.
+    Args:
+        array (ndarray): Array to be processed.
 
-    Returns
-    =======
-    array : ndarray
-        An array scaled to (-pi,pi).
-
+    Returns:
+        array (ndarray): An array scaled to (-pi,pi).
     """
     # correct phase value range (useful for DICOM-converted images)
     if np.ptp(array) > 2.0 * np.pi:
@@ -576,8 +583,8 @@ def voxel_curve_fit(
     Curve fitting for y = F(x, p)
 
     Args:
-        y_arr (ndarray): Dependent variable
-        x_arr (ndarray): Independent variable
+        y_arr (ndarray): Dependent variable with x dependence in the n-th dim
+        x_arr (ndarray): Independent variable with same size as n-th dim of y
         fit_func (func):
         fit_params (list[float]):
         pre_func (func):
@@ -673,42 +680,36 @@ def sources_generic(
         force=False,
         verbose=D_VERB_LVL):
     """
-    Get source files (both data and metadata) from specified directories.
+    Get source files (both data and metadata) from specified directories
 
-    Parameters
-    ==========
-    data_dirpath : str
-        Directory containing data files.
-    meta_dirpath : str or None
-        Directory containing metadata files.
-    opts : dict
-        | Accepted options:
-        | data_ext: str: File extension of the data files
-        | meta_ext: str: File extension of the metadata files
-        | multi_acq: bool: Use multiple acquisitions for computation
-        | use_meta: bool: Use metadata, instead of filenames, to get parameters
-        | param_select: str or None list: Parameters to select from metadata
-        | match: str: REGEX used to select data filenames
-        | pattern: int (1|2|3)-tuple: Slicing applied to data list.
-        | groups: int list or None: Results are split into groups (cyclically)
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        data_dirpath (str): Directory containing data files
+        meta_dirpath (str|None): Directory containing metadata files
+        opts (dict):
+            Accepted options:
+                - data_ext (str): File extension of the data files
+                - meta_ext (str): File extension of the metadata files
+                - multi_acq (bool): Use multiple acquisitions for computation
+                - use_meta (bool): Use metadata, instead of filenames, to get
+                  parameters
+                - param_select (list[str]): Parameters to select from metadata
+                - match (str): regular expression used to select data filenames
+                - pattern (tuple[int]): Slicing applied to data list
+                - groups (list[int]|None): Split results into groups
+                  (cyclically)
+        force (bool): Force calculation of output
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    sources_list : (str list) list
-        List of lists of filenames to be used for computation.
-    params_list : (str or num list) list
-        List of lists of parameters associated with the specified sources.
+    Returns:
+        sources_list (list[list[str]]): List of lists of filenames to be used
+            for computation
+        params_list : (list[list[str|float|int]]): List of lists of parameters
+            associated with the specified sources
 
-    See Also
-    ========
-    pymrt.computation.compute_generic,
-    pymrt.computation.compute,
-    pymrt.computation.D_OPTS
-
+    See Also:
+        pymrt.computation.compute_generic,
+        pymrt.computation.compute,
+        pymrt.computation.D_OPTS
     """
     sources_list = []
     params_list = []
@@ -808,47 +809,39 @@ def compute_generic(
     """
     Perform the specified computation on source files.
 
-    Parameters
-    ==========
-    sources : str list
-        Directory containing data files.
-    out_dirpath : str
-        Directory containing metadata files.
-    params : dict (optional)
-        Parameters associated with the sources.
-    opts : dict (optional)
-        | Accepted options:
-        * types: str list: List of image types to use for results
-        * mask: (int (1|2|3)-tuple) tuple: Slicing for each dimension
-        * adapt_mask: bool: adapt over- or under-sized mask
-        * dtype: str: data type to be used for the target images
-        * | compute_func: str: name of the function used for computation
-          | compute_func(images, params, compute_args, compute_kwargs)
-          | -> img_list, img_type_list
-        * compute_args: list: additional positional parameters for compute_func
-        * compute_kwargs: dict: additional keyword parameters for compute_func
-        * | affine_func: str: name of the function for affine computation
-          | affine_func(affines, affine_args...) -> affine
-        * affine_args: list: additional parameters for affine_func
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        sources (list[str]): Directory containing data files.
+        out_dirpath (str): Directory containing metadata files.
+        params (dict): Parameters associated with the sources.
+        opts (dict):
+            Accepted options:
+                - types (list[str]): List of image types to use for results.
+                - mask: (tuple[tuple[int]): Slicing for each dimension.
+                - adapt_mask (bool): adapt over- or under-sized mask.
+                - dtype (str): data type to be used for the target images.
+                - compute_func (str): function used for the computation.
 
-    Returns
-    =======
-    sources_list : (str list) list
-        List of lists of filenames to be used for computation.
-    params_list : (str or num list) list
-        List of lists of parameters associated with the specified sources.
+                  compute_func(images, params, compute_args, compute_kwargs)
+                  -> img_list, img_type_list
+                - compute_args (list): additional positional parameters for
+                  compute_func
+                - compute_kwargs (dict): additional keyword parameters for
+                  compute_func
+                - affine_func (str): name of the function for affine
+                  computation: affine_func(affines, affine_args...) -> affine
+                - affine_args (list): additional parameters for affine_func
+        force (bool): Force calculation of output
+        verbose (int): Set level of verbosity.
 
-    See Also
-    ========
-    pymrt.computation.sources_generic,
-    pymrt.computation.compute,
-    pymrt.computation.D_OPTS
+    Returns:
+        targets ():
 
+    See Also:
+        pymrt.computation.sources_generic,
+        pymrt.computation.compute,
+        pymrt.computation.D_OPTS
     """
+    # TODO: implement affine_func, affine_args, affine_kwargs?
     # get the num, name and seq from first source file
     opts = mrb.merge_dicts(D_OPTS, opts)
 
@@ -935,51 +928,45 @@ def compute(
         verbose=D_VERB_LVL):
     """
     Interface to perform calculation from all input files in a directory.
+
     If recursive flag is set or if input directory contains no suitable file,
     it tries to descend into subdirectories.
     If meta_subpath is set, it will look there for metadata files.
     If data_subpath is set, it will look there for data files.
 
-    Parameters
-    ==========
-    sources_func : func
-        | Function returning a list of list of filepaths.
-        | sources_func(data_path, meta_path, sources_args...) ->
-        | ((string, dict) list) list
-    sources_args : list
-        Positional parameters passed to get_sources_func.
-    sources_kwargs : list
-        Keyword parameters passed to get_sources_func.
-    compute_func : func
-        | Function performing calculation on each list of filepaths.
-        | compute_func(source_list, out_dirpath, compute_args...) ->
-        out_filepath
-    compute_args : list
-        Positional parameters passed to compute_func.
-    compute_kwargs : list
-        Keyword parameters passed to compute_func.
-    in_dirpath : str
-        Path to input directory.
-    out_dirpath : str
-        Path to output directory (updated at each iteration).
-    recursive : boolean (optional)
-        Force descending into subdirectories.
-    meta_subpath : str
-        Subdirectory appended (at each iteration) when searching for metadata.
-    data_subpath : str
-        Subdirectory appended (at each iteration) when searching for data.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        sources_func (func): Returns a list of list of filepaths used as input.
+            Each list of filepaths should contain the exhaustive input for the
+            computation to be performed. Function expected signature:
+            sources_func(data_path, meta_path, sources_args...) ->
+            ((string, dict) list) list.
+        sources_args (list): Positional parameters passed to get_sources_func.
+        sources_kwargs (dict): Keyword parameters passed to get_sources_func.
+        compute_func (func): Calculation to perform on each list of filepaths.
+            Function expected signature:
+            compute_func(source_list, out_dirpath, compute_args...) ->
+            out_filepath.
+        compute_args (list): Positional parameters passed to compute_func.
+        compute_kwargs (dict): Keyword parameters passed to compute_func.
+        in_dirpath (str): Path to input directory path.
+        out_dirpath (str): Path to output directory path.
+            The input directory structure is preserved during the recursion.
+        recursive (bool): Process subdirectories recursively.
+        meta_subpath (str): Subpath appended when searching for metadata.
+            Appending is performed (non-cumulatively) at each iteration
+            recursion.
+        data_subpath (str): Subpath appended when searching for data.
+            Appending is performed (non-cumulatively) at each iteration
+            recursion.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    None.
+    Returns:
+        None
 
-    See Also
-    ========
-    pymrt.computation.compute_generic,
-    pymrt.computation.source_generic,
-    pymrt.computation.D_OPTS
+    See Also:
+        pymrt.computation.compute_generic,
+        pymrt.computation.source_generic,
+        pymrt.computation.D_OPTS
 
     """
     # handle extra subdirectories in input path

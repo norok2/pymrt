@@ -185,28 +185,19 @@ def _compute_affine_fsl(
     """
     Calculate registration matrix.
 
-    Parameters
-    ==========
-    in_filepath : str
-        Path to input image.
-    ref_filepath : str
-        Path to reference image.
-    aff_filepath : str
-        Path to file where to store registration matrix.
-    dof : int (optional)
-        | Number of degrees of freedom of the affine transformation
-        | 6: only rotations and translations (rigid body)
-        | 9: only rotations, translations and magnification
-        | 12: all possible linear transformations
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        in_filepath (str): Path to input image.
+        ref_filepath (str): Path to reference image.
+        aff_filepath (str): Path to file where to store registration matrix.
+        dof (int): Number of degrees of freedom of the affine transformation.
+            - 6: only rotations and translations (rigid body);
+            - 9: only rotations, translations and magnification;
+            - 12: all possible linear transformations.
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    None.
-
+    Returns:
+        None.
     """
     if mrb.check_redo([in_filepath, ref_filepath], [aff_filepath], force):
         if verbose > VERB_LVL['none']:
@@ -1143,10 +1134,8 @@ def masking(
     """
     Mask input images using selected mask file.
 
-    Parameters
-    ==========
-    in_filepath_list : list of string
-        List of filepaths used as input.
+    Parameters:
+        in_filepath_list (list[string]): List of filepaths used as input.
     mask_filepath : str
         Path to mask image file.
     out_dirpath : str (optional)

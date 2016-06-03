@@ -86,16 +86,16 @@ TTY_COLORS = {
 # ======================================================================
 def _is_hidden(filepath):
     """
-    Heuristic to determine hidden files
+    Heuristic to determine hidden files.
 
     Args:
-        filepath (str): the input file path
+        filepath (str): the input file path.
 
     Returns:
-        is_hidden (bool): True if is hidden, False otherwise
+        is_hidden (bool): True if is hidden, False otherwise.
 
     Notes:
-        Only works with UNIX-like files, relying on prepended '.'
+        Only works with UNIX-like files, relying on prepended '.'.
     """
     # if sys.version_info[0] > 2:
     #     filepath = filepath.encode('utf-8')
@@ -106,16 +106,16 @@ def _is_hidden(filepath):
 # ======================================================================
 def _is_special(stats_mode):
     """
-    Heuristic to determine non-standard files
+    Heuristic to determine non-standard files.
 
     Args:
-        filepath (str): the input file path
+        filepath (str): the input file path.
 
     Returns:
-        is_special (bool): True if is hidden, False otherwise
+        is_special (bool): True if is hidden, False otherwise.
 
     Notes:
-        Its working relies on Python stat module implementation
+        Its working relies on Python stat module implementation.
     """
     is_special = not stat.S_ISREG(stats_mode) and \
                  not stat.S_ISDIR(stats_mode) and \
@@ -124,25 +124,15 @@ def _is_special(stats_mode):
 
 
 # ======================================================================
-def _or_not_and(flag, check):
-    return flag or not flag and check
-
-
-# ======================================================================
-def _or_not_and_not(flag, check):
-    return flag or not flag and not check
-
-
-# ======================================================================
 def gcd(*num_list):
     """
-    Find the greatest common divisor (GCD) of a list of numbers
+    Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *num_list (tuple[int]): The input numbers
+        *num_list (tuple[int]): The input numbers.
 
     Returns:
-        gcd_val (int): The value of the greatest common divisor (GCD)
+        gcd_val (int): The value of the greatest common divisor (GCD).
     """
     gcd_val = num_list[0]
     for num in num_list[1:]:
@@ -159,7 +149,7 @@ def lcm(*num_list):
         *num_list (tuple[int]): The input numbers.
 
     Returns:
-        gcd_val (int): The value of the least common multiple (LCM)
+        gcd_val (int): The value of the least common multiple (LCM).
     """
     lcm_val = num_list[0]
     for num in num_list[1:]:
@@ -170,14 +160,13 @@ def lcm(*num_list):
 # ======================================================================
 def merge_dicts(*dicts):
     """
-    Merge dictionaries into a new dict (new keys overwrite the old ones)
+    Merge dictionaries into a new dict (new keys overwrite the old ones).
 
     Args:
         dicts (tuple[dict]): Dictionaries to be merged together.
 
     Returns:
-        merged (dict): The merged dict (new keys overwrite the old ones)
-
+        merged (dict): The merged dict (new keys overwrite the old ones).
     """
     merged = {}
     for item in dicts:
@@ -214,10 +203,10 @@ def multi_replace(text, replace_list):
     Args:
         text (str): The input string
         replace_list (tuple[str,str]): The listing of the replacements.
-            Format: ((<old>, <new>), ...)
+            Format: ((<old>, <new>), ...).
 
     Returns:
-        text (str): The string after the performed replacements
+        text (str): The string after the performed replacements.
     """
     return functools.reduce(lambda s, r: s.replace(*r), replace_list, text)
 
@@ -276,13 +265,13 @@ def set_keyword_parameters(
         func (callable): The function to be inspected.
         values (dict): The (key, value) pairs to set.
             If a value is None, it will be replaced by the default value.
-            To use the names defined locally, use: `locals()`
+            To use the names defined locally, use: `locals()`.
 
     Results:
         kw_params (dict): A dictionary of the keyword parameters to set.
 
     See Also:
-        inspect.getargspec, locals, globals
+        inspect.getargspec, locals, globals.
     """
     # todo: refactor to get rid of deprecated getargspec
     inspected = inspect.getargspec(func)
@@ -300,13 +289,13 @@ def set_keyword_parameters(
 # ======================================================================
 def mdot(*arrays):
     """
-    Cumulative application of `numpy.dot` operation
+    Cumulative application of `numpy.dot` operation.
 
     Args:
-        arrays (tuple[ndarray]): List of input arrays
+        arrays (tuple[ndarray]): List of input arrays.
 
     Returns:
-        array (ndarray): The result of the tensor product
+        array (ndarray): The result of the tensor product.
     """
     array = arrays[0]
     for item in arrays[1:]:
@@ -317,13 +306,13 @@ def mdot(*arrays):
 # ======================================================================
 def ndot(array, dim=-1, step=1):
     """
-    Cumulative application of `numpy.dot` operation over a given axis
+    Cumulative application of `numpy.dot` operation over a given axis.
 
     Args:
-        array (ndarray): The input array
+        array (ndarray): The input array.
 
     Returns:
-        array (ndarray): The result of the tensor product
+        array (ndarray): The result of the tensor product.
     """
     if dim < 0:
         dim += array.ndim
@@ -390,6 +379,13 @@ def walk2(
         path (str): path to the next object
         stats (stat_result): structure containing file stats information
     """
+
+    # def _or_not_and(flag, check):
+    #     return flag or not flag and check
+
+    def _or_not_and_not(flag, check):
+        return flag or not flag and not check
+
     try:
         for name in os.listdir(base):
             path = os.path.join(base, name)
@@ -421,17 +417,17 @@ def walk2(
 # ======================================================================
 def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
-    Execute command and retrieve output at the end of execution
+    Execute command and retrieve output at the end of execution.
 
     Args:
         command (str): Command to execute.
-        use_pipes (bool): Get stdout and stderr streams from the process
-        dry (bool): Print rather than execute the command (dry run)
-        verbose (int): Set level of verbosity
+        use_pipes (bool): Get stdout and stderr streams from the process.
+        dry (bool): Print rather than execute the command (dry run).
+        verbose (int): Set level of verbosity.
 
     Returns:
-        p_stdout (str|None): if use_pipes the stdout of the process
-        p_stderr (str|None): if use_pipes the stderr of the process
+        p_stdout (str|None): if use_pipes the stdout of the process.
+        p_stderr (str|None): if use_pipes the stderr of the process.
     """
     p_stdout = p_stderr = None
     if dry:
@@ -470,10 +466,10 @@ def groups_from(lst, grouping):
 
     Args:
         lst (list): The source list.
-        grouping (list[int]): number of elements that each group contains
+        grouping (list[int]): number of elements that each group contains.
 
     Returns:
-        groups (list[list]): Grouped elements from the source list
+        groups (list[list]): Grouped elements from the source list.
     """
     group, groups = [], []
     j = 0
@@ -509,12 +505,12 @@ def listdir(
     Retrieve a sorted list of files matching specified extension and pattern.
 
     Args:
-        path (str): Path to search
+        path (str): Path to search.
         file_ext (str|None): File extension. Empty string for all files.
-            None for directories
-        pattern (slice): Selection pattern (assuming alphabetical ordering)
-        full_path (bool): Include the full path
-        verbose (int): Set level of verbosity
+            None for directories.
+        pattern (slice): Selection pattern (assuming alphabetical ordering).
+        full_path (bool): Include the full path.
+        verbose (int): Set level of verbosity.
 
     Returns:
         list[str]: List of file names/paths
@@ -585,10 +581,10 @@ def add_extsep(ext):
     Add a extsep char to a filename extension, if it does not have one.
 
     Args:
-        ext (str): Filename extension to which the dot has to be added
+        ext (str): Filename extension to which the dot has to be added.
 
     Returns:
-        ext (str): Filename extension with a prepending dot
+        ext (str): Filename extension with a prepending dot.
     """
     if not ext:
         ext = ''
@@ -607,8 +603,8 @@ def change_ext(
     Substitute the old extension with a new one in a filepath.
 
     Args:
-        filepath (str): Input filepath
-        new_ext (str): The new extension (with or without the dot)
+        filepath (str): Input filepath.
+        new_ext (str): The new extension (with or without the dot).
         old_ext (str): The old extension (with or without the dot).
             If None, it will be guessed.
         case_sensitive (str): Case-sensitive match of old extension.
@@ -636,14 +632,14 @@ def compact_num_str(
         val,
         max_lim=D_TAB_SIZE - 1):
     """
-    Convert a number into the most informative string within specified limit
+    Convert a number into the most informative string within specified limit.
 
     Args:
-        val (int|float): The number to be converted to string
-        max_lim (int): The maximum number of characters allowed for the string
+        val (int|float): The number to be converted to string.
+        max_lim (int): The maximum number of characters allowed for the string.
 
     Returns:
-        val_str (str): The string with the formatted number
+        val_str (str): The string with the formatted number.
     """
     try:
         # this is to simplify formatting (and accepting even strings)
@@ -681,15 +677,15 @@ def compact_num_str(
 # ======================================================================
 def has_decorator(text, pre_decor='"', post_decor='"'):
     """
-    Determine if a string is delimited by some characters (decorators)
+    Determine if a string is delimited by some characters (decorators).
 
     Args:
-        text (str): The text input string
-        pre_decor (str): initial string decorator
-        post_decor (str): final string decorator
+        text (str): The text input string.
+        pre_decor (str): initial string decorator.
+        post_decor (str): final string decorator.
 
     Returns:
-        has_decorator (bool): True if text is delimited by the specified chars
+        has_decorator (bool): True if text is delimited by the specified chars.
     """
     return text.startswith(pre_decor) and text.endswith(post_decor)
 
@@ -697,15 +693,15 @@ def has_decorator(text, pre_decor='"', post_decor='"'):
 # ======================================================================
 def strip_decorator(text, pre_decor='"', post_decor='"'):
     """
-    Strip initial and final character sequences (decorators) from a string
+    Strip initial and final character sequences (decorators) from a string.
 
     Args:
-        text (str): The text input string
-        pre_decor (str): initial string decorator
-        post_decor (str): final string decorator
+        text (str): The text input string.
+        pre_decor (str): initial string decorator.
+        post_decor (str): final string decorator.
 
     Returns:
-        text (str): the text without the specified decorators
+        text (str): the text without the specified decorators.
     """
     return text[len(pre_decor):-len(post_decor)]
 
@@ -713,15 +709,15 @@ def strip_decorator(text, pre_decor='"', post_decor='"'):
 # ======================================================================
 def auto_convert(text, pre_decor=None, post_decor=None):
     """
-    Convert value to numeric if possible, or strip delimiters from string
+    Convert value to numeric if possible, or strip delimiters from string.
 
     Args:
-        text (str): The text input string
-        pre_decor (str): initial string decorator
-        post_decor (str): final string decorator
+        text (str): The text input string.
+        pre_decor (str): initial string decorator.
+        post_decor (str): final string decorator.
 
     Returns:
-        val (int|float|complex): The numeric value of the string
+        val (int|float|complex): The numeric value of the string.
     """
     if pre_decor and post_decor and \
             has_decorator(text, pre_decor, post_decor):
@@ -743,13 +739,13 @@ def auto_convert(text, pre_decor=None, post_decor=None):
 # ======================================================================
 def is_number(var):
     """
-    Determine if a variable contains a number
+    Determine if a variable contains a number.
 
     Args:
-        var (str): The variable to test
+        var (str): The variable to test.
 
     Returns:
-        result (bool): True if the values can be converted, False otherwise
+        result (bool): True if the values can be converted, False otherwise.
     """
     try:
         complex(var)
@@ -763,17 +759,17 @@ def is_number(var):
 # ======================================================================
 def significant_figures(val, num):
     """
-    Format a number with the correct number of significant figures
+    Format a number with the correct number of significant figures.
 
     Args:
-        val (str|float|int): The numeric value to be correctly formatted
-        num (str|int): The number of significant figures to be displayed
+        val (str|float|int): The numeric value to be correctly formatted.
+        num (str|int): The number of significant figures to be displayed.
 
     Returns:
-        val (str): String containing the properly formatted number
+        val (str): String containing the properly formatted number.
 
     See Also:
-        The 'decimal' Python standard module
+        The 'decimal' Python standard module.
     """
 
     val = float(val)
@@ -797,14 +793,13 @@ def format_value_error(
     Write correct value/error pairs.
 
     Args:
-        val (str|float|int): The numeric value to be correctly formatted
-        err (str|float|int): The numeric error to be correctly formatted
-        num (str|int): The precision to be used for the error (usually 1 or 2)
+        val (str|float|int): The numeric value to be correctly formatted.
+        err (str|float|int): The numeric error to be correctly formatted.
+        num (str|int): The precision to be used for the error (usually 1 or 2).
 
     Returns:
-        val_str (str): The string with the correctly formatted numeric value
-        err_str (str): The string with the correctly formatted numeric error
-
+        val_str (str): The string with the correctly formatted numeric value.
+        err_str (str): The string with the correctly formatted numeric error.
     """
     val = float(val)
     err = float(err)
@@ -831,22 +826,22 @@ def str2dict(
         strip_val_str=None,
         convert=True):
     """
-    Convert a string to a dictionary
+    Convert a string to a dictionary.
 
     Args:
-        in_str (str): The input string
-        entry_sep (str): The entry separator
-        key_val_sep (str): The key-value separator
-        pre_decor (str): initial decorator (to be removed before parsing)
-        post_decor (str): final decorator (to be removed before parsing)
+        in_str (str): The input string.
+        entry_sep (str): The entry separator.
+        key_val_sep (str): The key-value separator.
+        pre_decor (str): initial decorator (to be removed before parsing).
+        post_decor (str): final decorator (to be removed before parsing).
         strip_key_str (str): Chars to be stripped from both ends of the key.
-            If None, whitespaces are stripped. Empty string for no stripping
+            If None, whitespaces are stripped. Empty string for no stripping.
         strip_val_str (str): Chars to be stripped from both ends of the value.
-            If None, whitespaces are stripped. Empty string for no stripping
-        convert (bool): Enable automatic conversion of string to numeric
+            If None, whitespaces are stripped. Empty string for no stripping.
+        convert (bool): Enable automatic conversion of string to numeric.
 
     Returns:
-        out_dict (dict): The output dictionary generated from the string
+        out_dict (dict): The output dictionary generated from the string.
 
     See Also:
         dict2str
@@ -893,20 +888,20 @@ def dict2str(
     Convert a dictionary to a string.
 
     Args:
-        in_dict (dict): The input dictionary
-        entry_sep (str): The entry separator
-        key_val_sep (str): The key-value separator
-        pre_decor (str): initial decorator (to be appended to the output)
-        post_decor (str): final decorator (to be appended to the output)
+        in_dict (dict): The input dictionary.
+        entry_sep (str): The entry separator.
+        key_val_sep (str): The key-value separator.
+        pre_decor (str): initial decorator (to be appended to the output).
+        post_decor (str): final decorator (to be appended to the output).
         strip_key_str (str): Chars to be stripped from both ends of the key.
-            If None, whitespaces are stripped. Empty string for no stripping
+            If None, whitespaces are stripped. Empty string for no stripping.
         strip_val_str (str): Chars to be stripped from both ends of the value.
-            If None, whitespaces are stripped. Empty string for no stripping
+            If None, whitespaces are stripped. Empty string for no stripping.
         sorting (callable): Function used as 'key' argument of 'sorted'
             for sorting the dictionary keys.
 
     Returns:
-        out_str (str): The output string generated from the dictionary
+        out_str (str): The output string generated from the dictionary.
 
     See Also:
         str2dict
@@ -936,9 +931,9 @@ def string_between(
         text (str): String to parse
         begin_str (str): Token at the beginning
         end_str (str): Token at the ending
-        incl_begin (bool): If True, include 'begin_string' in the result
-        incl_end (bool): If True, include 'end_str' in the result
-        greedy (bool): If True, output largest possible string
+        incl_begin (bool): Include 'begin_string' in the result
+        incl_end (bool): Include 'end_str' in the result.
+        greedy (bool): Output the largest possible string.
 
     Returns:
         text (str): The string contained between the specified tokens (if any)
@@ -1030,7 +1025,7 @@ def sgnlogspace(
         start (float): The starting value of the sequence.
         stop (float): The end value of the sequence.
         num (int): Number of samples to generate. Must be non-negative.
-        endpoint (bool): If True, stop is the last sample.
+        endpoint (bool): The value of 'stop' is the last sample.
         base (float): The base of the log space. Must be non-negative.
 
     Returns:
