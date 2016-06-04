@@ -31,6 +31,8 @@ import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
+# import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -76,12 +78,6 @@ EXT = {
 }
 D_TAB_SIZE = 8
 
-# :: TTY amenities
-TTY_COLORS = {
-    'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
-    'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
-}
-
 
 # ======================================================================
 def _is_hidden(filepath):
@@ -124,35 +120,53 @@ def _is_special(stats_mode):
 
 
 # ======================================================================
-def gcd(*num_list):
+def gcd(*numbers):
     """
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *num_list (tuple[int]): The input numbers.
+        *numbers (tuple[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
+
+    Examples:
+        >>> gcd(12, 24, 18)
+        6
+        >>> gcd(12, 24, 18, 42, 600, 66, 666, 768)
+        6
+        >>> gcd(12, 24, 18, 42, 600, 66, 666, 768, 101)
+        1
+        >>> gcd(12, 24, 18, 3)
+        3
     """
-    gcd_val = num_list[0]
-    for num in num_list[1:]:
+    gcd_val = numbers[0]
+    for num in numbers[1:]:
         gcd_val = math.gcd(gcd_val, num)
     return gcd_val
 
 
 # ======================================================================
-def lcm(*num_list):
+def lcm(*numbers):
     """
     Find the least common multiple (LCM) of a list of numbers.
 
     Args:
-        *num_list (tuple[int]): The input numbers.
+        *numbers (tuple[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the least common multiple (LCM).
+
+    Examples:
+        >>> lcm(2, 3, 4)
+        12
+        >>> lcm(9, 8)
+        72
+        >>> lcm(12, 23, 34, 45, 56)
+        985320
     """
-    lcm_val = num_list[0]
-    for num in num_list[1:]:
+    lcm_val = numbers[0]
+    for num in numbers[1:]:
         lcm_val = lcm_val * num // fractions.gcd(lcm_val, num)
     return lcm_val
 
@@ -167,6 +181,12 @@ def merge_dicts(*dicts):
 
     Returns:
         merged (dict): The merged dict (new keys overwrite the old ones).
+
+    Examples:
+        >>> merge_dicts({1: 2, 3: 4, 5: 6}, {2: 1, 4: 3, 6: 5})
+        {1: 2, 2: 1, 3: 4, 4: 3, 5: 6, 6: 5}
+        >>> merge_dicts({1: 2, 3: 4, 5: 6}, {1: 1, 3: 3, 6: 5})
+        {1: 1, 3: 3, 5: 6, 6: 5}
     """
     merged = {}
     for item in dicts:
@@ -175,12 +195,12 @@ def merge_dicts(*dicts):
 
 
 # ======================================================================
-def accumulate(lst, func=lambda x, y: x + y):
+def accumulate(items, func=lambda x, y: x + y):
     """
     Cumulatively apply the specified function to the elements of the list.
 
     Args:
-        lst (list): The list to process.
+        items (list): The list to process.
         func (callable): func(x,y) -> z
             The function applied cumulatively to the first n items of the list.
             Defaults to cumulative sum.
@@ -189,10 +209,17 @@ def accumulate(lst, func=lambda x, y: x + y):
         lst (list): The cumulative list.
 
     See Also:
-        itertools.accumulate
-
+        itertools.accumulate.
+    Examples:
+        >>> accumulate(list(range(5)))
+        [0, 1, 3, 6, 10]
+        >>> accumulate(list(range(5)), lambda x, y: (x + 1) * y)
+        [0, 1, 4, 15, 64]
+        >>> accumulate([1, 2, 3, 4, 5, 6, 7, 8], lambda x, y: x * y)
+        [1, 2, 6, 24, 120, 720, 5040, 40320]
     """
-    return [functools.reduce(func, lst[:idx + 1]) for idx in range(len(lst))]
+    return [
+        functools.reduce(func, items[:idx + 1]) for idx in range(len(items))]
 
 
 # ======================================================================
@@ -201,57 +228,65 @@ def multi_replace(text, replace_list):
     Perform multiple replacements in a string.
 
     Args:
-        text (str): The input string
+        text (str): The input string.
         replace_list (tuple[str,str]): The listing of the replacements.
             Format: ((<old>, <new>), ...).
 
     Returns:
         text (str): The string after the performed replacements.
+
+    Examples:
+        >>> multi_replace('python.best', (('thon', 'mrt'), ('est', 'ase')))
+        'pymrt.base'
+        >>> multi_replace('x-x-x-x', (('x', 'est'), ('est', 'test')))
+        'test-test-test-test'
+        >>> multi_replace('x-x-', (('-x-', '.test'),))
+        'x.test'
     """
     return functools.reduce(lambda s, r: s.replace(*r), replace_list, text)
 
 
-# ======================================================================
-def cartesian(*arrays):
-    """
-    Generate a cartesian product of input arrays.
-
-    Args:
-        *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
-
-    Returns:
-        out (ndarray): 2-D array of shape (M, len(arrays)) containing
-            cartesian products formed of input arrays.
-
-    Examples:
-        >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
-        array([[1, 4, 6],
-               [1, 4, 7],
-               [1, 5, 6],
-               [1, 5, 7],
-               [2, 4, 6],
-               [2, 4, 7],
-               [2, 5, 6],
-               [2, 5, 7],
-               [3, 4, 6],
-               [3, 4, 7],
-               [3, 5, 6],
-               [3, 5, 7]])
-    """
-
-    arrays = [np.asarray(x) for x in arrays]
-    dtype = arrays[0].dtype
-
-    n = np.prod([x.size for x in arrays])
-    out = np.zeros([n, len(arrays)], dtype=dtype)
-
-    m = n / arrays[0].size
-    out[:, 0] = np.repeat(arrays[0], m)
-    if arrays[1:]:
-        out[0:m, 1:] = cartesian(arrays[1:])
-        for j in range(1, arrays[0].size):
-            out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
-    return out
+# # ======================================================================
+# def cartesian(*arrays):
+#     """
+#     Generate a cartesian product of input arrays.
+#
+#     Args:
+#         *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
+#
+#     Returns:
+#         out (ndarray): 2-D array of shape (M, len(arrays)) containing
+#             cartesian products formed of input arrays.
+#
+#     Examples:
+#         >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+#         array([[1, 4, 6],
+#                [1, 4, 7],
+#                [1, 5, 6],
+#                [1, 5, 7],
+#                [2, 4, 6],
+#                [2, 4, 7],
+#                [2, 5, 6],
+#                [2, 5, 7],
+#                [3, 4, 6],
+#                [3, 4, 7],
+#                [3, 5, 6],
+#                [3, 5, 7]])
+#     """
+#
+#     arrays = [np.asarray(x) for x in arrays]
+#     dtype = arrays[0].dtype
+#
+#     n = np.prod([x.size for x in arrays])
+#     out = np.zeros([n, len(arrays)], dtype=dtype)
+#
+#     m = n / arrays[0].size
+#     out[:, 0] = np.repeat(arrays[0], m)
+#     if arrays[1:]:
+#         out[0:m, 1:] = cartesian(arrays[1:])
+#         for j in range(1, arrays[0].size):
+#             out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
+#     return out
 
 
 # ======================================================================
@@ -420,7 +455,7 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
     Execute command and retrieve output at the end of execution.
 
     Args:
-        command (str): Command to execute.
+        cmd (str): Command to execute.
         use_pipes (bool): Get stdout and stderr streams from the process.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
@@ -460,30 +495,44 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
 
 
 # ======================================================================
-def groups_from(lst, grouping):
+def grouping(items, num_elems):
     """
     Generate a list of lists from a source list and grouping specifications
 
     Args:
-        lst (list): The source list.
-        grouping (list[int]): number of elements that each group contains.
+        items (iterable): The source list.
+        num_elems (iterable[int]): number of elements that each group contains.
 
     Returns:
         groups (list[list]): Grouped elements from the source list.
+
+    Examples:
+        >>> grouping(range(10), 4)
+        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]]
+        >>> grouping(range(10), (2, 3))
+        [[0, 1], [2, 3, 4], [5, 6, 7, 8, 9]]
+        >>> grouping(range(10), (2, 4, 1))
+        [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
+        >>> grouping(range(10), (2, 4, 1, 20))
+        [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
     """
+    try:
+        iter(num_elems)
+    except TypeError:
+        num_elems = (num_elems,) * (len(items) // num_elems)
     group, groups = [], []
     j = 0
-    count = grouping[j] if j < len(grouping) else len(lst) + 1
-    for i, item in enumerate(lst):
+    count = num_elems[j] if j < len(num_elems) else len(items) + 1
+    for i, item in enumerate(items):
         if i >= count:
             loop = True
             while loop:
                 groups.append(group)
                 group = []
                 j += 1
-                add = grouping[j] if j < len(grouping) else len(lst) + 1
+                add = num_elems[j] if j < len(num_elems) else len(items) + 1
                 if add < 0:
-                    add = len(lst) + 1
+                    add = len(items) + 1
                 count += add
                 if add == 0:
                     loop = True
@@ -533,6 +582,7 @@ def listdir(
     return sorted(filepath_list)[pattern]
 
 
+# :: tty_colorify has been obsoleted by blessings
 # # ======================================================================
 # def tty_colorify(
 #         text,
@@ -540,33 +590,35 @@ def listdir(
 #     """
 #     Add color TTY-compatible color code to a string, for pretty-printing.
 #
-#     Parameters
-#     ==========
-#     text: str
-#         The text to be colored.
-#     color : str or int or None
-#         | A string or number for the color coding.
-#         | Lowercase letters modify the forground color.
-#         | Uppercase letters modify the background color.
-#         | Available colors:
-#         * r/R: red
-#         * g/G: green
-#         * b/B: blue
-#         * c/C: cyan
-#         * m/M: magenta
-#         * y/Y: yellow (brown)
-#         * k/K: black (gray)
-#         * w/W: white (gray)
+#     Args:
+#         text (str): The text to be colored.
+#         color (str|int|None): A string or number for the color coding.
+#             Lowercase letters modify the forground color.
+#             Uppercase letters modify the background color.
+#             Available colors:
+#                 * r/R: red
+#                 * g/G: green
+#                 * b/B: blue
+#                 * c/C: cyan
+#                 * m/M: magenta
+#                 * y/Y: yellow (brown)
+#                 * k/K: black (gray)
+#                 * w/W: white (gray)
 #
-#     Returns
-#     =======
+#     Returns:
 #         The colored string.
-#
-#     see also: TTY_COLORS
 #     """
-#     if color in TTY_COLORS:
-#         tty_color = TTY_COLORS[color]
-#     elif color in TTY_COLORS.values():
+#     # :: TTY amenities
+#     tty_color_code = {
+#         'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37,
+# 'k': 30,
+#         'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47,
+# 'K': 40,
+#     }
+#
+#     if color in tty_color_code:
+#         tty_color = tty_color_code[color]
+#     elif color in tty_color_code.values():
 #         tty_color = color
 #     else:
 #         tty_color = None
@@ -585,6 +637,14 @@ def add_extsep(ext):
 
     Returns:
         ext (str): Filename extension with a prepending dot.
+
+    Examples:
+        >>> add_extsep('txt')
+        '.txt'
+        >>> add_extsep('.txt')
+        '.txt'
+        >>> add_extsep('')
+        '.'
     """
     if not ext:
         ext = ''
@@ -605,12 +665,35 @@ def change_ext(
     Args:
         filepath (str): Input filepath.
         new_ext (str): The new extension (with or without the dot).
-        old_ext (str): The old extension (with or without the dot).
-            If None, it will be guessed.
-        case_sensitive (str): Case-sensitive match of old extension.
+        old_ext (str|None): The old extension (with or without the dot).
+            If None, it will be obtained from os.path.splitext.
+        case_sensitive (bool): Case-sensitive match of old extension.
+            If old_ext is None or empty, it has no effect.
 
     Returns:
         filepath (str): Output filepath
+
+    Examples:
+        >>> change_ext('test.txt', 'dat', 'txt')
+        'test.dat'
+        >>> change_ext('test.txt', '.dat', 'txt')
+        'test.dat'
+        >>> change_ext('test.txt', '.dat', '.txt')
+        'test.dat'
+        >>> change_ext('test.txt', 'dat', '.txt')
+        'test.dat'
+        >>> change_ext('test.txt', 'dat', 'TXT', False)
+        'test.dat'
+        >>> change_ext('test.txt', 'dat', 'TXT', True)
+        'test.txt.dat'
+        >>> change_ext('test.tar.gz', 'tgz')
+        'test.tar.tgz'
+        >>> change_ext('test.tar.gz', 'tgz', 'tar.gz')
+        'test.tgz'
+        >>> change_ext('test.tar', 'gz', '')
+        'test.tar.gz'
+        >>> change_ext('test.tar', 'gz', None)
+        'test.gz'
     """
     if old_ext is None:
         filepath, old_ext = os.path.splitext(filepath)
@@ -640,6 +723,14 @@ def compact_num_str(
 
     Returns:
         val_str (str): The string with the formatted number.
+
+    Examples:
+        >>> compact_num_str(100.0, 3)
+        '100'
+        >>> compact_num_str(100.042, 6)
+        '100.04'
+        >>> compact_num_str(100.042, 9)
+        '100.04200'
     """
     try:
         # this is to simplify formatting (and accepting even strings)
@@ -686,6 +777,14 @@ def has_decorator(text, pre_decor='"', post_decor='"'):
 
     Returns:
         has_decorator (bool): True if text is delimited by the specified chars.
+
+    Examples:
+        >>> has_decorator('"test"')
+        True
+        >>> has_decorator('"test')
+        False
+        >>> has_decorator('<test>', '<', '>')
+        True
     """
     return text.startswith(pre_decor) and text.endswith(post_decor)
 
@@ -702,8 +801,18 @@ def strip_decorator(text, pre_decor='"', post_decor='"'):
 
     Returns:
         text (str): the text without the specified decorators.
+
+    Examples:
+        >>> strip_decorator('"test"')
+        'test'
+        >>> strip_decorator('"test')
+        'test'
+        >>> strip_decorator('<test>', '<', '>')
+        'test'
     """
-    return text[len(pre_decor):-len(post_decor)]
+    begin = len(pre_decor) if text.startswith(pre_decor) else None
+    end = -len(post_decor) if text.endswith(post_decor) else None
+    return text[begin:end]
 
 
 # ======================================================================
@@ -718,21 +827,30 @@ def auto_convert(text, pre_decor=None, post_decor=None):
 
     Returns:
         val (int|float|complex): The numeric value of the string.
+
+    Examples:
+        >>> auto_convert('<100>', '<', '>')
+        100
+        >>> auto_convert('<100.0>', '<', '>')
+        100.0
+        >>> auto_convert('100.0+50j')
+        (100+50j)
+        >>> auto_convert('1e3')
+        1000.0
     """
     if pre_decor and post_decor and \
             has_decorator(text, pre_decor, post_decor):
-        val = strip_decorator(text, pre_decor, post_decor)
-    else:
+        text = strip_decorator(text, pre_decor, post_decor)
+    try:
+        val = int(text)
+    except (TypeError, ValueError):
         try:
-            val = int(text)
+            val = float(text)
         except (TypeError, ValueError):
             try:
-                val = float(text)
+                val = complex(text)
             except (TypeError, ValueError):
-                try:
-                    val = complex(text)
-                except (TypeError, ValueError):
-                    val = text
+                val = text
     return val
 
 
@@ -746,6 +864,14 @@ def is_number(var):
 
     Returns:
         result (bool): True if the values can be converted, False otherwise.
+
+    Examples:
+        >>> is_number('<100.0>')
+        False
+        >>> is_number('100.0+50j')
+        True
+        >>> is_number('1e3')
+        True
     """
     try:
         complex(var)
@@ -767,6 +893,18 @@ def significant_figures(val, num):
 
     Returns:
         val (str): String containing the properly formatted number.
+
+    Examples:
+        >>> significant_figures(1.2345, 1)
+        '1'
+        >>> significant_figures(1.2345, 4)
+        '1.234'
+        >>> significant_figures(1.234e3, 2)
+        '1.2e+03'
+        >>> significant_figures(-1.234e3, 3)
+        '-1.23e+03'
+        >>> significant_figures(12345678, 4)
+        '1.235e+07'
 
     See Also:
         The 'decimal' Python standard module.
@@ -800,6 +938,16 @@ def format_value_error(
     Returns:
         val_str (str): The string with the correctly formatted numeric value.
         err_str (str): The string with the correctly formatted numeric error.
+
+    Examples:
+        >>> format_value_error(1234.5, 6.7)
+        ('1234.5', '6.7')
+        >>> format_value_error(123.45, 6.7, 1)
+        ('123', '7')
+        >>> format_value_error(12345.6, 7.89, 2)
+        ('12345.6', '7.9')
+        >>> format_value_error(12345.6, 78.9, 2)
+        ('12346', '79')
     """
     val = float(val)
     err = float(err)
@@ -842,6 +990,13 @@ def str2dict(
 
     Returns:
         out_dict (dict): The output dictionary generated from the string.
+
+    Examples:
+        >>> d = str2dict('{a=10,b=20,c=test}')
+        >>> for k in sorted(d.keys()): print(k, ':', d[k])  # display dict
+        a : 10
+        b : 20
+        c : test
 
     See Also:
         dict2str
@@ -903,6 +1058,10 @@ def dict2str(
     Returns:
         out_str (str): The output string generated from the dictionary.
 
+    Examples:
+        >>> dict2str({'a': 10, 'b': 20, 'c': 'test'})
+        '{a=10,b=20,c=test}'
+
     See Also:
         str2dict
     """
@@ -937,18 +1096,33 @@ def string_between(
 
     Returns:
         text (str): The string contained between the specified tokens (if any)
+
+    Examples:
+        >>> string_between('roses are red violets are blue', 'ses', 'lets')
+        ' are red vio'
+        >>> string_between('roses are red, or not?', 'a', 'd')
+        're re'
+        >>> string_between('roses are red, or not?', ' ', ' ')
+        'are red, or'
+        >>> string_between('roses are red, or not?', ' ', ' ', greedy=False)
+        'are'
+        >>> string_between('roses are red, or not?', 'r', 'r')
+        'oses are red, o'
+        >>> string_between('roses are red, or not?', 'r', 'r', greedy=False)
+        'oses a'
+        >>> string_between('roses are red, or not?', 'r', 's', True, False)
+        'rose'
     """
     incl_begin = len(begin_str) if not incl_begin else 0
     incl_end = len(end_str) if incl_end else 0
     if begin_str in text and end_str in text:
         if greedy:
-            text = text[
-                   text.find(begin_str) + incl_begin:
-                   text.rfind(end_str) + incl_end]
+            begin = text.find(begin_str) + incl_begin
+            end = text.rfind(end_str) + incl_end
         else:
-            text = text[
-                   text.rfind(begin_str) + incl_begin:
-                   text.find(end_str) + incl_end]
+            begin = text.find(begin_str) + incl_begin
+            end = text[begin:].find(end_str) + incl_end + begin
+        text = text[begin:end]
     else:
         text = ''
     return text
@@ -1007,6 +1181,14 @@ def sgnlog(x, base=np.e):
 
     Returns:
         The signed logarithm
+
+    Examples:
+        >>> sgnlog(-100, 10)
+        -2.0
+        >>> sgnlog(-64, 2)
+        -6.0
+        >>> sgnlog(100, 2)
+        6.6438561897747253
     """
     return np.log(np.abs(x)) / np.log(base) * np.sign(x)
 
@@ -1030,6 +1212,18 @@ def sgnlogspace(
 
     Returns:
         samples (ndarray): equally spaced samples on a log scale.
+
+    Examples:
+        >>> sgnlogspace(-10, 10, 3)
+        array([-10. ,   0.1,  10. ])
+        >>> sgnlogspace(-100, -1, 3)
+        array([-100.,  -10.,   -1.])
+        >>> sgnlogspace(-10, 10, 6)
+        array([-10. ,  -1. ,  -0.1,   0.1,   1. ,  10. ])
+        >>> sgnlogspace(-10, 10, 5)
+        array([-10. ,  -0.1,   0.1,   1. ,  10. ])
+        >>> sgnlogspace(2, 10, 4)
+        array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
     if start * stop < 0.0:
         bounds = (
@@ -1064,8 +1258,12 @@ def minmax(array):
         array (ndarray): The input array
 
     Returns:
-        min, max (tuple[float]): the minimum and the maximum values of the
-            array
+        min (float): the minimum value of the array
+        max (float): the maximum value of the array
+
+    Examples:
+        >>> minmax(np.arange(10))
+        (0, 9)
     """
     return np.min(array), np.max(array)
 
@@ -1085,24 +1283,40 @@ def scale(
 
     Returns:
         val (float): The converted value
+
+    Examples:
+        >>> scale(100, (0, 100), (0, 1000))
+        1000.0
+        >>> scale(50, (-100, 100), (0, 1000))
+        750.0
+        >>> scale(50, (0, 1), (0, 10))
+        500.0
+        >>> scale(0.5, (0, 1), (-10, 10))
+        0.0
+        >>> scale(np.pi / 3, (0, np.pi), (0, 180))
+        60.0
     """
     in_min, in_max = in_interval
     out_min, out_max = out_interval
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
-# ======================================================================
-def interval_size(interval):
-    """
-    Calculate the (signed) size of an interval given as a 2-tuple (A,B)
-
-    Args:
-        interval (float,float): Interval for computation
-
-    Returns:
-        val (float): The converted value
-    """
-    return interval[1] - interval[0]
+# :: use numpy.ptp instead
+# # ======================================================================
+# def interval_size(interval):
+#     """
+#     Calculate the (signed) size of an interval given as a 2-tuple (A,B)
+#
+#     Args:
+#         interval (float,float): Interval for computation
+#
+#     Returns:
+#         val (float): The converted value
+#
+#     Examples:
+#
+#     """
+#     return interval[1] - interval[0]
 
 
 # ======================================================================
@@ -1116,13 +1330,19 @@ def combine_interval(
     Args:
         interval1 (tuple[float]): Interval of first operand
         interval2 (tuple[float]): Interval of second operand
-        operation (str): String with operation to perform. Supports:
-
-            - '+' : addition
-            - '-' : subtraction
+        operation (str): String with operation to perform.
+            Supports the following operations:
+                - '+' : addition
+                - '-' : subtraction
 
     Returns:
         new_interval (tuple[float]): Interval resulting from operation
+
+    Examples:
+        >>> combine_interval((-1.0, 1.0), (0, 1), '+')
+        (-1.0, 2.0)
+        >>> combine_interval((-1.0, 1.0), (0, 1), '-')
+        (-2.0, 1.0)
     """
     if operation == '+':
         new_interval = (
@@ -1147,7 +1367,7 @@ def midval(array):
         array (ndarray): The output (N-1)-dim array
 
     Examples:
-        >>>> midval(np.array([0, 1, 2, 3, 4]))
+        >>> midval(np.array([0, 1, 2, 3, 4]))
         array([ 0.5,  1.5,  2.5,  3.5])
     """
     return (array[1:] - array[:-1]) / 2.0 + array[:-1]
@@ -1275,13 +1495,24 @@ def calc_stats(
         compact (bool): Use a compact format string for displaying results
 
     Returns:
-        stats_dict (dict):
-            - 'min': minimum value
-            - 'max': maximum value
-            - 'avg': average or mean
-            - 'std': standard deviation
-            - 'sum': summation
-            - 'num': number of elements
+        stats_dict (dict): Dictionary of statistical values.
+            Statistical parameters calculated:
+                - 'min': minimum value
+                - 'max': maximum value
+                - 'avg': average or mean
+                - 'std': standard deviation
+                - 'sum': summation
+                - 'num': number of elements
+
+    Examples:
+        >>> d = calc_stats(np.arange(20))
+        >>> for k in sorted(d.keys()): print(k, ':', d[k])  # display dict
+        avg : 9.5
+        max : 19
+        min : 0
+        num : 20
+        std : 5.76628129734
+        sum : 190
     """
     if mask_nan:
         array = array[~np.isnan(array)]
@@ -1293,8 +1524,8 @@ def calc_stats(
         array = array[array != val]
     if val_interval is None:
         val_interval = minmax(array)
-    array = array[array > val_interval[0]]
-    array = array[array < val_interval[1]]
+    array = array[array >= val_interval[0]]
+    array = array[array <= val_interval[1]]
     if len(array) > 0:
         stats_dict = {
             'avg': np.mean(array),
@@ -1336,7 +1567,7 @@ def slice_array(
         axis=0,
         index=None):
     """
-    Slice a (N-1)D-array from an ND-array
+    Slice a (N-1)-dim array from an N-dim array
 
     Args:
         array (ndarray): The input N-dim array
@@ -1348,11 +1579,28 @@ def slice_array(
 
     Raises:
         ValueError: if index is out of bounds
+
+    Examples:
+        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
+        >>> slice_array(arr, 2, 1)
+        array([[ 1,  5,  9],
+               [13, 17, 21]])
+        >>> slice_array(arr, 1, 2)
+        array([[ 8,  9, 10, 11],
+               [20, 21, 22, 23]])
+        >>> slice_array(arr, 0, 0)
+        array([[ 0,  1,  2,  3],
+               [ 4,  5,  6,  7],
+               [ 8,  9, 10, 11]])
+        >>> slice_array(arr, 0, 1)
+        array([[12, 13, 14, 15],
+               [16, 17, 18, 19],
+               [20, 21, 22, 23]])
     """
     # initialize slice index
     slab = [slice(None)] * array.ndim
     # ensure index is meaningful
-    if not index:
+    if index is None:
         index = np.int(array.shape[axis] / 2.0)
     # check index
     if (index >= array.shape[axis]) or (index < 0):
@@ -1367,7 +1615,7 @@ def slice_array(
 def rel_err(
         arr1,
         arr2,
-        use_average=True):
+        use_average=False):
     """
     Calculate the element-wise relative error
 
@@ -1378,6 +1626,16 @@ def rel_err(
 
     Returns:
         array (ndarray): The relative error array
+
+    Examples:
+        >>> arr1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+        >>> arr2 = np.array([1.1, 2.1, 3.1, 4.1, 5.1, 6.1])
+        >>> rel_err(arr1, arr2)
+        array([ 0.1       ,  0.05      ,  0.03333333,  0.025     ,  0.02      ,
+                0.01666667])
+        >>> rel_err(arr1, arr2, True)
+        array([ 0.0952381 ,  0.04878049,  0.03278689,  0.02469136,  0.01980198,
+                0.01652893])
     """
     if arr2.dtype != np.complex:
         array = (arr2 - arr1).astype(np.float)
@@ -1399,18 +1657,29 @@ def euclid_dist(
         arr2,
         unsigned=True):
     """
-    Calculate the element-wise correlation euclidean distance D,
-    i.e. the distance between the identity line and the point of coordinates
-    given by intensity.
-        - D = abs(A2 - A1) / sqrt(2)
+    Calculate the element-wise correlation euclidean distance.
+
+    This is the distance D between the identity line and the point of
+    coordinates given by intensity:
+        \[D = abs(A2 - A1) / sqrt(2)\]
 
     Args:
         arr1 (ndarray): The first array
         arr2 (ndarray): The second array
-        signed (bool): Use signed distance
+        unsigned (bool): Use signed distance
 
     Returns:
         array (ndarray): The resulting array
+
+    Examples:
+        >>> arr1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+        >>> arr2 = np.array([-1.0, -2.0, -3.0, -4.0, -5.0, -6.0])
+        >>> euclid_dist(arr1, arr2)
+        array([ 1.41421356,  2.82842712,  4.24264069,  5.65685425,  7.07106781,
+                8.48528137])
+        >>> euclid_dist(arr1, arr2, False)
+        array([-1.41421356, -2.82842712, -4.24264069, -5.65685425, -7.07106781,
+               -8.48528137])
     """
     array = (arr2 - arr1) / np.sqrt(2.0)
     if unsigned:
@@ -1418,57 +1687,58 @@ def euclid_dist(
     return array
 
 
-# ======================================================================
-def ndstack(arrays, axis=-1):
-    """
-    Stack a list of arrays of the same size along a specific axis
-
-    Args:
-        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-        axis (int): Direction for the concatenation of the arrays
-
-    Returns:
-        array (ndarray): The concatenated N-dim array
-    """
-    array = arrays[0]
-    n_dim = array.ndim + 1
-    if axis < 0:
-        axis += n_dim
-    if axis < 0:
-        axis = 0
-    if axis > n_dim:
-        axis = n_dim
-    # calculate new shape
-    shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
-    # stack arrays together
-    array = np.zeros(shape, dtype=array.dtype)
-    for i, src in enumerate(arrays):
-        index = [slice(None)] * n_dim
-        index[axis] = i
-        array[tuple(index)] = src
-    return array
-
-
-# ======================================================================
-def ndsplit(array, axis=-1):
-    """
-    Split an array along a specific axis into a list of arrays
-
-    Args:
-        array (ndarray): The N-dim array to split
-        axis (int): Direction for the splitting of the array
-
-    Returns:
-        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-    """
-    # split array apart
-    arrays = []
-    for i in range(array.shape[axis]):
-        # determine index for slicing
-        index = [slice(None)] * array.ndim
-        index[axis] = i
-        arrays.append(array[index])
-    return arrays
+# :: ndstack and ndsplit have been obsoleted by: numpy.stack and numpy.split
+# # ======================================================================
+# def ndstack(arrays, axis=-1):
+#     """
+#     Stack a list of arrays of the same size along a specific axis
+#
+#     Args:
+#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+#         axis (int): Direction for the concatenation of the arrays
+#
+#     Returns:
+#         array (ndarray): The concatenated N-dim array
+#     """
+#     array = arrays[0]
+#     n_dim = array.ndim + 1
+#     if axis < 0:
+#         axis += n_dim
+#     if axis < 0:
+#         axis = 0
+#     if axis > n_dim:
+#         axis = n_dim
+#     # calculate new shape
+#     shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
+#     # stack arrays together
+#     array = np.zeros(shape, dtype=array.dtype)
+#     for i, src in enumerate(arrays):
+#         index = [slice(None)] * n_dim
+#         index[axis] = i
+#         array[tuple(index)] = src
+#     return array
+#
+#
+# # ======================================================================
+# def ndsplit(array, axis=-1):
+#     """
+#     Split an array along a specific axis into a list of arrays
+#
+#     Args:
+#         array (ndarray): The N-dim array to split
+#         axis (int): Direction for the splitting of the array
+#
+#     Returns:
+#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+#     """
+#     # split array apart
+#     arrays = []
+#     for i in range(array.shape[axis]):
+#         # determine index for slicing
+#         index = [slice(None)] * array.ndim
+#         index[axis] = i
+#         arrays.append(array[index])
+#     return arrays
 
 
 # ======================================================================
@@ -1564,6 +1834,7 @@ def print_elapsed(
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
+    doctest.testmod()
 
 # ======================================================================
 elapsed('pymrt.base')
