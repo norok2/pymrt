@@ -61,9 +61,6 @@ import pymrt.input_output as mrio
 from pymrt import VERB_LVL
 from pymrt import D_VERB_LVL
 
-# from pymrt import get_first_line
-
-
 # ======================================================================
 META_EXT = 'info'  # ID['info']
 
@@ -333,6 +330,14 @@ def ext_qsm_as_legacy(
     return img_list, aff_list, img_type_list, params_list
 
 
+def qsm_sdi(
+        images,
+        affines,
+        params,
+        img_types):
+
+    pass
+
 def calc_afi(
         images,
         affines,
@@ -344,7 +349,7 @@ def calc_afi(
     Fit monoexponential decay to images using the log-linear method.
     """
 
-    y_arr = mrb.ndstack(images)
+    y_arr = np.stack(images)
     s_arr = mrb.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
@@ -461,14 +466,14 @@ def fit_monoexp_decay_leasq(
     Fit monoexponential decay to images using the least-squares method.
     """
     norm_factor = 1e4
-    y_arr = mrb.ndstack(images, -1).astype(float)
+    y_arr = np.stack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     y_arr = y_arr / np.max(y_arr) * norm_factor
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = voxel_curve_fit(
         y_arr, x_arr, func_exp_decay,
         (np.mean(x_arr), np.mean(y_arr)), method='curve_fit')
-    img_list = mrb.ndsplit(p_arr, -1)
+    img_list = np.split(p_arr, 2, -1)
     type_list = ('tau', 's_0')
     img_type_list = tuple(img_types[key] for key in type_list)
     aff_list = _simple_affines(affines)
@@ -502,7 +507,7 @@ def fit_monoexp_decay_loglin(
         return arr
 
     exp_factor = 12  # 0: untouched, other values might improve results
-    y_arr = mrb.ndstack(images, -1).astype(float)
+    y_arr = np.stack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     p_arr = voxel_curve_fit(
@@ -511,7 +516,7 @@ def fit_monoexp_decay_loglin(
         prepare, [exp_factor], {},
         fix, [exp_factor], {},
         method='poly')
-    img_list = mrb.ndsplit(p_arr, -1)
+    img_list = np.split(p_arr, 2, -1)
     aff_list = _simple_affines(affines)
     type_list = ('tau', 's_0')
     img_type_list = tuple(img_types[key] for key in type_list)
@@ -547,7 +552,7 @@ def fit_monoexp_decay_loglin2(
         return arr
 
     exp_factor = 12  # 0: untouched, other values might improve results
-    y_arr = mrb.ndstack(images, -1).astype(float)
+    y_arr = np.stack(images, -1).astype(float)
     y_arr = y_arr[..., 0]  # use only the modulus
     x_arr = np.array(params[ti_label]).astype(float)
     noise_level = np.percentile(y_arr, 3)
@@ -558,7 +563,7 @@ def fit_monoexp_decay_loglin2(
         fix, [exp_factor], {},
         method='poly')
 
-    img_list = mrb.ndsplit(p_arr, -1)
+    img_list = np.split(p_arr, 2, -1)
     aff_list = _simple_affines(affines)
     type_list = ('tau', 's_0')
     img_type_list = tuple(img_types[key] for key in type_list)
@@ -623,7 +628,7 @@ def voxel_curve_fit(
     if method == 'curve_fit':
         iter_param_list = [
             (fit_func, x_arr, y_i_arr, fit_params)
-            for y_i_arr in mrb.ndsplit(y_arr, 0)]
+            for y_i_arr in np.split(y_arr, support_size, 0)]
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         for i, (par_opt, par_cov) in \
                 enumerate(pool.imap(mrb.curve_fit, iter_param_list)):

@@ -62,11 +62,12 @@ from pymrt.debug import dbg
 
 
 # from dcmpi.lib.common import D_NUM_DIGITS
-D_NUM_DIGITS = 3  # synced with: dcmpi.lib.common.D_NUM_DIGITS
+D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
 
 # ======================================================================
 # :: parsing constantsd
 TOKEN_SEP = '_'
+INFO_SEP=','
 KEY_VAL_SEP = '='
 
 # suffix of new reconstructed image from Siemens
@@ -165,8 +166,10 @@ def key_val_to_str(
 def str_to_info(
         text,
         sep=TOKEN_SEP,
-        kv_sep=TOKEN_SEP):
+        kv_sep=KEY_VAL_SEP):
     """
+    Extract information from Siemens DICOM names.
+    Expected format is: [s<###>_]<series_name>[_<#>][_<type>]
 
     Args:
         text (str):
@@ -174,13 +177,24 @@ def str_to_info(
         kv_sep (str):
 
     Returns:
+        info (dict):
 
+    Examples:
+        >>> d = str_to_info('S001_TEST_NAME_TE=10.6_2_T1')
+        >>> for k in sorted(d.keys()): print(k, ':', d[k])  # display dict
+        _# : 1
+        2 : None
+        name : None
+        t1 : None
+        te : 10.6
+        test : None
     """
-    info = {}
     tokens = text.split(sep)
-    for token in tokens:
+    info = {'#': mrb.auto_convert(tokens[0][len(SERIES_NUM_ID):])
+        if SERIES_NUM_ID.lower() in tokens[0].lower() else None}
+    for token in tokens[1:]:
         key, val = str_to_key_val(token, kv_sep)
-        info[key] = mrb.auto_convert(val)
+        info[key] = val
     return info
 
 
@@ -188,7 +202,7 @@ def str_to_info(
 def info_to_str(
         info,
         sep=TOKEN_SEP,
-        kv_sep=TOKEN_SEP):
+        kv_sep=KEY_VAL_SEP):
     """
 
     Args:
@@ -198,6 +212,9 @@ def info_to_str(
 
     Returns:
         text (str):
+
+    Examples:
+        >>> info = {'_#': 10, 'me-mp2rage'}
     """
     tokens = []
     for key, val in info.items():
@@ -210,7 +227,18 @@ def filepath_to_info(
         filepath,
         file_ext=mrb.EXT['img'],
         sep=TOKEN_SEP,
-        kv_sep=TOKEN_SEP):
+        kv_sep=KEY_VAL_SEP):
+    """
+
+    Args:
+        filepath ():
+        file_ext ():
+        sep ():
+        kv_sep ():
+
+    Returns:
+        info (dict): Information extracted from the
+    """
     filename = mrb.change_ext(os.path.basename(filepath), '', file_ext)
     return str_to_info(filename)
 
@@ -252,8 +280,8 @@ def filepath_set_info(
 # ======================================================================
 def parse_filename(
         filepath,
-        i_sep=TOKEN_SEP * 2,
-        p_sep=TOKEN_SEP,
+        t_sep=TOKEN_SEP * 2,
+        i_sep=TOKEN_SEP,
         kv_sep=KEY_VAL_SEP,
         b_sep=TOKEN_SEP):
     """
