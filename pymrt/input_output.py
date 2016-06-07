@@ -107,8 +107,8 @@ def save(
 
     Args:
         out_filepath (str): Output file path
-        array (ndarray): Data to be stored
-        affine (ndarray): 3D affine transformation (4x4 matrix)
+        array (np.ndarray): Data to be stored
+        affine (np.ndarray): 3D affine transformation (4x4 matrix)
         header: Header of the image (refer to NiBabel).
 
     Returns:

@@ -340,7 +340,7 @@ def _propagator_sum(
         dt (float):
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     l_op_sum = np.zeros(spin_model.operator_shape)
     for w1 in pulse_exc.w1_arr:
@@ -366,7 +366,7 @@ def _propagator_sum_order1(
         spin_model (SpinModel): the model for the spin system
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     l_op_list = []
     for w1 in pulse_exc.w1_arr:
@@ -398,7 +398,7 @@ def _propagator_sum_sep(
         spin_model (SpinModel): the model for the spin system
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     p_op_w1_sum = np.zeros(spin_model.operator_shape)
     l_op_free = dynamics_operator(spin_model, pulse_exc.w_c, 0.0)
@@ -432,7 +432,7 @@ def _propagator_poly(
         num_samples (int): number of samples used for the polynomial fit
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     if not num_samples or num_samples < fit_order + 1:
         num_samples = fit_order + 1
@@ -544,7 +544,7 @@ def _propagator_interp(
         num_samples (int): number of samples for the interpolation
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     if pulse_exc.is_real or pulse_exc.is_imag:
         _w1_arr = pulse_exc.w1_arr.real \
@@ -626,7 +626,7 @@ def _propagator_linear(
         num_samples (int): number of samples for the interpolation
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     if pulse_exc.is_real or pulse_exc.is_imag:
         _w1_arr = pulse_exc.w1_arr.real \
@@ -714,7 +714,7 @@ def _propagator_reduced(
         num_resamples (int): number of samples for the reduced resampling
 
     Returns:
-        p_op (ndarray): The (approximated) propagator operator P.
+        p_op (np.ndarray): The (approximated) propagator operator P.
     """
     chunk_marks = np.round(
         np.linspace(0, pulse_exc.num_steps - 1, num_resamples + 1))
@@ -869,7 +869,7 @@ class SpinModel:
             - the longitudinal magnetization is only in the z-axis
 
         Returns:
-            m_eq (ndarray): the equilibrium magnetization vector
+            m_eq (np.ndarray): the equilibrium magnetization vector
         """
         m_eq = np.zeros(self.operator_dim).astype(self.dtype)
         m_eq[0] = 0.5
@@ -898,7 +898,7 @@ class SpinModel:
             phase (float): the phase in rad of the detector system.
 
         Returns:
-            det (ndarray): the detector vector
+            det (np.ndarray): the detector vector
         """
         det = np.zeros(self.operator_dim).astype(complex)
         num_exact, num_approx = 0, 0
@@ -919,7 +919,7 @@ class SpinModel:
         Bloch-McConnell dynamics operator of the spin system.
 
         Returns:
-            l_op (ndarray): The dynamics operator L
+            l_op (np.ndarray): The dynamics operator L
         """
         num_pools = len(self.approx)
         l_op = np.zeros(self.operator_base_shape).astype(self.dtype)
@@ -954,7 +954,7 @@ class SpinModel:
         Calculate the symmetric operator of the pool-pool exchange constants.
 
         Returns:
-            k_op (ndarray):
+            k_op (np.ndarray):
         """
         indexes = sorted(
             list(itertools.combinations(range(self.num_pools), 2)),
@@ -1156,7 +1156,7 @@ class PulseExc:
             mode (string|None): Approximation to use for faster computation.
 
         Returns:
-            p_op (ndarray): The propagator P.
+            p_op (np.ndarray): The propagator P.
         """
         if not kwargs:
             kwargs = self.propagator_kwargs

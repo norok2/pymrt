@@ -1,7 +1,10 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-pymrt: basic and advanced generic computations for MRI data analysis.
+pymrt.computation: generic computation utilities for MRI data analysis.
+
+See Also:
+    pymrt.recipes
 """
 
 # ======================================================================
@@ -400,10 +403,10 @@ def fix_phase_interval(array):
     This is useful for DICOM-converted images (without post-processing).
 
     Args:
-        array (ndarray): Array to be processed.
+        array (np.ndarray): Array to be processed.
 
     Returns:
-        array (ndarray): An array scaled to (-pi,pi).
+        array (np.ndarray): An array scaled to (-pi,pi).
     """
     # correct phase value range (useful for DICOM-converted images)
     if np.ptp(array) > 2.0 * np.pi:
@@ -583,8 +586,8 @@ def voxel_curve_fit(
     Curve fitting for y = F(x, p)
 
     Args:
-        y_arr (ndarray): Dependent variable with x dependence in the n-th dim
-        x_arr (ndarray): Independent variable with same size as n-th dim of y
+        y_arr (np.ndarray): Dependent variable with x dependence in the n-th dim
+        x_arr (np.ndarray): Independent variable with same size as n-th dim of y
         fit_func (func):
         fit_params (list[float]):
         pre_func (func):
@@ -596,7 +599,7 @@ def voxel_curve_fit(
         method (str): Method to use for the curve fitting procedure.
 
     Returns:
-        p_arr (ndarray) :
+        p_arr (np.ndarray) :
     """
     # TODO: finish documentation
 

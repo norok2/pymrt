@@ -20,6 +20,7 @@
       <w>freqs</w>
       <w>imag</w>
       <w>isar</w>
+      <w>laplacian</w>
       <w>leasq</w>
       <w>linearize</w>
       <w>lineshape</w>

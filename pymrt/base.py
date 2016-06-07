@@ -1,7 +1,7 @@
-#!python
+#!/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: generic basic utilities.
+pymrt.base: generic basic utilities.
 """
 
 # ======================================================================
@@ -212,7 +212,7 @@ def multi_replace(text, replace_list):
 
 
 # ======================================================================
-def cartesian(*arrays):
+def cartesian(*arrs):
     """
     Generate a cartesian product of input arrays.
 
@@ -220,7 +220,7 @@ def cartesian(*arrays):
         *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
 
     Returns:
-        out (ndarray): 2-D array of shape (M, len(arrays)) containing
+        out (np.ndarray): 2-D array of shape (M, len(arrays)) containing
             cartesian products formed of input arrays.
 
     Examples:
@@ -239,17 +239,17 @@ def cartesian(*arrays):
                [3, 5, 7]])
     """
 
-    arrays = [np.asarray(x) for x in arrays]
-    dtype = arrays[0].dtype
+    arrs = [np.asarray(x) for x in arrs]
+    dtype = arrs[0].dtype
 
-    n = np.prod([x.size for x in arrays])
-    out = np.zeros([n, len(arrays)], dtype=dtype)
+    n = np.prod([x.size for x in arrs])
+    out = np.zeros([n, len(arrs)], dtype=dtype)
 
-    m = n / arrays[0].size
-    out[:, 0] = np.repeat(arrays[0], m)
-    if arrays[1:]:
-        out[0:m, 1:] = cartesian(arrays[1:])
-        for j in range(1, arrays[0].size):
+    m = n / arrs[0].size
+    out[:, 0] = np.repeat(arrs[0], m)
+    if arrs[1:]:
+        out[0:m, 1:] = cartesian(arrs[1:])
+        for j in range(1, arrs[0].size):
             out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
     return out
 
@@ -287,42 +287,42 @@ def set_keyword_parameters(
 
 
 # ======================================================================
-def mdot(*arrays):
+def mdot(*arrs):
     """
     Cumulative application of `numpy.dot` operation.
 
     Args:
-        arrays (tuple[ndarray]): List of input arrays.
+        arrs (tuple[ndarray]): List of input arrays.
 
     Returns:
-        array (ndarray): The result of the tensor product.
+        arr (np.ndarray): The result of the tensor product.
     """
-    array = arrays[0]
-    for item in arrays[1:]:
-        array = np.dot(array, item)
-    return array
+    arr = arrs[0]
+    for item in arrs[1:]:
+        arr = np.dot(arr, item)
+    return arr
 
 
 # ======================================================================
-def ndot(array, dim=-1, step=1):
+def ndot(arr, dim=-1, step=1):
     """
     Cumulative application of `numpy.dot` operation over a given axis.
 
     Args:
-        array (ndarray): The input array.
+        arr (np.ndarray): The input array.
 
     Returns:
-        array (ndarray): The result of the tensor product.
+        prod (np.ndarray): The result of the tensor product.
     """
     if dim < 0:
-        dim += array.ndim
-    start = 0 if step > 0 else array.shape[dim] - 1
-    stop = array.shape[dim] if step > 0 else -1
-    prod = array[
-        [slice(None) if j != dim else start for j in range(array.ndim)]]
+        dim += arr.ndim
+    start = 0 if step > 0 else arr.shape[dim] - 1
+    stop = arr.shape[dim] if step > 0 else -1
+    prod = arr[
+        [slice(None) if j != dim else start for j in range(arr.ndim)]]
     for i in range(start, stop, step)[1:]:
-        indexes = [slice(None) if j != dim else i for j in range(array.ndim)]
-        prod = np.dot(prod, array[indexes])
+        indexes = [slice(None) if j != dim else i for j in range(arr.ndim)]
+        prod = np.dot(prod, arr[indexes])
     return prod
 
 
@@ -331,11 +331,11 @@ def commutator(a, b):
     Calculate the commutator of two arrays: [A,B] = AB - BA
 
     Args:
-        a (ndarray): The first operand
-        b (ndarray): The second operand
+        a (np.ndarray): The first operand
+        b (np.ndarray): The second operand
 
     Returns:
-        c (ndarray): The operation result
+        c (np.ndarray): The operation result
     """
     return a.dot(b) - b.dot(a)
 
@@ -345,11 +345,11 @@ def anticommutator(a, b):
     Calculate the anticommutator of two arrays: [A,B] = AB + BA
 
     Args:
-        a (ndarray): The first operand
-        b (ndarray): The second operand
+        a (np.ndarray): The first operand
+        b (np.ndarray): The second operand
 
     Returns:
-        c (ndarray): The operation result
+        c (np.ndarray): The operation result
     """
     return a.dot(b) + b.dot(a)
 
@@ -1029,7 +1029,7 @@ def sgnlogspace(
         base (float): The base of the log space. Must be non-negative.
 
     Returns:
-        samples (ndarray): equally spaced samples on a log scale.
+        samples (np.ndarray): equally spaced samples on a log scale.
     """
     if start * stop < 0.0:
         bounds = (
@@ -1056,18 +1056,17 @@ def sgnlogspace(
 
 
 # ======================================================================
-def minmax(array):
+def minmax(arr):
     """
     Calculate the minimum and maximum of an array: (min, max).
 
     Args:
-        array (ndarray): The input array
+        arr (np.ndarray): The input array.
 
     Returns:
-        min, max (tuple[float]): the minimum and the maximum values of the
-            array
+        min, max (tuple[float]): minimum and maximum of the array.
     """
-    return np.min(array), np.max(array)
+    return np.min(arr), np.max(arr)
 
 
 # ======================================================================
@@ -1136,27 +1135,27 @@ def combine_interval(
 
 
 # ======================================================================
-def midval(array):
+def midval(arr):
     """
     Calculate the middle value vector.
 
     Args:
-        array (ndarray): The input N-dim array
+        arr (np.ndarray): The input N-dim array
 
     Returns:
-        array (ndarray): The output (N-1)-dim array
+        arr (np.ndarray): The output (N-1)-dim array
 
     Examples:
         >>>> midval(np.array([0, 1, 2, 3, 4]))
         array([ 0.5,  1.5,  2.5,  3.5])
     """
-    return (array[1:] - array[:-1]) / 2.0 + array[:-1]
+    return (arr[1:] - arr[:-1]) / 2.0 + arr[:-1]
 
 
 # ======================================================================
 def unwrap(arr, voxel_sizes=None):
     """
-    Superfast multi-dimensional Laplacian-based Fourier unwrapping.
+    Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
 
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
@@ -1173,8 +1172,8 @@ def unwrap(arr, voxel_sizes=None):
     k_range = [slice(-k_size / 2.0, +k_size / 2.0) for k_size in arr.shape]
     kk = np.ogrid[k_range]
     kk_2 = np.zeros_like(arr)
-    for i, (dim, voxel_size) in enumerate(zip(arr.shape, voxel_sizes)):
-        kk_2 += np.fft.fftshift(kk[i] / dim / voxel_size) ** 2
+    for i, dim in enumerate(arr.shape):
+        kk_2 += np.fft.fftshift(kk[i] / dim / voxel_sizes[i]) ** 2
     # perform the Laplacian-based Fourier unwrapping
     arr = np.fft.fftn(
         np.cos(arr) * np.fft.ifftn(kk_2 * np.fft.fftn(np.sin(arr))) -
@@ -1284,7 +1283,7 @@ def cartesian2polar(real, imag):
 
 # ======================================================================
 def calc_stats(
-        array,
+        arr,
         mask_nan=True,
         mask_inf=True,
         mask_vals=None,
@@ -1296,7 +1295,7 @@ def calc_stats(
     Calculate array statistical information (min, max, avg, std, sum, num)
 
     Args:
-        array (ndarray): The array to be investigated
+        arr (np.ndarray): The array to be investigated
         mask_nan (bool): Mask NaN values
         mask_inf (bool): Mask Inf values
         mask_vals (list[int|float]|None): List of values to mask
@@ -1316,25 +1315,25 @@ def calc_stats(
             - 'num': number of elements
     """
     if mask_nan:
-        array = array[~np.isnan(array)]
+        arr = arr[~np.isnan(arr)]
     if mask_inf:
-        array = array[~np.isinf(array)]
+        arr = arr[~np.isinf(arr)]
     if not mask_vals:
         mask_vals = []
     for val in mask_vals:
-        array = array[array != val]
+        arr = arr[arr != val]
     if val_interval is None:
-        val_interval = minmax(array)
-    array = array[array > val_interval[0]]
-    array = array[array < val_interval[1]]
-    if len(array) > 0:
+        val_interval = minmax(arr)
+    arr = arr[arr > val_interval[0]]
+    arr = arr[arr < val_interval[1]]
+    if len(arr) > 0:
         stats_dict = {
-            'avg': np.mean(array),
-            'std': np.std(array),
-            'min': np.min(array),
-            'max': np.max(array),
-            'sum': np.sum(array),
-            'num': np.size(array),}
+            'avg': np.mean(arr),
+            'std': np.std(arr),
+            'min': np.min(arr),
+            'max': np.max(arr),
+            'sum': np.sum(arr),
+            'num': np.size(arr),}
     else:
         stats_dict = {
             'avg': None, 'std': None,
@@ -1364,35 +1363,35 @@ def calc_stats(
 
 # ======================================================================
 def slice_array(
-        array,
+        arr,
         axis=0,
         index=None):
     """
-    Slice a (N-1)D-array from an ND-array
+    Slice a (N-1)dim array from an N-dim array
 
     Args:
-        array (ndarray): The input N-dim array
+        arr (np.ndarray): The input N-dim array
         axis (int): The slicing axis
-        index (int): The slicing index. If None, mid-value is taken
+        index (int): The slicing index. If None, mid-value is taken.
 
     Returns:
-        sliced (ndarray): The sliced (N-1)-dim array
+        sliced (np.ndarray): The sliced (N-1)-dim array
 
     Raises:
         ValueError: if index is out of bounds
     """
     # initialize slice index
-    slab = [slice(None)] * array.ndim
+    slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
-    if not index:
-        index = np.int(array.shape[axis] / 2.0)
+    if index is None:
+        index = np.int(arr.shape[axis] / 2.0)
     # check index
-    if (index >= array.shape[axis]) or (index < 0):
+    if (index >= arr.shape[axis]) or (index < 0):
         raise ValueError('Invalid array index in the specified direction')
     # determine slice index
     slab[axis] = index
     # slice the array
-    return array[slab]
+    return arr[slab]
 
 
 # ======================================================================
@@ -1404,25 +1403,25 @@ def rel_err(
     Calculate the element-wise relative error
 
     Args:
-        arr1 (ndarray): The input array with the exact values
-        arr2 (ndarray): The input array with the approximated values
+        arr1 (np.ndarray): The input array with the exact values
+        arr2 (np.ndarray): The input array with the approximated values
         use_average (bool): Use the input arrays average as the exact values
 
     Returns:
-        array (ndarray): The relative error array
+        arr (np.ndarray): The relative error array
     """
     if arr2.dtype != np.complex:
-        array = (arr2 - arr1).astype(np.float)
+        arr = (arr2 - arr1).astype(np.float)
     else:
-        array = (arr2 - arr1)
+        arr = (arr2 - arr1)
     if use_average:
         div = (arr1 + arr2) / 2.0
     else:
         div = arr1
     mask = (div != 0.0)
-    array[mask] = array[mask] / div[mask]
-    array[~mask] = 0.0
-    return array
+    arr[mask] = arr[mask] / div[mask]
+    arr[~mask] = 0.0
+    return arr
 
 
 # ======================================================================
@@ -1437,17 +1436,17 @@ def euclid_dist(
         - D = abs(A2 - A1) / sqrt(2)
 
     Args:
-        arr1 (ndarray): The first array
-        arr2 (ndarray): The second array
+        arr1 (np.ndarray): The first array
+        arr2 (np.ndarray): The second array
         signed (bool): Use signed distance
 
     Returns:
-        array (ndarray): The resulting array
+        arr (np.ndarray): The resulting array
     """
-    array = (arr2 - arr1) / np.sqrt(2.0)
+    arr = (arr2 - arr1) / np.sqrt(2.0)
     if unsigned:
-        array = np.abs(array)
-    return array
+        arr = np.abs(arr)
+    return arr
 
 
 # ======================================================================
@@ -1460,10 +1459,10 @@ def ndstack(arrays, axis=-1):
         axis (int): Direction for the concatenation of the arrays
 
     Returns:
-        array (ndarray): The concatenated N-dim array
+        arr (np.ndarray): The concatenated N-dim array
     """
-    array = arrays[0]
-    n_dim = array.ndim + 1
+    arr = arrays[0]
+    n_dim = arr.ndim + 1
     if axis < 0:
         axis += n_dim
     if axis < 0:
@@ -1471,36 +1470,36 @@ def ndstack(arrays, axis=-1):
     if axis > n_dim:
         axis = n_dim
     # calculate new shape
-    shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
+    shape = arr.shape[:axis] + tuple([len(arrays)]) + arr.shape[axis:]
     # stack arrays together
-    array = np.zeros(shape, dtype=array.dtype)
+    arr = np.zeros(shape, dtype=arr.dtype)
     for i, src in enumerate(arrays):
         index = [slice(None)] * n_dim
         index[axis] = i
-        array[tuple(index)] = src
-    return array
+        arr[tuple(index)] = src
+    return arr
 
 
 # ======================================================================
-def ndsplit(array, axis=-1):
+def ndsplit(arr, axis=-1):
     """
-    Split an array along a specific axis into a list of arrays
+    Split an array along a specific axis into a list of arrays.
 
     Args:
-        array (ndarray): The N-dim array to split
-        axis (int): Direction for the splitting of the array
+        arr (np.ndarray): The N-dim array to split.
+        axis (int): Direction for the splitting of the array.
 
     Returns:
-        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size.
     """
     # split array apart
-    arrays = []
-    for i in range(array.shape[axis]):
+    arrs = []
+    for i in range(arr.shape[axis]):
         # determine index for slicing
-        index = [slice(None)] * array.ndim
+        index = [slice(None)] * arr.ndim
         index[axis] = i
-        arrays.append(array[index])
-    return arrays
+        arrs.append(arr[index])
+    return arrs
 
 
 # ======================================================================
@@ -1514,8 +1513,8 @@ def curve_fit(args):
         args (list): List of parameters to pass to the function
 
     Returns:
-        par_fit (ndarray): Optimized parameters
-        par_cov (ndarray): The covariance of the optimized parameters.
+        par_fit (np.ndarray): Optimized parameters
+        par_cov (np.ndarray): The covariance of the optimized parameters.
             The diagonals provide the variance of the parameter estimate
     """
     try:
