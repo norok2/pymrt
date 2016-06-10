@@ -1138,24 +1138,21 @@ def masking(
 
     Parameters:
         in_filepath_list (list[string]): List of filepaths used as input.
-    mask_filepath : str
-        Path to mask image file.
-    out_dirpath : str (optional)
-        Path to directory where to store results.
-    mask_val : int or float
-        Value of masked out voxels.
-    use_mp : boolean (optional)
-        Use multiprocessing for faster computation.
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+        mask_filepath : str
+            Path to mask image file.
+        out_dirpath : str (optional)
+            Path to directory where to store results.
+        mask_val : int or float
+            Value of masked out voxels.
+        use_mp : boolean (optional)
+            Use multiprocessing for faster computation.
+        force : boolean (optional)
+            Force calculation of output.
+        verbose : int (optional)
+            Set level of verbosity.
 
-    Returns
-    =======
-    out_filepath_list : list of string
-        List of path to output files.
-
+    Returns:
+        out_filepath_list (list[str]): List of path to output files.
     """
     # ensure existing output path
     if not os.path.exists(out_dirpath):
@@ -1556,23 +1553,6 @@ def check_correlation(
 
 
 # todo: fix registration to (re)use FSL
-
-
-# ======================================================================
-# def bicorrelation(
-#         in1_filepath,
-#         in2_filepath,
-#         mask_filepath=None,
-#         in1_type=None,
-#         in1_interval=None,
-#         in1_units=None,
-#         in2_type=None,
-#         in2_interval=None,
-#         in2_units=None,
-#         ):
-
-
-
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
