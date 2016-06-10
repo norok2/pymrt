@@ -100,9 +100,9 @@ def str_to_key_val(
 
     Examples:
         >>> str_to_key_val('key=1000')
-        ('key', 1000)
+        (u'key', 1000)
         >>> str_to_key_val('key1000', '')
-        ('key', 1000)
+        (u'key', 1000)
 
     See Also:
         set_param_val, parse_series_name
@@ -230,7 +230,7 @@ def info_to_str(
 # ======================================================================
 def filepath_to_info(
         filepath,
-        file_ext=mrb.EXT['img'],
+        file_ext=mrb.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=KEY_VAL_SEP):
     """
@@ -252,7 +252,7 @@ def filepath_to_info(
 def info_to_filepath(
         info,
         dirpath='.',
-        file_ext=mrb.EXT['img'],
+        file_ext=mrb.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
     filename = mrb.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')

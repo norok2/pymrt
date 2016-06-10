@@ -141,6 +141,28 @@ def get_map(dirpath, type):
 
 
 # ======================================================================
+def calc_wm_to_brain_ratio(
+        dirpath=os.path.join(PATHS['base'], 'estimate_average_myelin')):
+    names = {
+        'bs': 'BrainStem.nii.gz',
+        'cer': 'Cerebellum.nii.gz',
+        'lc': 'LeftCerebralCortex.nii.gz',
+        'rc': 'RightCerebralCortex.nii.gz',
+        'lwm': 'LeftCerebralWhiteMatter.nii.gz',
+        'rwm': 'RightCerebralWhiteMatter.nii.gz',
+        'b': 'MNI152_T1_1mm_brain.nii.gz',
+    }
+    img = {}
+    for name, filename in names.items():
+        img[name] = mrio.load(os.path.join(dirpath, filename))
+    wm = img['lwm'] + img['rwm']
+    c = img['lc'] + img['rc']
+    b = wm + c
+    wm_ratio = np.sum(wm) / np.sum(b)
+    return wm_ratio
+
+
+# ======================================================================
 def apply_affine(
         i_arrays,
         linear,
@@ -210,9 +232,9 @@ def affine_model(
     unknowns = list(aa.ravel()) + list(cc)
     sols = sym.solvers.solve(eqs, *unknowns)
 
-    models, priors = {}, {}
+    arbs, priors = {}, {}
     if model == 'MyH-FeH-MyA-FeA-My0-Fe0':
-        models = {
+        arbs = {
             xx[0, 0]: 1.0, xx[1, 0]: 1.0,
             xx[0, 1]: 0.5, xx[1, 1]: 0.5,
             xx[0, 2]: 0.0, xx[1, 2]: 0.1,
@@ -223,7 +245,7 @@ def affine_model(
             pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
         }
     elif model == 'MyH-FeL-MyL-FeH-My0-Fe0':
-        models = {
+        arbs = {
             xx[0, 0]: 1.0, xx[1, 0]: 0.0,
             xx[0, 1]: 0.5, xx[1, 1]: 0.5,
             xx[0, 2]: 0.0, xx[1, 2]: 0.1,
@@ -234,7 +256,7 @@ def affine_model(
             pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
         }
     elif model == 'MyH-FeL-MyL-FeH':
-        models = {
+        arbs = {
             xx[0, 0]: 1.0, xx[1, 0]: 0.0,
             xx[0, 1]: 0.5, xx[1, 1]: 0.5,
         }
@@ -243,7 +265,7 @@ def affine_model(
             pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
         }
     elif model == 'MyH-FeH-MyA-FeA':
-        models = {
+        arbs = {
             xx[0, 0]: 1.0, xx[1, 0]: 0.0,
             xx[0, 1]: 0.5, xx[1, 1]: 0.5,
             xx[0, 2]: 0.0, xx[1, 2]: 0.1,
@@ -254,7 +276,7 @@ def affine_model(
             pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
         }
     elif model == 'MyA-FeA-My0-Fe0':
-        models = {
+        arbs = {
             xx[0, 0]: 1.0, xx[1, 0]: 0.0,
             xx[0, 1]: 0.5, xx[1, 1]: 0.5,
             xx[0, 2]: 0.0, xx[1, 2]: 0.1,
@@ -264,14 +286,14 @@ def affine_model(
             pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
             pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
         }
-    models_priors = mrb.merge_dicts(models, priors)
+    subst = mrb.merge_dicts(arbs, priors)
 
     aa_arr = np.array(
-        [sols[aa[i, j]].subs(models_priors)
+        [sols[aa[i, j]].subs(subst)
          for i in range(num) for j in range(num)]).reshape((num, num))
     if num_eqs:
         cc_arr = np.array(
-            [sols[cc[i]].subs(models_priors) for i in range(num)])
+            [sols[cc[i]].subs(subst) for i in range(num)])
     else:
         cc_arr = np.zeros_like(cc)
     if save_path is not None:
@@ -399,52 +421,7 @@ def main():
 if __name__ == '__main__':
     begin_time = time.time()
 
-    # main()
-    r1 = {
-        'My': 1.00,
-        'Fe': 0.95,
-        'Avg': 0.70,
-        '0': 0.20}
-    r2s = {
-        'My': 44.0,
-        'Fe': 105.0,
-        'Avg': 35.0,
-        '0': 0.45}
-
-    # X = A * P + C
-    num = 2
-    aa = np.array(
-        [sym.symbols('A_{}_{}'.format(i, j))
-         for i in range(num) for j in range(num)]).reshape((num, num))
-    cc = np.array([sym.symbols('C_{}'.format(i)) for i in range(num)])
-    # concentrations, 1st index: chemical species, 2nd index: prior information
-    xx = np.array(
-        [sym.symbols('X_{}_{}'.format(i, j))
-         for i in range(num) for j in range(num + 1)]).reshape((num, num + 1))
-    # parametric maps, 1st index: parametric map, 2nd index: prior information
-    pp = np.array(
-        [sym.symbols('P_{}_{}'.format(i, j))
-         for i in range(num) for j in range(num + 1)]).reshape((num, num + 1))
-
-    eqs = (
-        sym.Eq(xx[0, 0], aa[0, 0] * pp[0, 0] + aa[0, 1] * pp[1, 0] + cc[0]),
-        sym.Eq(xx[1, 0], aa[1, 0] * pp[0, 0] + aa[1, 1] * pp[1, 0] + cc[1]),
-        sym.Eq(xx[0, 1], aa[0, 0] * pp[0, 1] + aa[0, 1] * pp[1, 1] + cc[0]),
-        sym.Eq(xx[1, 1], aa[1, 0] * pp[0, 1] + aa[1, 1] * pp[1, 1] + cc[1]),
-        sym.Eq(xx[0, 2], aa[0, 0] * pp[0, 2] + aa[0, 1] * pp[1, 2] + cc[0]),
-        sym.Eq(xx[1, 2], aa[1, 0] * pp[0, 2] + aa[1, 1] * pp[1, 2] + cc[1]),
-    )
-
-
-    print(aa, cc)
-    print(eqs)
-    print(unknowns)
-    print(sols)
-
-
-
-
-    print(aa_arr, cc_arr)
+    main()
 
     mrb.elapsed('microstruct-linear')
     mrb.print_elapsed()

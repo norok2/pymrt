@@ -334,6 +334,7 @@ def ext_qsm_as_legacy(
     return img_list, aff_list, img_type_list, params_list
 
 
+# ======================================================================
 def qsm_sdi(
         images,
         affines,
@@ -342,6 +343,8 @@ def qsm_sdi(
 
     pass
 
+
+# ======================================================================
 def calc_afi(
         images,
         affines,
