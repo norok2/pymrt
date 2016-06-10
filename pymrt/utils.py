@@ -185,7 +185,7 @@ def parse_filename(
 
     """
     filename = os.path.basename(filepath)
-    filename_noext = mrb.change_ext(filename, '', mrb.EXT['img'])
+    filename_noext = mrb.change_ext(filename, '', mrb.EXT['niz'])
     if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
         tokens = filename_noext.split(i_sep)
         info = {}
@@ -217,7 +217,7 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
-        ext=mrb.EXT['img']):
+        ext=mrb.EXT['niz']):
     """
     Reconstruct file name/path with SIEMENS-like structure.
     Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
@@ -464,7 +464,7 @@ def combine_filename(
     filename = prefix
     for name in filenames:
         filename += 2 * INFO_SEP + \
-                    mrb.change_ext(os.path.basename(name), '', mrb.EXT['img'])
+                    mrb.change_ext(os.path.basename(name), '', mrb.EXT['niz'])
     return filename
 
 

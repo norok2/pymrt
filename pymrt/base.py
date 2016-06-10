@@ -56,8 +56,6 @@ from pymrt import VERB_LVL
 from pymrt import D_VERB_LVL
 from pymrt import _EVENTS
 
-# from pymrt import get_first_line
-
 # ======================================================================
 # :: Custom defined constants
 
@@ -69,7 +67,8 @@ CSV_DELIMITER = '\t'
 PNG_INTERVAL = (0.0, 255.0)
 EXT = {
     'plot': 'png',
-    'img': 'nii.gz',
+    'nii': 'nii',
+    'niz': 'nii.gz',
     'text': 'txt',
     'tab': 'csv',
     'data': 'json',
@@ -77,11 +76,10 @@ EXT = {
 D_TAB_SIZE = 8
 
 # :: TTY amenities
-TTY_COLORS = {
-    'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
-    'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
-}
-
+# TTY_COLORS = {
+#     'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
+#     'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
+# }
 
 # ======================================================================
 def _is_hidden(filepath):
@@ -1539,9 +1537,9 @@ def elapsed(
     Append a named event point to the events list.
 
     Args:
-        name (str): The name of the event point
+        name (basestring): The name of the event point
         time_point (float): The time in seconds since the epoch
-        events (list[(str,time)]): A list of named event time points.
+        events (list[(basestring,time)]): A list of named event time points.
             Each event is a 2-tuple: (label, time)
 
     Returns:

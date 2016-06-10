@@ -64,15 +64,13 @@ import pymrt.input_output as mrio
 from pymrt import VERB_LVL
 from pymrt import D_VERB_LVL
 
-# from pymrt import get_first_line
-
 
 # ======================================================================
 META_EXT = 'info'  # ID['info']
 
 D_OPTS = {
     # sources
-    'data_ext': mrb.EXT['img'],
+    'data_ext': mrb.EXT['niz'],
     'meta_ext': META_EXT,
     'multi_acq': False,
     'use_meta': True,
@@ -728,7 +726,7 @@ def sources_generic(
         for data_filepath in data_filepath_list:
             info = mru.parse_filename(
                 mrb.change_ext(mrb.os.path.basename(data_filepath), '',
-                               mrb.EXT['img']))
+                               mrb.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
@@ -1021,3 +1019,5 @@ def compute(
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
+
+mrb.elapsed('pymrt.computation')

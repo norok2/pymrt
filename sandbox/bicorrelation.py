@@ -104,7 +104,7 @@ def bicorr(
 
 # ======================================================================
 def sharpness(dirpath, mask_filename='mask.nii.gz', ):
-    in_filepaths = mrb.listdir(dirpath, mrb.EXT['img'])
+    in_filepaths = mrb.listdir(dirpath, mrb.EXT['niz'])
     in_filepaths = [item for item in in_filepaths if mask_filename not in item]
     mask_filepath = os.path.join(dirpath, mask_filename)
     msk = mrio.load(mask_filepath).astype(bool)
@@ -125,9 +125,9 @@ def sobel_gen(
         out_path = os.path.join(dirpath, 'sobel')
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        filenames = mrb.listdir(in_path, mrb.EXT['img'], full_path=False)
+        filenames = mrb.listdir(in_path, mrb.EXT['niz'], full_path=False)
         for filename in filenames:
-            if mrb.change_ext(filename, '', mrb.EXT['img']) in src_names:
+            if mrb.change_ext(filename, '', mrb.EXT['niz']) in src_names:
                 in_filepath = os.path.join(in_path, filename)
                 out_filepath = os.path.join(out_path, subpath + '__' + filename)
                 mrio.simple_filter_1_1(in_filepath, out_filepath, sobel)
@@ -137,9 +137,9 @@ def sobel_gen(
         out_path = os.path.join(dirpath, 'sobel__' + subpath)
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        filenames = mrb.listdir(in_path, mrb.EXT['img'], full_path=False)
+        filenames = mrb.listdir(in_path, mrb.EXT['niz'], full_path=False)
         for filename in filenames:
-            if mrb.change_ext(filename, '', mrb.EXT['img']) in src_names:
+            if mrb.change_ext(filename, '', mrb.EXT['niz']) in src_names:
                 in_filepath = os.path.join(in_path, filename)
                 out_filepath = os.path.join(out_path, filename)
                 mrio.simple_filter_1_1(in_filepath, out_filepath, sobel)

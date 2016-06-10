@@ -55,7 +55,7 @@ def mt_jigsaw(
         name = last_subdir.split(sep)[0]
         if name == target:
             key = mrb.change_ext(
-                os.path.basename(filepath), '', mrb.EXT['img'])
+                os.path.basename(filepath), '', mrb.EXT['niz'])
             if key in jigsaw:
                 jigsaw[key].append(filepath)
             else:
@@ -67,7 +67,7 @@ def mt_jigsaw(
     for key, in_filepaths in jigsaw.items():
         out_filepath = os.path.join(
             target_dirpath,
-            mrb.change_ext(sep.join((target, key)), mrb.EXT['img']))
+            mrb.change_ext(sep.join((target, key)), mrb.EXT['niz']))
         if verbose >= VERB_LVL['low']:
             print('Out: ', out_filepath)
         mrio.simple_filter_n_1(
