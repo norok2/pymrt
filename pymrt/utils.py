@@ -72,10 +72,215 @@ PARAM_BASE_SEP = '_'
 PARAM_SEP = ','
 PARAM_KEY_VAL_SEP = '='
 INFO_SEP = '__'
+TOKEN_SEP = '_'
+KEY_VAL_SEP = '='
 
 # suffix of new reconstructed image from Siemens
 NEW_RECO_ID = 'rr'
 SERIES_NUM_ID = 's'
+
+
+# ======================================================================
+def str_to_key_val(
+        text,
+        kv_sep=KEY_VAL_SEP,
+        case_sensitive=False):
+    """
+    Extract numerical value from string information.
+    This expects a string containing a single parameter in the form `key=val`.
+
+    Parameters:
+        text (str): The input string.
+        kv_sep (str): The string separating the key and the value.
+        case_sensitive : bool (optional)
+            Parsing of the string is case-sensitive.
+
+    Returns:
+        param_val (int|float|str|None): The value of the parameter.
+
+    Examples:
+        >>> str_to_key_val('key=1000')
+        ('key', 1000)
+        >>> str_to_key_val('key1000', '')
+        ('key', 1000)
+
+    See Also:
+        set_param_val, parse_series_name
+    """
+    if text:
+        if not case_sensitive:
+            text = text.lower()
+        if kv_sep and kv_sep in text:
+            key, val = text.split(kv_sep)
+        elif kv_sep == '':
+            key = re.findall(r'^[a-zA-Z\-]*', text)[0]
+            val = text[len(key):]
+        else:
+            key = text
+            val = None
+    else:
+        key, val = None, None
+    if val:
+        val = mrb.auto_convert(val)
+    return key, val
+
+
+# ======================================================================
+def key_val_to_str(
+        key,
+        val=None,
+        kv_sep=KEY_VAL_SEP,
+        case='lower'):
+    """
+    Extract numerical value from string information.
+    This expects an appropriate string, as retrieved by parse_filename().
+
+    Args:
+        val (int|float|None): The value of the parameter.
+        key (str): The string containing the label of the parameter.
+        kv_sep (str): String separating key from value in parameters.
+        case (str): Set the case of the parameter label.
+            - 'lower': force the key to be in lower case
+            - 'upper': force the key to be in upper case
+            - any other value has no effect and it is silently ignored
+
+    Returns:
+        text (str): The string containing the information.
+
+    Examples:
+        >>> key_val_to_str('key', 1000)
+        'key=1000'
+        >>> key_val_to_str('key', 1000, '')
+        'key1000'
+
+    See Also:
+        str_to_key_val, to_series_name
+    """
+    if case == 'lower':
+        key = key.lower()
+    elif case == 'upper':
+        key = key.upper()
+    if val is not None:
+        text = kv_sep.join((key, str(val)))
+    else:
+        text = key
+    return text
+
+
+# ======================================================================
+def str_to_info(
+        text,
+        sep=TOKEN_SEP,
+        kv_sep=KEY_VAL_SEP):
+    """
+    Extract information from Siemens DICOM names.
+    Expected format is: [s<###>_]<series_name>[_<#>][_<type>]
+
+    Args:
+        text (str):
+        sep (str):
+        kv_sep (str):
+
+    Returns:
+        info (dict):
+
+    Examples:
+        >>> d = str_to_info('S001_TEST_NAME_TE=10.6_2_T1')
+        >>> for k in sorted(d.keys()): print(k, ':', d[k])  # display dict
+        _# : 1
+        2 : None
+        name : None
+        t1 : None
+        te : 10.6
+        test : None
+    """
+    tokens = text.split(sep)
+    info = {'#': mrb.auto_convert(tokens[0][len(SERIES_NUM_ID):])
+        if SERIES_NUM_ID.lower() in tokens[0].lower() else None}
+    for token in tokens[1:]:
+        key, val = str_to_key_val(token, kv_sep)
+        info[key] = val
+    return info
+
+
+# ======================================================================
+def info_to_str(
+        info,
+        sep=TOKEN_SEP,
+        kv_sep=KEY_VAL_SEP):
+    """
+
+    Args:
+        info (dict):
+        sep (str):
+        kv_sep (str):
+
+    Returns:
+        text (str):
+
+    Examples:
+        >>> info = {'_#': 10, 'me-mp2rage'}
+    """
+    tokens = []
+    for key, val in info.items():
+        tokens.append(key_val_to_str(key, val, kv_sep))
+    return sep.join(tokens)
+
+
+# ======================================================================
+def filepath_to_info(
+        filepath,
+        file_ext=mrb.EXT['img'],
+        sep=TOKEN_SEP,
+        kv_sep=KEY_VAL_SEP):
+    """
+
+    Args:
+        filepath ():
+        file_ext ():
+        sep ():
+        kv_sep ():
+
+    Returns:
+        info (dict): Information extracted from the
+    """
+    filename = mrb.change_ext(os.path.basename(filepath), '', file_ext)
+    return str_to_info(filename)
+
+
+# ======================================================================
+def info_to_filepath(
+        info,
+        dirpath='.',
+        file_ext=mrb.EXT['img'],
+        sep=TOKEN_SEP,
+        kv_sep=TOKEN_SEP):
+    filename = mrb.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')
+    return os.path.join(
+        dirpath,  + mrb.add_extsep(file_ext))
+
+
+# ======================================================================
+def filepath_set_info(
+        in_filepath,
+        key,
+        val=None,
+        force=True):
+    """
+
+    Args:
+        in_filepath (str):
+        key (str):
+        val (int|float|str|None):
+        force (bool): Force overwrite of previously existing key:val pair.
+
+    Returns:
+        out_filepath(str):
+    """
+    info = filepath_to_info(in_filepath)
+    if key not in info or force:
+        info[key] = val
+    return info_to_filepath(info)
 
 
 # ======================================================================
