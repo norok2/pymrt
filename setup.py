@@ -144,12 +144,13 @@ setup(
 
             'pymrt_calc_mask=scripts_cli.calc_mask:main',
             'pymrt_geom_phantom=scripts_cli.geom_phantom:main',
+            'pymrt_ernst_calc=scripts_cli.ernst_calc:main',
 
             'pymrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
         ],
 
         'gui_scripts': [
-            'pymrt_ernst_calc=scripts_gui.ernst_angle_calculator:main',
+            'pymrt_flash=scripts_gui.flash_sim_optim:main',
             'pymrt_mp2rage=scripts_gui.mp2rage_sim_optim:main',
         ],
     },

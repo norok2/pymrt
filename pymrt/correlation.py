@@ -79,7 +79,12 @@ MAP_ID = {
     'chi': 'CHI',
     'b0': 'B0',
     'b1t': 'B1T',
-    'm0': 'MO'}
+    'pd': 'PD',
+    'm0': 'MO',
+    't1w': 'T1w',
+    't2w': 'T2w',
+    'pdw': 'PDw',
+}
 
 # magnitude/phase image type identifiers
 TYPE_ID = {
@@ -89,7 +94,8 @@ TYPE_ID = {
     'imag': 'IM',
     'complex': 'CX',
     'temp': 'TMP',
-    'none': None}
+    'none': None,
+}
 
 # service image type identifiers
 SERVICE_ID = {
@@ -111,13 +117,17 @@ KNOWN_IMG_TYPES = set(
     list(SERVICE_ID.values()) + list(MP2RAGE_ID.values()))
 
 # suffix of new reconstructed image from Siemens
+ID = {
+    'series': 's',
+    'reco': 'rr',
+}
 NEW_RECO_ID = 'rr'
 SERIES_NUM_ID = 's'
 
 # prefixes for target files
 MASK_FILENAME = 'mask'
 
-D_EXT = {
+EXT = {
     'reg_ref': '0_REG_REF',
     'corr_ref': '0_CORR_REF'}
 
@@ -144,15 +154,13 @@ def _get_ref_list(
         ref_ext (str): Filename extension of the reference file flag.
 
     Returns:
-        (list[str], list[str]): A tuple consisting of:
-
-            - list of path to reference files
-            - list of path to reference source files
+        ref_filepaths (list[str]): List of paths to reference files
+        ref_src_filepaths (list[str]): List of paths to reference source files
     """
-    ref_src_filepath_list = mrb.listdir(dirpath, ref_ext)
-    if ref_src_filepath_list:
-        ref_filepath_list = []
-        for ref_src in ref_src_filepath_list:
+    ref_src_filepaths = mrb.listdir(dirpath, ref_ext)
+    if ref_src_filepaths:
+        ref_filepaths = []
+        for ref_src in ref_src_filepaths:
             # extract dirpath
             ref_dirpath = os.path.dirname(ref_src)
             if subdir:
@@ -161,15 +169,16 @@ def _get_ref_list(
             ref_filename = mrb.change_ext(
                 os.path.basename(ref_src), mrb.EXT['img'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
-            ref_filepath_list.append(ref_filepath)
+            ref_filepaths.append(ref_filepath)
     elif target_list:
-        ref_filepath_list = target_list
+        ref_filepaths = target_list
     else:
-        ref_filepath_list = mrb.listdir(dirpath, mrb.EXT['img'])
-    if not ref_filepath_list:
+        ref_filepaths = mrb.listdir(dirpath, mrb.EXT['img'])
+    if not ref_filepaths:
         msg = 'No reference file(s) found'
         raise RuntimeError(msg)
-    return ref_filepath_list, ref_src_filepath_list
+    return ref_filepaths, ref_src_filepaths
+    return ref_filepaths, ref_src_filepaths
 
 
 # ======================================================================
@@ -243,7 +252,6 @@ def _apply_affine_fsl(
 
     Returns:
         None
-
     """
     if mrb.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
@@ -1343,8 +1351,8 @@ def check_correlation(
         val_interval=None,
         val_units=None,
         mask_filepath=None,
-        reg_ref_ext=D_EXT['reg_ref'],
-        corr_ref_ext=D_EXT['corr_ref'],
+        reg_ref_ext=EXT['reg_ref'],
+        corr_ref_ext=EXT['corr_ref'],
         tmp_dir='tmp',
         reg_dir='reg',
         msk_dir='msk',

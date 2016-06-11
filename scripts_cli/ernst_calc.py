@@ -1,11 +1,8 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-Template: Module Name and Description
-
-Long module description.
+Calculate the optimal signal conditions (e.g. Ernst angle) for FLASH sequences.
 """
-
 
 # ======================================================================
 # :: Future Imports
@@ -13,7 +10,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -36,7 +32,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 
 # :: Local Imports
 # import pymrt.base as mrb
-# import pymrt.utils as mru
+import pymrt.utils as mru
 # import pymrt.input_output as mrio
 # import pymrt.geometry as mrg
 from pymrt import INFO
@@ -73,8 +69,18 @@ def handle_arg():
         action='store_true',
         help='override verbosity settings to suppress output [%(default)s]')
     # :: Add additional arguments
-    # nothing here yet!
-    # avoid mandatory arguments whenever possible
+    arg_parser.add_argument(
+        '--t1', metavar='X',
+        type=float, default=1000,
+        help='set the T1 value in ms [%(default)s]')
+    arg_parser.add_argument(
+        '--tr', metavar='X',
+        type=float, default=100,
+        help='set the TR value in ms [%(default)s]')
+    arg_parser.add_argument(
+        '--fa', metavar='X',
+        type=float, default=None,
+        help='set the FA value in deg [%(default)s]')
     return arg_parser
 
 
@@ -93,20 +99,9 @@ def main():
         print('II:', 'Parsed Arguments:', args)
     print(__doc__)
 
-    T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]
-    th_E_val = np.rad2deg(np.arccos(np.exp(-TR_val / T1_val)))
-    plt.ion()
-    plt.xlabel('TR / ms')
-    plt.ylabel('flip angle / deg')
-    plt.contourf(np.arange(1, 20, 0.1), np.arange(700, 2500), th_E_val, 50)
-    plt.colorbar()
-    plt.show(block=True)
-    print(T1_val.shape)
+    val, name, units = mru.ernst_calc(args.t1, args.tr, args.fa)
+    print('{}={} {}'.format(name, val, units))
 
-    import tkinter
-    top = tkinter.Tk()
-    # Code to add widgets will go here...
-    top.mainloop()
 
 # ======================================================================
 if __name__ == '__main__':

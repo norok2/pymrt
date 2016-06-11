@@ -33,7 +33,7 @@ import re  # Regular expression operations
 import doctest  # Test interactive Python examples
 
 # :: External Imports
-# import numpy as np  # NumPy (multidimensional numerical arrays library)
+import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
@@ -67,7 +67,7 @@ D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
 # ======================================================================
 # :: parsing constantsd
 TOKEN_SEP = '_'
-INFO_SEP=','
+INFO_SEP = ','
 KEY_VAL_SEP = '='
 
 # suffix of new reconstructed image from Siemens
@@ -190,7 +190,8 @@ def str_to_info(
         test : None
     """
     tokens = text.split(sep)
-    info = {'#': mrb.auto_convert(tokens[0][len(SERIES_NUM_ID):])
+    info = {
+        '#': mrb.auto_convert(tokens[0][len(SERIES_NUM_ID):])
         if SERIES_NUM_ID.lower() in tokens[0].lower() else None}
     for token in tokens[1:]:
         key, val = str_to_key_val(token, kv_sep)
@@ -252,7 +253,7 @@ def info_to_filepath(
         kv_sep=TOKEN_SEP):
     filename = mrb.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')
     return os.path.join(
-        dirpath,  + mrb.add_extsep(file_ext))
+        dirpath, + mrb.add_extsep(file_ext))
 
 
 # ======================================================================
@@ -276,6 +277,7 @@ def filepath_set_info(
     if key not in info or force:
         info[key] = val
     return info_to_filepath(info)
+
 
 # ======================================================================
 def parse_filename(
@@ -806,6 +808,43 @@ def filename2label(
 #            print('Target:\t{}'.format(os.path.basename(out_phs_filepath)))
 #    return mag_filepath, phs_filepath
 '''
+
+
+# ======================================================================
+def ernst_calc(
+        t1=None,
+        tr=None,
+        fa=None):
+    """
+    Calculate optimal T1, TR or FA (given the other two) for FLASH sequence.
+
+    Args:
+        t1 (float|None): Longitudinal relaxation time T1 in ms
+        tr (float|None): Repetition time TE in ms
+        fa (float|None): flip angle FA in deg
+
+    Returns:
+        val (float): Either T1, TR or FA fulfilling Ernst condition
+
+    Examples:
+        >>> ernst_calc(100.0, 30.0)
+        (42.198837866408269, 'FA', 'deg')
+        >>> ernst_calc(100.0, fa=42)
+        (29.686433336996988, 'TR', 'ms')
+        >>> ernst_calc(None, 30.0, 42)
+        (101.05626250025875, 'T1', 'ms')
+    """
+    if t1 and tr:
+        fa = np.rad2deg(np.arccos(np.exp(-tr / t1)))
+        val, name, units = fa, 'FA', 'deg'
+    elif tr and fa:
+        t1 = -tr / np.log(np.cos(np.deg2rad(fa)))
+        val, name, units = t1, 'T1', 'ms'
+    elif t1 and fa:
+        tr = -t1 * np.log(np.cos(np.deg2rad(fa)))
+        val, name, units = tr, 'TR', 'ms'
+    return val, name, units
+
 
 # ======================================================================
 if __name__ == '__main__':

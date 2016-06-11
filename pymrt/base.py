@@ -223,7 +223,7 @@ def accumulate(items, func=lambda x, y: x + y):
 
 
 # ======================================================================
-def multi_replace(text, replace_list):
+def multi_replace(text, replaces):
     """
     Perform multiple replacements in a string.
 
@@ -243,7 +243,7 @@ def multi_replace(text, replace_list):
         >>> multi_replace('x-x-', (('-x-', '.test'),))
         'x.test'
     """
-    return functools.reduce(lambda s, r: s.replace(*r), replace_list, text)
+    return functools.reduce(lambda s, r: s.replace(*r), replaces, text)
 
 
 # # ======================================================================
@@ -567,7 +567,7 @@ def listdir(
     if file_ext is None:
         if verbose >= VERB_LVL['debug']:
             print('Scanning for DIRS on:\n{}'.format(path))
-        filepath_list = [
+        filepaths = [
             os.path.join(path, filename) if full_path else filename
             for filename in os.listdir(path)
             if os.path.isdir(os.path.join(path, filename))]
@@ -575,11 +575,11 @@ def listdir(
         if verbose >= VERB_LVL['debug']:
             print("Scanning for '{}' on:\n{}".format(file_ext, path))
         # extracts only those ending with specific file_ext
-        filepath_list = [
+        filepaths = [
             os.path.join(path, filename) if full_path else filename
             for filename in os.listdir(path)
             if filename.lower().endswith(file_ext.lower())]
-    return sorted(filepath_list)[pattern]
+    return sorted(filepaths)[pattern]
 
 
 # :: tty_colorify has been obsoleted by blessings
@@ -1003,19 +1003,19 @@ def str2dict(
     """
     if has_decorator(in_str, pre_decor, post_decor):
         in_str = strip_decorator(in_str, pre_decor, post_decor)
-    entry_list = in_str.split(entry_sep)
+    entries = in_str.split(entry_sep)
     out_dict = {}
-    for entry in entry_list:
+    for entry in entries:
         # fetch entry
-        key_val_list = entry.split(key_val_sep)
+        key_val = entry.split(key_val_sep)
         # parse entry
-        if len(key_val_list) == 1:
-            key, val = key_val_list[0], None
-        elif len(key_val_list) == 2:
-            key, val = key_val_list
+        if len(key_val) == 1:
+            key, val = key_val[0], None
+        elif len(key_val) == 2:
+            key, val = key_val
             val = val.strip(strip_val_str)
-        elif len(key_val_list) > 2:
-            key, val = key_val_list[0], key_val_list[1:]
+        elif len(key_val) > 2:
+            key, val = key_val[0], key_val[1:]
             val = [tmp_val.strip(strip_val_str) for tmp_val in val]
         else:
             key = None
@@ -1065,9 +1065,9 @@ def dict2str(
     See Also:
         str2dict
     """
-    key_list = sorted(in_dict.keys(), key=sorting)
+    keys = sorted(in_dict.keys(), key=sorting)
     out_list = []
-    for key in key_list:
+    for key in keys:
         key = key.strip(strip_key_str)
         val = str(in_dict[key]).strip(strip_val_str)
         out_list.append(key_val_sep.join([key, val]))
