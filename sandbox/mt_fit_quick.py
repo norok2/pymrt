@@ -308,7 +308,7 @@ def mt_fit_quick(
         else:
             print(error_msg)
 
-    dirpath = mrb.change_ext(filepaths['target'], '', mrb.EXT['img'])
+    dirpath = mrb.change_ext(filepaths['target'], '', mrb.EXT['niz'])
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
     p_imgs, dp_imgs = [], []
@@ -318,22 +318,22 @@ def mt_fit_quick(
         p_img = np.zeros_like(mask, float)
         p_img[mask] = image_flat
         p_filepath = os.path.join(
-            dirpath, mrb.change_ext('p_' + fitting_name, mrb.EXT['img']))
+            dirpath, mrb.change_ext('p_' + fitting_name, mrb.EXT['niz']))
         mrio.save(p_filepath, p_img, aff_mask)
         p_imgs.append(p_img)
         # save the error map
         dp_img = np.zeros_like(mask, float)
         dp_img[mask] = error_flat
         dp_filepath = os.path.join(
-            dirpath, mrb.change_ext('dp_' + fitting_name, mrb.EXT['img']))
+            dirpath, mrb.change_ext('dp_' + fitting_name, mrb.EXT['niz']))
         mrio.save(dp_filepath, dp_img, aff_mask)
         dp_imgs.append(dp_img)
     # save combined
     p_filepath = os.path.join(
-        dirpath, mrb.change_ext('p_all', mrb.EXT['img']))
+        dirpath, mrb.change_ext('p_all', mrb.EXT['niz']))
     mrio.save(p_filepath, mrb.ndstack(p_imgs), aff_mask)
     dp_filepath = os.path.join(
-        dirpath, mrb.change_ext('dp_all', mrb.EXT['img']))
+        dirpath, mrb.change_ext('dp_all', mrb.EXT['niz']))
     mrio.save(dp_filepath, mrb.ndstack(dp_imgs), aff_mask)
 
 

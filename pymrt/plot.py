@@ -755,8 +755,8 @@ def histogram2d(
     Plot 2D histogram of two arrays.
 
     Args:
-        array1 (ndarray):
-        array2 (ndarray):
+        array1 (np.ndarray):
+        array2 (np.ndarray):
         bin_size (float|tuple[float]): The size of the bins.
             If a single number is given, the same number is used for both axes.
             Otherwise, the first number is used for the x-axis and the second
@@ -819,9 +819,9 @@ def histogram2d(
             If None, gets the current Axes object.
 
     Returns:
-        hist2d (ndarray): The calculated 2D histogram.
-        x_edges (ndarray): The bin edges on the x-axis.
-        y_edges (ndarray): The bin edges on the y-axis.
+        hist2d (np.ndarray): The calculated 2D histogram.
+        x_edges (np.ndarray): The bin edges on the x-axis.
+        y_edges (np.ndarray): The bin edges on the y-axis.
         plot (matplotlib.pyplot.Figure): The Figure object containing the plot.
     """
     # setup array range

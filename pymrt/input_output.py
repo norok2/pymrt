@@ -107,8 +107,8 @@ def save(
 
     Args:
         out_filepath (str): Output file path
-        array (ndarray): Data to be stored
-        affine (ndarray): 3D affine transformation (4x4 matrix)
+        array (np.ndarray): Data to be stored
+        affine (np.ndarray): 3D affine transformation (4x4 matrix)
         header: Header of the image (refer to NiBabel).
 
     Returns:
@@ -465,7 +465,7 @@ def split(
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
         out_basename = mrb.change_ext(
-            os.path.basename(in_filepath), '', mrb.EXT['img'])
+            os.path.basename(in_filepath), '', mrb.EXT['niz'])
     out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
@@ -477,7 +477,7 @@ def split(
         i_str = str(i).zfill(len(str(len(img_list))))
         out_filepath = os.path.join(
             out_dirpath,
-            mrb.change_ext(out_basename + '-' + i_str, mrb.EXT['img'], ''))
+            mrb.change_ext(out_basename + '-' + i_str, mrb.EXT['niz'], ''))
         save(out_filepath, image, obj.get_affine())
         out_filepaths.append(out_filepath)
     return out_filepaths

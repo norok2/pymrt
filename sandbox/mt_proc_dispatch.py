@@ -112,10 +112,10 @@ def mt_proc_dispatch(
                 (idx >= np.min(chunk_idx)) * (idx <= np.max(chunk_idx))
             chunk[chunk_mask] = 1
             chunk_filepath = filepaths['chunk'].format(
-                name=mrb.change_ext(filenames['target'], '', mrb.EXT['img']),
+                name=mrb.change_ext(filenames['target'], '', mrb.EXT['niz']),
                 id='{:0{len}d}o{:0{len}d}'.format(
                     i + 1, num_chunks, len=int(ceil(log10(num_chunks + 1)))))
-            chunk_dirpath = mrb.change_ext(chunk_filepath, '', mrb.EXT['img'])
+            chunk_dirpath = mrb.change_ext(chunk_filepath, '', mrb.EXT['niz'])
             if not os.path.isfile(chunk_filepath):
                 mrio.save(chunk_filepath, chunk.astype(int), aff)
                 chunk_filepaths.append(chunk_filepath)

@@ -1,7 +1,7 @@
-#!python
+#!/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: generic basic utilities.
+pymrt.base: generic basic utilities.
 """
 
 # ======================================================================
@@ -58,8 +58,6 @@ from pymrt import VERB_LVL
 from pymrt import D_VERB_LVL
 from pymrt import _EVENTS
 
-# from pymrt import get_first_line
-
 # ======================================================================
 # :: Custom defined constants
 
@@ -71,13 +69,19 @@ CSV_DELIMITER = '\t'
 PNG_INTERVAL = (0.0, 255.0)
 EXT = {
     'plot': 'png',
-    'img': 'nii.gz',
+    'nii': 'nii',
+    'niz': 'nii.gz',
     'text': 'txt',
     'tab': 'csv',
     'data': 'json',
 }
 D_TAB_SIZE = 8
 
+# :: TTY amenities
+# TTY_COLORS = {
+#     'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
+#     'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
+# }
 
 # ======================================================================
 def _is_hidden(filepath):
@@ -322,42 +326,42 @@ def set_keyword_parameters(
 
 
 # ======================================================================
-def mdot(*arrays):
+def mdot(*arrs):
     """
     Cumulative application of `numpy.dot` operation.
 
     Args:
-        arrays (tuple[ndarray]): List of input arrays.
+        arrs (tuple[ndarray]): List of input arrays.
 
     Returns:
-        array (ndarray): The result of the tensor product.
+        arr (np.ndarray): The result of the tensor product.
     """
-    array = arrays[0]
-    for item in arrays[1:]:
-        array = np.dot(array, item)
-    return array
+    arr = arrs[0]
+    for item in arrs[1:]:
+        arr = np.dot(arr, item)
+    return arr
 
 
 # ======================================================================
-def ndot(array, dim=-1, step=1):
+def ndot(arr, dim=-1, step=1):
     """
     Cumulative application of `numpy.dot` operation over a given axis.
 
     Args:
-        array (ndarray): The input array.
+        arr (np.ndarray): The input array.
 
     Returns:
-        array (ndarray): The result of the tensor product.
+        prod (np.ndarray): The result of the tensor product.
     """
     if dim < 0:
-        dim += array.ndim
-    start = 0 if step > 0 else array.shape[dim] - 1
-    stop = array.shape[dim] if step > 0 else -1
-    prod = array[
-        [slice(None) if j != dim else start for j in range(array.ndim)]]
+        dim += arr.ndim
+    start = 0 if step > 0 else arr.shape[dim] - 1
+    stop = arr.shape[dim] if step > 0 else -1
+    prod = arr[
+        [slice(None) if j != dim else start for j in range(arr.ndim)]]
     for i in range(start, stop, step)[1:]:
-        indexes = [slice(None) if j != dim else i for j in range(array.ndim)]
-        prod = np.dot(prod, array[indexes])
+        indexes = [slice(None) if j != dim else i for j in range(arr.ndim)]
+        prod = np.dot(prod, arr[indexes])
     return prod
 
 
@@ -366,11 +370,11 @@ def commutator(a, b):
     Calculate the commutator of two arrays: [A,B] = AB - BA
 
     Args:
-        a (ndarray): The first operand
-        b (ndarray): The second operand
+        a (np.ndarray): The first operand
+        b (np.ndarray): The second operand
 
     Returns:
-        c (ndarray): The operation result
+        c (np.ndarray): The operation result
     """
     return a.dot(b) - b.dot(a)
 
@@ -380,11 +384,11 @@ def anticommutator(a, b):
     Calculate the anticommutator of two arrays: [A,B] = AB + BA
 
     Args:
-        a (ndarray): The first operand
-        b (ndarray): The second operand
+        a (np.ndarray): The first operand
+        b (np.ndarray): The second operand
 
     Returns:
-        c (ndarray): The operation result
+        c (np.ndarray): The operation result
     """
     return a.dot(b) + b.dot(a)
 
@@ -1250,12 +1254,12 @@ def sgnlogspace(
 
 
 # ======================================================================
-def minmax(array):
+def minmax(arr):
     """
     Calculate the minimum and maximum of an array: (min, max).
 
     Args:
-        array (ndarray): The input array
+        arr (np.ndarray): The input array.
 
     Returns:
         min (float): the minimum value of the array
@@ -1265,7 +1269,7 @@ def minmax(array):
         >>> minmax(np.arange(10))
         (0, 9)
     """
-    return np.min(array), np.max(array)
+    return np.min(arr), np.max(arr)
 
 
 # ======================================================================
@@ -1356,21 +1360,53 @@ def combine_interval(
 
 
 # ======================================================================
-def midval(array):
+def midval(arr):
     """
     Calculate the middle value vector.
 
     Args:
-        array (ndarray): The input N-dim array
+        arr (np.ndarray): The input N-dim array
 
     Returns:
-        array (ndarray): The output (N-1)-dim array
+        arr (np.ndarray): The output (N-1)-dim array
 
     Examples:
         >>> midval(np.array([0, 1, 2, 3, 4]))
         array([ 0.5,  1.5,  2.5,  3.5])
     """
-    return (array[1:] - array[:-1]) / 2.0 + array[:-1]
+    return (arr[1:] - arr[:-1]) / 2.0 + arr[:-1]
+
+
+# ======================================================================
+def unwrap(arr, voxel_sizes=None):
+    """
+    Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
+
+    Args:
+        arr (np.ndarray): The multi-dimensional array to unwrap.
+
+    Returns:
+        arr (np.ndarray): The multi-dimensional unwrapped array.
+
+    See Also:
+        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+    """
+    if not voxel_sizes:
+        voxel_sizes = np.ones_like(arr.shape)
+    # calculate the Laplacian kernel
+    k_range = [slice(-k_size / 2.0, +k_size / 2.0) for k_size in arr.shape]
+    kk = np.ogrid[k_range]
+    kk_2 = np.zeros_like(arr)
+    for i, dim in enumerate(arr.shape):
+        kk_2 += np.fft.fftshift(kk[i] / dim / voxel_sizes[i]) ** 2
+    # perform the Laplacian-based Fourier unwrapping
+    arr = np.fft.fftn(
+        np.cos(arr) * np.fft.ifftn(kk_2 * np.fft.fftn(np.sin(arr))) -
+        np.sin(arr) * np.fft.ifftn(kk_2 * np.fft.fftn(np.cos(arr)))) / kk_2
+    # removes the singularity generated by the division by kk_2
+    arr[np.isinf(arr)] = 0.0
+    arr = np.real(np.fft.ifftn(arr))
+    return arr
 
 
 # ======================================================================
@@ -1472,7 +1508,7 @@ def cartesian2polar(real, imag):
 
 # ======================================================================
 def calc_stats(
-        array,
+        arr,
         mask_nan=True,
         mask_inf=True,
         mask_vals=None,
@@ -1484,7 +1520,7 @@ def calc_stats(
     Calculate array statistical information (min, max, avg, std, sum, num)
 
     Args:
-        array (ndarray): The array to be investigated
+        arr (np.ndarray): The array to be investigated
         mask_nan (bool): Mask NaN values
         mask_inf (bool): Mask Inf values
         mask_vals (list[int|float]|None): List of values to mask
@@ -1515,25 +1551,25 @@ def calc_stats(
         sum : 190
     """
     if mask_nan:
-        array = array[~np.isnan(array)]
+        arr = arr[~np.isnan(arr)]
     if mask_inf:
-        array = array[~np.isinf(array)]
+        arr = arr[~np.isinf(arr)]
     if not mask_vals:
         mask_vals = []
     for val in mask_vals:
-        array = array[array != val]
+        arr = arr[arr != val]
     if val_interval is None:
-        val_interval = minmax(array)
-    array = array[array >= val_interval[0]]
-    array = array[array <= val_interval[1]]
-    if len(array) > 0:
+        val_interval = minmax(arr)
+    arr = arr[arr > val_interval[0]]
+    arr = arr[arr < val_interval[1]]
+    if len(arr) > 0:
         stats_dict = {
-            'avg': np.mean(array),
-            'std': np.std(array),
-            'min': np.min(array),
-            'max': np.max(array),
-            'sum': np.sum(array),
-            'num': np.size(array),}
+            'avg': np.mean(arr),
+            'std': np.std(arr),
+            'min': np.min(arr),
+            'max': np.max(arr),
+            'sum': np.sum(arr),
+            'num': np.size(arr),}
     else:
         stats_dict = {
             'avg': None, 'std': None,
@@ -1563,19 +1599,19 @@ def calc_stats(
 
 # ======================================================================
 def slice_array(
-        array,
+        arr,
         axis=0,
         index=None):
     """
     Slice a (N-1)-dim array from an N-dim array
 
     Args:
-        array (ndarray): The input N-dim array
+        arr (np.ndarray): The input N-dim array
         axis (int): The slicing axis
-        index (int): The slicing index. If None, mid-value is taken
+        index (int): The slicing index. If None, mid-value is taken.
 
     Returns:
-        sliced (ndarray): The sliced (N-1)-dim array
+        sliced (np.ndarray): The sliced (N-1)-dim array
 
     Raises:
         ValueError: if index is out of bounds
@@ -1598,17 +1634,17 @@ def slice_array(
                [20, 21, 22, 23]])
     """
     # initialize slice index
-    slab = [slice(None)] * array.ndim
+    slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
     if index is None:
         index = np.int(array.shape[axis] / 2.0)
     # check index
-    if (index >= array.shape[axis]) or (index < 0):
+    if (index >= arr.shape[axis]) or (index < 0):
         raise ValueError('Invalid array index in the specified direction')
     # determine slice index
     slab[axis] = index
     # slice the array
-    return array[slab]
+    return arr[slab]
 
 
 # ======================================================================
@@ -1620,8 +1656,8 @@ def rel_err(
     Calculate the element-wise relative error
 
     Args:
-        arr1 (ndarray): The input array with the exact values
-        arr2 (ndarray): The input array with the approximated values
+        arr1 (np.ndarray): The input array with the exact values
+        arr2 (np.ndarray): The input array with the approximated values
         use_average (bool): Use the input arrays average as the exact values
 
     Returns:
@@ -1638,17 +1674,17 @@ def rel_err(
                 0.01652893])
     """
     if arr2.dtype != np.complex:
-        array = (arr2 - arr1).astype(np.float)
+        arr = (arr2 - arr1).astype(np.float)
     else:
-        array = (arr2 - arr1)
+        arr = (arr2 - arr1)
     if use_average:
         div = (arr1 + arr2) / 2.0
     else:
         div = arr1
     mask = (div != 0.0)
-    array[mask] = array[mask] / div[mask]
-    array[~mask] = 0.0
-    return array
+    arr[mask] = arr[mask] / div[mask]
+    arr[~mask] = 0.0
+    return arr
 
 
 # ======================================================================
@@ -1752,8 +1788,8 @@ def curve_fit(args):
         args (list): List of parameters to pass to the function
 
     Returns:
-        par_fit (ndarray): Optimized parameters
-        par_cov (ndarray): The covariance of the optimized parameters.
+        par_fit (np.ndarray): Optimized parameters
+        par_cov (np.ndarray): The covariance of the optimized parameters.
             The diagonals provide the variance of the parameter estimate
     """
     try:
@@ -1778,9 +1814,9 @@ def elapsed(
     Append a named event point to the events list.
 
     Args:
-        name (str): The name of the event point
+        name (basestring): The name of the event point
         time_point (float): The time in seconds since the epoch
-        events (list[(str,time)]): A list of named event time points.
+        events (list[(basestring,time)]): A list of named event time points.
             Each event is a 2-tuple: (label, time)
 
     Returns:

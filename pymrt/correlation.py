@@ -167,13 +167,13 @@ def _get_ref_list(
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
             ref_filename = mrb.change_ext(
-                os.path.basename(ref_src), mrb.EXT['img'], ref_ext)
+                os.path.basename(ref_src), mrb.EXT['niz'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepaths.append(ref_filepath)
     elif target_list:
         ref_filepaths = target_list
     else:
-        ref_filepaths = mrb.listdir(dirpath, mrb.EXT['img'])
+        ref_filepaths = mrb.listdir(dirpath, mrb.EXT['niz'])
     if not ref_filepaths:
         msg = 'No reference file(s) found'
         raise RuntimeError(msg)
@@ -718,7 +718,7 @@ def calc_correlation(
         num_ratio = num / num_tot
         # save results to csv
         filenames = [
-            mrb.change_ext(os.path.basename(path), '', mrb.EXT['img'])
+            mrb.change_ext(os.path.basename(path), '', mrb.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
@@ -956,7 +956,7 @@ def plot_histogram(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
-                       mrb.EXT['img']))
+                       mrb.EXT['niz']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
@@ -1021,7 +1021,7 @@ def plot_sample(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         mrb.change_ext(os.path.basename(img_filepath), mrb.EXT['plot'],
-                       mrb.EXT['img']))
+                       mrb.EXT['niz']))
     if mrb.check_redo([img_filepath], [save_filepath], force):
         if verbose > VERB_LVL['none']:
             print('PltFig:\t{}'.format(os.path.basename(save_filepath)))
@@ -1228,7 +1228,7 @@ def get_comparing_list(
         diff_filepath = os.path.join(
             out_dirpath,
             mru.combine_filename(diff_prefix, (ref_filepath, in_filepath)) +
-            mrb.add_extsep(mrb.EXT['img']))
+            mrb.add_extsep(mrb.EXT['niz']))
         corr_filepath = os.path.join(
             out_dirpath,
             mru.combine_filename(corr_prefix, (ref_filepath, in_filepath)) +
@@ -1414,7 +1414,7 @@ def check_correlation(
     # :: populate a list of images to analyze
     target_list, corr_list = [], []
     if os.path.exists(dirpath):
-        filepath_list = mrb.listdir(dirpath, mrb.EXT['img'])
+        filepath_list = mrb.listdir(dirpath, mrb.EXT['niz'])
         source_list = [filepath for filepath in filepath_list
                        if not val_type or
                        mru.parse_filename(filepath)['type'] == val_type]
@@ -1454,7 +1454,7 @@ def check_correlation(
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
                     mask_filepath = mrb.change_ext(
-                        MASK_FILENAME, mrb.EXT['img'])
+                        MASK_FILENAME, mrb.EXT['niz'])
                 # add current directory if it was not specified
                 if not os.path.exists(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)
