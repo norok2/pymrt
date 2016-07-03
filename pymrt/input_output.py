@@ -202,8 +202,8 @@ def filter_n_1(
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(list[img, aff, hdr], *args, *kwargs)) -> img, aff, hdr
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        args (tuple): Positional arguments passed to the filtering function.
+        kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         None

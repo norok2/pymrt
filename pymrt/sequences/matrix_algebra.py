@@ -1048,7 +1048,7 @@ class PulseExc:
                     [normal|cauchy|sinc|cos_sin]
             shape_kwargs (dict|None): keyword arguments for the shape function
             w_c (float|None): carrier angular frequency of the pulse in rad/s.
-            propagator_mode (basestr|None): calculation mode for the propagator.
+            propagator_mode (basestr|None): calculation mode for propagator.
                 Note: a function named '_propagator_[MODE]' must exist.
                     [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
             propagator_kwargs (dict|None): keyword arguments for the

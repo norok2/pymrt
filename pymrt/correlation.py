@@ -198,10 +198,14 @@ def _compute_affine_fsl(
         in_filepath (str): Path to input image.
         ref_filepath (str): Path to reference image.
         aff_filepath (str): Path to file where to store registration matrix.
-        dof (int): Number of degrees of freedom of the affine transformation.
-            - 6: only rotations and translations (rigid body);
-            - 9: only rotations, translations and magnification;
-            - 12: all possible linear transformations.
+        msk_filepath (str): Path to mask image.
+        flirt_kwargs (dict|None):
+        flirt__kwargs (dict|None):
+            dof (int): Number of degrees of freedom of the affine
+            transformation.
+                - 6: only rotations and translations (rigid body);
+                - 9: only rotations, translations and magnification;
+                - 12: all possible linear transformations.
         force (bool): Force calculation of output.
         verbose (int): Set level of verbosity.
 
@@ -224,8 +228,7 @@ def _compute_affine_fsl(
             for key, val in flirt__kwargs.items():
                 cmd_args[str(key)] = eval(val)
         cmd = ' '.join(
-            [ext_cmd] + ['-{} {}'.format(k, v) for k, v in
-                         cmd_args.items()])
+            [ext_cmd] + ['-{} {}'.format(k, v) for k, v in cmd_args.items()])
         if verbose >= VERB_LVL['high']:
             print('> ', cmd)
         mrb.execute(cmd, verbose=verbose)
@@ -1381,7 +1384,8 @@ def check_correlation(
 
     Returns:
         target_list (list[str]): List of processed image files.
-        corr_list (list[str]): List of files containing correlation computations
+        corr_list (list[str]): List of files containing correlation
+        computations
     """
     if verbose > VERB_LVL['none']:
         print('Target: {}'.format(dirpath))

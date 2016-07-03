@@ -26,14 +26,12 @@ The N-D geometrical shapes currentyl available are:
 Running this file directly will run some tests.
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -70,10 +68,10 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import scipy.constants  # SciPy: Mathematical and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
-
 # :: Local Imports
 import pymrt.base as mrb
 import pymrt.plot as mrp
+
 # from pymrt import INFO
 # from pymrt import VERB_LVL
 # from pymrt import D_VERB_LVL
@@ -98,26 +96,21 @@ D_ANGLE_3 = (math.pi / 2.0, math.pi / 3.0, math.pi / 4.0)
 
 
 # ======================================================================
-def relative2coord(position, shape):
+def relative2coord(shape, position):
     """
     Calculate the absolute position with respect to a given shape.
 
-    Parameters
-    ==========
-    position : float N-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    shape : int N-tuple
-        Information on the shape.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
 
-    Returns
-    =======
-    coord : int N-tuple
-        Coordinate of the specified position inside the shape.
-
+    Returns:
+        coord (tuple[int]): Coordinate of the position inside the shape.
     """
     if len(position) != len(shape):
         raise IndexError('length of tuples must match')
-    return tuple([(s - 1.0) * p for p, s in zip(position, shape)])
+    return tuple((s - 1.0) * p for p, s in zip(position, shape))
 
 
 # ======================================================================
@@ -125,22 +118,17 @@ def coord2relative(coord, shape):
     """
     Calculate the proportional position with respect to a given shape.
 
-    Parameters
-    ==========
-    coord : float N-tuple
-        Coordinate of the specified position inside the shape.
-    shape : int N-tuple
-        Information on the shape.
+    Args:
+        coord (tuple[int]): Coordinate of the position inside the shape.
+        shape (tuple[int]): The shape of the mask in px.
 
-    Returns
-    =======
-    position : float N-tuple
-        Relative position (to the lowest edge) in the interval [0.0, 1.0]
-
+    Returns:
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
     """
     if len(coord) != len(shape):
         raise IndexError('length of tuples must match')
-    return tuple([c / (s - 1.0) for c, s in zip(coord, shape)])
+    return tuple(c / (s - 1.0) for c, s in zip(coord, shape))
 
 
 # ======================================================================
@@ -151,20 +139,16 @@ def render(
     """
     Render a mask as an image.
 
-    Parameters
-    ==========
-    mask : nd-array
-        Mask to be rendered.
-    fill : (True value, False value)
-        Values to render the mask with.
-    dtype : data-type, optional
-        Desired output data-type.
+    Args:
+        mask (np.ndarray): Mask to be rendered.
+        fill (tuple[bool|int|float]): Values to render the mask with.
+            The first value is used for inside the mask.
+            The second value is used for outside the mask.
+        dtype (np.dtype): Desired output data-type.
 
-    Returns
-    =======
-    img : nd-array
-        Image of the mask rendered with specified values and data type.
-
+    Returns:
+        img (np.ndarray):
+            Image of the mask rendered with specified values and data type.
     """
     img = np.empty_like(mask, dtype)
     img[mask] = fill[0]
@@ -180,20 +164,14 @@ def square(
     """
     Generate a mask whose shape is a square.
 
-    Parameters
-    ==========
-    shape : int 2-tuple
-        Shape of the generated mask.
-    position : float 2-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    side : float 2-tuple
-        Length of the side of the square.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        side (float): The side of the square in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 2
@@ -202,7 +180,7 @@ def square(
         e_msg = 'length of tuples must be {}'.format(n_dim)
         raise IndexError(e_msg)
     # adjust semisides
-    semisides = tuple([side / 2.0]) * n_dim
+    semisides = (side / 2.0,) * n_dim
     # use n-dim function
     return nd_cuboid(shape, position, semisides)
 
@@ -215,20 +193,14 @@ def rectangle(
     """
     Generate a mask whose shape is a rectangle.
 
-    Parameters
-    ==========
-    shape : int 2-tuple
-        Shape of the generated mask.
-    position : float 2-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semisides : float 2-tuple
-        Length of the semisides of the rectangle.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semisides (tuple[float]): The semisides of the rectangle in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 2
@@ -248,20 +220,14 @@ def rhombus(
     """
     Generate a mask whose shape is a rhombus.
 
-    Parameters
-    ==========
-    shape : int 2-tuple
-        Shape of the generated mask.
-    position : float 2-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semidiagonals : float 2-tuple
-        Length of the semidiagonals of the rhombus.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semidiagonals (tuple[float]): The semidiagonals of the rhombus in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 2
@@ -273,7 +239,7 @@ def rhombus(
     semiaxes = semidiagonals
     # set index value
     rhombus_index = 1.0
-    index = tuple([rhombus_index] * n_dim)
+    index = (rhombus_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -286,20 +252,14 @@ def circle(
     """
     Generate a mask whose shape is a circle.
 
-    Parameters
-    ==========
-    shape : int 2-tuple
-        Shape of the generated mask.
-    position : float 2-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    radius : float
-        Length of the radius of the circle.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        radius (float): The radius of the circle in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 2
@@ -308,10 +268,10 @@ def circle(
         e_msg = 'length of tuples must be {}'.format(n_dim)
         raise IndexError(e_msg)
     # adjust semiaxes
-    semiaxes = tuple([radius] * n_dim)
+    semiaxes = (radius,) * n_dim
     # set index value
     circle_index = 2.0
-    index = tuple([circle_index] * n_dim)
+    index = (circle_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -324,20 +284,14 @@ def ellipsis(
     """
     Generate a mask whose shape is an ellipsis.
 
-    Parameters
-    ==========
-    shape : int 2-tuple
-        Shape of the generated mask.
-    position : float 2-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semiaxes : float 2-tuple
-        Length of the semiaxes of the ellipsis.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semiaxes (tuple[float]): The semiaxes of the ellipsis in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 2
@@ -347,7 +301,7 @@ def ellipsis(
         raise IndexError(e_msg)
     # set index value
     ellipsis_index = 2.0
-    index = tuple([ellipsis_index] * n_dim)
+    index = (ellipsis_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -360,20 +314,14 @@ def cube(
     """
     Generate a mask whose shape is a cube.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    side : float
-        Length of the side of the cube.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        side (float): The side of the cube in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -382,7 +330,7 @@ def cube(
         e_msg = 'length of tuples must be {}'.format(n_dim)
         raise IndexError(e_msg)
     # adjust semisides
-    semisides = tuple([side / 2.0] * n_dim)
+    semisides = (side / 2.0,) * n_dim
     # use n-dim function
     return nd_cuboid(shape, position, semisides)
 
@@ -395,20 +343,14 @@ def cuboid(
     """
     Generate a mask whose shape is a cuboid.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semisides : float 3-tuple
-        Length of the sides of the cuboid.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semisides (tuple[float]): The semisides of the cuboid in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -428,20 +370,14 @@ def rhomboid(
     """
     Generate a mask whose shape is a rhomboid.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semidiagonals : float 3-tuple
-        Length of the semidiagonals of the rhomboid.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -453,7 +389,7 @@ def rhomboid(
     semiaxes = semidiagonals
     # set index value
     rhombus_index = 1.0
-    index = tuple([rhombus_index] * n_dim)
+    index = (rhombus_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -466,20 +402,14 @@ def sphere(
     """
     Generate a mask whose shape is a sphere.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    radius : float
-        Length of the radius of the sphere.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        radius (float): The radius of the sphere in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -488,10 +418,10 @@ def sphere(
         e_msg = 'length of tuples must be {}'.format(n_dim)
         raise IndexError(e_msg)
     # adjust semiaxes
-    semiaxes = tuple([radius] * n_dim)
+    semiaxes = (radius,) * n_dim
     # set index value
     circle_index = 2.0
-    index = tuple([circle_index] * n_dim)
+    index = (circle_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -504,20 +434,14 @@ def ellipsoid(
     """
     Generate a mask whose shape is an ellipsoid.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semiaxes : float 3-tuple
-        Length of the semiaxes of the ellipsoid.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semiaxes (tuple[float]): The semiaxes of the ellipsoid in px.
 
-    Returns
-    =======
-    mask : nd-array
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -527,7 +451,7 @@ def ellipsoid(
         raise IndexError(e_msg)
     # set index value
     ellipsis_index = 2.0
-    index = tuple([ellipsis_index] * n_dim)
+    index = (ellipsis_index,) * n_dim
     # use n-dim function
     return nd_superellipsoid(shape, position, semiaxes, index)
 
@@ -541,22 +465,15 @@ def cylinder(
     """
     Generate a mask whose shape is a cylinder.
 
-    Parameters
-    ==========
-    shape : int 3-tuple
-        Shape of the generated mask.
-    position : float 3-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    height : float
-        Length of the height of the cylinder.
-    radius : float
-        Length of the radius of the cylinder.
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        height (float): The height of the cylinder in px.
+        radius (float): The radius of the cylinder in px.
 
-    Returns
-    =======
-    mask : ndarray
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # set correct dimensions
     n_dim = 3
@@ -577,28 +494,23 @@ def nd_cuboid(
         position,
         semisides):
     """
-    Generate a mask whose shape is a cuboid: sum[abs(x_n/a_n)^inf] < 1.0
+    Generate a mask whose shape is an ND cuboid.
+    The cartesian equations are: sum[abs(x_n/a_n)^inf] < 1.0
 
-    Parameters
-    ==========
-    shape : int N-tuple
-        Shape of the generated mask.
-    position : float N-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semisides : float N-tuple
-        Length of the semisides of the cuboid
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semisides (tuple[float]): The semisides of the ND cuboid in px.
 
-    Returns
-    =======
-    mask : ndarray
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # check compatibility of given parameters
     if not (len(shape) == len(position) == len(semisides)):
         raise IndexError('length of tuples must match')
     # calculate the position of the center of the solid inside the mask
-    x_0 = relative2coord(position, shape)
+    x_0 = relative2coord(shape, position)
     # create the grid with origin in the specified position
     grid = [slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)]
     x_arr = np.ogrid[grid]
@@ -616,30 +528,24 @@ def nd_superellipsoid(
         semiaxes,
         indexes):
     """
-    Generate a mask whose shape is a superellipsoid: sum[abs(x_n/a_n)^k] < 1.0
+    Generate a mask whose shape is an ND superellipsoid.
+    The cartesian equations are: sum[abs(x_n/a_n)^k] < 1.0
 
-    Parameters
-    ==========
-    shape : int N-tuple
-        Shape of the generated mask.
-    position : float N-tuple
-        Relative position (to the lowest edge). Values are in the range [0, 1].
-    semiaxes : float N-tuple
-        Length of the semiaxes of the cuboid a_n
-    indexes : float N-tuple
-        Exponent k to which summed terms are raised
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        position (tuple[float]): Relative position (to the lowest edge).
+            Values are in the range [0, 1].
+        semiaxes (tuple[float]): The semiaxes of the ND superellipsoid in px.
+        indexes (tuple[float]): The exponent of the summed terms.
 
-    Returns
-    =======
-    mask : ndarray
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     # check compatibility of given parameters
     if not (len(shape) == len(position) == len(semiaxes) == len(indexes)):
         raise IndexError('length of tuples must match')
     # calculate the position of the center of the solid inside the mask
-    x_0 = relative2coord(position, shape)
+    x_0 = relative2coord(shape, position)
     # create the grid with origin in the middle
     grid = [slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)]
     x_arr = np.ogrid[grid]
@@ -657,43 +563,36 @@ def nd_prism(
         extra_shape,
         axis,
         position,
-        semiheight):
+        height):
     """
-    Generate a mask whose shape is a N-dim prism.
+    Generate a mask whose shape is a ND prism.
 
-    Parameters
-    ==========
-    base_mask : (N-1)-dim ndarray
-        Base mask to stack in order to obtain the prism.
-    extra_shape : int
-        Size of the new dimension to be added.
-    axis : int [0,N]
-        Orientation of the prism in the N-dim space.
-    position : float
-        Position proportional to extra shape size relative to its center.
-    semiheight : float
-        Length of half of the height of the prism.
+    Args:
+        base_mask (np.ndarray): Base (N-1)-dim mask to stack as prism.
+        extra_shape (int): Size of the new dimension to be added.
+        axis (int): Orientation of the prism in the N-dim space.
+        position (float): Relative position (to the lowest edge).
+            This setting only affects the extra shape dimension.
+            Values are in the range [0, 1].
+        height (float): The height of the prism.
 
-    Returns
-    =======
-    mask : ndarray
-        Array of boolean describing the geometrical object.
-
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     n_dim = base_mask.ndim + 1
     if axis > n_dim:
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
     # calculate the position of the center of the solid inside the mask
-    x_0 = (position + 1.0) * extra_shape / 2.0
+    x_0 = relative2coord((extra_shape,), (position,))[0]
     # create a grid with origin in the middle
     iii = slice(-x_0, extra_shape - x_0)
     xxx = np.ogrid[iii]
     # create the extra mask (height)
-    extra_mask = np.abs(xxx) < semiheight
+    extra_mask = np.abs(xxx) < (height / 2.0)
     # calculate mask shape
     shape = (
-        base_mask.shape[:axis] + tuple([extra_shape]) + base_mask.shape[axis:])
+        base_mask.shape[:axis] + (extra_shape,) + base_mask.shape[axis:])
     # create indefinite prism
     mask = np.zeros(shape, dtype=bool)
     for i in range(extra_shape):
@@ -711,25 +610,22 @@ def frame(
         background=0.0,
         use_longest=True):
     """
-    Add a frame to an array.
-    TODO: check with 'reframe'
+    Add a background frame to an array specifying the borders.
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    borders : float or float tuple (optional)
-        The size of the border relative to the initial array shape.
-    background : int or float (optional)
-        The background value to be used for the frame.
-    use_longest : bool (optional)
-        Use longest dimension to get the border size.
+    Args:
+        array (np.ndarray): The input array.
+        borders (float|tuple[float]): The relative border size.
+            This is proportional to the initial array shape.
+            If 'use_longest' is True, use the longest dimension for the
+            calculations.
+        background (int|float): The background value to be used for the frame.
+        use_longest (bool): Use longest dimension to get the border size.
 
-    Returns
-    =======
-    result : ndarray
-        The result array,
+    Returns:
+        result (np.ndarray): The result array with added borders.
 
+    See Also:
+        reframe
     """
     try:
         iter(borders)
@@ -758,25 +654,24 @@ def reframe(
         new_shape,
         background=0.0):
     """
-    Add a frame to an array.
-    TODO: check with 'frame'
+    Add a frame to an array by centering the input array into a new shape.
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    border : int or int tuple (optional)
-        The size of the border relative to the initial array shape.
-    background : int or float (optional)
-        The background value to be used for the frame.
-    use_longest : bool (optional)
-        Use longest dimension to get the border size.
+    Args:
+        array (np.ndarray): The input array.
+        new_shape (tuple[int]): The shape of the output array.
+            The number of dimensions between the input and the output array
+            must match. Additionally, each dimensions of the new shape cannot
+        background (int|float): The background value to be used for the frame.
 
-    Returns
-    =======
-    result : ndarray
-        The result array,
+    Returns:
+        result (np.ndarray): The result array with added borders.
 
+    Raises:
+        IndexError: input and output shape sizes must match.
+        ValueError: output shape cannot be smaller than the input shape.
+
+    See Also:
+        frame
     """
     if array.ndim != len(new_shape):
         raise IndexError('number of dimensions must match')
@@ -799,26 +694,17 @@ def zoom_prepare(
         extra_dim=True,
         fill_dim=True):
     """
-    Prepare the zoom and shape tuples to allow for non homogeneous shapes.
+    Prepare the zoom and shape tuples to allow for non-homogeneous shapes.
 
-    Parameters
-    ==========
-    zoom : float or float tuple
-        The zoom factors for each directions.
-    shape : int tuple
-        The shape of the array to operate with.
-    extra_dim : bool, optional
-        Force extra dimensions in the zoom parameters.
-    fill_dim : bool, optional
-        Dimensions not specified are left untouched.
+    Args:
+        zoom (float|tuple[float]): The zoom factors for each directions.
+        shape (tuple[int]): The shape of the array to operate with.
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
 
-    Returns
-    =======
-    zoom : float or float tuple
-        The zoom factors for each directions.
-    shape : int tuple
-        The shape of the array to operate with.
-
+    Returns:
+        zoom (tuple[float]): The zoom factors for each directions.
+        shape (tuple[int]): The shape of the array to operate with.
     """
     try:
         iter(zoom)
@@ -843,24 +729,19 @@ def shape2zoom(
     """
     Calculate zoom (or conversion) factor between two shapes.
 
-    Parameters
-    ==========
-    old_shape : int tuple
-        The shape of the source array.
-    new_shape : int tuple
-        The target shape of the array.
-    aspect : callable or None
-        | Function to be applied to zoom factors tuple to enforce aspect ratio.
-        | None to avoid keeping aspect ratio.
-        | Signature: keep_ratio_method(iterable) -> float
-        | - 'min': image strictly contained into new shape
-        | - 'max': new shape strictly contained into image
+    Args:
+        old_shape (tuple[int]): The shape of the source array.
+        new_shape (tuple[int]): The target shape of the array.
+        aspect (callable|None): Function for the manipulation of the zoom.
+            Signature: aspect(tuple[float]) -> float.
+            None to leave the zoom unmodified. It specified, the function is
+            applied to zoom factors tuple for fine tuning of the aspect.
+            Particularly, to obtain specific aspect ratio results:
+             - 'min': image strictly contained into new shape
+             - 'max': new shape strictly contained into image
 
-    Returns
-    =======
-    zoom : float or float tuple
-        The zoom factors for each directions.
-
+    Returns:
+        zoom (tuple[float]): The zoom factors for each directions.
     """
     if len(old_shape) != len(new_shape):
         raise IndexError('length of tuples must match')
@@ -874,24 +755,23 @@ def shape2zoom(
 def apply_to_complex(
         array,
         func,
-        *args, **kwargs):
+        *args,
+        **kwargs):
     """
-    Apply the specified affine transformation to the array.
+    Apply a real-valued function to real and imaginary part of an array.
 
-    Parameters
-    ==========
-    img : ndarray
-        The n-dimensional image to be transformed.
-    affine : ndarray
-        The n+1 square matrix describing the affine transformation.
-    opts : ...
-        Additional options to be passed to: scipy.ndimage.affine_transform
+    This can be useful for geometric transformations, particularly affines,
+    and generally for functions that are explicitly restricted to real values.
 
-    Returns
-    =======
-    img : ndarray
-        The transformed image.
+    Args:
+        array (np.ndarray): The N-dim array to be transformed.
+        func (callable): Filtering function.
+            func(array, *args, **kwargs) -> array
+        args (tuple): Positional arguments passed to the filtering function.
+        kwargs (dict): Keyword arguments passed to the filtering function.
 
+    Returns:
+        array (np.ndarray): The transformed N-dim array.
     """
     real = func(np.real(array), *args, **kwargs)
     imag = func(np.imag(array), *args, **kwargs)
@@ -905,18 +785,12 @@ def decode_affine(
     """
     Decompose the affine matrix into a linear transformation and a translation.
 
-    Parameters
-    ==========
-    affine : ndarray
-        The n+1 square matrix describing the affine transformation.
+    Args:
+        affine (np.ndarray): The (N+1)-sized affine square matrix.
 
-    Returns
-    =======
-    linear : ndarray
-        The n square matrix describing the linear transformation.
-    shift : array
-        The array containing the shift along each axis.
-
+    Returns:
+        linear (np.ndarray): The N-sized linear square matrix.
+        shift (np.ndarray): The shift along each axis in px.
     """
     dims = affine.shape
     linear = affine[:dims[0] - 1, :dims[1] - 1]
@@ -931,18 +805,12 @@ def encode_affine(
     """
     Combine a linear transformation and a translation into the affine matrix.
 
-    Parameters
-    ==========
-    linear : ndarray
-        The n square matrix describing the linear transformation.
-    shift : array
-        The array containing the shift along each axis.
+    PArgs:
+        linear (np.ndarray): The N-sized linear square matrix.
+        shift (np.ndarray): The shift along each axis in px.
 
-    Returns
-    =======
-    affine : ndarray
-        The n+1 square matrix describing the affine transformation.
-
+    Returns:
+        affine (np.ndarray): The (N+1)-sized affine square matrix.
     """
     dims = linear.shape
     affine = np.eye(dims[0] + 1)
@@ -962,19 +830,14 @@ def num_angles_from_dim(num_dim):
     N = n * (n - 1) / 2 [ = n! / 2! / (n - 2)! ]
     (N: num of angles, n: num of dim)
 
-    Parameters
-    ==========
-    num_dim : int
-        The number of dimensions
+    Args:
+        num_dim (int): The number of dimensions.
 
-    Returns
-    =======
-    num_angles : int
-        The corresponding number of angles.
+    Returns:
+        num_angles (int): The corresponding number of angles.
 
-    See Also
-    ========
-    pymrt.geometry.angles2linear
+    See Also:
+        angles2linear
     """
     return num_dim * (num_dim - 1) // 2
 
@@ -984,30 +847,25 @@ def angles2linear(
         angles,
         axes_list=None,
         use_degree=True,
-        tol=2e6):
+        tol=2e-6):
     """
     Calculate the linear transformation relative to the specified rotations.
 
-    Parameters
-    ==========
-    angles : float tuple
-        The angles to be used for rotation.
-    axes_list : list of int 2-tuple or None (optional)
-        The axes couples defining the plane of rotation for each angle.
-        If None, uses the output of `itertools.combinations(range(n_dim), 2)`.
-    use_degree : bool (optional)
-        If True, interpret angles in degree. Otherwise, use radians.
+    Args:
+        angles (tuple[float]): The angles to be used for rotation.
+        axes_list (tuple[tuple[int]]|None): The axes of the rotation plane.
+            If not None, for each rotation angle a pair of axes must be
+            specified to define the associated plane of rotation.
+            If None, uses output of `itertools.combinations(range(n_dim), 2)`.
+        use_degree (bool): Interpret angles as expressed in degree.
+            Otherwise, use radians.
 
-    Returns
-    =======
-    linear : ndarray
-        The rotation matrix identified by the selected angles.
+    Returns:
+        linear (np.ndarray): The rotation matrix as defined by the angles.
 
-    See Also
-    ========
-    pymrt.geometry.num_angles_from_dim,
-    itertools.combinations
-
+    See Also:
+        num_angles_from_dim,
+        itertools.combinations
     """
     # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
     num_dim = ((1 + np.sqrt(1 + 8 * len(angles))) / 2)
@@ -1048,39 +906,38 @@ def affine_transform(
         linear,
         shift,
         origin=None,
-        *args, **kwargs):
+        *args,
+        **kwargs):
     """
-    Perform an affine transformation followed by a translation.
+    Perform an affine transformation followed by a translation on the array.
 
-    Parameters
-    ==========
-    array : ndarray
-        The array to operate with.
-    linear : ndarray
-        The linear transformation to apply.
-    shift : ndarray
-        The translation vector.
-    origin : ndarray (optional)
-        The offset at which the linear transformation is to be applied.
-        If None, uses the center of the array.
-    args : tuple (optional)
-    kwargs : dict (optional)
-        Additional arguments to be passed to the transformation function:
-        `scipy.ndimage.affine_transform()`
+    Args:
+        array (np.ndarray): The N-dim array to operate with.
+        linear (np.ndarray): The N-sized linear square matrix.
+        shift (np.ndarray): The shift along each axis in px.
+        origin (np.ndarray): The origin vector of the linear transformation.
+            If None, uses the center of the array.
+        args (tuple|None): Positional arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
+        kwargs (dict|None): Keyword arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
-    Returns
-    =======
-    array : ndarray
-        The transformed array.
+    Returns:
+        array (np.ndarray): The transformed array.
 
+    See Also:
+        scipy.ndimage.affine_transform
     """
     # other parameters accepted by `scipy.ndimage.affine_transform` are:
     #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
     if origin is None:
-        origin = np.array(relative2coord([0.5] * array.ndim, array.shape))
+        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
     offset = origin - np.dot(linear, origin + shift)
-    array = sp.ndimage.affine_transform(
-        array, linear, offset, *args, **kwargs)
+    array = sp.ndimage.affine_transform(array, linear, offset, *args, **kwargs)
     return array
 
 
@@ -1092,35 +949,29 @@ def weighted_center(
     """
     Determine the covariance mass matrix with respect to the origin.
 
-    \latex{\sum_i (\vec{x}_i - \vec{o}_i) (\vec{x}_i - \vec{o}_i)^T}
+    $$\sum_i (\vec{x}_i - \vec{o}_i) (\vec{x}_i - \vec{o}_i)^T$$
 
     for i spanning through all support space.
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
 
-    Returns
-    =======
-    cov : ndarray
-        The covariance matrix.
+    Returns:
+        center (np.ndarray): The coordinates of the weighed center.
 
-    See Also
-    ========
-    pymrt.geometry.tensor_of_inertia,
-    pymrt.geometry.rotatio_axes,
-    pymrt.geometry.auto_rotate,
-    pymrt.geometry.realign
-
+    See Also:
+        pymrt.geometry.tensor_of_inertia,
+        pymrt.geometry.rotatio_axes,
+        pymrt.geometry.auto_rotate,
+        pymrt.geometry.realign
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
     array = array.astype(np.double)
@@ -1142,39 +993,34 @@ def weighted_covariance(
     """
     Determine the weighted covariance matrix with respect to the origin.
 
-    \latex{\sum_i w_i (\vec{x}_i - \vec{o}) (\vec{x}_i - \vec{o})^T}
+    \[\sum_i w_i (\vec{x}_i - \vec{o}) (\vec{x}_i - \vec{o})^T\]
 
     for i spanning through all support space, where:
-    o is the origin vector (
-    x_i is the coordinate vector of the point i
-    w_i is the weight, i.e. the value of the array at that coordinate
+    o is the origin vector,
+    x_i is the coordinate vector of the point i,
+    w_i is the weight, i.e. the value of the array at that coordinate.
 
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate centers-of-mass. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
+    Returns:
+        cov (np.ndarray): The covariance weight matrix from the origin.
 
-    Returns
-    =======
-    cov : ndarray
-        The covariance matrix.
-
-    See Also
-    ========
-    pymrt.geometry.tensor_of_inertia,
-    pymrt.geometry.rotation_axes,
-    pymrt.geometry.auto_rotate,
-    pymrt.geometry.realign
-
+    See Also:
+        pymrt.geometry.tensor_of_inertia,
+        pymrt.geometry.rotation_axes,
+        pymrt.geometry.auto_rotate,
+        pymrt.geometry.realign
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
     array = array.astype(np.double)
@@ -1190,7 +1036,7 @@ def weighted_covariance(
                 cov[i, j] = sp.ndimage.sum(
                     array * grid[i] * grid[j], labels, index) / norm
             else:
-                # the covariance mass matrix is symmetric
+                # the covariance weight matrix is symmetric
                 cov[i, j] = cov[j, i]
     return cov
 
@@ -1206,31 +1052,31 @@ def tensor_of_inertia(
 
     I = Id * tr(C) - C
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate the weighted center. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
+    where:
+    C is the weighted covariance matrix,
+    Id is the identity matrix.
 
-    Returns
-    =======
-    inertia : ndarray
-        The tensor (rank 2, i.e. a matrix) of inertia.
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
 
-    See Also
-    ========
-    pymrt.geometry.weighted_covariance,
-    pymrt.geometry.rotatio_axes,
-    pymrt.geometry.auto_rotate,
-    pymrt.geometry.realign
+    Returns:
+        inertia (np.ndarray): The tensor of inertia from the origin.
 
+    See Also:
+        pymrt.geometry.weighted_covariance,
+        pymrt.geometry.rotation_axes,
+        pymrt.geometry.auto_rotate,
+        pymrt.geometry.realign
     """
     cov = weighted_covariance(array, labels, index, origin)
     inertia = np.eye(array.ndim) * np.trace(cov) - cov
@@ -1246,36 +1092,31 @@ def rotation_axes(
     """
     Calculate principal axes of rotation.
 
-    Eigenvectors of the tensor of inertia.
+    These can be found as the eigenvectors of the tensor of inertia.
 
-    Parameters
-    ==========
-    array : ndarray
-        The input array.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate the weighted center. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
-    sort_by_shape : bool
-        If True, sort by the array shape (optimizes rotation to fit array).
-        Otherwise it is sorted by increasing eigenvalue.
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        sort_by_shape (bool): Sort the axes by the array shape.
+            This is useful in order to obtain the optimal rotations to
+            align the objects to the shape.
+            Otherwise, it is sorted by increasing eigenvalues.
 
-    Returns
-    =======
-    axes : ndarray
-        A matrix containing the axes of rotation as columns.
+    Returns:
+        axes (ndarray): A matrix containing the axes of rotation as columns.
 
-    See Also
-    ========
-    pymrt.geometry.weighted_covariance,
-    pymrt.geometry.tensor_of_inertia,
-    pymrt.geometry.auto_rotate,
-    pymrt.geometry.realign,
-
+    See Also:
+        pymrt.geometry.weighted_covariance,
+        pymrt.geometry.tensor_of_inertia,
+        pymrt.geometry.auto_rotate,
+        pymrt.geometry.realign
     """
     # calculate the tensor of inertia with respect to the weighted center
     inertia = tensor_of_inertia(array, labels, index, None).astype(np.double)
@@ -1310,48 +1151,46 @@ def auto_rotate(
     """
     Rotate the array to have the principal axes of rotation along the axes.
 
-    Parameters
-    ==========
-    array : ndarray
-        The array to rotate along its principal axes.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate the weighted center. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
-    args : tuple (optional)
-    kwargs : dict (optional)
-        Additional arguments to be passed to the transformation function:
-        `scipy.ndimage.affine_transform()`
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
+        args (tuple|None): Positional arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
+        kwargs (dict|None): Keyword arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
-    Returns
-    =======
-    rotated : ndarray
-        The rotated array.
-    rot_matrix : ndarray
-        The rotation matrix used.
-    offset : ndarray
-        The offset used.
+    Returns:
+        rotated (np.ndarray): The rotated array.
+        rot_matrix (np.ndarray): The rotation matrix used.
+        offset (np.ndarray): The offset used.
 
-    See Also
-    ========
-    scipy.ndimage.center_of_mass,
-    scipy.ndimage.affine_transform,
-    pymrt.weighted_covariance,
-    pymrt.tensor_of_inertia,
-    pymrt.rotation_axes,
-    pymrt.angles2linear,
-    pymrt.linear2angles,
-    pymrt.auto_rotate,
-    pymrt.realign
-
+    See Also:
+        scipy.ndimage.center_of_mass,
+        scipy.ndimage.affine_transform,
+        pymrt.weighted_covariance,
+        pymrt.tensor_of_inertia,
+        pymrt.rotation_axes,
+        pymrt.angles2linear,
+        pymrt.linear2angles,
+        pymrt.auto_rotate,
+        pymrt.realign
     """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
     rot_matrix = rotation_axes(array, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord([0.5] * array.ndim, array.shape))
+        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
     offset = origin - np.dot(rot_matrix, origin)
     rotated = sp.ndimage.affine_transform(
         array, rot_matrix, offset, *args, **kwargs)
@@ -1369,45 +1208,44 @@ def auto_shift(
     """
     Shift the array to have the weighted center in a convenient location.
 
-    Parameters
-    ==========
-    array : ndarray
-        The array to autorotate along its principal axes.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate the weighted center. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The origin to be used. If None, the weighted center is used.
-    args : tuple (optional)
-    kwargs : dict (optional)
-        Additional arguments to be passed to the transformation function:
-        `scipy.ndimage.affine_transform()`
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
+        args (tuple|None): Positional arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
+        kwargs (dict|None): Keyword arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
-    Returns
-    =======
-    rotated : ndarray
-        The rotated array.
-    offset : ndarray
-        The offset used.
+    Returns:
+        rotated (np.ndarray): The rotated array.
+        offset (np.ndarray): The offset used.
 
-    See Also
-    ========
-    scipy.ndimage.center_of_mass,
-    scipy.ndimage.affine_transform,
-    pymrt.weighted_covariance,
-    pymrt.tensor_of_inertia,
-    pymrt.rotation_axes,
-    pymrt.angles2linear,
-    pymrt.linear2angles,
-    pymrt.auto_rotate,
-    pymrt.realign
-
+    See Also:
+        scipy.ndimage.center_of_mass,
+        scipy.ndimage.affine_transform,
+        pymrt.weighted_covariance,
+        pymrt.tensor_of_inertia,
+        pymrt.rotation_axes,
+        pymrt.angles2linear,
+        pymrt.linear2angles,
+        pymrt.auto_rotate,
+        pymrt.realign
     """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
     if origin is None:
-        origin = relative2coord([0.5] * array.ndim, array.shape)
+        origin = relative2coord(array.shape, (0.5,) * array.ndim)
     com = np.array(sp.ndimage.center_of_mass(array, labels, index))
     offset = com - origin
     shifted = sp.ndimage.affine_transform(
@@ -1429,49 +1267,47 @@ def realign(
     Principal axis of rotation will be parallel to cartesian axes.
     Weighted center will be at a given point (e.g. the middle of the support).
 
-    Parameters
-    ==========
-    array : ndarray
-        The array to autorotate along its principal axes.
-    labels : ndarray or None (optional)
-        Labels for objects in `array`, as generated by `ndimage.label`.
-        Only used with `index`.  Dimensions must be the same as `array`.
-    index : int, int tuple or None (optional)
-         Labels for which to calculate the weighted center. If not specified,
-         all labels greater than zero are used.  Only used with `labels`.
-    origin : ndarray or None (optional)
-        The final position of the weighted center. If None, set to the middle.
-    args : tuple (optional)
-    kwargs : dict (optional)
-        Additional arguments to be passed to the transformation function:
-        `scipy.ndimage.affine_transform()`
+    Args:
+        array (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|tuple[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
+        args (tuple|None): Positional arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
+        kwargs (dict|None): Keyword arguments for the transforming function.
+            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
-    Returns
-    =======
-    rotated : ndarray
-        The rotated array.
-    rot_matrix : ndarray
-        The rotation matrix used.
-    offset : ndarray
-        The offset used.
+    Returns:
+        rotated (np.ndarray): The rotated array.
+        rot_matrix (np.ndarray): The rotation matrix used.
+        offset (np.ndarray): The offset used.
 
-    See Also
-    ========
-    scipy.ndimage.center_of_mass,
-    scipy.ndimage.affine_transform,
-    pymrt.weighted_covariance,
-    pymrt.tensor_of_inertia,
-    pymrt.rotation_axes,
-    pymrt.angles2linear,
-    pymrt.linear2angles,
-    pymrt.auto_rotate,
-    pymrt.auto_shift
-
+    See Also:
+        scipy.ndimage.center_of_mass,
+        scipy.ndimage.affine_transform,
+        pymrt.weighted_covariance,
+        pymrt.tensor_of_inertia,
+        pymrt.rotation_axes,
+        pymrt.angles2linear,
+        pymrt.linear2angles,
+        pymrt.auto_rotate,
+        pymrt.auto_shift
     """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
     com = np.array(sp.ndimage.center_of_mass(array, labels, index))
     rot_matrix = rotation_axes(array, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord([0.5] * array.ndim, array.shape))
+        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
     offset = com - np.dot(rot_matrix, origin)
     aligned = sp.ndimage.affine_transform(
         array, rot_matrix, offset, *args, **kwargs)
@@ -1490,8 +1326,8 @@ def _self_test_interactive():
         None
     """
     # :: 2D Tests
-    shape_2d = tuple([D_SHAPE] * 2)
-    position_2d = tuple([D_POSITION] * 2)
+    shape_2d = (D_SHAPE,) * 2
+    position_2d = (D_POSITION,) * 2
     # :: - shape test
     mrp.quick(square(shape_2d, position_2d, D_LENGTH_1))
     mrp.quick(rectangle(shape_2d, position_2d, D_LENGTH_2))
@@ -1502,8 +1338,8 @@ def _self_test_interactive():
     mrp.quick(ellipsis(shape_2d, (0.2, 0.7), D_LENGTH_2))
 
     # :: 3D Tests
-    shape_3d = tuple([D_SHAPE] * 3)
-    position_3d = tuple([D_POSITION] * 3)
+    shape_3d = (D_SHAPE,) * 3
+    position_3d = (D_POSITION,) * 3
     # :: - shape test
     mrp.quick(cube(shape_3d, position_3d, D_LENGTH_1))
     mrp.quick(cuboid(shape_3d, position_3d, D_LENGTH_3))
