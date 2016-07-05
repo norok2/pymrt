@@ -77,6 +77,7 @@ EXT = {
 }
 D_TAB_SIZE = 8
 
+
 # :: TTY amenities
 # TTY_COLORS = {
 #     'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
@@ -468,7 +469,7 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
         p_stdout (str|None): if use_pipes the stdout of the process.
         p_stderr (str|None): if use_pipes the stderr of the process.
     """
-    p_stdout = p_stderr = None
+    p_stdout, p_stderr = None, None
     if dry:
         print('Dry:\t{}'.format(cmd))
     else:
@@ -1149,8 +1150,8 @@ def check_redo(
         force (bool): True if the computation is to be re-done.
 
     Raises:
-        IndexError: if the input filepath list is empty
-        IOError: if any of the input files do not exist
+        IndexError: If the input filepath list is empty.
+        IOError: If any of the input files do not exist.
     """
     # todo: include output_dir autocreation
     if not in_filepaths:
@@ -1637,7 +1638,7 @@ def slice_array(
     slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
     if index is None:
-        index = np.int(array.shape[axis] / 2.0)
+        index = np.int(arr.shape[axis] / 2.0)
     # check index
     if (index >= arr.shape[axis]) or (index < 0):
         raise ValueError('Invalid array index in the specified direction')

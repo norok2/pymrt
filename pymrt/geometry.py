@@ -50,6 +50,8 @@ import itertools  # Functions creating iterators for efficient looping
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
+# import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -605,7 +607,7 @@ def nd_prism(
 
 # ======================================================================
 def frame(
-        array,
+        arr,
         borders=0.05,
         background=0.0,
         use_longest=True):
@@ -613,7 +615,7 @@ def frame(
     Add a background frame to an array specifying the borders.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         borders (float|tuple[float]): The relative border size.
             This is proportional to the initial array shape.
             If 'use_longest' is True, use the longest dimension for the
@@ -630,34 +632,34 @@ def frame(
     try:
         iter(borders)
     except TypeError:
-        borders = [borders] * array.ndim
+        borders = [borders] * arr.ndim
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
     if use_longest:
-        dim = max(array.shape)
+        dim = max(arr.shape)
         borders = [round(border * dim) for border in borders]
     else:
         borders = [
-            round(border * dim) for dim, border in zip(array.shape, borders)]
+            round(border * dim) for dim, border in zip(arr.shape, borders)]
     result = background * np.ones(
-        [dim + 2 * border for dim, border in zip(array.shape, borders)])
+        [dim + 2 * border for dim, border in zip(arr.shape, borders)])
     inner = [
         slice(border, border + dim, None) \
-        for dim, border in zip(array.shape, borders)]
-    result[inner] = array
+        for dim, border in zip(arr.shape, borders)]
+    result[inner] = arr
     return result
 
 
 # ======================================================================
 def reframe(
-        array,
+        arr,
         new_shape,
         background=0.0):
     """
     Add a frame to an array by centering the input array into a new shape.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         new_shape (tuple[int]): The shape of the output array.
             The number of dimensions between the input and the output array
             must match. Additionally, each dimensions of the new shape cannot
@@ -673,17 +675,17 @@ def reframe(
     See Also:
         frame
     """
-    if array.ndim != len(new_shape):
+    if arr.ndim != len(new_shape):
         raise IndexError('number of dimensions must match')
-    elif any([old > new for old, new in zip(array.shape, new_shape)]):
+    elif any([old > new for old, new in zip(arr.shape, new_shape)]):
         raise ValueError('new shape cannot be smaller than the old one.')
     result = background * np.ones(new_shape)
     borders = [
-        round((new - old) / 2.0) for old, new in zip(array.shape, new_shape)]
+        round((new - old) / 2.0) for old, new in zip(arr.shape, new_shape)]
     inner = [
         slice(border, border + dim, None)
-        for dim, border in zip(array.shape, borders)]
-    result[inner] = array
+        for dim, border in zip(arr.shape, borders)]
+    result[inner] = arr
     return result
 
 
@@ -753,7 +755,7 @@ def shape2zoom(
 
 # ======================================================================
 def apply_to_complex(
-        array,
+        arr,
         func,
         *args,
         **kwargs):
@@ -764,19 +766,19 @@ def apply_to_complex(
     and generally for functions that are explicitly restricted to real values.
 
     Args:
-        array (np.ndarray): The N-dim array to be transformed.
+        arr (np.ndarray): The N-dim array to be transformed.
         func (callable): Filtering function.
-            func(array, *args, **kwargs) -> array
+            func(arr, *args, **kwargs) -> arr
         args (tuple): Positional arguments passed to the filtering function.
         kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         array (np.ndarray): The transformed N-dim array.
     """
-    real = func(np.real(array), *args, **kwargs)
-    imag = func(np.imag(array), *args, **kwargs)
-    array = mrb.cartesian2complex(real, imag)
-    return array
+    real = func(np.real(arr), *args, **kwargs)
+    imag = func(np.imag(arr), *args, **kwargs)
+    arr = mrb.cartesian2complex(real, imag)
+    return arr
 
 
 # ======================================================================
@@ -902,7 +904,7 @@ def linear2angles():
 
 # ======================================================================
 def affine_transform(
-        array,
+        arr,
         linear,
         shift,
         origin=None,
@@ -912,7 +914,7 @@ def affine_transform(
     Perform an affine transformation followed by a translation on the array.
 
     Args:
-        array (np.ndarray): The N-dim array to operate with.
+        arr (np.ndarray): The N-dim array to operate with.
         linear (np.ndarray): The N-sized linear square matrix.
         shift (np.ndarray): The shift along each axis in px.
         origin (np.ndarray): The origin vector of the linear transformation.
@@ -935,15 +937,15 @@ def affine_transform(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
+        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(linear, origin + shift)
-    array = sp.ndimage.affine_transform(array, linear, offset, *args, **kwargs)
-    return array
+    arr = sp.ndimage.affine_transform(arr, linear, offset, *args, **kwargs)
+    return arr
 
 
 # ======================================================================
 def weighted_center(
-        array,
+        arr,
         labels=None,
         index=None):
     """
@@ -954,7 +956,7 @@ def weighted_center(
     for i spanning through all support space.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -974,19 +976,19 @@ def weighted_center(
         pymrt.geometry.realign
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
-    array = array.astype(np.double)
-    norm = sp.ndimage.sum(array, labels, index)
+    arr = arr.astype(np.double)
+    norm = sp.ndimage.sum(arr, labels, index)
     grid = np.ogrid[[slice(0, i) for i in array.shape]]
     # numpy.double to improve the accuracy of the result
-    center = np.zeros(array.ndim).astype(np.double)
-    for i in range(array.ndim):
-        center[i] = sp.ndimage.sum(array * grid[i], labels, index) / norm
+    center = np.zeros(arr.ndim).astype(np.double)
+    for i in range(arr.ndim):
+        center[i] = sp.ndimage.sum(arr * grid[i], labels, index) / norm
     return center
 
 
 # ======================================================================
 def weighted_covariance(
-        array,
+        arr,
         labels=None,
         index=None,
         origin=None):
@@ -1001,7 +1003,7 @@ def weighted_covariance(
     w_i is the weight, i.e. the value of the array at that coordinate.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1023,18 +1025,18 @@ def weighted_covariance(
         pymrt.geometry.realign
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
-    array = array.astype(np.double)
-    norm = sp.ndimage.sum(array, labels, index)
+    arr = arr.astype(np.double)
+    norm = sp.ndimage.sum(arr, labels, index)
     if origin is None:
-        origin = np.array(sp.ndimage.center_of_mass(array, labels, index))
+        origin = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     grid = np.ogrid[[slice(0, i) for i in array.shape]] - origin
     # numpy.double to improve the accuracy of the result
-    cov = np.zeros((array.ndim, array.ndim)).astype(np.double)
-    for i in range(array.ndim):
-        for j in range(array.ndim):
+    cov = np.zeros((arr.ndim, arr.ndim)).astype(np.double)
+    for i in range(arr.ndim):
+        for j in range(arr.ndim):
             if i <= j:
                 cov[i, j] = sp.ndimage.sum(
-                    array * grid[i] * grid[j], labels, index) / norm
+                    arr * grid[i] * grid[j], labels, index) / norm
             else:
                 # the covariance weight matrix is symmetric
                 cov[i, j] = cov[j, i]
@@ -1043,7 +1045,7 @@ def weighted_covariance(
 
 # ======================================================================
 def tensor_of_inertia(
-        array,
+        arr,
         labels=None,
         index=None,
         origin=None):
@@ -1057,7 +1059,7 @@ def tensor_of_inertia(
     Id is the identity matrix.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1078,14 +1080,14 @@ def tensor_of_inertia(
         pymrt.geometry.auto_rotate,
         pymrt.geometry.realign
     """
-    cov = weighted_covariance(array, labels, index, origin)
-    inertia = np.eye(array.ndim) * np.trace(cov) - cov
+    cov = weighted_covariance(arr, labels, index, origin)
+    inertia = np.eye(arr.ndim) * np.trace(cov) - cov
     return inertia
 
 
 # ======================================================================
 def rotation_axes(
-        array,
+        arr,
         labels=None,
         index=None,
         sort_by_shape=False):
@@ -1095,7 +1097,7 @@ def rotation_axes(
     These can be found as the eigenvectors of the tensor of inertia.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1119,7 +1121,7 @@ def rotation_axes(
         pymrt.geometry.realign
     """
     # calculate the tensor of inertia with respect to the weighted center
-    inertia = tensor_of_inertia(array, labels, index, None).astype(np.double)
+    inertia = tensor_of_inertia(arr, labels, index, None).astype(np.double)
     # numpy.linalg only supports up to numpy.double
     eigenvalues, eigenvectors = np.linalg.eigh(inertia)
     if sort_by_shape:
@@ -1127,10 +1129,10 @@ def rotation_axes(
             (size, eigenvalue, eigenvector)
             for size, eigenvalue, eigenvector
             in zip(
-                sorted(array.shape, reverse=True),
+                sorted(arr.shape, reverse=True),
                 eigenvalues,
                 tuple(eigenvectors.transpose()))]
-        tmp = sorted(tmp, key=lambda x: array.shape.index(x[0]))
+        tmp = sorted(tmp, key=lambda x: arr.shape.index(x[0]))
         axes = []
         for size, eigenvalue, eigenvector in tmp:
             axes.append(eigenvector)
@@ -1142,7 +1144,7 @@ def rotation_axes(
 
 # ======================================================================
 def auto_rotate(
-        array,
+        arr,
         labels=None,
         index=None,
         origin=None,
@@ -1152,7 +1154,7 @@ def auto_rotate(
     Rotate the array to have the principal axes of rotation along the axes.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1188,18 +1190,18 @@ def auto_rotate(
         args = ()
     if kwargs is None:
         kwargs = {}
-    rot_matrix = rotation_axes(array, labels, index, True)
+    rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
+        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(rot_matrix, origin)
     rotated = sp.ndimage.affine_transform(
-        array, rot_matrix, offset, *args, **kwargs)
+        arr, rot_matrix, offset, *args, **kwargs)
     return rotated, rot_matrix, offset
 
 
 # ======================================================================
 def auto_shift(
-        array,
+        arr,
         labels=None,
         index=None,
         origin=None,
@@ -1209,7 +1211,7 @@ def auto_shift(
     Shift the array to have the weighted center in a convenient location.
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1245,17 +1247,17 @@ def auto_shift(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = relative2coord(array.shape, (0.5,) * array.ndim)
-    com = np.array(sp.ndimage.center_of_mass(array, labels, index))
+        origin = relative2coord(arr.shape, (0.5,) * arr.ndim)
+    com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     offset = com - origin
     shifted = sp.ndimage.affine_transform(
-        array, np.eye(array.ndim), offset, *args, **kwargs)
+        arr, np.eye(arr.ndim), offset, *args, **kwargs)
     return shifted, offset
 
 
 # ======================================================================
 def realign(
-        array,
+        arr,
         labels=None,
         index=None,
         origin=None,
@@ -1268,7 +1270,7 @@ def realign(
     Weighted center will be at a given point (e.g. the middle of the support).
 
     Args:
-        array (np.ndarray): The input array.
+        arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
@@ -1304,13 +1306,13 @@ def realign(
         args = ()
     if kwargs is None:
         kwargs = {}
-    com = np.array(sp.ndimage.center_of_mass(array, labels, index))
-    rot_matrix = rotation_axes(array, labels, index, True)
+    com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
+    rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord(array.shape, (0.5,) * array.ndim))
+        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
     offset = com - np.dot(rot_matrix, origin)
     aligned = sp.ndimage.affine_transform(
-        array, rot_matrix, offset, *args, **kwargs)
+        arr, rot_matrix, offset, *args, **kwargs)
     return aligned, rot_matrix, offset
 
 
@@ -1354,6 +1356,7 @@ def _self_test_interactive():
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
+    # doctest.testmod()
     _self_test_interactive()
     mrb.elapsed('self_test_interactive')
     mrb.print_elapsed()

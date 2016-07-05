@@ -33,6 +33,8 @@ import os  # Miscellaneous operating system interfaces
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import inspect  # Inspect live objects
+# import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -1066,3 +1068,4 @@ def plot_histogram2d(
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
+    doctest.testmod()

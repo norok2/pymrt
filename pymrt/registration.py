@@ -1,9 +1,8 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-pymrt.registration: generic registration using numpy/scipy
+pymrt.registration: generic simple registration
 """
-
 
 # ======================================================================
 # :: Future Imports
@@ -30,6 +29,8 @@ import itertools  # Functions creating iterators for efficient looping
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import inspect  # Inspect live objects
+# import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -49,8 +50,6 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
-
-
 # :: Local Imports
 import pymrt.base as mrb
 # import pymrt.input_output as mrio
@@ -63,7 +62,22 @@ from pymrt.config import EXT_CMD
 
 
 # ======================================================================
-def affine2parameters(linear, shift, num_dim, transform):
+def affine_to_params(
+        linear,
+        shift,
+        num_dim,
+        transform):
+    """
+
+    Args:
+        linear ():
+        shift ():
+        num_dim ():
+        transform ():
+
+    Returns:
+
+    """
     if transform == 'affine':
         parameters = np.concatenate((shift, linear.ravel()))
     else:
@@ -72,20 +86,31 @@ def affine2parameters(linear, shift, num_dim, transform):
 
 
 # ======================================================================
-def parameters2affine(params, num_dim, transform):
+def params_to_affine(
+        params,
+        num_dim,
+        transform):
+    """
+
+    Args:
+        params ():
+        num_dim ():
+        transform ():
+
+    Returns:
+
+    """
+    linear = np.eye(num_dim)
+    shift = np.zeros(num_dim)
     if 'translation' in transform or transform in ['rigid', 'affine']:
         shift = params[:num_dim]
         params = params[num_dim:]
-
     if 'rotation' in transform or transform in ['rigid']:
         linear = mrg.angles2linear(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
         linear = params.reshape((num_dim, num_dim))
-    else:
-        linear = np.eye(num_dim)
-        shift = np.zeros(num_dim)
     return linear, shift
 
 
@@ -168,7 +193,8 @@ def _discrete_generator(transform, num_dim):
     """
     if transform == 'reflection':
         shift = np.zeros((num_dim,))
-        for elements in itertools.product([-1, 0, 1], repeat=num_dim * num_dim):
+        for elements in itertools.product([-1, 0, 1],
+                                          repeat=num_dim * num_dim):
             linear = np.array(elements).reshape((num_dim, num_dim))
             if np.abs(np.linalg.det(linear)) == 1:
                 linear = linear.astype(np.float)
@@ -227,7 +253,7 @@ def minimize_discrete(
         cost_func = \
             mrb.set_keyword_parameters(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
-        params = affine2parameters(linear, shift, moving.ndim, 'affine')
+        params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
             params, moving.ravel(), fixed.ravel(), moving.shape, 'affine',
             cost_func, interp_order=interp_order)
@@ -236,7 +262,7 @@ def minimize_discrete(
             best_params = params
         if cost_threshold and best_cost < cost_threshold:
             break
-    return parameters2affine(best_params, moving.ndim, 'affine')
+    return params_to_affine(best_params, moving.ndim, 'affine')
 
 
 # ======================================================================
@@ -253,7 +279,7 @@ def _min_func_affine(
     Function to minimize for affine transformation.
     """
     num_dim = len(shape)
-    linear, shift = parameters2affine(params, num_dim, transform)
+    linear, shift = params_to_affine(params, num_dim, transform)
     # the other valid parameters of the `affine_transform` function are:
     #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
     moved_ravel = mrg.affine_transform(
@@ -327,11 +353,11 @@ def affine_registration(
             _min_func_affine, init_params, args=args__min_func_affine,
             method=method, bounds=bounds)
         opt_par = results.x
-        linear, shift = parameters2affine(opt_par, moving.ndim, transform)
+        linear, shift = params_to_affine(opt_par, moving.ndim, transform)
     elif transform in discrete_transforms:
         linear, shift = minimize_discrete(moving, fixed, transform)
     else:
-        linear, shift = parameters2affine(None, moving.ndim, '')
+        linear, shift = params_to_affine(None, moving.ndim, '')
 
     return linear, shift
 
@@ -396,9 +422,12 @@ def external_registration(
 #       '=post0,l=2,reg=s3__T1.nii.gz'
 
 
-s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e=pre0,l=1__T2S.nii.gz'
-s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH-3D_e=post0,l=1__T2S.nii.gz'
-t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH-3D_e=pre0,l=1,reg__T2S.nii.gz'
+s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
+     '-3D_e=pre0,l=1__T2S.nii.gz'
+s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH' \
+     '-3D_e=post0,l=1__T2S.nii.gz'
+t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
+      '-3D_e=pre0,l=1,reg__T2S.nii.gz'
 
 import pymrt.input_output as mrio
 
@@ -428,7 +457,8 @@ if __name__ == '__main__':
     print(__doc__)
     begin_time = time.time()
 
-    # for idx, (linear, shift) in enumerate(_discrete_generator('reflection', 3)):
+    # for idx, (linear, shift) in enumerate(_discrete_generator(
+    # 'reflection', 3)):
     #     print(idx)
     #     print(linear)
 
