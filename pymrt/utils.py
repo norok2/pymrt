@@ -923,6 +923,8 @@ def ernst_calc(
     elif t1 and fa:
         tr = -t1 * np.log(np.cos(np.deg2rad(fa)))
         val, name, units = tr, 'TR', 'ms'
+    else:
+        val, name, units = None, None, None
     return val, name, units
 
 

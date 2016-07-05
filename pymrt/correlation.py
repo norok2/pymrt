@@ -199,13 +199,13 @@ def _compute_affine_fsl(
         ref_filepath (str): Path to reference image.
         aff_filepath (str): Path to file where to store registration matrix.
         msk_filepath (str): Path to mask image.
-        flirt_kwargs (dict|None):
-        flirt__kwargs (dict|None):
-            dof (int): Number of degrees of freedom of the affine
-            transformation.
-                - 6: only rotations and translations (rigid body);
-                - 9: only rotations, translations and magnification;
-                - 12: all possible linear transformations.
+        flirt_kwargs (dict|None): Keyword arguments passed to `flirt`.
+            Keyword arguments from this dictionary are passed directly to
+            FSL's `flirt`.
+        flirt__kwargs (dict|None): Keyword arguments processed to `flirt`.
+            Keywords arguments from this dictionary should contain only
+            strings containing Python code as values, which will be passed to
+            Python's `eval` function.
         force (bool): Force calculation of output.
         verbose (int): Set level of verbosity.
 
@@ -254,7 +254,7 @@ def _apply_affine_fsl(
         verbose (int): Set level of verbosity.
 
     Returns:
-        None
+        None.
     """
     if mrb.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
@@ -281,7 +281,6 @@ def register_fsl(
         ref_filepath,
         out_filepath,
         ref_mask_filepath=None,
-        mode='linear',
         affine_prefix='affine',
         flirt_kwargs=None,
         flirt__kwargs=None,
@@ -291,36 +290,27 @@ def register_fsl(
     """
     Register input file to reference.
 
-    Parameters
-    ==========
-    in_filepath : string
-        Path to input file.
-    ref_filepath : string
-        Path to reference file.
-    out_filepath : string
-        Path to output file.
-    regmat_filepath : string
-        Path to registration matrix file.
-    options : int (optional)
-        | Number of degrees of freedom of the affine transformation
-        | 6: only rotations and translations (rigid body)
-        | 9: only rotations, translations and magnification
-        | 12: all possible linear transformations
-    use_helper : boolean (optional)
-        | Use helper files for calculating registration matrix.
-        | Helper files have image type defined by SERVICE_ID.helper as
-        | retrieved from the parse_filename() function.
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        in_filepath (str): Path to input file.
+        ref_filepath (str): Path to reference file.
+        out_filepath (str): Path to output file.
+        ref_mask_filepath (str): Path to mask for the reference file.
+        affine_prefix (str): Prefix to be used when generating affine filename.
+        flirt_kwargs (dict|None): Keyword arguments passed to `flirt`.
+            Keyword arguments from this dictionary are passed directly to
+            FSL's `flirt`.
+        flirt__kwargs (dict|None): Keyword arguments processed to `flirt`.
+            Keywords arguments from this dictionary should contain only
+            strings containing Python code as values, which will be passed to
+            Python's `eval` function.
+        helper_img_type (str|None): The image type for helping registration.
+            If None, no helper image is used.
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    None.
-
+    Returns:
+        None.
     """
-
     if helper_img_type:
         in_tmp_filepath = mru.change_img_type(in_filepath, helper_img_type)
         ref_tmp_filepath = mru.change_img_type(ref_filepath, helper_img_type)
@@ -354,26 +344,15 @@ def register(
     """
     Register input file to reference.
 
-    Parameters
-    ==========
-    in_filepath : str
-        Path to input file.
-    ref_filepath : str
-        Path to reference file.
-    out_filepath : str
-        Path to output file.
-    aff_filepath : str
-        Path to registration matrix file.
-    ref_mask_filepath : str
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        in_filepath (str): Path to input file.
+        ref_filepath (str): Path to reference file.
+        out_filepath (str): Path to output file.
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    None.
-
+    Returns:
+        None.
     """
 
     def _quick_reg(array_list, *args, **kwargs):
@@ -414,25 +393,16 @@ def apply_mask(
     """
     Apply a mask.
 
-    Parameters
-    ==========
-    in_filepath : str
-        Path to input file.
-    mask_filepath : str
-        Path to reference file.
-    out_filepath : str
-        Path to output file.
-    mask_val : int or float
-        Value of masked out voxels.
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        in_filepath (str): Path to input file.
+        mask_filepath (str): Path to reference file.
+        out_filepath (str): Path to output file.
+        mask_val (int|float): Value of masked out voxels.
+        force (bool): Force calculation of output.
+        verbose (int): Set level of verbosity.
 
-    Returns
-    =======
-    None.
-
+    Returns:
+        None.
     """
 
     def _mask_reframe(arr_list, mask_val):
