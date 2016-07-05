@@ -9,8 +9,8 @@ See Also:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -55,7 +55,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt.base as mrb
-import pymrt.utils as mru
+import filter as mru
 import pymrt.input_output as mrio
 
 # from dcmpi.lib.common import ID
@@ -939,7 +939,7 @@ def compute(
         data_subpath=None,
         verbose=D_VERB_LVL):
     """
-    Interface to perform calculation from all input files in a directory.
+    Interface to perform calculation from all input files within a path.
 
     If recursive flag is set or if input directory contains no suitable file,
     it tries to descend into subdirectories.

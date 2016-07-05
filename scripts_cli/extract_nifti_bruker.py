@@ -11,8 +11,8 @@ A tentative receiver gain correction is also performed.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -51,7 +51,7 @@ import subprocess  # Subprocess management
 
 # :: Local Imports
 import pymrt.base as mrb
-import pymrt.utils as mru
+import filter as mru
 import pymrt.input_output as mrio
 import pymrt.extras as mre
 # import pymrt.geometry as mrg

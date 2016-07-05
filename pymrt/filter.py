@@ -891,42 +891,6 @@ def filename2label(
 
 
 # ======================================================================
-def ernst_calc(
-        t1=None,
-        tr=None,
-        fa=None):
-    """
-    Calculate optimal T1, TR or FA (given the other two) for FLASH sequence.
-
-    Args:
-        t1 (float|None): Longitudinal relaxation time T1 in ms
-        tr (float|None): Repetition time TE in ms
-        fa (float|None): flip angle FA in deg
-
-    Returns:
-        val (float): Either T1, TR or FA fulfilling Ernst condition
-
-    Examples:
-        >>> ernst_calc(100.0, 30.0)
-        (42.198837866408269, 'FA', 'deg')
-        >>> ernst_calc(100.0, fa=42)
-        (29.686433336996988, 'TR', 'ms')
-        >>> ernst_calc(None, 30.0, 42)
-        (101.05626250025875, 'T1', 'ms')
-    """
-    if t1 and tr:
-        fa = np.rad2deg(np.arccos(np.exp(-tr / t1)))
-        val, name, units = fa, 'FA', 'deg'
-    elif tr and fa:
-        t1 = -tr / np.log(np.cos(np.deg2rad(fa)))
-        val, name, units = t1, 'T1', 'ms'
-    elif t1 and fa:
-        tr = -t1 * np.log(np.cos(np.deg2rad(fa)))
-        val, name, units = tr, 'TR', 'ms'
-    return val, name, units
-
-
-# ======================================================================
 if __name__ == '__main__':
     print(__doc__)
     doctest.testmod()

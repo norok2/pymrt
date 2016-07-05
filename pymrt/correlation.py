@@ -48,7 +48,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
 # :: Local Imports
 import pymrt.base as mrb
-import pymrt.utils as mru
+import filter as mru
 import pymrt.geometry as mrg
 # import pymrt.plot as mrp
 import pymrt.registration as mrr

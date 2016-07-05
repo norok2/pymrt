@@ -1,7 +1,7 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-MP2RAGE signal expression library.
+MP2RAGE pulse sequence library.
 
 Calculate the analytical expression of MP2RAGE signal.
 Two different set of parameters (direct and indirect) are accepted.

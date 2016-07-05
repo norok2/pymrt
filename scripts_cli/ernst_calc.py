@@ -6,8 +6,8 @@ Calculate the optimal signal conditions (e.g. Ernst angle) for FLASH sequences.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -19,10 +19,8 @@ from __future__ import unicode_literals
 import argparse  # Argument Parsing
 
 # :: External Imports
-import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
@@ -32,7 +30,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 
 # :: Local Imports
 # import pymrt.base as mrb
-import pymrt.utils as mru
+import pymrt.sequences.flash
 # import pymrt.input_output as mrio
 # import pymrt.geometry as mrg
 from pymrt import INFO
@@ -99,7 +97,7 @@ def main():
         print('II:', 'Parsed Arguments:', args)
     print(__doc__)
 
-    val, name, units = mru.ernst_calc(args.t1, args.tr, args.fa)
+    val, name, units = pymrt.sequences.flash.ernst_calc(args.t1, args.tr, args.fa)
     print('{}={} {}'.format(name, val, units))
 
 
