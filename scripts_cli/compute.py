@@ -189,7 +189,7 @@ def main():
                 args.input, args.output, args.recursive,
                 args.meta_subpath, args.data_subpath, args.verbose)
         else:
-            print("EE: Mode / options combination not supported.")
+            print('EE: Mode / options combination not supported.')
     else:
         print('WW: Method not specified.')
 

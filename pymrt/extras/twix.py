@@ -32,7 +32,6 @@ import re  # Regular expression operations
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import struct  # Interpret strings as packed binary data
 
-
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
@@ -99,6 +98,7 @@ _STRUCT_TYPES = (
     's', 'p',  # char[]
     'P',  # void * (only support mode: '@')
 )
+
 _DTYPE_STR = {s: s for s in _STRUCT_TYPES}
 # define how to interpreted Python types
 _DTYPE_STR.update({
@@ -264,7 +264,7 @@ def _read_x_protocol(text):
     rang = pp.Literal('>').suppress()
     dot = pp.Literal('.')
     cstr = pp.quotedString.addParseAction(pp.removeQuotes)
-    number = pp.Regex(r'[+-]?\d+(\.\d*)?').setName("number")
+    number = pp.Regex(r'[+-]?\d+(\.\d*)?').setName('number')
     tag = pp.Combine(
         lang +
         pp.Word(pp.alphanums) +
@@ -279,7 +279,7 @@ def _read_x_protocol(text):
         number |
         cstr |
         pp.Group(lbra + pp.ZeroOrMore(exp) + rbra)
-        )
+    )
 
     # print(x_prot)
     x_prot = exp.parseString(text)

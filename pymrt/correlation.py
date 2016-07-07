@@ -1172,15 +1172,29 @@ def masking(
 
 
 # ======================================================================
-def get_comparing_list(
-        in_filepath_list,
-        ref_filepath_list,
+def prepare_comparison(
+        in_filepaths,
+        ref_filepaths,
         out_dirpath,
         skip_equal=True,
         skip_symmetric=False,
         diff_prefix='diff',
         corr_prefix='corr'):
-    """Get list items to be compared."""
+    """
+    Get list items to be compared.
+
+    Args:
+        in_filepaths (list[str]): List of filepaths used as input.
+        ref_filepaths (list[str]): List of filepaths used as reference.
+        out_dirpath (str):
+        skip_equal (bool):
+        skip_symmetric (bool):
+        diff_prefix (str):
+        corr_prefix (str):
+
+    Returns:
+
+    """
 
     def _symmetric(item1, item2, source):
         result = False
@@ -1192,7 +1206,7 @@ def get_comparing_list(
         return result
 
     cmp_list = []
-    combinator = itertools.product(ref_filepath_list, in_filepath_list)
+    combinator = itertools.product(ref_filepaths, in_filepaths)
     for ref_filepath, in_filepath in combinator:
         if skip_equal and in_filepath == ref_filepath:
             continue
@@ -1213,8 +1227,8 @@ def get_comparing_list(
 
 # ======================================================================
 def comparing(
-        in_filepath_list,
-        ref_filepath_list=None,
+        in_filepaths,
+        ref_filepaths=None,
         out_dirpath='comparing',
         mask_filepath=None,
         skip_equal=True,
@@ -1232,46 +1246,33 @@ def comparing(
     Compare input files to reference files.
     Calculate difference and correlation coefficients.
 
-    Parameters
-    ==========
-    in_filepath_list : list of string
-        List of filepaths used as input.
-    ref_filepath_list : list of string (optional)
-        List of filepaths used as reference.
-    out_dirpath : str (optional)
-        Path to directory where to store results.
-    mask_filepath : str (optional)
-        Path to mask image file.
-    skip_equal : boolean (optional)
-        Skip comparison if input and reference are equal.
-    mask_nan : bool (optional)
-        Mask NaN values.
-    mask_inf : bool (optional)
-        Mask Inf values.
-    mask_vals : list of int or float
-        List of values to mask.
-    val_interval : 2-tuple (optional)
-        The (min, max) values range.
-    trunc : int or None (optional)
-        Defines the maximum length to be used by numeric values in output.
-    diff_prefix :
-        Prefix to use for difference files.
-    corr_prefix :
-        Prefix to use for correlation files.
-    use_mp : boolean (optional)
-        Use multiprocessing for faster computation.
-    force : boolean (optional)
-        Force calculation of output.
-    verbose : int (optional)
-        Set level of verbosity.
+    Args:
+        in_filepaths (list[str]): List of filepaths used as input.
+        ref_filepaths (list[str]): List of filepaths used as reference.
+        out_dirpath (str): Subpath where to store results.
+        mask_filepath (str): Path to mask image file.
+        skip_equal (bool): Skip comparison if input and reference are equal.
+        mask_nan (bool): Ignore NaN values during comparison.
+        mask_inf (bool): Ignore Inf values during comparison.
+        mask_vals : list of int or float
+            List of values to mask.
+        val_interval : 2-tuple (optional)
+            The (min, max) values range.
+        trunc : int or None (optional)
+            Defines the maximum length to be used by numeric values in output.
+        diff_prefix :
+            Prefix to use for difference files.
+        corr_prefix :
+            Prefix to use for correlation files.
+        use_mp : boolean (optional)
+            Use multiprocessing for faster computation.
+        force : boolean (optional)
+            Force calculation of output.
+        verbose : int (optional)
+            Set level of verbosity.
 
-    Returns
-    =======
-    diff_filepath_list : list of string
-        List of path to difference image files.
-    corr_filepath_list : list of string
-        List of path to voxel correlation coefficient data files.
-
+    Returns:
+        cmp_list (list[list[str]]):
     """
     # ensure existing output path
     if not os.path.exists(out_dirpath):
@@ -1281,8 +1282,8 @@ def comparing(
         n_proc = multiprocessing.cpu_count()
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
-    cmp_list = get_comparing_list(
-        in_filepath_list, ref_filepath_list, out_dirpath,
+    cmp_list = prepare_comparison(
+        in_filepaths, ref_filepaths, out_dirpath,
         skip_equal=True, skip_symmetric=True,
         diff_prefix='diff', corr_prefix='corr')
     for in_filepath, ref_filepath, diff_filepath, corr_filepath in cmp_list:
@@ -1529,12 +1530,11 @@ def check_correlation(
                 corr_list += tmp_corr_list
             # group resulting correlations
             if corr_list:
-                combine_correlation(corr_list, dirpath,
-                                    force=force, verbose=verbose)
+                combine_correlation(
+                    corr_list, dirpath, force=force, verbose=verbose)
     return target_list, corr_list
 
 
-# todo: fix registration to (re)use FSL
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
