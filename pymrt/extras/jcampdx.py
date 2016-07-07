@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 pymrt: read files with a JCAMP-DX-like structure.
@@ -133,20 +133,13 @@ def read(filepath):
     """
     Read files with JCAMP-DX-like structure.
 
-    Parameters
-    ==========
-    filepath : str
-        Path to file to parse.
+    Args:
+        filepath (str|unicode): Path to file to parse.
 
-    Returns
-    =======
-    ldr_std : dictionary
-        Standard Labelled-Data-Records present.
-    ldr_user : dictionary
-        User-defined Labelled-Data-Records.
-    comments : str
-        Comment lines.
-
+    Returns:
+        ldr_std (dict): Dictionary of the standard Labelled-Data-Records found.
+        ldr_user (dict): Dictionary of User-defined Labelled-Data-Records found.
+        comments (str): Comment lines.
     """
     ldr_sep, ldr_usr_sep, ldr_dict_sep = '##', '$', '='
     with open(filepath, 'rb') as in_file:
@@ -169,16 +162,13 @@ def read(filepath):
 # ======================================================================
 def test():
     """
-    Test JCAMP-DX module with files provided in the package.
+    Test module functionalities with files provided in the package.
 
-    Parameters
-    ==========
-    None.
+    Args:
+        None.
 
-    Returns
-    =======
-    None.
-
+    Returns:
+        None.
     """
     test_filepath_list = []  # 'test/file1.jcampdx']
     try:
@@ -194,6 +184,7 @@ def test():
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
+    # time the tests
     begin_time = time.time()
     test()
     end_time = time.time()

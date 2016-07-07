@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 pymrt/sequences/matrix_algebra: solver of the Bloch-McConnell equations.

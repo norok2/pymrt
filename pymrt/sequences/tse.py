@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Turbo Spin-Echo (TSE) signal expression library.

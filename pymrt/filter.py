@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 pymrt.utils: useful utilities for MRI data analysis.
