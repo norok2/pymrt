@@ -64,7 +64,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 
 # :: Local Imports
 import pymrt.base as mrb
-import filter as mru
+import pymrt.utils as mru
 # import pymrt.plot as mrp
 # import pymrt.registration as mrr
 import pymrt.computation as mrc
@@ -167,9 +167,8 @@ def apply_affine(
 
 # ======================================================================
 def affine_model(
-        r1=None,
-        r2s=None,
-        model='no_average',
+        r1,
+        r2s,
         save_path=None):
     """
     Calculate the affine for the model, given the prior R1 and R2S info.
@@ -189,12 +188,13 @@ def affine_model(
     """
     # define all symbols
     # X = A * P + C
-    num = 2
+    relaxants = ('My', 'Fe')
+    num = len(relaxants)
     aa = np.array(
         [sym.symbols('A_{}_{}'.format(i, j))
          for i in range(num) for j in range(num)]).reshape((num, num))
     cc = np.array([sym.symbols('C_{}'.format(i)) for i in range(num)])
-    # concentrations, 1st index: chemical species, 2nd index: prior information
+    # concentrations, 1st index: relaxants, 2nd index: prior information
     xx = np.array(
         [sym.symbols('X_{}_{}'.format(i, j))
          for i in range(num) for j in range(num + 1)]).reshape((num, num + 1))
@@ -203,90 +203,110 @@ def affine_model(
         [sym.symbols('P_{}_{}'.format(i, j))
          for i in range(num) for j in range(num + 1)]).reshape((num, num + 1))
 
-    num_eqs = len(model.split('-'))
-    if num_eqs == 4:
-        eqs = (
-            sym.Eq(xx[0, 0], aa[0, 0] * pp[0, 0] + aa[0, 1] * pp[1, 0]),
-            sym.Eq(xx[1, 0], aa[1, 0] * pp[0, 0] + aa[1, 1] * pp[1, 0]),
-            sym.Eq(xx[0, 1], aa[0, 0] * pp[0, 1] + aa[0, 1] * pp[1, 1]),
-            sym.Eq(xx[1, 1], aa[1, 0] * pp[0, 1] + aa[1, 1] * pp[1, 1]),
-        )
-    else:  # num_eqs == 6
-        eqs = (
-            sym.Eq(xx[0, 0], aa[0, 0] * pp[0, 0] + aa[0, 1] * pp[1, 0] + cc[0]),
-            sym.Eq(xx[1, 0], aa[1, 0] * pp[0, 0] + aa[1, 1] * pp[1, 0] + cc[1]),
-            sym.Eq(xx[0, 1], aa[0, 0] * pp[0, 1] + aa[0, 1] * pp[1, 1] + cc[0]),
-            sym.Eq(xx[1, 1], aa[1, 0] * pp[0, 1] + aa[1, 1] * pp[1, 1] + cc[1]),
-            sym.Eq(xx[0, 2], aa[0, 0] * pp[0, 2] + aa[0, 1] * pp[1, 2] + cc[0]),
-            sym.Eq(xx[1, 2], aa[1, 0] * pp[0, 2] + aa[1, 1] * pp[1, 2] + cc[1]),
-        )
-    unknowns = list(aa.ravel()) + list(cc)
-    sols = sym.solvers.solve(eqs, *unknowns)
+    model = list(set(r1.keys()) & set(r2s.keys()))
+    print(model)
+    try:
+        model = model.split('-')
+    except AttributeError:
+        pass
 
-    arbs, priors = {}, {}
-    if model == 'MyH-FeH-MyA-FeA-My0-Fe0':
-        arbs = {
-            xx[0, 0]: 1.0, xx[1, 0]: 1.0,
-            xx[0, 1]: 0.5, xx[1, 1]: 0.5,
-            xx[0, 2]: 0.0, xx[1, 2]: 0.1,
-        }
-        priors = {
-            pp[0, 0]: r1['My'], pp[1, 0]: r2s['Fe'],
-            pp[0, 1]: r1['Avg'], pp[1, 1]: r2s['Avg'],
-            pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
-        }
-    elif model == 'MyH-FeL-MyL-FeH-My0-Fe0':
-        arbs = {
-            xx[0, 0]: 1.0, xx[1, 0]: 0.0,
-            xx[0, 1]: 0.5, xx[1, 1]: 0.5,
-            xx[0, 2]: 0.0, xx[1, 2]: 0.1,
-        }
-        priors = {
-            pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
-            pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
-            pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
-        }
-    elif model == 'MyH-FeL-MyL-FeH':
-        arbs = {
-            xx[0, 0]: 1.0, xx[1, 0]: 0.0,
-            xx[0, 1]: 0.5, xx[1, 1]: 0.5,
-        }
-        priors = {
-            pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
-            pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
-        }
-    elif model == 'MyH-FeH-MyA-FeA':
-        arbs = {
-            xx[0, 0]: 1.0, xx[1, 0]: 0.0,
-            xx[0, 1]: 0.5, xx[1, 1]: 0.5,
-            xx[0, 2]: 0.0, xx[1, 2]: 0.1,
-        }
-        priors = {
-            pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
-            pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
-            pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
-        }
-    elif model == 'MyA-FeA-My0-Fe0':
-        arbs = {
-            xx[0, 0]: 1.0, xx[1, 0]: 0.0,
-            xx[0, 1]: 0.5, xx[1, 1]: 0.5,
-            xx[0, 2]: 0.0, xx[1, 2]: 0.1,
-        }
-        priors = {
-            pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
-            pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
-            pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
-        }
-    subst = mrb.merge_dicts(arbs, priors)
+    check_model = {
+        'num_priors': len(model)
+    }
+    for relaxant in relaxants:
+        check_model[relaxant] = 0
+        for prior in model:
+            if relaxant in prior:
+                check_model[relaxant] += 1
+    # todo: check that the number of priors is correct
 
-    aa_arr = np.array(
-        [sols[aa[i, j]].subs(subst)
-         for i in range(num) for j in range(num)]).reshape((num, num))
-    if num_eqs:
-        cc_arr = np.array(
-            [sols[cc[i]].subs(subst) for i in range(num)])
-    else:
-        cc_arr = np.zeros_like(cc)
+
+    if 'MyH' in model:
+        pass
+    # num_eqs = len(model.split('-'))
+    # if num_eqs == 4:
+    #     eqs = (
+    #         sym.Eq(xx[0, 0], aa[0, 0] * pp[0, 0] + aa[0, 1] * pp[1, 0]),
+    #         sym.Eq(xx[1, 0], aa[1, 0] * pp[0, 0] + aa[1, 1] * pp[1, 0]),
+    #         sym.Eq(xx[0, 1], aa[0, 0] * pp[0, 1] + aa[0, 1] * pp[1, 1]),
+    #         sym.Eq(xx[1, 1], aa[1, 0] * pp[0, 1] + aa[1, 1] * pp[1, 1]),
+    #     )
+    # else:  # num_eqs == 6
+    #     eqs = (
+    #         sym.Eq(xx[0, 0], aa[0, 0] * pp[0, 0] + aa[0, 1] * pp[1, 0] + cc[0]),
+    #         sym.Eq(xx[1, 0], aa[1, 0] * pp[0, 0] + aa[1, 1] * pp[1, 0] + cc[1]),
+    #         sym.Eq(xx[0, 1], aa[0, 0] * pp[0, 1] + aa[0, 1] * pp[1, 1] + cc[0]),
+    #         sym.Eq(xx[1, 1], aa[1, 0] * pp[0, 1] + aa[1, 1] * pp[1, 1] + cc[1]),
+    #         sym.Eq(xx[0, 2], aa[0, 0] * pp[0, 2] + aa[0, 1] * pp[1, 2] + cc[0]),
+    #         sym.Eq(xx[1, 2], aa[1, 0] * pp[0, 2] + aa[1, 1] * pp[1, 2] + cc[1]),
+    #     )
+    # unknowns = list(aa.ravel()) + list(cc)
+    # sols = sym.solvers.solve(eqs, *unknowns)
+    #
+    # arbs, priors = {}, {}
+    # if model == 'MyH-FeH-MyA-FeA-My0-Fe0':
+    #     arbs = {
+    #         xx[0, 0]: 1.0, xx[1, 0]: 1.0,
+    #         xx[0, 1]: 0.5, xx[1, 1]: 0.5,
+    #         xx[0, 2]: 0.0, xx[1, 2]: 0.1,
+    #     }
+    #     priors = {
+    #         pp[0, 0]: r1['My'], pp[1, 0]: r2s['Fe'],
+    #         pp[0, 1]: r1['Avg'], pp[1, 1]: r2s['Avg'],
+    #         pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
+    #     }
+    # elif model == 'MyH-FeL-MyL-FeH-My0-Fe0':
+    #     arbs = {
+    #         xx[0, 0]: 1.0, xx[1, 0]: 0.0,
+    #         xx[0, 1]: 0.5, xx[1, 1]: 0.5,
+    #         xx[0, 2]: 0.0, xx[1, 2]: 0.1,
+    #     }
+    #     priors = {
+    #         pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
+    #         pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
+    #         pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
+    #     }
+    # elif model == 'MyH-FeL-MyL-FeH':
+    #     arbs = {
+    #         xx[0, 0]: 1.0, xx[1, 0]: 0.0,
+    #         xx[0, 1]: 0.5, xx[1, 1]: 0.5,
+    #     }
+    #     priors = {
+    #         pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
+    #         pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
+    #     }
+    # elif model == 'MyH-FeH-MyA-FeA':
+    #     arbs = {
+    #         xx[0, 0]: 1.0, xx[1, 0]: 0.0,
+    #         xx[0, 1]: 0.5, xx[1, 1]: 0.5,
+    #         xx[0, 2]: 0.0, xx[1, 2]: 0.1,
+    #     }
+    #     priors = {
+    #         pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
+    #         pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
+    #         pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
+    #     }
+    # elif model == 'MyA-FeA-My0-Fe0':
+    #     arbs = {
+    #         xx[0, 0]: 1.0, xx[1, 0]: 0.0,
+    #         xx[0, 1]: 0.5, xx[1, 1]: 0.5,
+    #         xx[0, 2]: 0.0, xx[1, 2]: 0.1,
+    #     }
+    #     priors = {
+    #         pp[0, 0]: r1['My'], pp[1, 0]: r2s['My'],
+    #         pp[0, 1]: r1['Fe'], pp[1, 1]: r2s['Fe'],
+    #         pp[0, 2]: r1['0'], pp[1, 2]: r2s['0'],
+    #     }
+    # subst = mrb.merge_dicts(arbs, priors)
+    #
+    # aa_arr = np.array(
+    #     [sols[aa[i, j]].subs(subst)
+    #      for i in range(num) for j in range(num)]).reshape((num, num))
+    # if num_eqs:
+    #     cc_arr = np.array(
+    #         [sols[cc[i]].subs(subst) for i in range(num)])
+    # else:
+    #     cc_arr = np.zeros_like(cc)
     if save_path is not None:
         np.savetxt(save_path, np.concatenate((aa_arr, cc_arr), -1))
     return aa_arr, cc_arr

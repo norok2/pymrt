@@ -51,7 +51,7 @@ import subprocess  # Subprocess management
 
 # :: Local Imports
 import pymrt.base as mrb
-import filter as mru
+import utils as mru
 import pymrt.input_output as mrio
 import pymrt.extras as mre
 # import pymrt.geometry as mrg

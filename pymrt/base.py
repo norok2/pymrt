@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-import sys  # System-specific parameters and functions
+# import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
 import math  # Mathematical functions
 import time  # Time access and conversions
@@ -457,44 +457,57 @@ def walk2(
 # ======================================================================
 def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
-    Execute command and retrieve output at the end of execution.
+    Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str): Command to execute.
+        cmd (str|unicode|list[str]): Command to execute.
         use_pipes (bool): Get stdout and stderr streams from the process.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        p_stdout (str|None): if use_pipes the stdout of the process.
-        p_stderr (str|None): if use_pipes the stderr of the process.
+        p_stdout (str|unicode|None): if use_pipes the stdout of the process.
+        p_stderr (str|unicode|None): if use_pipes the stderr of the process.
     """
     p_stdout, p_stderr = None, None
+    # ensure cmd is a list of strings
+    try:
+        cmd = cmd.split()
+    except AttributeError:
+        pass
+
     if dry:
-        print('Dry:\t{}'.format(cmd))
+        print('$$ {}'.format(' '.join(cmd)))
     else:
-        if verbose >= VERB_LVL['high']:
-            print('Cmd:\t{}'.format(cmd))
+        if verbose >= VERB_LVL['medium']:
+            print('>> {}'.format(' '.join(cmd)))
+
         if use_pipes:
-            # # :: deprecated
+            # # :: deprecated (since Python 2.4)
             # proc = os.popen3(cmd)
             # p_stdout, p_stderr = [item.read() for item in proc[1:]]
-            # :: new style
+
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True, close_fds=True)
-            p_stdout = proc.stdout.read()
+            # handle stdout
+            p_stdout = ''
+            while proc.poll() is None:
+                stdout_buffer = proc.stdout.readline()
+                p_stdout += stdout_buffer
+                if verbose >= VERB_LVL['medium']:
+                    print(stdout_buffer, end='')
+            # handle stderr
             p_stderr = proc.stderr.read()
-            if verbose >= VERB_LVL['debug']:
-                print('stdout:\t{}'.format(p_stdout))
-                print('stderr:\t{}'.format(p_stderr))
+            if verbose >= VERB_LVL['high']:
+                print(p_stderr)
         else:
-            # # :: deprecated
+            # # :: deprecated (since Python 2.4)
             # os.system(cmd)
-            # :: new style
+
             subprocess.call(cmd, shell=True)
     return p_stdout, p_stderr
 
@@ -585,51 +598,6 @@ def listdir(
             for filename in os.listdir(path)
             if filename.lower().endswith(file_ext.lower())]
     return sorted(filepaths)[pattern]
-
-
-# :: tty_colorify has been obsoleted by blessings
-# # ======================================================================
-# def tty_colorify(
-#         text,
-#         color=None):
-#     """
-#     Add color TTY-compatible color code to a string, for pretty-printing.
-#
-#     Args:
-#         text (str): The text to be colored.
-#         color (str|int|None): A string or number for the color coding.
-#             Lowercase letters modify the forground color.
-#             Uppercase letters modify the background color.
-#             Available colors:
-#                 * r/R: red
-#                 * g/G: green
-#                 * b/B: blue
-#                 * c/C: cyan
-#                 * m/M: magenta
-#                 * y/Y: yellow (brown)
-#                 * k/K: black (gray)
-#                 * w/W: white (gray)
-#
-#     Returns:
-#         The colored string.
-#     """
-#     # :: TTY amenities
-#     tty_color_code = {
-#         'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37,
-# 'k': 30,
-#         'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47,
-# 'K': 40,
-#     }
-#
-#     if color in tty_color_code:
-#         tty_color = tty_color_code[color]
-#     elif color in tty_color_code.values():
-#         tty_color = color
-#     else:
-#         tty_color = None
-#     if tty_color and sys.stdout.isatty():
-#         text = '\x1b[1;{color}m{}\x1b[1;m'.format(text, color=tty_color)
-#     return text
 
 
 # ======================================================================
