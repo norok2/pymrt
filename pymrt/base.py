@@ -1833,18 +1833,18 @@ def elapsed(
 
 
 # ======================================================================
-def note(
-        msg,
+def msg(
+        text,
         verb_lvl,
         verb_threshold=D_VERB_LVL,
         fmt=None,
         *args,
         **kwargs):
     """
-    Send a feedback note to output.
+    Send a feedback msg to output.
 
     Args:
-        msg (str|unicode): Message to display.
+        text (str|unicode): Message text to display.
         verb_lvl (int): Current level of verbosity.
         verb_threshold (int): Threshold level of verbosity.
         fmt (str|unicode): Format of the message (if `blessings` supported).
@@ -1868,16 +1868,16 @@ def note(
                     extra = term.magenta + term.bold
                 else:
                     extra = term.white
-                msg = '{e}{t.bold}{first}{t.normal}{e}{rest}{t.normal}'.format(
+                text = '{e}{t.bold}{fst}{t.normal}{e}{rest}{t.normal}'.format(
                     t=term, e=extra,
-                    first=msg[:msg.find(' ')],
-                    rest=msg[msg.find(' '):])
+                    fst=text[:text.find(' ')],
+                    rest=text[text.find(' '):])
             else:
-                msg = fmt.format(msg, t=term) + term.normal
+                text = fmt.format(text, t=term) + term.normal
         except ImportError:
             pass
         finally:
-            print(msg, *args, **kwargs)
+            print(text, *args, **kwargs)
     return
 
 
