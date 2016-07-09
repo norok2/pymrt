@@ -57,8 +57,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # :: Header information
 HDR = {
     'metabolites': 'Conc.  %SD   /Cre   Metabolite',
-    'data_mag': ' points ',
-    'data_phs': 'phased data points follow',
+    'data_cs': 'points on ppm-axis',  # chemical shift in ppm
+    'data_s': 'phased data points follow',
     'data_fit': 'points of the fit to the data follow',
     'data_bg': 'background values follow',
 
@@ -71,7 +71,7 @@ HDR = {
 
 
 # ======================================================================
-def _percent_to_float(text):
+def percent_to_float(text):
     """
     Convert percent text to float.
 
@@ -82,7 +82,8 @@ def _percent_to_float(text):
         val (float): The converted Value.
 
     Examples:
-        >>>
+        >>> percent_to_float('50%')
+        0.5
     """
     try:
         val = float(text.strip('%')) / 100
@@ -105,8 +106,11 @@ def read(
     Returns:
         lcmodel (dict): The extracted information.
              The concentration information are stored in `metabolites`.
-             The data for the spectra is stored respectively in:
-             `data_mag`, `data_mag`, `data_mag`, and `data_mag`.
+             The spectral data are stored respectively in:
+              - `data_cs`: the chemical shift in ppm (the x-axis);
+              - `data_s`: the spectrum in arb.units (the y-axis);
+              - `data_fit`: the spectrum obtained from the fitting in arb.units;
+              - `data_bg`: the background of the spectrum  in arb.units.
              The extra information is stored in the corresponding entries.
     """
     lcmodel = {}
@@ -123,13 +127,13 @@ def read(
                     val, err, over_cre, name = line.split()
                     lcmodel['metabolites'][name] = {
                         'val': float(val),
-                        'percent_err': _percent_to_float(err),
+                        'percent_err': percent_to_float(err),
                         'over_cre': float(over_cre)}
             except ValueError:
                 break
 
         # read file until it finds the first spectra labels
-        labels = ['data_mag', 'data_phs', 'data_fit', 'data_bg']
+        labels = ['data_cs', 'data_s', 'data_fit', 'data_bg']
         for label in labels:
             vals = []
             if label == labels[0]:
@@ -187,13 +191,22 @@ def test():
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
-    # time the tests
+
+
+    # time the extra tests
     begin_time = time.time()
     test()
     end_time = time.time()
     print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
 
     s = '/scr/beryllium1/mr16/RM/lcmLONGc_128avg' \
-        '/LONGc_128avg160419_RL6T_MET20_Step01_WAT.coord'
+        '/LONGc_128avg160419_RL6T_MET20_Step01_WAT.txt'
 
-    print(read(s))
+    d = read(s)
+    print(d)
+    # import matplotlib.pyplot as plt
+    # plt.figure()
+    # plt.plot(d['data_cs'], d['data_s'], '-b')
+    # plt.plot(d['data_cs'], d['data_fit'], '-r')
+    # plt.plot(d['data_cs'], d['data_bg'], '-y')
+    # plt.show()
