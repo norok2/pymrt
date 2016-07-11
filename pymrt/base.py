@@ -205,7 +205,7 @@ def accumulate(items, func=lambda x, y: x + y):
     Cumulatively apply the specified function to the elements of the list.
 
     Args:
-        items (list): The list to process.
+        items (iterable): The items to process.
         func (callable): func(x,y) -> z
             The function applied cumulatively to the first n items of the list.
             Defaults to cumulative sum.
@@ -224,7 +224,8 @@ def accumulate(items, func=lambda x, y: x + y):
         [1, 2, 6, 24, 120, 720, 5040, 40320]
     """
     return [
-        functools.reduce(func, items[:idx + 1]) for idx in range(len(items))]
+        functools.reduce(func, list(items)[:idx + 1])
+        for idx in range(len(items))]
 
 
 # ======================================================================
@@ -1798,85 +1799,6 @@ def elapsed(
     if not time_point:
         time_point = time.time()
     events.append((name, time_point))
-
-
-# ======================================================================
-def note(
-        msg,
-        verb_lvl,
-        verb_threshold=D_VERB_LVL,
-        fmt=None,
-        *args,
-        **kwargs):
-    """
-    Send a feedback note to output.
-
-    Args:
-        msg (str|unicode): Message to display.
-        verb_lvl (int): Current level of verbosity.
-        verb_threshold (int): Threshold level of verbosity.
-        fmt (str|unicode): Format of the message (if `blessings` supported).
-            If None, a standard formatting is used.
-        *args (tuple): Positional arguments to be passed to `print`.
-        **kwargs (dict): Keyword arguments to be passed to `print`.
-
-    Returns:
-        None.
-    """
-    if verb_lvl >= verb_threshold:
-        try:
-            import blessings
-            term = blessings.Terminal()
-            if not fmt:
-                if verb_lvl == VERB_LVL['medium']:
-                    extra = term.cyan
-                elif verb_lvl == VERB_LVL['high']:
-                    extra = term.yellow
-                elif verb_lvl == VERB_LVL['debug']:
-                    extra = term.magenta + term.bold
-                else:
-                    extra = term.white
-                msg = '{e}{t.bold}{first}{t.normal}{e}{rest}{t.normal}'.format(
-                    t=term, e=extra,
-                    first=msg[:msg.find(' ')],
-                    rest=msg[msg.find(' '):])
-            else:
-                msg = fmt.format(msg, t=term) + term.normal
-        except ImportError:
-            pass
-        finally:
-            print(msg, *args, **kwargs)
-    return
-
-
-# ======================================================================
-def dbg(name):
-    """
-    Print content of a variable for debug purposes.
-
-    Args:
-        name: The name to be inspected.
-
-    Returns:
-        None.
-
-    Examples:
-        >>> my_dict = {'a': 1, 'b': 1}
-        >>> dbg(my_dict)
-        dbg(my_dict): {
-            "a": 1,
-            "b": 1
-        }
-        <BLANKLINE>
-        >>> dbg(my_dict['a'])
-        dbg(my_dict['a']): 1
-        <BLANKLINE>
-    """
-    outer_frame = inspect.getouterframes(inspect.currentframe())[1]
-    name_str = outer_frame[4][0][:-1]
-    print(name_str, end=': ')
-    print(json.dumps(name, sort_keys=True, indent=4))
-    print()
 
 
 # ======================================================================

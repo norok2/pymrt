@@ -55,7 +55,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt.base as mrb
-import utils as mru
+import pymrt.utils as mru
 import pymrt.input_output as mrio
 
 # from dcmpi.lib.common import ID
