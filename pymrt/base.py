@@ -496,7 +496,7 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
             # handle stdout
             p_stdout = ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.readline()
+                stdout_buffer = proc.stdout.read(1)
                 p_stdout += stdout_buffer
                 if verbose >= VERB_LVL['medium']:
                     print(stdout_buffer, end='')
@@ -1846,7 +1846,6 @@ def msg(
             pass
         finally:
             print(text, *args, **kwargs)
-    return
 
 
 # ======================================================================
