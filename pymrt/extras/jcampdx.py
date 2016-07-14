@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: read files with a JCAMP-DX-like structure.
+pymrt: read_output files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """

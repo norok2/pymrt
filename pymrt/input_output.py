@@ -170,8 +170,8 @@ def filter_1_1(
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -204,8 +204,8 @@ def filter_n_1(
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(list[img, aff, hdr], *args, *kwargs)) -> img, aff, hdr
-        args (tuple): Positional arguments passed to the filtering function.
-        kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         None
@@ -241,8 +241,8 @@ def filter_n_m(
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(list[img, aff, hdr], *args, *kwargs)) -> list[img, aff, hdr]
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -280,8 +280,8 @@ def filter_n_x(
         func (callable): Filtering function
             (img: ndarray, aff:ndarray, hdr:header)
             func(list[img, aff, hdr], *args, *kwargs)) -> list[img, aff, hdr]
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -307,8 +307,8 @@ def simple_filter_1_1(
         out_filepath (str): Output file path
         func (callable): Filtering function (img: ndarray)
             func(img, *args, *kwargs) -> img
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -337,8 +337,8 @@ def simple_filter_n_1(
         out_filepath (str): Output file path
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs)) -> img
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -373,8 +373,8 @@ def simple_filter_n_m(
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs) -> list[ndarray]
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -411,8 +411,8 @@ def simple_filter_n_x(
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs) -> list[ndarray]
-        args (tuple): Positional arguments passed to the filtering function
-        kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -439,7 +439,7 @@ def join(
     Returns:
         None
     """
-    simple_filter_n_1(in_filepaths, out_filepath, mrb.ndstack, axis)
+    simple_filter_n_1(in_filepaths, out_filepath, np.stack, axis)
 
 
 # ======================================================================
@@ -897,8 +897,8 @@ def plot_sample2d(
 
     Args:
         in_filepath (str): The input file path
-        args (tuple): Positional arguments passed to the plot function
-        kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function
+        **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
         The result of `pymrt.plot.sample2d`
@@ -928,8 +928,8 @@ def plot_sample2d_anim(
 
     Args:
         in_filepath (str): The input file path
-        args (tuple): Positional arguments passed to the plot function
-        kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function
+        **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
         The result of `pymrt.plot.sample2d`
@@ -961,8 +961,8 @@ def plot_histogram1d(
     Args:
         in_filepath (str): The input file path
         mask_filepath (str): The mask file path
-        args (tuple): Positional arguments passed to the plot function
-        kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function
+        **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
         The result of `pymrt.plot.histogram1d`
@@ -995,8 +995,8 @@ def plot_histogram1d_list(
     Args:
         in_filepaths (list[str]): The list of input file paths
         mask_filepath (str): The mask file path
-        args (tuple): Positional arguments passed to the plot function
-        kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function
+        **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
         The result of `pymrt.plot.histogram1d_list`
@@ -1036,8 +1036,8 @@ def plot_histogram2d(
         in2_filepath (str): The second input file path.
         mask1_filepath (str): The first mask file path.
         mask2_filepath (str): The second mask file path.
-        args (tuple): Positional arguments passed to the plot function
-        kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function
+        **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
         The result of `pymrt.plot.histogram2d`

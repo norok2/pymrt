@@ -47,8 +47,10 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+# import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import sympy as sym  # SymPy (symbolic CAS library)
+import xarray as xr  # N-D labeled arrays and datasets in Python
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
@@ -69,11 +71,9 @@ import pymrt.computation as mrc
 # import pymrt.correlation as mrl
 import pymrt.input_output as mrio
 
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
-from pymrt import _EVENTS
-from pymrt import msg
-from pymrt import dbg
+from pymrt import INFO
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Paths
@@ -91,7 +91,7 @@ PATHS['masks'] = os.path.join(PATHS['base'], 'masks')
 PATHS['prior'] = os.path.join(PATHS['sandbox'], 'prior')
 PATHS['model'] = os.path.join(PATHS['sandbox'], 'model')
 
-PATHS['subjects'] = mrb.listdir(PATHS['sources'], None, full_path=False)
+PATHS['samples'] = mrb.listdir(PATHS['sources'], None, full_path=False)
 
 # PATHS['masks'] = mrb.listdir(PATHS['masks'], mrn.D_EXT)
 
@@ -120,12 +120,13 @@ tpl_t1w_b = os.path.join(PATHS['templates'], 'MNI152_T1_1mm_brain.nii.gz')
 # ======================================================================
 def priors_to_models(priors):
     models = [
-        ('My_CC', 'Fe_CC', 'My_SN', 'Fe_SN'),
-        ('My_CC', 'Fe_SN', 'My_avg', 'Fe_avg'),
-        ('My_CC', 'Fe_SN', 'My_avg', 'Fe_avg', 'My_CSF', 'Fe_CSF'),
-        ('My_CC', 'Fe_CC', 'My_SN', 'Fe_SN', 'My_CSF', 'Fe_CSF'),
+        ('My_aCC', 'Fe_aCC', 'My_SN', 'Fe_SN'),
+        ('My_aCC', 'Fe_SN', 'My_avg', 'Fe_avg'),
+        ('My_aCC', 'Fe_SN', 'My_avg', 'Fe_avg', 'My_CSF', 'Fe_CSF'),
+        ('My_aCC', 'Fe_aCC', 'My_SN', 'Fe_SN', 'My_CSF', 'Fe_CSF'),
         # ('My_CC', 'Fe_SN', 'My_CSF', 'Fe_CSF', 'My_avg'),  # the best model?
     ]
+    models = [tuple(sorted(model)) for model in models]
     return models
 
 
@@ -171,17 +172,21 @@ def apply_affine(
     return o_arrays
 
 
+# ======================================================================
 def time_to_rate(
+        sample_subpaths=PATHS['samples'],
+        model_dirpath=PATHS['model'],
+        sources_dirpath=PATHS['sources'],
         force=False,
         verbose=D_VERB_LVL):
     """
     Calculate R1, R2S maps from the corresponding T1, T2S.
     """
-    for subject in PATHS['subjects']:
-        dirpath = os.path.join(PATHS['model'], subject)
+    for sample in sample_subpaths:
+        dirpath = os.path.join(model_dirpath, sample)
         time_maps = [
-            get_map(os.path.join(PATHS['sources'], subject), 'T1'),
-            get_map(os.path.join(PATHS['sources'], subject), 'T2S')]
+            get_map(os.path.join(sources_dirpath, sample), 'T1'),
+            get_map(os.path.join(sources_dirpath, sample), 'T2S')]
         rate_maps = [
             os.path.join(dirpath, os.path.basename(filepath))
             for filepath in (
@@ -195,39 +200,82 @@ def time_to_rate(
                 mrio.simple_filter_1_1(time_map, rate_map, mrc.time_to_rate)
 
 
-def refine_priors(priors):
-    r1_group = {key: [] for key in priors}
-    r2s_group = {key: [] for key in priors}
-    for subject in PATHS['subjects'][:-1]:
-        dirpath = os.path.join(PATHS['model'], subject)
-        if os.path.isdir(dirpath):
+# ======================================================================
+def get_roi_values(
+        dirpath=PATHS['model'],
+        out_filename='priors_maps.json',
+        force=False,
+        verbosity=D_VERB_LVL):
+    """
+    Refine priors from the measured R1 and R2* maps.
+    """
+    # todo: reimplement using xarray
+    msg(':: Calculating ROI values in maps...')
+    stats = {'avg': np.mean, 'std': np.std}
+    subdirpaths = [
+        item for item in mrb.listdir(dirpath, None) if os.access(item, os.W_OK)]
+    inputs = []
+    for subdirpath in subdirpaths:
+        inputs += [
+            mask for mask in mrb.listdir(subdirpath, mrb.EXT['niz'])
+            if os.path.basename(mask).startswith('mask')]
+    out_filepath = os.path.join(dirpath, out_filename)
+    if mrb.check_redo(inputs, [out_filepath], force):
+        roi_values = {}
+        for subdirpath in subdirpaths:
+            subdirname = os.path.basename(subdirpath)
+            individual_stat = {}
             masks = [
                 (mru.parse_filename(mask)['type'], mask)
-                for mask in mrb.listdir(dirpath, mrb.EXT['niz'])
+                for mask in mrb.listdir(subdirpath, mrb.EXT['niz'])
                 if os.path.basename(mask).startswith('mask')]
-            r1_arr = mrio.load(
-                get_map(os.path.join(PATHS['model'], subject), 'R1'))
-            r2s_arr = mrio.load(
-                get_map(os.path.join(PATHS['model'], subject), 'R2S'))
+            r1_arr = mrio.load(get_map(subdirpath, 'R1'))
+            r2s_arr = mrio.load(get_map(subdirpath, 'R2S'))
+            msg('Calculating on `{}`'.format(subdirname))
             for key, mask_path in masks:
                 mask = mrio.load(mask_path).astype(bool)
-                if key in r1_group:
-                    r1_group[key].append(np.median(r1_arr[mask]))
-                if key in r2s_group:
-                    r2s_group[key].append(np.median(r2s_arr[mask]))
-    msg('Group averages: ', fmt='{t.green}{t.bold}')
-    for key in priors:
-        r1[key] = np.median(np.array(r1_group[key]))
-        r2s[key] = np.median(np.array(r2s_group[key]))
-        print("r1['{}'] = {}".format(key, r1[key]))
-        print("r2s['{}'] = {}".format(key, r2s[key]))
+                parameters = {'R1': r1_arr, 'R2S': r2s_arr}
+                individual_stat[key] = {}
+                for name, arr in parameters.items():
+                    individual_stat[key][name] = {}
+                    for stat, func in stats.items():
+                        individual_stat[key][name][stat] = func(arr[mask])
+            roi_values[subdirname] = individual_stat
+        # group individual results
+        msg('Grouping and saving to `{}`'.format(out_filepath))
+        grouped = {}
+        for individual, roi_value in roi_values.items():
+            for roi, roi_vals in roi_value.items():
+                if roi not in grouped:
+                    grouped[roi] = {}
+                for param, param_vals in roi_vals.items():
+                    if param not in grouped[roi]:
+                        grouped[roi][param] = {}
+                    for stat in stats.keys():
+                        if stat not in grouped[roi][param]:
+                            grouped[roi][param][stat] = []
+                        grouped[roi][param][stat].append(param_vals[stat])
+        for roi, roi_vals in grouped.items():
+            for param, param_vals in roi_vals.items():
+                for stat in stats.keys():
+                    grouped[roi][param][stat] = np.mean(param_vals[stat])
+        roi_values['grouped'] = grouped
+        # save to file
+        with open(out_filepath, 'w') as out_file:
+            json.dump(roi_values, out_file, sort_keys=True, indent=4)
+    else:
+        # load from file
+        with open(out_filepath, 'r') as out_file:
+            roi_values = json.load(out_file)
+    return roi_values
 
 
 # ======================================================================
 def affine_model(
         model,
         priors,
-        save_path=None):
+        dirpath=PATHS['model'],
+        filename=None):
     """
     Calculate the affine for the model, given the prior R1 and R2S info.
 
@@ -236,12 +284,19 @@ def affine_model(
             To each model element is associated an equation and an estimate
             of the concentration for the corresponding relaxant.
         priors (dict): Prior information required to calculate the model.
-        save_path (str): Path to files where to save the calculated parameters.
+        dirpath (str|unicode): Path to directory of model results.
+        filename (str|unicode|None): File name of model results.
+            If None, it is generated from the model.
 
     Returns:
         (ndarray[2,2], ndarray[2,1]):
             Linear transformation and shift for the affine model.
     """
+    msg('Model `{}`'.format(model))
+    if not filename:
+        filename = '_'.join(model) + '.csv'
+    filepath = os.path.join(dirpath, filename)
+
     # :: analyze model for relaxants
     relaxants, rois = [], set()
     for elem in model:
@@ -277,53 +332,59 @@ def affine_model(
     assert (n_x * n_eqn_per_x == n_eqn)
     assert (len(set(parameters_counter.values())) == 1)
 
-    # :: define symbols for the eqns: X = A * P + C
-    aa = np.array(
-        [sym.symbols('A_{}_{}'.format(i, j))
-         for i in range(n_x) for j in range(n_p)]).reshape((n_x, n_p))
+    if not os.path.isfile(filepath):
+        # :: define symbols for the eqns: X = A * P + C
+        aa = np.array(
+            [sym.symbols('A_{}_{}'.format(i, j))
+             for i in range(n_x) for j in range(n_p)]).reshape((n_x, n_p))
 
-    ppp = {
-        roi: np.array(
-            [sym.symbols('{}_{}'.format(parameter, roi))
-             for parameter in parameters]).reshape((n_p, 1))
-        for roi in rois}
-    xx, pp = [], []
-    for elem in model:
-        relaxant, roi = elem.split('_')
-        xx.append(sym.symbols('{}'.format(elem)))
-        pp.append(ppp[roi])
+        ppp = {
+            roi: np.array(
+                [sym.symbols('{}_{}'.format(parameter, roi))
+                 for parameter in parameters]).reshape((n_p, 1))
+            for roi in rois}
+        xx, pp = [], []
+        for elem in model:
+            relaxant, roi = elem.split('_')
+            xx.append(sym.symbols('{}'.format(elem)))
+            pp.append(ppp[roi])
 
-    # :: if the information is enough for the determination o
-    if n_eqn == n_x * (n_p + 1):
-        cc = np.array([sym.symbols('C_{}'.format(i)) for i in range(n_x)])
+        # :: if the information is enough for the determination o
+        if n_eqn == n_x * (n_p + 1):
+            cc = np.array([sym.symbols('C_{}'.format(i)) for i in range(n_x)])
+        else:
+            cc = np.zeros((n_p, 1))
+        eqs = []
+        for i, elem in enumerate(model):
+            relaxant, roi = elem.split('_')
+            j = relaxants.index(relaxant)
+            eqs.append(sym.Eq(xx[i], (np.dot(aa, pp[i])[j] + cc[j])[0]))
+        # print(model)
+        # print(eqs)
+        unknowns = list(aa.ravel()) + list(cc)
+        sols = sym.solvers.solve(eqs, *unknowns)
+        # print(sols)
+        relaxants_priors = {
+            sym.symbols(name): value for name, value in priors['X'].items()}
+        parameters_priors = {
+            sym.symbols('_'.join((name, roi))): priors['P'][roi][name]
+            for name in parameters for roi in priors['P'].keys()}
+        # print(parameters_priors)
+        subst = mrb.merge_dicts(relaxants_priors, parameters_priors)
+        # print(subst)
+        aa_arr = np.array(
+            [sols[aa[i, j]].subs(subst)
+             for i in range(n_x) for j in range(n_p)]).reshape((n_x, n_p))
+        cc_arr = np.array(
+            [(sols[cc[i]].subs(subst) if cc[i] else 0.0)
+             for i in range(n_x)]).reshape((n_x, 1))
+        combined_arr = np.concatenate((aa_arr, cc_arr), -1)
+        np.savetxt(filepath, combined_arr)
+
     else:
-        cc = np.zeros((n_p, 1))
-    eqs = []
-    for i, elem in enumerate(model):
-        relaxant, roi = elem.split('_')
-        j = relaxants.index(relaxant)
-        eqs.append(sym.Eq(xx[i], (np.dot(aa, pp[i])[j] + cc[j])[0]))
-    # print(model)
-    # print(eqs)
-    unknowns = list(aa.ravel()) + list(cc)
-    sols = sym.solvers.solve(eqs, *unknowns)
-    # print(sols)
-    relaxants_priors = {
-        sym.symbols(name): value for name, value in priors['X'].items()}
-    parameters_priors = {
-        sym.symbols('_'.join((name, roi))): priors['P'][roi][name]
-        for name in parameters for roi in priors['P'].keys()}
-    # print(parameters_priors)
-    subst = mrb.merge_dicts(relaxants_priors, parameters_priors)
-    # print(subst)
-    aa_arr = np.array(
-        [sols[aa[i, j]].subs(subst)
-         for i in range(n_x) for j in range(n_p)]).reshape((n_x, n_p))
-    cc_arr = np.array(
-        [(sols[cc[i]].subs(subst) if cc[i] else 0.0)
-         for i in range(n_x)])
-    # print(aa_arr)
-    # print(cc_arr)
+        data = np.loadtxt(filepath)
+        aa_arr = data[:, :n_p].reshape((n_x, n_p))
+        cc_arr = data[:, n_p].reshape((n_x, 1))
     return aa_arr, cc_arr
 
 
@@ -331,52 +392,90 @@ def affine_model(
 def estimate_relaxants_content(
         models,
         affines,
+        sample_subpaths=PATHS['samples'],
+        model_dirpath=PATHS['model'],
         force=False,
         verbose=D_VERB_LVL):
-    # :: estimate relaxants content
+    """
+    Produces semi-quantitative estimates of the relaxants content.
+    """
     export = {}
-    msg(':: Calculating models...')
     for idx, model in enumerate(models):
         msg('Model `{}`'.format(model))
+        model_name = '_'.join(model)
+        relaxants = sorted(set([elem.split('_')[0] for elem in model]))
+        params = sorted(('R1', 'R2S'))
         export[model] = {}
-        for subject in PATHS['subjects']:
-            print("Subject '{}'".format(subject))
-            export[model][subject] = {}
-            dirpath = os.path.join(PATHS['model'], subject)
-            subpath = os.path.join(PATHS['model'], subject, model)
-            rate_maps = [
-                get_map(dirpath, 'R1'),
-                get_map(dirpath, 'R2S')]
+        for sample in sample_subpaths:
+            msg('Sample `{}`'.format(sample))
+            export[model][sample] = {}
+            dirpath = os.path.join(model_dirpath, sample)
+            subpath = os.path.join(model_dirpath, sample, model_name)
+            rate_maps = [get_map(dirpath, param) for param in params]
             conc_maps = [
                 os.path.join(subpath, mru.change_param_val(mru.change_img_type(
                     os.path.basename(rate_maps[1]), img_type), 'm', idx))
-                for img_type in ('My', 'Fe')]
+                for img_type in relaxants]
             if not os.path.isdir(subpath):
                 os.makedirs(subpath)
-            model_filepath = model + '.csv'
             if mrb.check_redo(rate_maps, conc_maps, force):
                 mrio.simple_filter_n_m(
                     rate_maps, conc_maps, apply_affine, *affines[model])
-            # :: tentatively validate model
-            masks = [
-                (mru.parse_filename(mask)['type'], mask)
-                for mask in mrb.listdir(dirpath, mrio.D_EXT)
-                if os.path.basename(mask).startswith('mask') and
-                mru.parse_filename(mask)['type'] not in priors]
-            my_arr = mrio.load(conc_maps[0])
-            fe_arr = mrio.load(conc_maps[1])
-            for key, mask_path in masks:
-                export[model][subject][key] = {}
-                mask = mrio.load(mask_path).astype(bool)
-                export[model][subject][key]['My'] = \
-                    np.mean(my_arr[mask]), np.std(my_arr[mask])
-                export[model][subject][key]['Fe'] = \
-                    np.mean(fe_arr[mask]), np.std(fe_arr[mask])
-    save_path = os.path.join(PATHS['model'], 'evaluation.json')
-    with open(save_path, 'w') as export_file:
-        json.dump(export, export_file, sort_keys=True, indent=4)
-    return
 
+
+# ======================================================================
+def validate_results(
+        models,
+        sample_subpaths=PATHS['samples'],
+        model_dirpath=PATHS['model'],
+        save_filename='evaluation.json',
+        force=False,
+        verbose=D_VERB_LVL):
+    """
+    Validate results using information from priors.
+    """
+    # :: estimate relaxants content
+    save_filepath = os.path.join(model_dirpath, save_filename)
+    export = {}
+    if not os.path.isfile(save_filepath):
+        for idx, model in enumerate(models):
+            msg('Model `{}`'.format(model))
+            model_name = '_'.join(model)
+            relaxants = sorted(set([elem.split('_')[0] for elem in model]))
+            params = sorted(('R1', 'R2S'))
+            export[model_name] = {}
+            for sample in sample_subpaths:
+                # :: tentatively validate model with roi information
+                dirpath = os.path.join(model_dirpath, sample)
+                subpath = os.path.join(model_dirpath, sample, model_name)
+                rate_maps = [get_map(dirpath, param) for param in params]
+                conc_maps = [
+                    os.path.join(subpath, mru.change_param_val(mru.change_img_type(
+                        os.path.basename(rate_maps[1]), img_type), 'm', idx))
+                    for img_type in relaxants]
+                model_priors = sorted(set([elem.split('_')[1] for elem in model]))
+                masks = [
+                    (mru.parse_filename(mask)['type'], mask)
+                    for mask in mrb.listdir(dirpath, mrb.EXT['niz'])
+                    if os.path.basename(mask).startswith('mask') and
+                    mru.parse_filename(mask)['type'] not in model_priors]
+                relaxant_arrs = [mrio.load(filepath) for filepath in conc_maps]
+                export[model_name][sample] = {}
+                for key, mask_path in masks:
+                    export[model_name][sample][key] = {}
+                    mask = mrio.load(mask_path).astype(bool)
+                    for i, relaxant in enumerate(relaxants):
+                        export[model_name][sample][key][relaxant] = \
+                            np.mean(relaxant_arrs[i][mask]), \
+                            np.std(relaxant_arrs[i][mask])
+
+        with open(save_filepath, 'w') as export_file:
+            json.dump(export, export_file, sort_keys=True, indent=4)
+
+    else:
+        with open(save_filepath, 'r') as export_file:
+            export = json.load(export_file)
+    return export
 
 # ======================================================================
 def main():
@@ -389,13 +488,13 @@ def main():
     priors = {
         'P': {
             'CSF': {'R1': 0.20, 'R2S': 0.45},
-            'CC': {'R1': 0.997, 'R2S': 44.1},
-            'SN': {'R1': 0.957, 'R2S': 150.4},
-            'avg': {'R1': 0.689, 'R2S': 35.9},
+            # 'aCC': {'R1': 0.997, 'R2S': 44.1},
+            # 'SN': {'R1': 0.957, 'R2S': 150.4},
+            # 'avg': {'R1': 0.689, 'R2S': 35.9},
         },
         'X': {
-            'My_CC': 1.0,
-            'Fe_CC': 0.5,
+            'My_aCC': 1.0,
+            'Fe_aCC': 0.5,
             'My_SN': 0.5,
             'Fe_SN': 1.0,
             'My_CSF': 0.0,
@@ -406,18 +505,22 @@ def main():
     }
 
     # :: refine the priors with current measurements
-    refine_priors(priors)
+    roi_values = get_roi_values()
+    priors['P'].update(
+        {roi: {param: val['avg'] for param, val in values.items()}
+         for roi, values in roi_values['grouped'].items()})
 
-    # :: generate models
+    msg('Generating linear models...')
     models = priors_to_models(priors['X'])
     affines = {
-        model: affine_model(
-            model, priors,
-            os.path.join(PATHS['model'], '_'.join(model) + '.csv'))
+        model: affine_model(model, priors)
         for model in models}
 
-    # :: apply models to input data
-    estimate_relaxants_content(models, affines, force=True)
+    msg(':: Estimating concentration of contrast sources...')
+    estimate_relaxants_content(models, affines)
+
+    msg(':: Validating linear models...')
+    validate_results(models)
 
 
 # ======================================================================
@@ -428,3 +531,59 @@ if __name__ == '__main__':
 
     mrb.elapsed('microstruct-linear')
     mrb.print_elapsed()
+
+# IDK what it does
+# for subject in PATHS['subjects']:
+#     dirpath = os.path.join(PATHS['prior'], subject)
+#     inv2m_filepath = get_map(
+#         os.path.join(PATHS['sources'], subject), 'INV2M')
+#     uniform_filepath = get_map(
+#         os.path.join(PATHS['sources'], subject), 'UNIFORM')
+#     aff_filepath = os.path.join(dirpath, 'affine.txt')
+#     warp_filepath = os.path.join(dirpath, 'warpcoef.txt')
+#     bet_filepath = os.path.join(dirpath, 'brain.nii.gz')
+#     flirt_filepath = os.path.join(dirpath, 'flirt.nii.gz')
+#     fnirt_filepath = os.path.join(dirpath, 'fnirt.nii.gz')
+#     in_filepath = os.path.join(
+#         dirpath,
+#         mru.change_img_type(os.path.basename(inv2m_filepath), 'T1W'))
+#     if not os.path.isdir(dirpath):
+#         os.makedirs(dirpath)
+#     mrn.simple_filter_n(
+#         [inv2m_filepath, uniform_filepath], in_filepath,
+#         lambda x:
+#         x[0][..., 0].astype(float) * x[1][..., 0].astype(float) / 1e3)
+#
+#     # brain extract
+#     if mrb.check_redo([in_filepath], [bet_filepath]):
+#         print('bet')
+#         cmd = 'bet {} {} -R'.format(in_filepath, bet_filepath)
+#         mrb.execute(cmd)
+#     # linear registration matrix
+#     if mrb.check_redo(
+#             [bet_filepath, tpl_t1w_b],
+#             [aff_filepath, flirt_filepath]):
+#         print('flirt')
+#         cmd = 'flirt -in {} -ref {} -omat {} -out {}'.format(
+#             tpl_t1w_b, bet_filepath, aff_filepath, flirt_filepath)
+#         mrb.execute(cmd)
+#     # non-linear registration matrix
+#     if mrb.check_redo(
+#             [in_filepath, tpl_t1w, aff_filepath],
+#             [warp_filepath, fnirt_filepath]):
+#         print('fnirt')
+#         cmd = 'fnirt --in={} --ref={} --aff={} --cout={} --iout={
+# }'.format(
+# tpl_t1w, in_filepath, aff_filepath, warp_filepath,
+# fnirt_filepath)
+# mrb.execute(cmd)
+# # apply registration to masks
+# for mask in PATHS['masks']:
+#     print('applywarp')
+# reg_mask = os.path.join(dirpath, os.path.basename(mask))
+# if mrb.check_redo(
+#         [mask, tpl_t1w, aff_filepath, warp_filepath],
+#         [reg_mask]):
+#     cmd = 'applywarp -i {} -o {} -r {} -w {}'.format(
+#         mask, reg_mask, tpl_t1w, warp_filepath)
+# mrb.execute(cmd)

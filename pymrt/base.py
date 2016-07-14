@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-# import sys  # System-specific parameters and functions
+import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
 import math  # Mathematical functions
 import time  # Time access and conversions
@@ -24,6 +24,7 @@ import datetime  # Basic date and time types
 import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command
+# import re  # Regular expression operations
 import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 import fractions  # Rational numbers
@@ -33,6 +34,7 @@ import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
 # import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
+import shlex  # Simple lexical analysis
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -53,10 +55,10 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
-from pymrt import _EVENTS
+from pymrt import INFO
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 # ======================================================================
 # :: Custom defined constants
@@ -456,24 +458,27 @@ def walk2(
 
 
 # ======================================================================
-def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
+def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
     Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str|unicode|list[str]): Command to execute.
-        use_pipes (bool): Get stdout and stderr streams from the process.
+        cmd (str|unicode): Command to execute.
+        get_pipes (bool): Get stdout and stderr streams from the process.
+            If True, the program flow is halted until the process is completed.
+            Otherwise, the process is spawn in background, continuing execution.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        p_stdout (str|unicode|None): if use_pipes the stdout of the process.
-        p_stderr (str|unicode|None): if use_pipes the stderr of the process.
+        ret_code (str): if get_pipes, the return code of the command.
+        p_stdout (str|unicode|None): if get_pipes, the stdout of the process.
+        p_stderr (str|unicode|None): if get_pipes, the stderr of the process.
     """
-    p_stdout, p_stderr = None, None
+    p_stdout, p_stderr, ret_code = None, None, None
     # ensure cmd is a list of strings
     try:
-        cmd = cmd.split()
+        cmd = shlex.split(cmd)
     except AttributeError:
         pass
 
@@ -483,34 +488,30 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
         if verbose >= VERB_LVL['medium']:
             print('>> {}'.format(' '.join(cmd)))
 
-        if use_pipes:
-            # # :: deprecated (since Python 2.4)
-            # proc = os.popen3(cmd)
-            # p_stdout, p_stderr = [item.read() for item in proc[1:]]
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False, close_fds=True)
 
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True, close_fds=True)
+        if get_pipes:
             # handle stdout
             p_stdout = ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.readline()
+                stdout_buffer = proc.stdout.read(1)
                 p_stdout += stdout_buffer
                 if verbose >= VERB_LVL['medium']:
-                    print(stdout_buffer, end='')
+                    sys.stdout.write(stdout_buffer)
+                    sys.stdout.flush()
             # handle stderr
             p_stderr = proc.stderr.read()
             if verbose >= VERB_LVL['high']:
                 print(p_stderr)
-        else:
-            # # :: deprecated (since Python 2.4)
-            # os.system(cmd)
+            # finally get the return code
+            ret_code = proc.returncode
 
-            subprocess.call(cmd, shell=True)
-    return p_stdout, p_stderr
+    return p_stdout, p_stderr, ret_code
 
 
 # ======================================================================
@@ -1123,8 +1124,11 @@ def check_redo(
         IOError: If any of the input files do not exist.
     """
     # todo: include output_dir autocreation
+    # check if input is not empty
     if not in_filepaths:
         raise IndexError('List of input files is empty.')
+
+    # check if input exists
     for in_filepath in in_filepaths:
         if not os.path.exists(in_filepath):
             raise IOError('Input file does not exists.')
@@ -1777,68 +1781,6 @@ def curve_fit(args):
             np.tile(err_val, n_fit_par), \
             np.tile(err_val, (n_fit_par, n_fit_par))
     return result
-
-
-# ======================================================================
-def elapsed(
-        name,
-        time_point=None,
-        events=_EVENTS):
-    """
-    Append a named event point to the events list.
-
-    Args:
-        name (basestring): The name of the event point
-        time_point (float): The time in seconds since the epoch
-        events (list[(basestring,time)]): A list of named event time points.
-            Each event is a 2-tuple: (label, time)
-
-    Returns:
-        None
-    """
-    if not time_point:
-        time_point = time.time()
-    events.append((name, time_point))
-
-
-# ======================================================================
-def print_elapsed(
-        events=_EVENTS,
-        label='\nElapsed Time(s): ',
-        only_last=False):
-    """
-    Print quick-and-dirty elapsed times between named event points.
-
-    Args:
-        events (list[str,time]): A list of named event time points.
-            Each event is a 2-tuple: (label, time)
-        label (str): heading of the elapsed time table
-        only_last (bool): print only the last event (useful inside a loop).
-
-    Returns:
-        None
-    """
-    if not only_last:
-        print(label, end='\n' if len(events) > 2 else '')
-        first_elapsed = events[0][1]
-        for i in range(len(events) - 1):
-            _id = i + 1
-            name = events[_id][0]
-            curr_elapsed = events[_id][1]
-            prev_elapsed = events[_id - 1][1]
-            diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
-            diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
-            if diff_first == diff_last:
-                diff_first = '-'
-            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-                name, diff_last, diff_first))
-    else:
-        _id = -1
-        name = events[_id][0]
-        curr_elapsed = events[_id][1]
-        prev_elapsed = events[_id - 1][1]
-        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
-        print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 
 # ======================================================================

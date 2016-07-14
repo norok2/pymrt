@@ -131,6 +131,16 @@ setup(
         'pyparsing',
     ],
 
+    setup_requires=[
+        'setuptools',
+        'setuptools_scm'
+    ],
+
+    extras_require=[
+        'PySide',
+        'blessings'
+    ],
+
     package_data={
         'pymrt': ['sequences/pulses/*.csv', ],
     },
