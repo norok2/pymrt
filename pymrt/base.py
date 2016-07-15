@@ -332,13 +332,16 @@ def set_keyword_parameters(
 # ======================================================================
 def mdot(*arrs):
     """
-    Cumulative application of `numpy.dot` operation.
+    Cumulative application of multiple `numpy.dot` operation.
 
     Args:
-        arrs (tuple[ndarray]): List of input arrays.
+        *arrs (tuple[ndarray]): Tuple of input arrays.
 
     Returns:
         arr (np.ndarray): The result of the tensor product.
+
+    Examples:
+        >>>
     """
     arr = arrs[0]
     for item in arrs[1:]:
@@ -356,6 +359,9 @@ def ndot(arr, dim=-1, step=1):
 
     Returns:
         prod (np.ndarray): The result of the tensor product.
+
+    Examples:
+        >>>
     """
     if dim < 0:
         dim += arr.ndim
@@ -1112,8 +1118,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (list[str]): Filepaths used as input of computation.
-        out_filepaths (list[str]): Filepaths used as output of computation.
+        in_filepaths (list[str|unicode]): Input filepaths for computation.
+        out_filepaths (list[str|unicode]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -1259,7 +1265,7 @@ def scale(
     Linear convert the value from input interval to output interval
 
     Args:
-        val (float): Value to convert
+        val (float|np.ndarray): Value(s) to convert
         in_interval (float,float): Interval of the input value
         out_interval (float,float): Interval of the output value.
 

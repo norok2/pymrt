@@ -334,14 +334,14 @@ def simple_filter_n_1(
         in_filepaths (list[str]): List of input file paths.
             The affine matrix is taken from the last item.
             The header is calculated automatically.
-        out_filepath (str): Output file path
+        out_filepath (str): Output file path.
         func (callable): Filtering function (img: ndarray)
             func(list[img], *args, *kwargs)) -> img
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
-        None
+        None.
     """
     img_list = []
     aff_list = []
@@ -377,7 +377,7 @@ def simple_filter_n_m(
         **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
-        None
+        None.
     """
     i_img_list = []
     aff_list = []
@@ -407,21 +407,21 @@ def simple_filter_n_x(
     Args:
         in_filepaths (list[str]): List of input file paths.
             The shape of each array must be identical.
-            The affine matrix is taken from the last item
+            The affine matrix is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
-        func (callable): Filtering function (img: ndarray)
+        func (callable): Filtering function (img: ndarray).
             func(list[img], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
-        None
+        None.
     """
     pass
 
 
 # ======================================================================
-def join(
+def stack(
         in_filepaths,
         out_filepath,
         axis=-1):
@@ -437,7 +437,7 @@ def join(
             Must be a valid index for the input shape.
 
     Returns:
-        None
+        None.
     """
     simple_filter_n_1(in_filepaths, out_filepath, np.stack, axis)
 
@@ -449,18 +449,18 @@ def split(
         out_basename=None,
         axis=-1):
     """
-    Split images apart
+    Split images apart.
 
     Args:
         in_filepath (str): Input file path.
             The affine matrix is taken from the input.
         axis (int): Joining axis of orientation.
             Must be a valid index for the input shape
-        out_dirpath (str): Path to directory where to store results
-        out_filename (str): Output filename (without extension)
+        out_dirpath (str): Path to directory where to store results.
+        out_filename (str): Output filename (without extension).
 
     Returns:
-        out_filepaths (list[str]): List of output file paths
+        out_filepaths (list[str]): List of output file paths.
     """
     # todo: refactor to use simple_filter_n_x
     if not out_dirpath or not os.path.exists(out_dirpath):
