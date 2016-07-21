@@ -505,13 +505,13 @@ def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
             # handle stdout
             p_stdout = ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.read(1)
+                stdout_buffer = proc.stdout.readline().decode('utf8')
                 p_stdout += stdout_buffer
                 if verbose >= VERB_LVL['medium']:
-                    sys.stdout.write(stdout_buffer)
+                    print(stdout_buffer, end='')
                     sys.stdout.flush()
             # handle stderr
-            p_stderr = proc.stderr.read()
+            p_stderr = proc.stderr.read().decode('utf8')
             if verbose >= VERB_LVL['high']:
                 print(p_stderr)
             # finally get the return code
