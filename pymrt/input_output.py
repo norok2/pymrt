@@ -101,24 +101,24 @@ def load(
 # ======================================================================
 def save(
         out_filepath,
-        array,
-        affine=None,
-        header=None):
+        arr,
+        aff=None,
+        hdr=None):
     """
     Save a NiBabel-supported image
 
     Args:
         out_filepath (str): Output file path
-        array (np.ndarray): Data to be stored
-        affine (np.ndarray): 3D affine transformation (4x4 matrix)
-        header: Header of the image (refer to NiBabel).
+        arr (np.ndarray): Data to be stored
+        aff (np.ndarray): 3D affine transformation (4x4 matrix)
+        hdr: Header of the image (refer to NiBabel).
 
     Returns:
         None
     """
-    if affine is None:
-        affine = np.eye(4)
-    obj = nib.Nifti1Image(array, affine, header)
+    if aff is None:
+        aff = np.eye(4)
+    obj = nib.Nifti1Image(arr, aff, hdr)
     obj.to_filename(out_filepath)
 
 
@@ -473,7 +473,7 @@ def split(
     obj = nib.load(in_filepath)
     img = obj.get_data()
     # split data
-    img_list = mrb.ndsplit(img, axis)
+    img_list = np.split(img, img.shape[axis], axis)
     # save data to output
     for i, image in enumerate(img_list):
         i_str = str(i).zfill(len(str(len(img_list))))
