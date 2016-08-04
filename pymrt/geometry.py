@@ -512,13 +512,13 @@ def nd_cuboid(
     if not (len(shape) == len(position) == len(semisides)):
         raise IndexError('length of tuples must match')
     # calculate the position of the center of the solid inside the mask
-    x_0 = relative2coord(shape, position)
+    origin = relative2coord(shape, position)
     # create the grid with origin in the specified position
-    grid = [slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)]
-    x_arr = np.ogrid[grid]
+    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
+    coord = np.ogrid[grid]
     # create the mask
     mask = np.ones(shape, dtype=bool)
-    for x_i, semiside in zip(x_arr, semisides):
+    for x_i, semiside in zip(coord, semisides):
         mask *= (np.abs(x_i) < semiside)
     return mask
 
@@ -547,13 +547,13 @@ def nd_superellipsoid(
     if not (len(shape) == len(position) == len(semiaxes) == len(indexes)):
         raise IndexError('length of tuples must match')
     # calculate the position of the center of the solid inside the mask
-    x_0 = relative2coord(shape, position)
+    origin = relative2coord(shape, position)
     # create the grid with origin in the middle
-    grid = [slice(-x0c, dim - x0c) for x0c, dim in zip(x_0, shape)]
-    x_arr = np.ogrid[grid]
+    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
+    coord = np.ogrid[grid]
     # create the mask
     mask = np.zeros(shape, dtype=float)
-    for x_i, semiaxis, index in zip(x_arr, semiaxes, indexes):
+    for x_i, semiaxis, index in zip(coord, semiaxes, indexes):
         mask += (np.abs(x_i / semiaxis) ** index)
     mask = mask < 1.0
     return mask
@@ -586,9 +586,9 @@ def nd_prism(
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
     # calculate the position of the center of the solid inside the mask
-    x_0 = relative2coord((extra_shape,), (position,))[0]
+    origin = relative2coord((extra_shape,), (position,))[0]
     # create a grid with origin in the middle
-    iii = slice(-x_0, extra_shape - x_0)
+    iii = slice(-origin, extra_shape - origin)
     xxx = np.ogrid[iii]
     # create the extra mask (height)
     extra_mask = np.abs(xxx) < (height / 2.0)

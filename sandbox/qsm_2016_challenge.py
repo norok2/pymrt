@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-pymrt: code that is now deprecated but can still be useful for legacy scripts.
-"""
+"""Participation to the QSM 2016 challenge."""
 
 # ======================================================================
 # :: Future Imports
@@ -13,90 +11,73 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
-import sys  # System-specific parameters and functions
-# import shutil  # High-level file operations
-# import math  # Mathematical functions
-# import time  # Time access and conversions
-# import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
-# import itertools  # Functions creating iterators for efficient looping
-# import functools  # Higher-order functions and operations on callable objects
-# import argparse  # Parser for command-line options, arguments and sub-command
-# import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
-# import fractions  # Rational numbers
-# import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-# import inspect  # Inspect live objects
-# import stat  # Interpreting stat() results
-# import unittest  # Unit testing framework
-import doctest  # Test interactive Python examples
+import os  # Miscellaneous operating system interfaces
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
-import scipy.signal  # SciPy: Signal Processing
+import scipy.linalg
+import scipy.ndimage
+import scipy.signal
+
+import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+
+from pymrt import elapsed, print_elapsed
+import pymrt.input_output as mrio
 
 
 # ======================================================================
-def tty_colorify(
-        text,
-        color=None):
+def scale(
+        val,
+        in_interval=(0.0, 1.0),
+        out_interval=(0.0, 1.0)):
     """
-    Add color TTY-compatible color code to a string, for pretty-printing.
+    Linear convert the value from input interval to output interval
 
     Args:
-        text (str): The text to color.
-        color (str|int|None): Identifier for the color coding.
-            Lowercase letters modify the forground color.
-            Uppercase letters modify the background color.
-            Available colors:
-             - r/R: red
-             - g/G: green
-             - b/B: blue
-             - c/C: cyan
-             - m/M: magenta
-             - y/Y: yellow (brown)
-             - k/K: black (gray)
-             - w/W: white (gray)
+        val (float|np.ndarray): Value(s) to convert
+        in_interval (float,float): Interval of the input value
+        out_interval (float,float): Interval of the output value.
 
     Returns:
-        text (str): The colored text.
+        val (float): The converted value
 
-    See also:
-        tty_colors
+    Examples:
+        >>> scale(100, (0, 100), (0, 1000))
+        1000.0
+        >>> scale(50, (-100, 100), (0, 1000))
+        750.0
+        >>> scale(50, (0, 1), (0, 10))
+        500.0
+        >>> scale(0.5, (0, 1), (-10, 10))
+        0.0
+        >>> scale(np.pi / 3, (0, np.pi), (0, 180))
+        60.0
     """
-    tty_colors = {
-        'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
-        'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
-    }
+    in_min, in_max = in_interval
+    out_min, out_max = out_interval
+    return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
-    if color in tty_colors:
-        tty_color = tty_colors[color]
-    elif color in tty_colors.values():
-        tty_color = color
-    else:
-        tty_color = None
-    if tty_color and sys.stdout.isatty():
-        return '\x1b[1;{color}m{}\x1b[1;m'.format(text, color=tty_color)
-    else:
-        return text
+
+# ======================================================================
+def minmax(arr):
+    """
+    Calculate the minimum and maximum of an array: (min, max).
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        min (float): the minimum value of the array
+        max (float): the maximum value of the array
+
+    Examples:
+        >>> minmax(np.arange(10))
+        (0, 9)
+    """
+    return np.min(arr), np.max(arr)
 
 
 # ======================================================================
@@ -133,6 +114,83 @@ def gaussian_kernel(shape, sigmas, center=0.0, ndim=1, normalize=True):
     if normalize:
         kernel = kernel / np.sum(kernel)
     return kernel
+
+
+# ======================================================================
+def rmse(
+        arr1,
+        arr2,
+        scaling=100):
+    """
+    Calculate the root mean squared error of the first vs the second array.
+
+    RMSE = A * ||arr1 - arr2|| / ||arr2||
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+        scaling (float): The scaling factor.
+            Useful to express the results in percent.
+
+    Returns:
+        rmse (float): The root mean squared error
+    """
+    assert (arr1.shape == arr2.shape)
+    norm = scipy.linalg.norm
+    rmse = scaling * norm(arr1 - arr2) / norm(arr2)
+    return rmse
+
+
+# ======================================================================
+def hfen(
+        arr1,
+        arr2,
+        filter_sizes=15,
+        sigmas=1.5):
+    """
+    Compute the high-frequency error norm.
+
+    The Laplacian of a Gaussian filter is used to get high frequency
+    information.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+        filter_sizes (tuple[int]|int): The size of the filter in px.
+            If a single value is given, is is assumed to be equal in all dims.
+        sigmas (tuple[float]|float): The sigma of the gaussian kernel in px.
+            If a single value is given, it is assumed to be equal in all dims.
+
+    Returns:
+        hfen (float): The high-frequency error norm.
+    """
+    assert (arr1.shape == arr2.shape)
+    ndim = arr1.ndim
+
+    filter_sizes = auto_replicate(filter_sizes, ndim)
+    sigmas = auto_replicate(sigmas, ndim)
+    assert (len(sigmas) == len(filter_sizes))
+
+    grid = [slice(-filter_size // 2 + 1, filter_size // 2 + 1)
+            for filter_size in filter_sizes]
+    coord = np.ogrid[grid]
+    gaussian_filter = gaussian_kernel(filter_sizes, sigmas)
+    hfen_factor = \
+        sum([x ** 2 / sigma ** 4 for x, sigma in zip(coord, sigmas)]) + \
+        - sum([1 / sigma ** 2 for sigma in sigmas])
+    arr_filter = gaussian_filter * hfen_factor
+    arr_filter = arr_filter - np.sum(arr_filter) / np.prod(arr_filter.shape)
+
+    # the filter should be symmetric, therefore: correlate == convolve
+    # additionally, fftconvolve much faster than direct convolve or correlate
+
+    # arr1_corr = scipy.ndimage.filters.correlate(arr1, arr_filter)
+    arr1_corr = scipy.signal.fftconvolve(arr1, arr_filter, 'same')
+    # arr2_corr = scipy.ndimage.filters.correlate(arr2, arr_filter)
+    arr2_corr = scipy.signal.fftconvolve(arr2, arr_filter, 'same')
+
+    hfen = rmse(arr1_corr, arr2_corr)
+    return hfen
 
 
 # ======================================================================
@@ -270,7 +328,40 @@ def ssim_map(
     return ssim_arr, ssim
 
 
-# ======================================================================
-if __name__ == '__main__':
-    print(__doc__)
-    doctest.testmod()
+a1 = mrio.load(
+    '/nobackup/isar2/cache/qsm_2016_challenge/backup/data/chi_cosmos.nii.gz'
+    '').astype(np.float64)
+a2 = mrio.load(
+    '/nobackup/isar2/cache/qsm_2016_challenge/backup/data/phs_unwrap.nii.gz'
+    '').astype(np.float64)
+
+# import profile
+# profile.run('compute_hfen(arr1, arr2)', sort=1)
+
+# print(rmse(a1, a2))
+# elapsed('rmse')
+
+# print(hfen(a1, a2))
+# elapsed('hfen')
+
+msk1 = a1 != 0.0
+msk2 = a2 != 0.0
+a12 = np.stack((a1, a2))
+min12 = np.min(a12)
+max12 = np.max(a12)
+a1[msk1] = scale(a1[msk1], minmax(a12), (0, 255))
+a2[msk2] = scale(a2[msk2], minmax(a12), (0, 255))
+elapsed('prepare for ssim')
+
+print(ssim(a1, a2))
+elapsed('ssim')
+
+ssim_arr, val = ssim_map(a1, a2)
+print(val)
+elapsed('ssim_map')
+from skimage.measure import compare_ssim
+
+print(compare_ssim(a1, a2, win_size=5, gaussian_weights=True, sigma=1.5,
+                   dynamic_range=np.ptp((0, 255))))
+elapsed('ssim_scikit')
+print_elapsed()

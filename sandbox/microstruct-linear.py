@@ -33,7 +33,7 @@ from __future__ import unicode_literals
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
 # import math  # Mathematical functions
-import time  # Time access and conversions
+# import time  # Time access and conversions
 # import re  # Regular expression operations
 # import operator  # Standard operators as functions
 import collections  # High-performance container datatypes
@@ -525,7 +525,7 @@ def main():
 
 # ======================================================================
 if __name__ == '__main__':
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
 
     main()
 

@@ -99,10 +99,10 @@ def elapsed(
     Returns:
         None.
     """
-    import time
+    import datetime
 
     if not time_point:
-        time_point = time.time()
+        time_point = datetime.datetime.now()
     events.append((name, time_point))
 
 
@@ -133,8 +133,8 @@ def print_elapsed(
             name = events[_id][0]
             curr_elapsed = events[_id][1]
             prev_elapsed = events[_id - 1][1]
-            diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
-            diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
+            diff_first = curr_elapsed - first_elapsed
+            diff_last = curr_elapsed - prev_elapsed
             if diff_first == diff_last:
                 diff_first = '-'
             print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
@@ -186,15 +186,14 @@ def msg(
     if verb_lvl >= verb_threshold:
         try:
             import blessings
-
             term = blessings.Terminal()
             if not fmt:
-                if verb_lvl == VERB_LVL['medium']:
+                if verb_threshold == VERB_LVL['medium']:
                     extra = term.cyan
-                elif verb_lvl == VERB_LVL['high']:
+                elif verb_threshold == VERB_LVL['high']:
                     extra = term.yellow
-                elif verb_lvl == VERB_LVL['debug']:
-                    extra = term.magenta + term.bold
+                elif verb_threshold == VERB_LVL['debug']:
+                    extra = term.magenta
                 else:
                     extra = term.white
                 text = '{e}{t.bold}{first}{t.normal}{e}{rest}{t.normal}'.format(

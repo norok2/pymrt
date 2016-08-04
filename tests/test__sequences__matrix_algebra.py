@@ -220,7 +220,7 @@ def test_approx_propagator(
                 pulse = PulseExc.shaped(
                     40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c,
                     mode, kwargs)
-                begin_time = time.time()
+                begin_time = datetime.datetime.now()
                 p_op = pulse.propagator(spin_model)
                 elapsed = datetime.timedelta(0, time.time() - begin_time)
                 rel_error = np.sum(np.abs(exact_p_ops[shape] - p_op)) / \
