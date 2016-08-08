@@ -137,10 +137,9 @@ setup(
         'setuptools_scm'
     ],
 
-    extras_require=[
-        'PySide',
-        'blessings'
-    ],
+    extras_require={
+        'blessings': 'blessings',
+    },
 
     package_data={
         'pymrt': ['sequences/pulses/*.csv', ],
