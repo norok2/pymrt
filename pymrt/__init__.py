@@ -47,25 +47,6 @@ D_VERB_LVL = VERB_LVL['low']
 # :: quick and dirty timing facility
 _EVENTS = []
 
-# :: import
-# import pymrt.base as mrb
-# import pymrt.utils as mru
-# import pymrt.geometry as mrg
-# import pymrt.plot as mrp
-# import pymrt.registration as mrr
-# import pymrt.segmentation as mrs
-# import pymrt.computation as mrc
-# import pymrt.correlation as mrl
-# import pymrt.input_output as mrio
-# import pymrt.sequences as mrq
-# import pymrt.extras as mre
-# from pymrt.debug import dbg
-# from pymrt.sequences import mp2rage
-# from pymrt.sequences import matrix_algebra
-# from pymrt.extras import twix
-# from pymrt.extras import jcampdx
-# from pymrt.extras import latex
-
 # ======================================================================
 # Greetings
 MY_GREETINGS = r"""
@@ -80,72 +61,6 @@ MY_GREETINGS = r"""
 
 # :: Causes the greetings to be printed any time the library is loaded.
 print(MY_GREETINGS)
-
-
-# ======================================================================
-def elapsed(
-        name,
-        time_point=None,
-        events=_EVENTS):
-    """
-    Append a named event point to the events list.
-
-    Args:
-        name (str|unicode): The name of the event point.
-        time_point (float): The time in seconds since the epoch.
-        events (list[(str|unicode,time)]): A list of named event time points.
-            Each event is a 2-tuple: (label, time).
-
-    Returns:
-        None.
-    """
-    import datetime
-
-    if not time_point:
-        time_point = datetime.datetime.now()
-    events.append((name, time_point))
-
-
-# ======================================================================
-def print_elapsed(
-        events=_EVENTS,
-        label='\nElapsed Time(s): ',
-        only_last=False):
-    """
-    Print quick-and-dirty elapsed times between named event points.
-
-    Args:
-        events (list[str|unicode,time]): A list of named event time points.
-            Each event is a 2-tuple: (label, time).
-        label (str|unicode): heading of the elapsed time table.
-        only_last (bool): print only the last event (useful inside a loop).
-
-    Returns:
-        None.
-    """
-    import datetime
-
-    if not only_last:
-        print(label, end='\n' if len(events) > 2 else '')
-        first_elapsed = events[0][1]
-        for i in range(len(events) - 1):
-            _id = i + 1
-            name = events[_id][0]
-            curr_elapsed = events[_id][1]
-            prev_elapsed = events[_id - 1][1]
-            diff_first = curr_elapsed - first_elapsed
-            diff_last = curr_elapsed - prev_elapsed
-            if diff_first == diff_last:
-                diff_first = '-'
-            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-                name, diff_last, diff_first))
-    else:
-        _id = -1
-        name = events[_id][0]
-        curr_elapsed = events[_id][1]
-        prev_elapsed = events[_id - 1][1]
-        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
-        print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 
 # ======================================================================
@@ -241,6 +156,72 @@ def dbg(name):
     print(name_str, end=': ')
     print(json.dumps(name, sort_keys=True, indent=4))
     print()
+
+
+# ======================================================================
+def elapsed(
+        name,
+        time_point=None,
+        events=_EVENTS):
+    """
+    Append a named event point to the events list.
+
+    Args:
+        name (str|unicode): The name of the event point.
+        time_point (float): The time in seconds since the epoch.
+        events (list[(str|unicode,time)]): A list of named event time points.
+            Each event is a 2-tuple: (label, time).
+
+    Returns:
+        None.
+    """
+    import datetime
+
+    if not time_point:
+        time_point = datetime.datetime.now()
+    events.append((name, time_point))
+
+
+# ======================================================================
+def print_elapsed(
+        events=_EVENTS,
+        label='\nElapsed Time(s): ',
+        only_last=False):
+    """
+    Print quick-and-dirty elapsed times between named event points.
+
+    Args:
+        events (list[str|unicode,time]): A list of named event time points.
+            Each event is a 2-tuple: (label, time).
+        label (str|unicode): heading of the elapsed time table.
+        only_last (bool): print only the last event (useful inside a loop).
+
+    Returns:
+        None.
+    """
+    import datetime
+
+    if not only_last:
+        print(label, end='\n' if len(events) > 2 else '')
+        first_elapsed = events[0][1]
+        for i in range(len(events) - 1):
+            _id = i + 1
+            name = events[_id][0]
+            curr_elapsed = events[_id][1]
+            prev_elapsed = events[_id - 1][1]
+            diff_first = curr_elapsed - first_elapsed
+            diff_last = curr_elapsed - prev_elapsed
+            if diff_first == diff_last:
+                diff_first = '-'
+            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
+                name, diff_last, diff_first))
+    else:
+        _id = -1
+        name = events[_id][0]
+        curr_elapsed = events[_id][1]
+        prev_elapsed = events[_id - 1][1]
+        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
+        print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 
 # ======================================================================

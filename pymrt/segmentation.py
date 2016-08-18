@@ -77,7 +77,7 @@ def mask_threshold(
         mode (str): Determines how to interpret / process the threshold value.
             Available values are:
              - 'absolute': use the absolute value
-             - 'relative': use a value relative to dynamic range
+             - 'relative': use a value relative to values interval
              - 'percentile': use the value obtained from the percentiles
 
     Returns:
@@ -123,7 +123,7 @@ def label_thresholds(
         mode (str): Determines how to interpret / process the threshold value.
             Available values are:
              - 'absolute': use the absolute value
-             - 'relative': use a value relative to dynamic range
+             - 'relative': use a value relative to values interval
              - 'percentile': use the value obtained from the percentiles
 
     Returns:
@@ -226,7 +226,7 @@ if __name__ == '__main__':
 
     import nibabel as nib
 
-    src = "/nobackup/isar1/TEMP/QSM-PLB" \
+    src = "~/hd1/TEMP/QSM-PLB" \
           "/P05_d0_S8_FLASH_3D_0p6_multiecho_corrected_magnitude_sum_Te8.16" \
           ".nii"
     array = nib.load(src).get_data()

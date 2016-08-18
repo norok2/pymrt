@@ -526,7 +526,7 @@ def histogram1d(
         array_interval = (np.nanmin(array), np.nanmax(array))
     # setup bins
     if not bins:
-        bins = int(mrb.interval_size(array_interval) / bin_size + 1)
+        bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
     hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
                            for val in hist_interval])
@@ -658,7 +658,7 @@ def histogram1d_list(
                 max(np.nanmax(array), array_interval[1]))
     # setup bins
     if not bins:
-        bins = int(mrb.interval_size(array_interval) / bin_size + 1)
+        bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
     hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
                            for val in hist_interval])

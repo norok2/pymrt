@@ -405,28 +405,28 @@ def external_registration(
 
 # ======================================================================
 # :: test
-# s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# s1 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
 # /s018__MP2RAGE_e' \
 #      '=post0,l=2__T1.nii.gz'
-# s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# s2 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
 # /s020__MP2RAGE_e' \
 #      '=post2,l=2__T1.nii.gz'
-# s3 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# s3 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
 # /s031__MP2RAGE_e' \
 #      '=pre0,l=2__T1.nii.gz'
-# t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# t12 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
 # /s018__MP2RAGE_e' \
 #       '=post0,l=2,reg=s2__T1.nii.gz'
-# t13 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T1_sample2
+# t13 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
 # /s018__MP2RAGE_e' \
 #       '=post0,l=2,reg=s3__T1.nii.gz'
 
 
-s1 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
+s1 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
      '-3D_e=pre0,l=1__T2S.nii.gz'
-s2 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH' \
+s2 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH' \
      '-3D_e=post0,l=1__T2S.nii.gz'
-t12 = '/nobackup/isar2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
+t12 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
       '-3D_e=pre0,l=1,reg__T2S.nii.gz'
 
 import pymrt.input_output as mrio

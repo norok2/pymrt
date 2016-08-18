@@ -753,7 +753,7 @@ def mask_threshold(
             Determines how to interpret / process the threshold value.
             Available values are:
             | 'absolute': use the absolute value
-            | 'relative': use a value relative to dynamic range
+            | 'relative': use a value relative to values interval
             | 'percentile': use the value obtained from the percentiles
 
     Returns:

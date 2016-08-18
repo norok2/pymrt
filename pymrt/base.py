@@ -55,9 +55,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
 
 # ======================================================================
@@ -1118,8 +1116,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (list[str|unicode]): Input filepaths for computation.
-        out_filepaths (list[str|unicode]): Output filepaths for computation.
+        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
+        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -1287,24 +1285,6 @@ def scale(
     in_min, in_max = in_interval
     out_min, out_max = out_interval
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
-
-
-# :: use numpy.ptp instead
-# # ======================================================================
-# def interval_size(interval):
-#     """
-#     Calculate the (signed) size of an interval given as a 2-tuple (A,B)
-#
-#     Args:
-#         interval (float,float): Interval for computation
-#
-#     Returns:
-#         val (float): The converted value
-#
-#     Examples:
-#
-#     """
-#     return interval[1] - interval[0]
 
 
 # ======================================================================

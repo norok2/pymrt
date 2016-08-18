@@ -18,7 +18,7 @@ The 3D geometrical shapes currently available are:
 - ellipsoid
 - cylinder
 
-The N-D geometrical shapes currentyl available are:
+The N-D geometrical shapes currently available are:
 - cuboid: sum[abs(x_n/a_n)^inf] < 1
 - superellipsoid: sum[abs(x_n/a_n)^k] < 1
 - prism: stack (N-1)-D mask on given axis
@@ -35,50 +35,22 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
-# import shutil  # High-level file operations
 import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
-# import functools  # Higher-order functions and operations on callable objects
-# import argparse  # Parser for command-line options, arguments and subcommands
-# import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
-# import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
-# import unittest  # Unit testing framework
-import doctest  # Test interactive Python examples
+import random  # Generate pseudo-random numbers
+# import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-# import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematical and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
 import pymrt.base as mrb
 import pymrt.plot as mrp
-
-# from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
-
 
 # ======================================================================
 # :: Custom defined constants
@@ -1314,6 +1286,29 @@ def realign(
     aligned = sp.ndimage.affine_transform(
         arr, rot_matrix, offset, *args, **kwargs)
     return aligned, rot_matrix, offset
+
+
+# ======================================================================
+def rand_mask(
+        arr,
+        density=0.01):
+    """
+    Calculate a randomly distributed mask of specified density.
+
+    Args:
+        arr (np.ndarray): The target array.
+        density (float): The density of the mask.
+            Must be in the (0, 1) interval.
+
+    Returns:
+        mask
+    """
+    if not 0 < density < 1:
+        raise ValueError('Density must be between 0 and 1')
+    shape = arr.shape
+    mask = np.zeros_like(arr).astype(np.bool).ravel()
+    mask[random.sample(range(arr.size), int(arr.size * density))] = True
+    return mask.reshape(shape)
 
 
 # ======================================================================

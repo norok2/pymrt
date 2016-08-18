@@ -50,7 +50,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # :: Local Imports
 import pymrt.base as mrb
 
-# import pymrt.utils as mru
+# import pymrt.naming as mrn
 # import pymrt.input_output as mrio
 # import pymrt.geometry as mrg
 # from pymrt.sequences import mp2rage
