@@ -69,22 +69,22 @@ from pymrt import D_VERB_LVL
 # ======================================================================
 # :: sequence default parameters (MARQUES TR8)
 D_EFF = 0.96  # %
-D_N = 160  # #
-D_TR_GRE = mp2rage.D_TR_GRE  # ms
-D_A1 = mp2rage.D_A1  # deg
-D_A2 = mp2rage.D_A2  # deg
-D_TR_SEQ = mp2rage.D_TR_SEQ  # ms
-D_TI1 = mp2rage.D_TI1  # ms
-D_TI2 = mp2rage.D_TI2  # ms
-D_TA = mp2rage.D_TA  # ms
-D_TB = mp2rage.D_TB  # ms
-D_TC = mp2rage.D_TC  # ms
+D_N_GRE = 160  # #
+D_TR_GRE = 7.0  # ms
+D_A1 = 4.0  # deg
+D_A2 = 5.0  # deg
+D_TR_SEQ = 8000.0  # ms
+D_TI1 = 1100.0  # ms
+D_TI2 = 3300.0  # ms
+D_TA = 440.0  # ms
+D_TB = 1180.0  # ms
+D_TC = 4140.0 # ms
 # :: GUI constants
 T1_NUM = 256.0
 T1_INTERVAL = (100.0, 5000.0)
 T1_LINSPACE = T1_INTERVAL + (T1_NUM,)
 EFF_SLIDER = (0.0, 1.0, D_EFF)  # %
-N_SLIDER = (32, 512, D_N)  # #
+N_SLIDER = (32, 512, D_N_GRE)  # #
 TR_GRE_SLIDER = (0.1, 50.0, D_TR_GRE)  # ms
 A1_SLIDER = (0.1, 90.0 / 4, D_A1)  # deg
 A2_SLIDER = (0.1, 90.0 / 4, D_A2)  # deg
@@ -176,15 +176,15 @@ def ui_plot(
         # update title
         if is_direct:
             tr_t = mp2rage.calc_tr_t(*par)
-            ti1 = mp2rage.calc_ti1(*par)
-            ti2 = mp2rage.calc_ti2(*par)
+            ti1 = mp2rage._calc_ti1(*par)
+            ti2 = mp2rage._calc_ti2(*par)
             ax_main.set_title('MP2RAGE: ' +
                               'TR_t={:.1f} ms, TI1={:.1f} ms, TI2={:.1f} ms'
                               .format(tr_t, ti1, ti2))
         else:
-            t_a = mp2rage.calc_ta(*par)
-            t_b = mp2rage.calc_tb(*par)
-            t_c = mp2rage.calc_tc(*par)
+            t_a = mp2rage._calc_ta(*par)
+            t_b = mp2rage._calc_tb(*par)
+            t_c = mp2rage._calc_tc(*par)
             ax_main.set_title('MP2RAGE: ' +
                               'TA={:.1f} ms, TB={:.1f} ms, TC={:.1f} ms'
                               .format(t_a, t_b, t_c))
@@ -228,7 +228,7 @@ def ui_plot(
 
     # define parameter list
     if is_direct:
-        mp2rage_ii = mp2rage.calc_signal
+        mp2rage_ii = mp2rage.signal
         param_list = [
             ['eff / #', EFF_SLIDER],
             ['n_GRE / #', N_SLIDER],
@@ -239,7 +239,7 @@ def ui_plot(
             ['a1 / deg', A1_SLIDER],
             ['a2 / deg', A2_SLIDER]]
     else:
-        mp2rage_ii = mp2rage.calc_signal2
+        mp2rage_ii = mp2rage._signal2
         param_list = [
             ['$\\eta$ / #', EFF_SLIDER],
             ['$n_{GRE}$ / #', N_SLIDER],
@@ -255,7 +255,7 @@ def ui_plot(
         ['$B_1^+$ -', B1T_MINUS_SLIDER]]
     slider_list = param_list + b1t_tune_list
     num_sliders = len(slider_list)
-    # :: Calculate plotting values
+    # :: Calculate rhoting values
     t1_val = np.linspace(*t1_linspace)
     # :: figure to plot
     fig, ax_main = plt.subplots()

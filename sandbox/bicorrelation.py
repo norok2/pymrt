@@ -147,7 +147,7 @@ def sobel_gen(
 
 # ======================================================================
 def main():
-    dirpath = '/nobackup/isar2/cache/me-mp2rage/misreg/bicorr/'
+    dirpath = '~/hd2/cache/me-mp2rage/misreg/bicorr/'
     # sharpness
     # sobel_gen(dirpath)
     # sharpness(os.path.join(dirpath, 'sobel'))

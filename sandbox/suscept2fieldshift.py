@@ -89,7 +89,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 
 # :: Local Imports
 # import pymrt.base as mrb
-# import pymrt.utils as mru
+# import pymrt.naming as mrn
 import pymrt.input_output as mrio
 
 # ======================================================================

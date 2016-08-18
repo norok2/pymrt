@@ -49,7 +49,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 
 # :: Local Imports
 # import pymrt.base as mrb
-# import pymrt.utils as mru
+# import pymrt.naming as mrn
 import pymrt.geometry as mrg
 # import pymrt.plot as mrp
 # import pymrt.registration as mrr

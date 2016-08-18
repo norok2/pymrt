@@ -54,7 +54,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: Local Imports
 import pymrt.base as mrb
-# import pymrt.utils as mru
+# import pymrt.naming as mrn
 # import pymrt.input_output as mrio
 import pymrt.computation as mrc
 # import pymrt.correlate as mrr

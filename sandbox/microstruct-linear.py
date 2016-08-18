@@ -64,7 +64,7 @@ import xarray as xr  # N-D labeled arrays and datasets in Python
 
 # :: Local Imports
 import pymrt.base as mrb
-import pymrt.utils as mru
+import pymrt.naming as mrn
 # import pymrt.plot as mrp
 # import pymrt.registration as mrr
 import pymrt.computation as mrc
@@ -78,8 +78,8 @@ from pymrt import msg, dbg
 # ======================================================================
 # :: Paths
 PATHS = {
-    'acquisition': '/nobackup/isar3/data/siemens/RME**ME-MP2RAGE',
-    'cache': '/nobackup/isar2/cache',
+    'acquisition': '~/hd3/data/siemens/RME**ME-MP2RAGE',
+    'cache': '~/hd2/cache',
 }
 
 PATHS['base'] = os.path.join(PATHS['cache'], 'microstruct', 'linear')

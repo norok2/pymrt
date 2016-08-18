@@ -46,7 +46,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 
 # :: Local Imports
 import pymrt.base as mrb
-# import pymrt.utils as mru
+# import pymrt.naming as mrn
 # import pymrt.input_output as mrio
 # import pymrt.compute as mrc
 import pymrt.correlation as mrl
