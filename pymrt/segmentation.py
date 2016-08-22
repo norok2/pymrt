@@ -53,8 +53,8 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # TODO: implement other types of segmentations?
@@ -221,7 +221,7 @@ def snr_analysis(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()
 
     import nibabel as nib

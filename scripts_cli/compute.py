@@ -63,8 +63,8 @@ import pymrt.computation as mrc
 # import dcmpi.common as dcmlib
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -146,10 +146,9 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
     if args.verbose >= VERB_LVL['medium']:
         print("II: Using method/options: '{}' / '{}'".format(

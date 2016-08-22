@@ -17,7 +17,6 @@ import os  # Miscellaneous operating system interfaces
 import re  # Regular expression operations
 import doctest  # Test interactive Python examples
 
-
 # :: External Imports
 
 # :: External Imports Submodules
@@ -30,6 +29,7 @@ D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
 
 # ======================================================================
 # :: parsing constants
+# old-style separators
 D_SEP = '_'
 PARAM_BASE_SEP = '_'
 PARAM_SEP = ','
@@ -37,6 +37,14 @@ PARAM_KEY_VAL_SEP = '='
 INFO_SEP = '__'
 TOKEN_SEP = '_'
 KEY_VAL_SEP = '='
+
+# new-style separators
+SEP = {
+    'token': '__',
+    'info': '_',
+    'key_val': '=',
+    'name_units': '!',
+}
 
 # suffix of new reconstructed image from Siemens
 NEW_RECO_ID = 'rr'
@@ -63,9 +71,9 @@ def str_to_key_val(
 
     Examples:
         >>> str_to_key_val('key=1000')
-        (u'key', 1000)
+        ('key', 1000)
         >>> str_to_key_val('key1000', '')
-        (u'key', 1000)
+        ('key', 1000)
 
     See Also:
         set_param_val, parse_series_name
@@ -183,7 +191,7 @@ def info_to_str(
         text (str):
 
     Examples:
-        >>> info = {'_#': 10, 'me-mp2rage'}
+        >>> info = {'_#': 10, '_id': 'me-mp2rage', 't1': 2000}
     """
     tokens = []
     for key, val in info.items():
@@ -673,5 +681,5 @@ def filename2label(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()

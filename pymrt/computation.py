@@ -61,8 +61,8 @@ import pymrt.input_output as mrio
 # from dcmpi.lib.common import ID
 
 # from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -355,8 +355,8 @@ def calc_afi(
     """
     Fit monoexponential decay to images using the log-linear method.
     """
-
-    y_arr = np.stack(images)
+    y_arr = np.stack(images, -1).astype(float)
+    print(y_arr.shape)
     s_arr = mrb.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
@@ -1029,6 +1029,6 @@ def compute(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
 
 mrb.elapsed('pymrt.computation')

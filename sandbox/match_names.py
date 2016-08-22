@@ -39,5 +39,5 @@ def parse_name(text):
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()

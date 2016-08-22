@@ -1771,8 +1771,8 @@ def curve_fit(args):
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()
 
 # ======================================================================
-elapsed('pymrt.base')
+elapsed(os.path.basename(__file__))

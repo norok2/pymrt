@@ -58,8 +58,9 @@ import pymrt.extras as mre
 # from pymrt.sequences import mp2rage
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 
 # ======================================================================
@@ -304,17 +305,16 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
-    if args.verbose > VERB_LVL['low']:
-        print(__doc__)
-    begin_time = datetime.datetime.now()
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
+
     extract_nifti(args.dir, args.extradir, args.force, args.verbose)
-    end_time = datetime.datetime.now()
-    if args.verbose > VERB_LVL['low']:
-        print('ExecTime: {}'.format(end_time - begin_time))
+
+    elapsed('extract_nifit_bruker')
+    print_elapsed()
+
 
 
 # ======================================================================

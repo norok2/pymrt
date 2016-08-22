@@ -55,8 +55,8 @@ import pymrt.base as mrb
 # import pymrt.input_output as mrio
 import pymrt.geometry as mrg
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 # from pymrt import get_first_line
 from pymrt.config import EXT_CMD
 
@@ -454,7 +454,7 @@ def my_reg(array_list, *args, **kwargs):
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     begin_time = datetime.datetime.now()
 
     # for idx, (linear, shift) in enumerate(_discrete_generator(

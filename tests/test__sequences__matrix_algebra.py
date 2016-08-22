@@ -414,7 +414,7 @@ def test_fit_spin_model(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     # test_dynamics_operator_symbolic()
     # mrb.elapsed'test_symbolic')
     # test_dynamics_operator()
@@ -429,10 +429,10 @@ if __name__ == '__main__':
     #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
     test_z_spectrum()
-    mrb.elapsed('test_z_spectrum')
+    elapsed('test_z_spectrum')
     # test_fit_spin_model()
     # mrb.elapsed('test_fit_spin_model')
 
-    mrb.print_elapsed()
+    print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

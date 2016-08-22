@@ -62,8 +62,8 @@ import pymrt.input_output as mrio
 # from pymrt.sequences import mp2rage
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -254,10 +254,9 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
     make_phantom(
         args.infile, args.sizes, args.append, args.phantom, args.position,

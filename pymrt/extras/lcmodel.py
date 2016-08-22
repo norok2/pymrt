@@ -1,7 +1,7 @@
 #!/usr/
 # -*- coding: utf-8 -*-
 """
-pymrt: read_output files from LCModel.
+PyMRT: read_output files from LCModel.
 """
 
 # ======================================================================
@@ -249,7 +249,7 @@ def test():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
 
     test()
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""pymrt: useful basic utilities."""
+"""
+PyMRT: useful basic utilities.
+"""
 
 # ======================================================================
 # :: Future Imports
@@ -54,8 +56,8 @@ import scipy.stats  # SciPy: Statistical functions
 import pymrt.base as mrb
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 # from pymrt import get_first_line
 
 # ======================================================================
@@ -834,7 +836,7 @@ def histogram2d(
                 min(np.nanmin(array1), np.nanmin(array2)),
                 max(np.nanmax(array1), np.nanmax(array2)))
     try:
-        array_interval[0].__iter__
+        iter(array_interval[0])
     except AttributeError:
         array_interval = (array_interval, array_interval)
     # setup image aspect ratio
@@ -851,12 +853,12 @@ def histogram2d(
                       for val in array_interval])
     else:
         try:
-            bins.__iter__
+            iter(bins)
         except AttributeError:
             bins = (bins, bins)
     # setup histogram range
     try:
-        hist_interval[0].__iter__
+        iter(hist_interval[0])
     except AttributeError:
         hist_interval = (hist_interval, hist_interval)
     hist_interval = list(hist_interval)

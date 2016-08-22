@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: voxel-by-voxel correlation analysis for MRI data.
+PyMRT: voxel-by-voxel correlation analysis for MRI data.
 """
 
 # ======================================================================
@@ -61,8 +61,8 @@ import pymrt.input_output as mrio
 # from pymrt.debug import dbg
 # from pymrt.sequences import mp2rage
 
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 from pymrt.config import EXT_CMD
 
 # ======================================================================
@@ -1543,4 +1543,4 @@ def check_correlation(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())

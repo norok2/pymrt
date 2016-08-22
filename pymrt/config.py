@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: configuration file
+PyMRT: configuration file
 """
 
 

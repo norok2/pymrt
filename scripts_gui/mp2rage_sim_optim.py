@@ -39,23 +39,15 @@ from __future__ import unicode_literals  # DEBUG: sympy complains about it
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Operating System facilities
-# import math  # Mathematical Functions
-import collections  # Collections of Items
+import os  # Operating System facilities
 import argparse  # Argument Parsing
-# import time  # Time-related functions
+
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import scipy.optimize
 
 # :: Local Imports
@@ -63,8 +55,9 @@ import pymrt.base as mrb
 import pymrt.sequences.mp2rage as mp2rage
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 # ======================================================================
 # :: sequence default parameters (MARQUES TR8)
@@ -95,9 +88,9 @@ TR_SEQ_SLIDER = (1000.0, 10000.0, D_TR_SEQ)  # ms
 TI1_SLIDER = (10.0, 5000.0, D_TI1)  # ms
 TI2_SLIDER = (10.0, 10000.0, D_TI2)  # ms
 # only in direct mode
-TA_SLIDER = (10.0, 8000.0, D_TA)  # ms
-TB_SLIDER = (10.0, 8000.0, D_TB)  # ms
-TC_SLIDER = (10.0, 8000.0, D_TC)  # ms
+TA_SLIDER = (1.0, 10000.0, D_TA)  # ms
+TB_SLIDER = (1.0, 10000.0, D_TB)  # ms
+TC_SLIDER = (1.0, 10000.0, D_TC)  # ms
 
 # optimization parameters
 OPTIM_T1_INTERVAL = (1.0, 4000.0)
@@ -175,7 +168,7 @@ def ui_plot(
         plt_m2.set_label('B1+ -{:.0f}%'.format(2 * b1t_tune[1] * 100))
         # update title
         if is_direct:
-            tr_t = mp2rage.calc_tr_t(*par)
+            tr_t = mp2rage._calc_tr_seq(*par)
             ti1 = mp2rage._calc_ti1(*par)
             ti2 = mp2rage._calc_ti2(*par)
             ax_main.set_title('MP2RAGE: ' +
@@ -383,12 +376,16 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+
     ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1,
             args.ot1)
+
+    elapsed(os.path.basename(__file__))
+    print_elapsed()
+
 
 
 # ======================================================================

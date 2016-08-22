@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: read_output files with a JCAMP-DX-like structure.
+PyMRT: read_output files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """
@@ -183,7 +183,7 @@ def test():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     # time the tests
     begin_time = datetime.datetime.now()
     test()

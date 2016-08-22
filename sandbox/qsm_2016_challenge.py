@@ -38,6 +38,12 @@ from pymrt import VERB_LVL, D_VERB_LVL
 
 
 # ======================================================================
+def gen_k_kernel(shape):
+    arr_kk = np.zeros(shape)
+    return arr_kk
+
+
+# ======================================================================
 def auto_replicate(val, n):
     try:
         iter(val)
@@ -251,12 +257,29 @@ def check_performance(test, ref, name):
 
 
 # ======================================================================
+def meta_to_str(metas):
+    def preprocess(val):
+        val = str(val)
+        if '_' in val:
+            val = val.replace('_', '-')
+        if ' ' in val:
+            val = ''.join(val.split())  # remove all whitespaces
+        return val
+
+    text = '_'.join(
+        ['{}={:s}'.format(key, preprocess(val))
+         for key, val in sorted(metas.items())])
+    return text
+
+
+# ======================================================================
 def test_ann_1(
         base=os.path.expanduser('~/hd2/cache/qsm_2016_challenge/challenge'),
         ann_target='chi_cosmos.nii.gz',
         density=0.05,
         force=False,
         verbose=D_VERB_LVL):
+    msg('Dirpath: {}'.format(base))
     filepaths = {
         'mag': os.path.join(base, 'mag.nii.gz'),
         'phs': os.path.join(base, 'phs.nii.gz'),
@@ -269,39 +292,58 @@ def test_ann_1(
     arr_chi = mrio.load(filepaths['chi']).astype(np.float64)
 
     arr_cx = arr_mag / np.max(arr_mag) * np.exp(-1j * arr_phs)
+    arr_kk = gen_k_kernel(arr_cx.shape)
     arr_real_imag = np.stack((np.real(arr_cx), np.imag(arr_cx)), -1)
 
-    ann_filepath = os.path.join(
-        base, mrb.change_ext(ann_target, 'neurolab.ann', mrb.EXT['niz']))
-    if mrb.check_redo(filepaths.values(), [ann_filepath], force):
-        np.random.seed(0)
-        mask = mrg.rand_mask(arr_cx, density=density)
-        mask *= arr_msk
-        arr_input = arr_real_imag[mask]
-        arr_target = arr_chi[mask].reshape(-1, 1)
-        hidden_layers = [int(arr_input.size ** (1 / 2) + 1)]
-        msg('hidden layers: {}'.format(hidden_layers))
-        msg('input size: {} ({:.2%})'.format(
-            arr_input.size, arr_input.size / arr_real_imag.size))
+    # calculate ANN parameters
+    np.random.seed(0)
+    mask = mrg.rand_mask(arr_cx, density=density)
+    mask *= arr_msk
+    input_size = 2
+    arr_input = arr_real_imag[mask]
+
+    arr_target = arr_chi[mask].reshape(-1, 1)
+    hidden_layers = [30, 25, 20]
+
+    metas = {
+        'a': mrb.change_ext(ann_target, '', mrb.EXT['niz']),
+        'dens': density,
+        'hidden-layers': hidden_layers,
+        'regular': 1e-6,
+        'z-stop': 1e-6,
+    }
+    for k, v in sorted(metas.items()):
+        msg('{}: {:s}'.format(k, str(v)), verbose)
+    ann_filename = 'chi_ann__' + meta_to_str(metas) + '.neurolab.ann'
+    ann_filepath = os.path.join(base, ann_filename)
+    msg('ANN: {}'.format(ann_filename), verbose)
+    if mrb.check_redo(tuple(filepaths.values()), [ann_filepath], force):
+        msg('Calculating ...')
         ann = nnl.net.newff([[-1, 1], [-1, 1]], hidden_layers + [1])
         err = ann.train(
             arr_input, arr_target,
-            epochs=1000000, show=1000, goal=1e-6, rr=1e6)
+            epochs=1000000, show=10,
+            goal=metas['z-stop'], rr=metas['regular'])
 
         ann.save(ann_filepath)
     else:
+        msg('Loading ...')
         ann = nnl.load(ann_filepath)
 
-    chiann_filename = mrn.
+    chiann_filename = 'chi_ann__' + meta_to_str(metas) + '.' + mrb.EXT['niz']
     chiann_filepath = os.path.join(base, chiann_filename)
+    msg('chi_ann: {}'.format(ann_filepath), verbose)
     if mrb.check_redo(list(filepaths.values()) + [ann_filepath],
                       [chiann_filepath], force):
+        msg('Calculating ...')
         arr_chiann = ann.sim(
             arr_real_imag.reshape((-1, 2))).reshape(arr_cx.shape)
 
         mrio.save(chiann_filepath, arr_chiann)
     else:
+        msg('Loading ...')
         arr_chiann = mrio.load(chiann_filepath)
+
 
     if verbose >= VERB_LVL['low']:
         check_performance(
@@ -335,6 +377,6 @@ def test_metrics():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     # test_metrics()
     test_ann_1()

@@ -18,7 +18,7 @@ import cmath  # Mathematical functions for complex numbers
 import time  # Time access and conversions
 import datetime  # Basic date and time types
 import operator  # Standard operators as functions
-import collections  # High-performance container datatypes
+import collections  # Container datatypes
 import random  # Generate pseudo-random numbers
 import argparse  # Parser for command-line options, arguments and subcommands
 import itertools  # Functions creating iterators for efficient looping
@@ -29,6 +29,13 @@ import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
 import cProfile as profile  # Deterministic profiling of Python programs
+import warnings  # Warning control
+
+# Configuration file parser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: useful I/O utilities.
+PyMRT: useful I/O utilities.
 
 TODO:
 - improve affine support
@@ -61,8 +61,8 @@ import pymrt.segmentation as mrs
 
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 # from pymrt import get_first_line
 
 # ======================================================================
@@ -1067,5 +1067,5 @@ def plot_histogram2d(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()

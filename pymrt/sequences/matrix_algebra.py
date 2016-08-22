@@ -72,8 +72,8 @@ import pymrt.base as mrb
 # import pymrt.segmentation as mrs
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 from pymrt.base import elapsed, print_elapsed
 
 # from pymrt import get_first_line
@@ -1418,7 +1418,7 @@ class MtFlash(PulseTrain):
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
 
     mrb.print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)

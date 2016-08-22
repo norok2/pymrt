@@ -1350,7 +1350,7 @@ def _self_test_interactive():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     # doctest.testmod()
     _self_test_interactive()
     mrb.elapsed('self_test_interactive')

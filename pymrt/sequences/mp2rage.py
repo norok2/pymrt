@@ -4,29 +4,18 @@
 MP2RAGE pulse sequence library.
 
 Calculate the analytical expression of MP2RAGE signal.
-Two different set of parameters (direct and indirect) are accepted.
-Direct:
+
 - T1: longitudinal relaxation time
 - eff : efficiency eff of the adiabatic inversion pulse
-- n : number of pulses in each GRE block
+- n_GRE : number of pulses in each GRE block
 - TR_GRE : repetition time of GRE pulses in ms
 - TA : time between inversion pulse and first GRE block in ms
 - TB : time between first and second GRE blocks in ms
 - TC : time after second GRE block in ms
 - A1 : flip angle of the first GRE block in deg
 - A2 : flip angle a2 of the second GRE block in deg
-Indirect:
-- T1: longitudinal relaxation time
-- eff : efficiency eff of the adiabatic inversion pulse
-- n : number of pulses in each GRE block
-- TR_GRE : repetition time of GRE pulses in ms
-- TR_SEQ : total repetition time of the MP2RAGE sequence in ms
-- TI1 : inversion time (at center of k-space) of the first GRE blocks in ms
-- TI2 : inversion time (at center of k-space) of the second GRE blocks in ms
-- A1 : flip angle of the first GRE block in deg
-- A2 : flip angle a2 of the second GRE block in deg
-WARNING: when using indirect parameters, remember to check that TA, TB and TC
-timing parameters are positive.
+
+Additionally, Conversion from acquisition to sequence parameters is supported.
 
 [ref: J. P. Marques at al., NeuroImage 49 (2010) 1271-1281]
 """
@@ -54,7 +43,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # ======================================================================
 # :: Default values
 T1_INTERVAL = (50.0, 5000.0)
-D = {
+D_SEQ_PARAMS = {
     'eff': 1.0,  # #
     'n_gre': 160,  # #
     'tr_gre': 7.0,  # ms
@@ -226,30 +215,44 @@ def _signal2(t1, eff, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
 
 def acq_to_seq_params(
         matrix_sizes=(256, 256, 256),
-        grappa_factors=(2, 2, 1),
-        grappa_refs=(24, 24, 0),
-        part_fourier_factors=(8 / 8, 6 / 8, 6 / 8),
+        grappa_factors=(1.0, 2, 1),
+        grappa_refs=(0.0, 24, 0),
+        part_fourier_factors=(1.0, 6 / 8, 6 / 8),
         bandwidths=(280, 280, 280, 500),
         tr_gre_delta=0.0,
+        sl_pe_swap=False,
         tr_seq=8000,
         ti=(900, 3300)):
     """
+    Determine the sequence parameters from the acquisition parameters.
 
     Args:
         matrix_sizes (tuple[int]):
         grappa_factors (tuple[int]):
         grappa_refs (tuple[int]
-        partial_fourier_factors (tuple[float]):
+        part_fourier_factors (tuple[float]):
         bandwidths (tuple[int]): readout bandwidth in Hz/px
+        tr_gre_delta (float):
+        sl_pe_swap (bool):
         tr_seq (int): repetition time TR_seq of the sequence
-        ti (tuple(int)):
+        ti (tuple[int]):
 
     Returns:
-
+        seq_params (tuple): The sequence parameters for signal calculation.
+        extra_info (dict): Additional sequence information.
     """
-    n_gre = matrix_sizes[0] / grappa_factors[0] + grappa_refs[0]
+
+    def k_space_lines(size, grappa, part_fourier, grappa_refs):
+        return int(size / grappa * part_fourier) + int(
+            grappa_refs * (grappa - 1) / grappa - 1)
+
+    pe1 = 1 if sl_pe_swap else 2
+    pe2 = 2 if sl_pe_swap else 1
+    n_gre = k_space_lines(
+        matrix_sizes[pe1], grappa_factors[pe1], part_fourier_factors[pe1],
+        grappa_refs[pe1])
     tr_gre = round(
-        sum([1 / bw * 4 * matrix_sizes[0] for bw in bandwidths]) + tr_gre_delta,
+        sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]) + tr_gre_delta,
         2)
     t_gre_block = n_gre * tr_gre
     center_k = part_fourier_factors[1] / 2
@@ -260,8 +263,11 @@ def acq_to_seq_params(
     if any(x < 0.0 for x in td):
         raise ValueError('Invalid sequence parameters: {}'.format(seq_params))
     seq_params = (n_gre, tr_gre) + td
+
     extra_info = {
-        't_acq': tr_seq * matrix_sizes[2] * 1e-3
+        't_acq': tr_seq * 1e-3 * k_space_lines(
+            matrix_sizes[pe2], grappa_factors[pe2], part_fourier_factors[pe2],
+            grappa_refs[pe2])
     }
     return seq_params, extra_info
 
@@ -286,10 +292,4 @@ def _calc_tc(eff, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
 
 # ======================================================================
 if __name__ == '__main__':
-    # todo: refresh this code (at some point)
-    print(__doc__)
-    t1_arr = np.linspace(*T1_INTERVAL)
-    s_arr = signal(t1_arr, **D)
-    print(s_arr)
-    plt.plot(s_arr, t1_arr)
-    plt.show()
+    msg(__doc__.strip())
