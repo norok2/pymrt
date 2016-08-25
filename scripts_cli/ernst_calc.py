@@ -29,10 +29,10 @@ import argparse  # Argument Parsing
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as mrb
+# import pymrt.base as pmb
 import pymrt.sequences.flash
-# import pymrt.input_output as mrio
-# import pymrt.geometry as mrg
+# import pymrt.input_output as pmio
+# import pymrt.geometry as pmg
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg

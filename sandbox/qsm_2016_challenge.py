@@ -18,6 +18,7 @@ import random  # Generate pseudo-random numbers
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import neurolab as nnl  # NeuroLab (neural network with MATLAB-like interface)
+import skimage as ski
 
 # :: External Imports Submodules
 import scipy.linalg
@@ -27,10 +28,14 @@ import scipy.signal
 import matplotlib.pyplot as plt  # Matplotlib's MATLAB-like interface
 
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.naming as mrn
-import pymrt.input_output as mrio
-import pymrt.geometry as mrg
+from pymrt.base import check_redo, scale, auto_repeat, calc_stats, subst
+from pymrt.base import realpath, change_ext, EXT
+from pymrt.base import dft, idft, coord, gaussian_nd, laplacian, inv_laplacian
+from pymrt.base import unwrap_phase_laplacian as unwrap_phase
+from pymrt.recipes.chi import dipole_kernel
+
+from pymrt.geometry import rand_mask
+from pymrt.input_output import load, save
 
 from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
@@ -38,45 +43,33 @@ from pymrt import VERB_LVL, D_VERB_LVL
 
 
 # ======================================================================
-def gen_k_kernel(shape):
-    arr_kk = np.zeros(shape)
-    return arr_kk
+def my_qsm(cx_arr, b0z=3.0, theta=0.0, phi=0.0):
+    # susceptibility in Fourier space (zero-centered)
 
+    assert (len(cx_arr.shape) == 3)
 
-# ======================================================================
-def auto_replicate(val, n):
-    try:
-        iter(val)
-    except TypeError:
-        val = (val,) * n
-    return val
+    from skimage.restoration import unwrap_phase, denoise_tv_chambolle
+    mag_arr = np.abs(cx_arr)
+    phs_arr = unwrap_phase(np.angle(cx_arr))
+    re_arr = np.real(cx_arr)
+    im_arr = np.imag(cx_arr)
+    dn_re_arr = denoise_tv_chambolle(re_arr, weight=0.2)
+    dn_im_arr = denoise_tv_chambolle(im_arr, weight=0.2)
+    dn_phs_arr = np.angle((re_arr - dn_re_arr) + 1j * (im_arr - dn_im_arr))
 
+    # threshold = 0.0  # np.percentile(mag_arr, 0)
+    # mask = mag_arr >= threshold
+    # msg('Mask Size: {:%}'.format(np.sum(mask) / np.size(mask)))
+    # phs_arr[~mask] = 0.0
 
-# ======================================================================
-def gaussian_kernel(shape, sigmas, center=0.0, ndim=1, normalize=True):
-    for val in (shape, sigmas, center):
-        try:
-            iter(val)
-        except TypeError:
-            pass
-        else:
-            ndim = max(len(val), ndim)
+    chi_arr = unwrap_phase(dn_phs_arr)
 
-    shape = auto_replicate(shape, ndim)
-    sigmas = auto_replicate(sigmas, ndim)
-    center = auto_replicate(center, ndim)
-
-    assert (len(sigmas) == len(shape))
-    assert (len(center) == len(shape))
-
-    grid = [slice(-(x - x0) // 2 + 1, (x - x0) // 2 + 1)
-            for x, x0 in zip(shape, center)]
-    coord = np.ogrid[grid]
-    kernel = np.exp(
-        -(sum([x ** 2 / (2 * sigma ** 2) for x, sigma in zip(coord, sigmas)])))
-    if normalize:
-        kernel = kernel / np.sum(kernel)
-    return kernel
+    # arr_phs_k = dft(arr_phs)
+    # arr_dk_k = dipole_kernel(arr_cx)
+    # # field shift along z in Tesla in Fourier space
+    # chi_k = arr_phs_k / arr_dk_k
+    # arr_chi = np.real(idft(arr_chi_k))
+    return chi_arr
 
 
 # ======================================================================
@@ -154,14 +147,14 @@ def hfen(
     assert (arr1.shape == arr2.shape)
     ndim = arr1.ndim
 
-    filter_sizes = auto_replicate(filter_sizes, ndim)
-    sigmas = auto_replicate(sigmas, ndim)
+    filter_sizes = auto_repeat(filter_sizes, ndim)
+    sigmas = auto_repeat(sigmas, ndim)
     assert (len(sigmas) == len(filter_sizes))
 
     grid = [slice(-filter_size // 2 + 1, filter_size // 2 + 1)
             for filter_size in filter_sizes]
     coord = np.ogrid[grid]
-    gaussian_filter = gaussian_kernel(filter_sizes, sigmas)
+    gaussian_filter = gaussian_nd(filter_sizes, sigmas)
     hfen_factor = \
         sum([x ** 2 / sigma ** 4 for x, sigma in zip(coord, sigmas)]) + \
         - sum([1 / sigma ** 2 for sigma in sigmas])
@@ -225,8 +218,8 @@ def ssim(
     if vals_interval:
         msk1 = arr1 != 0.0
         msk2 = arr2 != 0.0
-        arr1[msk1] = mrb.scale(arr1[msk1], arr_interval, arr_interval)
-        arr2[msk2] = mrb.scale(arr2[msk2], arr_interval, arr_interval)
+        arr1[msk1] = scale(arr1[msk1], arr_interval, arr_interval)
+        arr2[msk2] = scale(arr2[msk2], arr_interval, arr_interval)
         arr_interval = vals_interval
     interval_size = np.ptp(arr_interval)
     cc = [(k * interval_size) ** 2 for k in kk]
@@ -257,7 +250,7 @@ def check_performance(test, ref, name):
 
 
 # ======================================================================
-def meta_to_str(metas):
+def meta_to_str(metas, pre='__', post='__'):
     def preprocess(val):
         val = str(val)
         if '_' in val:
@@ -269,47 +262,112 @@ def meta_to_str(metas):
     text = '_'.join(
         ['{}={:s}'.format(key, preprocess(val))
          for key, val in sorted(metas.items())])
+    if text:
+        text = pre + text + post
     return text
+
+
+def test_my_qsm(
+        base=realpath('~/hd2/cache/qsm_2016_challenge/challenge'),
+        target='chi_cosmos.nii.gz',
+        force=True,
+        verbose=D_VERB_LVL):
+    """
+
+    Args:
+        base ():
+        target():
+        force ():
+        verbose ():
+
+    Returns:
+
+    """
+    msg('Dirpath: {}'.format(base))
+    filepaths = {
+        'mag': os.path.join(base, 'mag.nii.gz'),
+        'phs': os.path.join(base, 'phs.nii.gz'),
+        'tgt': os.path.join(base, target),
+    }
+    arr_mag = load(filepaths['mag']).astype(np.float64)
+    arr_phs = load(filepaths['phs']).astype(np.float64)
+    arr_tgt = load(filepaths['tgt']).astype(np.float64)
+
+    metas = {}
+
+    chi_filename = 'chi_myqsm' + meta_to_str(metas, post='') + '.' + EXT['niz']
+    chi_filepath = os.path.join(base, chi_filename)
+    msg('chi_myqsm: {}'.format(chi_filepath), verbose)
+    if check_redo(list(filepaths.values()), [chi_filepath], force):
+        msg('Calculating ...')
+        arr_cx = arr_mag / np.max(arr_mag) * np.exp(-1j * arr_phs)
+        arr_chi = my_qsm(arr_cx)
+
+        save(chi_filepath, arr_chi)
+    else:
+        msg('Loading ...')
+        arr_chi = load(chi_filepath)
+
+    if verbose >= VERB_LVL['low']:
+        check_performance(
+            arr_chi, arr_tgt, change_ext(target, '', EXT['niz']))
 
 
 # ======================================================================
 def test_ann_1(
         base=os.path.expanduser('~/hd2/cache/qsm_2016_challenge/challenge'),
-        ann_target='chi_cosmos.nii.gz',
-        density=0.05,
+        target='chi_cosmos.nii.gz',
+        density=0.20,
         force=False,
         verbose=D_VERB_LVL):
+    """
+
+    Args:
+        base ():
+        target ():
+        density ():
+        force ():
+        verbose ():
+
+    Returns:
+
+    """
     msg('Dirpath: {}'.format(base))
     filepaths = {
         'mag': os.path.join(base, 'mag.nii.gz'),
         'phs': os.path.join(base, 'phs.nii.gz'),
         'msk': os.path.join(base, 'mask.nii.gz'),
-        'chi': os.path.join(base, ann_target),
+        'tgt': os.path.join(base, target),
     }
-    arr_mag = mrio.load(filepaths['mag']).astype(np.float64)
-    arr_phs = mrio.load(filepaths['phs']).astype(np.float64)
-    arr_msk = mrio.load(filepaths['msk']).astype(np.bool)
-    arr_chi = mrio.load(filepaths['chi']).astype(np.float64)
+    arr_mag = load(filepaths['mag']).astype(np.float64)
+    arr_phs = load(filepaths['phs']).astype(np.float64)
+    arr_msk = load(filepaths['msk']).astype(np.bool)
+    arr_tgt = load(filepaths['tgt']).astype(np.float64)
 
     arr_cx = arr_mag / np.max(arr_mag) * np.exp(-1j * arr_phs)
-    arr_kk = gen_k_kernel(arr_cx.shape)
-    arr_real_imag = np.stack((np.real(arr_cx), np.imag(arr_cx)), -1)
+    arr_cx_k = dft(arr_cx)
+    arr_cxm = arr_cx * arr_msk
+    arr_cxm_k = dft(arr_cxm)
+
+    arr_dk_k = dipole_kernel(arr_cx.shape)
 
     # calculate ANN parameters
     np.random.seed(0)
-    mask = mrg.rand_mask(arr_cx, density=density)
-    mask *= arr_msk
-    input_size = 2
-    arr_input = arr_real_imag[mask]
+    mask = rand_mask(arr_cxm_k, density=density)
+    # mask *= arr_msk
+    arr_input = np.stack(
+        (np.real(arr_cxm_k[mask]), np.imag(arr_cxm_k[mask]), arr_dk_k[mask]),
+        axis=-1)
+    input_dims = arr_input.shape[-1]
 
-    arr_target = arr_chi[mask].reshape(-1, 1)
-    hidden_layers = [30, 25, 20]
+    arr_target = arr_tgt[mask].reshape(-1, 1)
+    hidden_layers = [24, 20, 16]
 
     metas = {
-        'a': mrb.change_ext(ann_target, '', mrb.EXT['niz']),
+        'a': change_ext(target, '', EXT['niz']),
         'dens': density,
         'hidden-layers': hidden_layers,
-        'regular': 1e-6,
+        'regular': 1e-3,
         'z-stop': 1e-6,
     }
     for k, v in sorted(metas.items()):
@@ -317,12 +375,12 @@ def test_ann_1(
     ann_filename = 'chi_ann__' + meta_to_str(metas) + '.neurolab.ann'
     ann_filepath = os.path.join(base, ann_filename)
     msg('ANN: {}'.format(ann_filename), verbose)
-    if mrb.check_redo(tuple(filepaths.values()), [ann_filepath], force):
+    if check_redo(tuple(filepaths.values()), [ann_filepath], force):
         msg('Calculating ...')
-        ann = nnl.net.newff([[-1, 1], [-1, 1]], hidden_layers + [1])
+        ann = nnl.net.newff([[-1, 1]] * input_dims, hidden_layers + [1])
         err = ann.train(
             arr_input, arr_target,
-            epochs=1000000, show=10,
+            epochs=4096, show=16,
             goal=metas['z-stop'], rr=metas['regular'])
 
         ann.save(ann_filepath)
@@ -330,32 +388,33 @@ def test_ann_1(
         msg('Loading ...')
         ann = nnl.load(ann_filepath)
 
-    chiann_filename = 'chi_ann__' + meta_to_str(metas) + '.' + mrb.EXT['niz']
-    chiann_filepath = os.path.join(base, chiann_filename)
+    chi_filename = 'chi_ann__' + meta_to_str(metas) + '.' + EXT['niz']
+    chi_filepath = os.path.join(base, chi_filename)
     msg('chi_ann: {}'.format(ann_filepath), verbose)
-    if mrb.check_redo(list(filepaths.values()) + [ann_filepath],
-                      [chiann_filepath], force):
+    if check_redo(list(filepaths.values()) + [ann_filepath],
+                  [chi_filepath], force):
         msg('Calculating ...')
-        arr_chiann = ann.sim(
-            arr_real_imag.reshape((-1, 2))).reshape(arr_cx.shape)
+        arr_input_all = np.stack(
+            (np.real(arr_cx_k), np.imag(arr_cx_k), arr_dk_k), axis=-1)
+        arr_chiann = np.real(idft(ann.sim(
+            arr_input_all.reshape((-1, input_dims))).reshape(arr_cx.shape)))
 
-        mrio.save(chiann_filepath, arr_chiann)
+        save(chi_filepath, arr_chiann)
     else:
         msg('Loading ...')
-        arr_chiann = mrio.load(chiann_filepath)
-
+        arr_chiann = load(chi_filepath)
 
     if verbose >= VERB_LVL['low']:
         check_performance(
-            arr_chiann, arr_chi, mrb.change_ext(ann_target, '', mrb.EXT['niz']))
+            arr_chiann, arr_tgt, change_ext(target, '', EXT['niz']))
 
 
 # ======================================================================
 def test_metrics():
     base_path = os.path.expanduser('~/hd2/cache/qsm_2016_challenge/backup')
-    a1 = mrio.load(
+    a1 = load(
         os.path.join(base_path, 'data', 'chi_cosmos.nii.gz')).astype(np.float64)
-    a2 = mrio.load(
+    a2 = load(
         os.path.join(base_path, 'data', 'chi_33.nii.gz')).astype(np.float64)
 
     # import profile
@@ -379,4 +438,5 @@ def test_metrics():
 if __name__ == '__main__':
     msg(__doc__.strip())
     # test_metrics()
-    test_ann_1()
+    # test_ann_1()
+    test_my_qsm()

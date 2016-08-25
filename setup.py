@@ -30,7 +30,7 @@ VERSION_SOURCE_FILEPATH = 'pymrt/__init__.py'
 README_SOURCE_FILE = 'README.rst'
 
 # get the working directory for the setup script
-CWD = os.path.realpath(os.path.dirname(__file__))
+CWD = pmb.realpath(os.path.dirname(__file__))
 
 # get the long description from the README file
 with open(os.path.join(CWD, README_SOURCE_FILE),
@@ -138,7 +138,7 @@ setup(
     ],
 
     extras_require={
-        'blessings': 'blessings',
+        'blessed': 'blessed',
     },
 
     package_data={

@@ -78,7 +78,7 @@ def msg(
         text (str|unicode): Message to display.
         verb_lvl (int): Current level of verbosity.
         verb_threshold (int): Threshold level of verbosity.
-        fmt (str|unicode): Format of the message (if `blessings` supported).
+        fmt (str|unicode): Format of the message (if `blessed` supported).
             If None, a standard formatting is used.
         *args (tuple): Positional arguments to be passed to `print`.
         **kwargs (dict): Keyword arguments to be passed to `print`.
@@ -93,24 +93,24 @@ def msg(
         >>> msg(s, VERB_LVL['medium'], VERB_LVL['low'])
         Hello World!
         >>> msg(s, VERB_LVL['low'], VERB_LVL['medium'])  # no output
-        >>> msg(s, fmt='{t.green}')  # if in ANSI Terminal, text is green
+        >>> msg(s, fmt='{t.green}')  # if ANSI Terminal, green text
         Hello World!
-        >>> msg(s, fmt='{t.red}{}')  # if in ANSI Terminal, text is red
-        Hello World!
-        >>> msg(s, fmt='yellow')  # if in ANSI Terminal, text is yellow
-        Hello World!
+        >>> msg('   :  a b c', fmt='{t.red}{}')  # if ANSI Terminal, red text
+           :  a b c
+        >>> msg(' : a b c', fmt='cyan')  # if ANSI Terminal, cyan text
+         : a b c
     """
     if verb_lvl >= verb_threshold:
-        # if blessings is not present, no coloring
+        # if blessed is not present, no coloring
         try:
-            import blessings
+            import blessed
         except ImportError:
-            blessings = None
+            blessed = None
 
-        if blessings:
-            t = blessings.Terminal()
+        if blessed:
+            t = blessed.Terminal()
             if not fmt:
-                if VERB_LVL['none'] < verb_threshold <= VERB_LVL['medium']:
+                if VERB_LVL['low'] < verb_threshold <= VERB_LVL['medium']:
                     e = t.cyan
                 elif VERB_LVL['medium'] < verb_threshold < VERB_LVL['debug']:
                     e = t.magenta
@@ -124,33 +124,36 @@ def msg(
                     e = t.red
                 else:
                     e = t.white
-                tokens = text.split(None, 1)
-                txt0 = text[:text.find(tokens[0])]
-                txt1 = tokens[0]
-                txt2 = text[text.find(txt1) + len(txt1)] + tokens[1] \
-                    if len(tokens) > 1 else ''
+                # first non-whitespace word
+                txt1 = text.split(None, 1)[0]
+                # initial whitespaces
+                n = text.find(txt1)
+                txt0 = text[:n]
+                # rest
+                txt2 = text[n + len(txt1):]
                 txt_kwargs = {
                     'e1': e + (t.bold if e == t.white else ''),
                     'e2': e + (t.bold if e != t.white else ''),
-                    'init': txt0, 'first': txt1, 'rest': txt2, 'n': t.normal}
-                text = '{init}{e1}{first}{n}{e2}{rest}{n}'.format(**txt_kwargs)
+                    't0': txt0, 't1': txt1, 't2': txt2, 'n': t.normal}
+                text = '{t0}{e1}{t1}{n}{e2}{t2}{n}'.format(**txt_kwargs)
             else:
                 if 't.' not in fmt:
                     fmt = '{{t.{}}}'.format(fmt)
                 if '{}' not in fmt:
                     fmt += '{}'
                 text = fmt.format(text, t=t) + t.normal
-        else:
-            print(text, *args, **kwargs)
+        print(text, *args, **kwargs)
 
 
 # ======================================================================
-def dbg(name):
+def dbg(obj, fmt=None):
     """
     Print content of a variable for debug purposes.
 
     Args:
-        name: The name to be inspected.
+        obj: The name to be inspected.
+        fmt (str|unicode): Format of the message (if `blessed` supported).
+            If None, a standard formatting is used.
 
     Returns:
         None.
@@ -158,28 +161,24 @@ def dbg(name):
     Examples:
         >>> my_dict = {'a': 1, 'b': 1}
         >>> dbg(my_dict)
-        dbg(my_dict): {
-            "a": 1,
-            "b": 1
-        }
-        <BLANKLINE>
+        dbg(my_dict): (('a', 1), ('b', 1))
         >>> dbg(my_dict['a'])
         dbg(my_dict['a']): 1
-        <BLANKLINE>
     """
-    import json
     import inspect
 
     outer_frame = inspect.getouterframes(inspect.currentframe())[1]
     name_str = outer_frame[4][0][:-1]
-    print(name_str, end=': ')
-    print(json.dumps(name, sort_keys=True, indent=4))
-    print()
+    msg(name_str, fmt=fmt, end=': ')
+    if isinstance(obj, dict):
+        obj = tuple(sorted(obj.items()))
+    text = repr(obj)
+    msg(text, fmt='')
 
 
 # ======================================================================
 def elapsed(
-        name,
+        name=None,
         time_point=None,
         events=_EVENTS):
     """
@@ -195,6 +194,13 @@ def elapsed(
         None.
     """
     import datetime
+    import inspect
+    import os
+
+    if name is None:
+        outer_frame = inspect.getouterframes(inspect.currentframe())[1]
+        filename = __file__
+        name = os.path.basename(filename)
 
     if not time_point:
         time_point = datetime.datetime.now()
@@ -244,4 +250,11 @@ def print_elapsed(
 
 
 # ======================================================================
-elapsed('pymrt')
+if __name__ == '__main__':
+    import doctest
+
+    msg(__doc__.strip())
+    doctest.testmod()
+
+else:
+    elapsed()

@@ -18,8 +18,8 @@ from math import ceil, log10
 
 import numpy as np
 
-import pymrt.base as mrb
-import pymrt.input_output as mrio
+import pymrt.base as pmb
+import pymrt.input_output as pmio
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
@@ -58,11 +58,11 @@ def mt_proc_dispatch(
     filenames = {'target': target_name, 'chunk': chunk_name}
     filepaths = {}
     for item, filename in filenames.items():
-        filepaths[item] = os.path.realpath(filename)
+        filepaths[item] = pmb.realpath(filename)
         if not os.path.exists(filepaths[item]):
             filepaths[item] = os.path.join(dirpath, filename)
     # preprocess input
-    img, aff, hdr = mrio.load(filepaths['target'], True)
+    img, aff, hdr = pmio.load(filepaths['target'], True)
     img = img.astype(int)
     msk = img[...].astype(bool)
     msk_size = int(sum(img[msk]))
@@ -112,12 +112,12 @@ def mt_proc_dispatch(
                 (idx >= np.min(chunk_idx)) * (idx <= np.max(chunk_idx))
             chunk[chunk_mask] = 1
             chunk_filepath = filepaths['chunk'].format(
-                name=mrb.change_ext(filenames['target'], '', mrb.EXT['niz']),
+                name=pmb.change_ext(filenames['target'], '', pmb.EXT['niz']),
                 id='{:0{len}d}o{:0{len}d}'.format(
                     i + 1, num_chunks, len=int(ceil(log10(num_chunks + 1)))))
-            chunk_dirpath = mrb.change_ext(chunk_filepath, '', mrb.EXT['niz'])
+            chunk_dirpath = pmb.change_ext(chunk_filepath, '', pmb.EXT['niz'])
             if not os.path.isfile(chunk_filepath):
-                mrio.save(chunk_filepath, chunk.astype(int), aff)
+                pmio.save(chunk_filepath, chunk.astype(int), aff)
                 chunk_filepaths.append(chunk_filepath)
             if not os.path.isdir(chunk_dirpath):
                 cmd = (cmd_dispatch + ' ') \
@@ -238,8 +238,8 @@ def main():
     }
     mt_proc_dispatch(**args)
 
-    mrb.elapsed(os.path.basename(__file__))
-    mrb.print_elapsed()
+    pmb.elapsed(os.path.basename(__file__))
+    pmb.print_elapsed()
 
 
 # ======================================================================

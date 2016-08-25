@@ -25,8 +25,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.signal  # SciPy: Signal Processing
 
-
-
+import pymrt.base as pmb
 
 
 # ======================================================================
@@ -91,42 +90,6 @@ def interval_size(interval):
 
     """
     return interval[1] - interval[0]
-
-
-# ======================================================================
-def auto_replicate(val, n):
-    try:
-        iter(val)
-    except TypeError:
-        val = (val,) * n
-    return val
-
-
-# ======================================================================
-def gaussian_kernel(shape, sigmas, center=0.0, ndim=1, normalize=True):
-    for val in (shape, sigmas, center):
-        try:
-            iter(val)
-        except TypeError:
-            pass
-        else:
-            ndim = max(len(val), ndim)
-
-    shape = auto_replicate(shape, ndim)
-    sigmas = auto_replicate(sigmas, ndim)
-    center = auto_replicate(center, ndim)
-
-    assert (len(sigmas) == len(shape))
-    assert (len(center) == len(shape))
-
-    grid = [slice(-(x - x0) // 2 + 1, (x - x0) // 2 + 1)
-            for x, x0 in zip(shape, center)]
-    coord = np.ogrid[grid]
-    kernel = np.exp(
-        -(sum([x ** 2 / (2 * sigma ** 2) for x, sigma in zip(coord, sigmas)])))
-    if normalize:
-        kernel = kernel / np.sum(kernel)
-    return kernel
 
 
 # ======================================================================
@@ -235,8 +198,7 @@ def ssim_map(
             min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
     interval_size = np.ptp(arr_interval)
     ndim = arr1.ndim
-    arr_filter = gaussian_kernel(
-        auto_replicate(filter_sizes, ndim), auto_replicate(sigmas, ndim))
+    arr_filter = pmb.gaussian_nd(filter_sizes, sigmas, 0.5, ndim, True)
     convolve = scipy.signal.fftconvolve
     mu1 = convolve(arr1, arr_filter, 'same')
     mu2 = convolve(arr2, arr_filter, 'same')
@@ -316,7 +278,7 @@ def calc_averages(
    out_phs_filepath = change_img_type(out_tmp_filepath, TYPE_ID['phs'])
    out_filepath_list = [out_tmp_filepath, out_mag_filepath, out_phs_filepath]
    # perform calculation
-  if mrb.check_redo(filepath_list, out_filepath_list, force) and sum_avg > 1:
+  if pmb.check_redo(filepath_list, out_filepath_list, force) and sum_avg > 1:
        # stack multiple images together
        # assume every other file is a phase image, starting with magnitude
        img_tuple_list = []
@@ -339,8 +301,8 @@ def calc_averages(
 #        regmat_filepath_list = [
 #            os.path.join(
 #            tmp_dirpath,
-#            mrio.del_ext(os.path.basename(img_tuple[0])) +
-#            mrb.add_extsep(mrb.EXT['txt']))
+#            pmio.del_ext(os.path.basename(img_tuple[0])) +
+#            pmb.add_extsep(pmb.EXT['txt']))
 #            for img_tuple in img_tuple_list]
 #        iter_param_list = [
 #            (img_tuple[0], img_tuple_list[0][0], regmat)
@@ -388,7 +350,7 @@ def calc_averages(
                rel_power = np.abs(avg_power - np.sum(img_mag)) / avg_power
            if (not avg_power or rel_power < threshold) \
                    and shape == img_mag.shape:
-               img_list.append(mrb.polar2complex(img_mag, img_phs))
+               img_list.append(pmb.polar2complex(img_mag, img_phs))
                num += 1
                avg_power = (avg_power * (num - 1) + np.sum(img_mag)) / num
        out_mag_filepath = change_param_val(
@@ -405,39 +367,39 @@ def calc_averages(
            img = np.fft.ifftn(np.fft.ifftshift(ft_img * np.exp(1j * dephs)))
            img_list[idx] = img
 
-       img = mrb.ndstack(img_list, -1)
+       img = pmb.ndstack(img_list, -1)
        img = np.mean(img, -1)
-       mrio.save(out_mag_filepath, np.abs(img), affine_nii)
-#        mrio.save(out_phs_filepath, np.angle(img), affine_nii)
+       pmio.save(out_mag_filepath, np.abs(img), affine_nii)
+#        pmio.save(out_phs_filepath, np.angle(img), affine_nii)
 
 #        fixed = np.abs(img_list[0])
 #        for idx, img in enumerate(img_list):
-#            affine = mrb.affine_registration(np.abs(img), fixed, 'rigid')
-#            img_list[idx] = mrb.apply_affine(img_list[idx], affine)
-#        mrio.save(out_filepath, np.abs(img), affine_nii)
+#            affine = pmb.affine_registration(np.abs(img), fixed, 'rigid')
+#            img_list[idx] = pmb.apply_affine(img_list[idx], affine)
+#        pmio.save(out_filepath, np.abs(img), affine_nii)
 #        print(img.shape, img.nbytes / 1024 / 1024)  # DEBUG
 #        # calculate the Fourier transform
 #        for img in img_list:
 #            fft_list.append(np.fft.fftshift(np.fft.fftn(img)))
 #        fixed = np.abs(img[:, :, :, 0])
-#        mrb.sample2d(fixed, -1)
+#        pmb.sample2d(fixed, -1)
 #        tmp = tmp * np.exp(1j*0.5)
 #        moving = sp.ndimage.shift(fixed, [1.0, 5.0, 0.0])
-#        mrb.sample2d(moving, -1)
+#        pmb.sample2d(moving, -1)
 
 #        print(linear, shift)
 #        moved = sp.ndimage.affine_transform(moving, linear, offset=-shift)
-#        mrb.sample2d(moved, -1)
-#        mrio.save(out_filepath, moving, affine)
-#        mrio.save(mag_filepath, fixed, affine)
-#        mrio.save(phs_filepath, moved-fixed, affine)
+#        pmb.sample2d(moved, -1)
+#        pmio.save(out_filepath, moving, affine)
+#        pmio.save(mag_filepath, fixed, affine)
+#        pmio.save(phs_filepath, moved-fixed, affine)
 #        for idx in range(len(img_list)):
 #            tmp_img = img[:, :, :, idx]
 #            tmp_fft = fft[:, :, :, idx]
-#            mrb.sample2d(np.real(tmp_fft), -1)
-#            mrb.sample2d(np.imag(tmp_fft), -1)
-#            mrb.sample2d(np.abs(img[:, :, :, idx]), -1)
-#            mrb.sample2d(np.angle(img[:, :, :, idx]), -1)
+#            pmb.sample2d(np.real(tmp_fft), -1)
+#            pmb.sample2d(np.imag(tmp_fft), -1)
+#            pmb.sample2d(np.abs(img[:, :, :, idx]), -1)
+#            pmb.sample2d(np.angle(img[:, :, :, idx]), -1)
 
        # calculate output
        if verbose > VERB_LVL['none']:

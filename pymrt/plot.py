@@ -53,12 +53,11 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
-# from pymrt import get_first_line
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: MatPlotLib-related constants
@@ -258,11 +257,11 @@ def sample2d(
         ax = plt.gca()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = mrb.slice_array(array, axis, index)
+    sample = pmb.slice_array(array, axis, index)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = mrb.minmax(array)
+        array_interval = pmb.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.seismic
@@ -388,11 +387,11 @@ def sample2d_anim(
         ax = plt.gca()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = mrb.slice_array(array, axis, 0)
+    sample = pmb.slice_array(array, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = mrb.minmax(array)
+        array_interval = pmb.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.seismic
@@ -449,7 +448,7 @@ def sample2d_anim(
     plots = []
     for i in range(0, n_frames, step):
         plot = ax.imshow(
-            mrb.slice_array(array, axis, i), cmap=cmap,
+            pmb.slice_array(array, axis, i), cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         if len(plots) <= 0:
             if colorbar_opts is not None:
@@ -530,7 +529,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
+    hist_interval = tuple([pmb.scale(val, out_interval=array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -548,7 +547,7 @@ def histogram1d(
     # plot figure
     if ax is None:
         ax = plt.gca()
-    plot = ax.plot(mrb.midval(bin_edges), hist, style)
+    plot = ax.plot(pmb.midval(bin_edges), hist, style)
     # setup title and labels
     if title:
         ax.set_title(title)
@@ -662,7 +661,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([mrb.scale(val, out_interval=array_interval)
+    hist_interval = tuple([pmb.scale(val, out_interval=array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -695,7 +694,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         plot = ax.plot(
-            mrb.midval(bin_edges), hist, next(style_cycler),
+            pmb.midval(bin_edges), hist, next(style_cycler),
             label=legend)
         plots.append(plot)
     # create the legend for the first line.
@@ -825,6 +824,13 @@ def histogram2d(
         y_edges (np.ndarray): The bin edges on the y-axis.
         plot (matplotlib.pyplot.Figure): The Figure object containing the plot.
     """
+    def _ensure_all_axis(obj, n=2):
+        try:
+            iter(obj[0])
+        except TypeError:
+            obj = (obj,) * n
+        return obj
+
     # setup array range
     if not array_interval:
         if use_separate_interval:
@@ -835,10 +841,8 @@ def histogram2d(
             array_interval = (
                 min(np.nanmin(array1), np.nanmin(array2)),
                 max(np.nanmax(array1), np.nanmax(array2)))
-    try:
-        iter(array_interval[0])
-    except AttributeError:
-        array_interval = (array_interval, array_interval)
+
+    array_interval = _ensure_all_axis(array_interval)
     # setup image aspect ratio
     if not aspect:
         x_axis_size = np.ptp(array_interval[0])
@@ -852,21 +856,11 @@ def histogram2d(
         bins = tuple([int(np.ptp(val) / bin_size + 1)
                       for val in array_interval])
     else:
-        try:
-            iter(bins)
-        except AttributeError:
-            bins = (bins, bins)
+        bins = _ensure_all_axis(bins)
     # setup histogram range
-    try:
-        iter(hist_interval[0])
-    except AttributeError:
-        hist_interval = (hist_interval, hist_interval)
-    hist_interval = list(hist_interval)
-    for i in range(2):
-        hist_interval[i] = tuple(
-            [mrb.scale(val, out_interval=array_interval[i])
-             for val in hist_interval[i]])
-    hist_interval = tuple(hist_interval)
+    hist_interval = _ensure_all_axis(hist_interval)
+    hist_interval = tuple([[pmb.scale(val, out_interval=array_interval[i])
+             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
     hist, x_edges, y_edges = np.histogram2d(
@@ -915,10 +909,10 @@ def histogram2d(
         mask *= (array1 < array_interval[0][1]).astype(bool)
         mask *= (array2 > array_interval[1][0]).astype(bool)
         mask *= (array2 < array_interval[1][1]).astype(bool)
-        stats_dict = mrb.calc_stats(
+        stats_dict = pmb.calc_stats(
             array1[mask] - array2[mask], **stats_opts)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *mrb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
+            *pmb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
@@ -932,7 +926,7 @@ def histogram2d(
         except ValueError:
             pass
         else:
-            print('Mutual Information: {}'.format(mi))
+            print('I: Mutual Information: {}'.format(mi))
     # setup title and labels
     ax.set_title(title.format(bins=bins, scale=scale))
     ax.set_xlabel(labels[0])

@@ -50,11 +50,11 @@ import subprocess  # Subprocess management
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.naming as mrn
-import pymrt.input_output as mrio
-import pymrt.extras as mre
-# import pymrt.geometry as mrg
+import pymrt.base as pmb
+import pymrt.naming as pmn
+import pymrt.input_output as pmio
+import pymrt.extras as pme
+# import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 
 from pymrt import INFO
@@ -77,7 +77,7 @@ def calc_nii(in_dirpath, compress=True, force=False, verbose=D_VERB_LVL):
     out_filepath_list = [os.path.join(out_dirpath, out_filename)
                          for out_filename in out_filename_list]
     if os.path.exists(data_filepath):
-        if mrb.check_redo(in_filepath_list, out_filepath_list, force):
+        if pmb.check_redo(in_filepath_list, out_filepath_list, force):
             # remove files checked by matlab reco to avoid new folders
             matlab_output = os.path.join(out_dirpath, 'bildabs.mat')
             if os.path.exists(matlab_output):
@@ -111,7 +111,7 @@ def postprocess_nii_mag(
     receiver_gain = params_ldr_dict['RG'] / 1000.0  # in Volts
     # correction factor
     factor = num_avgs * receiver_gain
-    mrio.simple_filter_1_1(
+    pmio.simple_filter_1_1(
         in_filepath, out_filepath, (lambda img: img / factor), [])
 
 
@@ -132,7 +132,7 @@ def extract_nii(dirpath, extradir, force, verbose):
     """
     Extract single volumens from calculated NIfTI-1 images.
 
-    TODO: integrate with mrb.check_redo()
+    TODO: integrate with pmb.check_redo()
     """
     mag_filepath = os.path.join(dirpath, 'pdata/1/bildabs.nii.gz')
     phs_filepath = os.path.join(dirpath, 'pdata/1/bildphs.nii.gz')
@@ -145,7 +145,7 @@ def extract_nii(dirpath, extradir, force, verbose):
             print('Target:\t{}'.format(dirpath))
         # ensure proper destination path
         dest_dirpath, scan_id = os.path.split(dirpath)
-        info_dict = mru.parse_filename('')
+        info_dict = pmn.parse_filename('')
         info_dict['scan_num'] = int(scan_id)
         if extradir:
             dest_dirpath = os.path.join(dest_dirpath, extradir)
@@ -168,8 +168,8 @@ def extract_nii(dirpath, extradir, force, verbose):
                 in ['MTyesno', 'MT_superlist_freq', 'MT_superlist_power']]) \
                 and method_ldr_dict['MTyesno'] == 'Yes':
             # MT-specific code
-            old_mag_filepath_list = mrio.split(mag_filepath)
-            old_phs_filepath_list = mrio.split(phs_filepath)
+            old_mag_filepath_list = pmio.split(mag_filepath)
+            old_phs_filepath_list = pmio.split(phs_filepath)
             base_protocol = info_dict['protocol']
             for i, (mt_freq, mt_power, old_mag_filepath, old_phs_filepath) \
                     in enumerate(zip(
@@ -180,12 +180,12 @@ def extract_nii(dirpath, extradir, force, verbose):
                     'id': i,
                     'mtfreq': float(mt_freq),
                     'mtpower': float(mt_power)}
-                info_dict['protocol'] = mru.to_protocol(
+                info_dict['protocol'] = pmn.to_protocol(
                     base_protocol, param_dict)
-                info_dict['img_type'] = mru.TYPE_ID['mag']
-                new_mag_filepath = mru.to_filename(info_dict, dest_dirpath)
-                info_dict['img_type'] = mru.TYPE_ID['phs']
-                new_phs_filepath = mru.to_filename(info_dict, dest_dirpath)
+                info_dict['img_type'] = pmn.TYPE_ID['mag']
+                new_mag_filepath = pmn.to_filename(info_dict, dest_dirpath)
+                info_dict['img_type'] = pmn.TYPE_ID['phs']
+                new_phs_filepath = pmn.to_filename(info_dict, dest_dirpath)
                 postprocess_nii_mag(
                     old_mag_filepath, old_mag_filepath,
                     method_ldr_dict, params_ldr_dict)
@@ -196,16 +196,16 @@ def extract_nii(dirpath, extradir, force, verbose):
                 shutil.move(old_phs_filepath, new_phs_filepath)
         elif 'EffectiveTE' in method_ldr_dict:
             # Multi-Echo-specific code
-            old_mag_filepath_list = mrio.split(mag_filepath)
-            old_phs_filepath_list = mrio.split(phs_filepath)
+            old_mag_filepath_list = pmio.split(mag_filepath)
+            old_phs_filepath_list = pmio.split(phs_filepath)
             for te_val, old_mag_filepath, old_phs_filepath in \
                     zip(method_ldr_dict['EffectiveTE'], old_mag_filepath_list,
                         old_phs_filepath_list):
                 info_dict['te_val'] = te_val
-                info_dict['img_type'] = mru.TYPE_ID['mag']
-                new_mag_filepath = mru.to_filename(info_dict, dest_dirpath)
-                info_dict['img_type'] = mru.TYPE_ID['phs']
-                new_phs_filepath = mru.to_filename(info_dict, dest_dirpath)
+                info_dict['img_type'] = pmn.TYPE_ID['mag']
+                new_mag_filepath = pmn.to_filename(info_dict, dest_dirpath)
+                info_dict['img_type'] = pmn.TYPE_ID['phs']
+                new_phs_filepath = pmn.to_filename(info_dict, dest_dirpath)
                 postprocess_nii_mag(
                     old_mag_filepath, old_mag_filepath,
                     method_ldr_dict, params_ldr_dict)
@@ -216,10 +216,10 @@ def extract_nii(dirpath, extradir, force, verbose):
                 shutil.move(old_phs_filepath, new_phs_filepath)
         else:
             # generic code
-            info_dict['img_type'] = mru.TYPE_ID['mag']
-            new_mag_filepath = mru.to_filename(info_dict, dest_dirpath)
-            info_dict['img_type'] = mru.TYPE_ID['phs']
-            new_phs_filepath = mru.to_filename(info_dict, dest_dirpath)
+            info_dict['img_type'] = pmn.TYPE_ID['mag']
+            new_mag_filepath = pmn.to_filename(info_dict, dest_dirpath)
+            info_dict['img_type'] = pmn.TYPE_ID['phs']
+            new_phs_filepath = pmn.to_filename(info_dict, dest_dirpath)
             old_mag_filepath = mag_filepath[::-1].replace(
                 'bildabs'[::-1], 'bildabs-tmp'[::-1], 1)[::-1]
             old_phs_filepath = phs_filepath[::-1].replace(
@@ -241,9 +241,9 @@ def extract_nifti(dirpath, extradir, force, verbose):
     """
     Walk through folders generated by Bruker scanner to extract NIfTI-1 files.
     """
-    in_dirpath_list = mrb.listdir(dirpath, None)
+    in_dirpath_list = pmb.listdir(dirpath, None)
     for in_dirpath in in_dirpath_list:
-        in_subdirpath_list = mrb.listdir(in_dirpath, None)
+        in_subdirpath_list = pmb.listdir(in_dirpath, None)
         for in_subdirpath in in_subdirpath_list:
             if verbose >= VERB_LVL['medium']:
                 print('Folder:\t{}'.format(in_subdirpath))

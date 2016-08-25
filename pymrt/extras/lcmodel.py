@@ -48,11 +48,11 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
-# import pymrt.naming as mrn
-# import pymrt.input_output as mrio
-# import pymrt.geometry as mrg
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 from pymrt import elapsed, print_elapsed
 
@@ -217,7 +217,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            mrb.is_number(item)
+                            pmb.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:

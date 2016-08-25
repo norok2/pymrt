@@ -33,10 +33,10 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as mrb
-# import pymrt.naming as mrn
-# import pymrt.input_output as mrio
-# import pymrt.geometry as mrg
+# import pymrt.base as pmb
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.geometry as pmg
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg

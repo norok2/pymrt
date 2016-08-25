@@ -48,13 +48,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 # from pymrt import msg, dbg
-# from pymrt import get_first_line
 
 
 # ======================================================================
@@ -106,7 +105,7 @@ def tabular(labels, rows, label_filters, row_filters, format_dict):
     # separator
     output_str += '\hline\n'
     # write data
-    seps = mrb.accumulate(grouping) if grouping else []
+    seps = pmb.accumulate(grouping) if grouping else []
     for i, row in enumerate(rows):
         for j, col in enumerate(row):
             if row_filters:

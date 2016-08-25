@@ -65,29 +65,18 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 # from numba import jit
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
-# import pymrt.geometry as mrg
-# import pymrt.plot as mrp
-# import pymrt.segmentation as mrs
+# import pymrt.geometry as pmg
+# import pymrt.plot as pmp
+# import pymrt.segmentation as pms
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 # from pymrt import msg, dbg
 from pymrt.base import elapsed, print_elapsed
 
-# from pymrt import get_first_line
-
-
-# ======================================================================
-# Proton Gyromagnetic Ratio
-# rad/s/T
-GAMMA = \
-    sp.constants.physical_constants['proton gyromag. ratio'][0]
-# Hz/T
-GAMMA_BAR = 1.0e6 * \
-            sp.constants.physical_constants[
-                'proton gyromag. ratio over 2 pi'][0]
+from pymrt.constants import GAMMA, GAMMA_BAR
 
 # Magnetic Field Strength
 B0 = 7.0  # T
@@ -114,7 +103,7 @@ def superlorentz(x):
 # todo: check that the sampling rate is appropriate: 1024 is usually enough
 # _SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 1024)
 # _SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-# mrb.elapsed('Superlorentz Approx.')
+# pmb.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -263,7 +252,7 @@ def _shape_from_file(
 
     """
     tmp_dirpaths = [
-        os.path.realpath(dirpath),
+        pmb.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
     ]
     for tmp_dirpath in tmp_dirpaths:
@@ -271,7 +260,7 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + mrb.add_extsep(mrb.EXT['tab']))
+        dirpath, filename + pmb.add_extsep(pmb.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
@@ -375,7 +364,7 @@ def _propagator_sum_order1(
     l_op_sum = sum(l_op_list)
     # pseudo-first-order correction
     comm_list = [
-        mrb.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
+        pmb.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
         for i in range(len(l_op_list[:-1]))]
     comm_sum = sum(comm_list)
     return scipy.linalg.expm(-(l_op_sum + comm_sum))
@@ -468,7 +457,7 @@ def _propagator_poly(
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -519,7 +508,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -566,7 +555,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -604,7 +593,7 @@ def _propagator_interp(
                     (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
                     method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -648,7 +637,7 @@ def _propagator_linear(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -692,7 +681,7 @@ def _propagator_linear(
                      np.abs(pulse_exc.w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrb.mdot(*p_op_list[::-1])
+        p_op = pmb.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -728,7 +717,7 @@ def _propagator_reduced(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return mrb.mdot(*p_op_list[::-1])
+    return pmb.mdot(*p_op_list[::-1])
 
 
 # ======================================================================
@@ -1165,7 +1154,7 @@ class PulseExc:
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self.w1_arr]
-            p_op = mrb.mdot(*p_op_list[::-1])
+            p_op = pmb.mdot(*p_op_list[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
@@ -1177,7 +1166,7 @@ class PulseExc:
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self.w1_arr]
-                p_op = mrb.mdot(*p_op_list[::-1])
+                p_op = pmb.mdot(*p_op_list[::-1])
         return p_op
 
     def __repr__(self):
@@ -1274,7 +1263,7 @@ class PulseSequence:
     def __init__(
             self,
             w_c=None,
-            gamma=GAMMA,
+            gamma=GAMMA['1H'],
             b0=B0,
             *args,
             **kwargs):
@@ -1289,7 +1278,7 @@ class PulseSequence:
     def signal(
             self,
             spin_model):
-        signal = mrb.mdot(
+        signal = pmb.mdot(
             spin_model.det, self.propagator(spin_model), spin_model.m_eq)
         return np.abs(signal)
 
@@ -1327,7 +1316,7 @@ class PulseList(PulseSequence):
         propagators = [
             pulse.propagator(spin_model, *args, **kwargs)
             for pulse in self.pulses]
-        return mrb.mdot(*propagators[::-1])
+        return pmb.mdot(*propagators[::-1])
 
 
 # ======================================================================
@@ -1420,6 +1409,6 @@ class MtFlash(PulseTrain):
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-    mrb.print_elapsed()
+    pmb.print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

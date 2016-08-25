@@ -51,7 +51,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.optimize
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 import pymrt.sequences.mp2rage as mp2rage
 
 from pymrt import INFO
@@ -145,7 +145,7 @@ def ui_plot(
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
         if use_dicom_INTERVAL:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
-                mrb.scale(
+                pmb.scale(
                     ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val

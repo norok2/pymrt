@@ -54,16 +54,15 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.geometry as mrg
-import pymrt.plot as mrp
-import pymrt.segmentation as mrs
+import pymrt.base as pmb
+import pymrt.geometry as pmg
+import pymrt.plot as pmp
+import pymrt.segmentation as pms
 
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 # from pymrt import msg, dbg
-# from pymrt import get_first_line
 
 # ======================================================================
 # :: Custom defined constants
@@ -466,8 +465,8 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = mrb.change_ext(
-            os.path.basename(in_filepath), '', mrb.EXT['niz'])
+        out_basename = pmb.change_ext(
+            os.path.basename(in_filepath), '', pmb.EXT['niz'])
     out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
@@ -479,7 +478,7 @@ def split(
         i_str = str(i).zfill(len(str(len(img_list))))
         out_filepath = os.path.join(
             out_dirpath,
-            mrb.change_ext(out_basename + '-' + i_str, mrb.EXT['niz'], ''))
+            pmb.change_ext(out_basename + '-' + i_str, pmb.EXT['niz'], ''))
         save(out_filepath, image, obj.get_affine())
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -513,7 +512,7 @@ def zoom(
     """
 
     def _zoom(array, zoom, interp_order, extra_dim, fill_dim):
-        zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom, shape = pmg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -554,8 +553,8 @@ def resample(
 
     def _zoom(
             array, new_shape, aspect, interp_order, extra_dim, fill_dim):
-        zoom = mrg.shape2zoom(array.shape, new_shape, aspect)
-        zoom, shape = mrg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom = pmg.shape2zoom(array.shape, new_shape, aspect)
+        zoom, shape = pmg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -588,7 +587,7 @@ def frame(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrg.frame, border, background,
+        in_filepath, out_filepath, pmg.frame, border, background,
         use_longest)
 
 
@@ -612,7 +611,7 @@ def reframe(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrg.reframe, new_shape, background)
+        in_filepath, out_filepath, pmg.reframe, new_shape, background)
 
 
 # ======================================================================
@@ -648,7 +647,7 @@ def common_sampling(
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
         for i, shape in enumerate(shape_list):
             shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = mrb.lcm if lossless else max
+        combiner = pmb.lcm if lossless else max
         new_shape = [
             combiner(*list(shape_arr[:, i]))
             for i in range(len(new_shape))]
@@ -766,7 +765,7 @@ def mask_threshold(
     def _img_mask_threshold(array, *args, **kwargs):
         return mrs.mask_threshold(array, *args, **kwargs).astype(float)
 
-    kw_params = mrb.set_keyword_parameters(mrs.mask_threshold, locals())
+    kw_params = pmb.set_keyword_parameters(mrs.mask_threshold, locals())
     simple_filter_1_1(in_filepath, out_filepath, _img_mask_threshold,
                       **kw_params)
 
@@ -855,13 +854,13 @@ def calc_stats(
     #         else:
     #             title = os.path.basename(img_filepath)
     #     print(save_filepath)
-    #     stats_dict = mrb.calc_stats(
+    #     stats_dict = pmb.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
     # else:
-    #     stats_dict = mrb.calc_stats(
+    #     stats_dict = pmb.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
     #         compact)
-    return mrb.calc_stats(img[mask], *args, **kwargs)
+    return pmb.calc_stats(img[mask], *args, **kwargs)
 
 
 # ======================================================================
@@ -912,7 +911,7 @@ def plot_sample2d(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    sample, plot = mrp.sample2d(img, *args, **kwargs)
+    sample, plot = pmp.sample2d(img, *args, **kwargs)
     return sample, plot
 
 
@@ -943,7 +942,7 @@ def plot_sample2d_anim(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    mov = mrp.sample2d_anim(img, *args, **kwargs)
+    mov = pmp.sample2d_anim(img, *args, **kwargs)
     return mov
 
 
@@ -977,7 +976,7 @@ def plot_histogram1d(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    result = mrp.histogram1d(img[mask], *args, **kwargs)
+    result = pmp.histogram1d(img[mask], *args, **kwargs)
     return result
 
 
@@ -1014,7 +1013,7 @@ def plot_histogram1d_list(
         obj = nib.load(in_filepath)
         img = obj.get_data()
         img_list.append(img[mask])
-    hist, bin_edges, plot = mrp.histogram1d_list(img_list, *args, **kwargs)
+    hist, bin_edges, plot = pmp.histogram1d_list(img_list, *args, **kwargs)
     return hist, bin_edges, plot
 
 
@@ -1060,7 +1059,7 @@ def plot_histogram2d(
     else:
         mask2 = slice(None)
     hist2d, x_edges, y_edges, plot = \
-        mrp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
+        pmp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
 
     return hist2d, x_edges, y_edges, plot
 

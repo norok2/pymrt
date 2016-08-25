@@ -64,17 +64,17 @@ import scipy.misc  # SciPy: Miscellaneous routines
 # import sympy.mpmath  # SymPy: Function approximation
 
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.naming as mrn
-import pymrt.geometry as mrg
-import pymrt.plot as mrp
-import pymrt.registration as mrr
-import pymrt.segmentation as mrs
-import pymrt.computation as mrc
-import pymrt.correlation as mrl
-import pymrt.input_output as mrio
-import pymrt.sequences as mrq
-import pymrt.extras as mre
+import pymrt.base as pmb
+import pymrt.naming as pmn
+import pymrt.geometry as pmg
+import pymrt.plot as pmp
+import pymrt.registration as pmr
+import pymrt.segmentation as pms
+import pymrt.computation as pmc
+import pymrt.correlation as pml
+import pymrt.input_output as pmio
+import pymrt.sequences as pmq
+import pymrt.extras as pme
 
 from pymrt.sequences import mp2rage
 from pymrt.sequences import matrix_algebra

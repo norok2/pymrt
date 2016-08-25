@@ -52,12 +52,11 @@ import pyparsing as pp  # A Python Parsing Module
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 # from pymrt import msg, dbg
-# from pymrt import get_first_line
 
 # ======================================================================
 LIMITS = {
@@ -236,9 +235,9 @@ def _read_protocol(text):
                     val = prot[key]
                 else:
                     val = []
-                val.append((indexes, mrb.auto_convert(value, '""', '""')))
+                val.append((indexes, pmb.auto_convert(value, '""', '""')))
             else:
-                val = mrb.auto_convert(value, '""', '""')
+                val = pmb.auto_convert(value, '""', '""')
             if key:
                 prot[key] = val
     return prot
@@ -307,7 +306,7 @@ def _guess_version(file_stream):
 def _guess_header_type(text):
     if text.startswith('<XProtocol'):
         header_type = 'x_prot'
-    elif mrb.has_decorator(text, *PROT['prot_decor']):
+    elif pmb.has_decorator(text, *PROT['prot_decor']):
         header_type = 'prot'
     else:
         header_type = None
