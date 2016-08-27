@@ -404,7 +404,7 @@ def read(
 def test():
     filepath = '/media/Data/tmp/' + \
                'meas_MID389_gre_qmri_0_6mm_FA30_MTOff_LowRes_FID36111.dat'
-    # twix = read(filepath)
+    # twix = read_output(filepath)
     # with open('/media/Data/tmp/hdr_Meas.txt', 'r') as f:
     with open('/media/Data/tmp/hdr_Meas.txt', 'r') as f:
         t = f.read()
@@ -414,7 +414,7 @@ def test():
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
     test()
-    end_time = time.time()
-    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+    end_time = datetime.datetime.now()
+    print('ExecTime: {}'.format(end_time - begin_time))

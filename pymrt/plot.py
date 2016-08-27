@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-pymrt: useful basic utilities.
-"""
+"""pymrt: useful basic utilities."""
 
 # ======================================================================
 # :: Future Imports
@@ -169,6 +167,7 @@ def quick_2d(array):
 
 def quick_3d(array):
     """
+    TODO: DOCSTRING.
 
     Args:
         array:
@@ -804,7 +803,7 @@ def histogram2d(
         title (str): The title of the plot.
         labels (tuple[str]): The x- and y- labels.
         text_list (tuple[dict]): The keyword arguments defining texts.
-        cmap (matplotlib.cm): The colormap for the histogram.
+        cmap (mpl.cm): The colormap for the histogram.
         bisector (str|None): If not None, show the first bisector.
             The line style must be specified in the string format,
             as specified by matplotlib specifications.
@@ -848,7 +847,7 @@ def histogram2d(
             aspect = 1.0
     # setup bins
     if not bins:
-        bins = tuple([int(mrb.interval_size(val) / bin_size + 1)
+        bins = tuple([int(np.ptp(val) / bin_size + 1)
                       for val in array_interval])
     else:
         try:

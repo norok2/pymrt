@@ -55,7 +55,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt.base as mrb
-import utils as mru
+import pymrt.utils as mru
 import pymrt.input_output as mrio
 
 # from dcmpi.lib.common import ID
@@ -405,22 +405,22 @@ def rate_to_time(
 
 
 # ======================================================================
-def fix_phase_interval(array):
+def fix_phase_interval(arr):
     """
     Ensure that the range of values is interpreted as valid phase information.
 
     This is useful for DICOM-converted images (without post-processing).
 
     Args:
-        array (np.ndarray): Array to be processed.
+        arr (np.ndarray): Array to be processed.
 
     Returns:
         array (np.ndarray): An array scaled to (-pi,pi).
     """
     # correct phase value range (useful for DICOM-converted images)
-    if np.ptp(array) > 2.0 * np.pi:
-        array = mrb.scale(array, mrb.minmax(array), (-np.pi, np.pi))
-    return array
+    if np.ptp(arr) > 2.0 * np.pi:
+        arr = mrb.scale(arr, mrb.minmax(arr), (-np.pi, np.pi))
+    return arr
 
 
 # ======================================================================

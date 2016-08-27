@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: read files with a JCAMP-DX-like structure.
+pymrt: read_output files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """
@@ -18,7 +18,7 @@ from __future__ import unicode_literals
 # import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import time  # Time access and conversions
+# import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
@@ -185,7 +185,7 @@ def test():
 if __name__ == '__main__':
     print(__doc__)
     # time the tests
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
     test()
-    end_time = time.time()
-    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+    end_time = datetime.datetime.now()
+    print('ExecTime: {}'.format(end_time - begin_time))

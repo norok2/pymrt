@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Test superlorentzian approximation
+Test superlorentzian approximation.
 """
 
 # ======================================================================
@@ -16,8 +16,8 @@ from __future__ import unicode_literals
 # import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import cmath  # Mathematical functions for complex numbers
-import time  # Time access and conversions
+# import cmath  # Mathematical functions for complex numbers
+# import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
@@ -115,10 +115,10 @@ def optimize_sampling():
         for max_sel in max_sel_list:
             for skip_sel in skip_sel_list:
                 selection = slice(min_sel, max_sel, skip_sel)
-                begin_time = time.time()
+                begin_time = datetime.datetime.now()
                 errors, num_points = test_approx(
                         lambda x: np.interp(np.abs(x), x_i[selection], y_i[selection]))
-                end_time = time.time()
+                end_time = datetime.datetime.now()
                 print('{:.3f}\t{:.3f}\t{:4d}\t{}\t{:.8e}'.format(
                         np.log10(x_i[min_sel]),
                         np.log10(x_i[max_sel]),
@@ -166,9 +166,9 @@ def optimize_interpolation():
 
     fig = plt.figure()
     for name, func in approx_func_list:
-        begin_time = time.time()
+        begin_time = datetime.datetime.now()
         errors, num_points = test_approx(func)
-        end_time = time.time()
+        end_time = datetime.datetime.now()
         print('{:20s}\t{}\t{:.8e}'.format(
                 name,
                 datetime.timedelta(0, end_time - begin_time),

@@ -30,14 +30,12 @@ DB_z(r) = DB_z(r) / B0_z
 [ref: J.P. Marques, R. Bowtell, Concepts in MR B 25B (2005) 65-78]
 """
 
-
 # ======================================================================
 # :: Future Imports
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 __version__ = '0.0.0.13'
 # $Source$
@@ -54,13 +52,12 @@ COPYRIGHT = 'Copyright (C) ' + str(DATE_INFO['year'])
 # first non-empty line of __doc__
 DOC_FIRSTLINE = [line for line in __doc__.splitlines() if line][0]
 
-
 # ======================================================================
 # :: Python Standard Library Imports
 # import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import time  # Time access and conversions
+# import time  # Time access and conversions
 import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 import collections  # High-performance container datatypes
@@ -91,12 +88,9 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import mr_lib.base as mrb
-# import mr_lib.utils as mru
-import mr_lib.nifti as mrn
-# import mr_lib.geom_mask as mrgm
-# import mr_lib.mp2rage as mp2rage
-
+# import pymrt.base as mrb
+# import pymrt.utils as mru
+import pymrt.input_output as mrio
 
 # ======================================================================
 # :: supported verbosity levels (level 4 skipped on purpose)
@@ -143,10 +137,10 @@ def suscept2fieldshift(
     k_range = [slice(-k_size / 2.0, +k_size / 2.0) for k_size in chi_k.shape]
     kk_x, kk_y, kk_z = np.ogrid[k_range]
     dipole_kernel_k = (1.0 / 3.0 -
-        (kk_z * np.cos(theta) * np.cos(phi)
-        - kk_y * np.sin(theta) * np.cos(phi)
-        + kk_x * np.sin(phi)) ** 2 /
-        (kk_x ** 2 + kk_y ** 2 + kk_z ** 2))
+                       (kk_z * np.cos(theta) * np.cos(phi)
+                        - kk_y * np.sin(theta) * np.cos(phi)
+                        + kk_x * np.sin(phi)) ** 2 /
+                       (kk_x ** 2 + kk_y ** 2 + kk_z ** 2))
     # fix singularity for |k|^2 == 0 with DBdz(k) = B0z * chi(k) / 3
     singularity = np.isnan(dipole_kernel_k)
     dipole_kernel_k[singularity] = 1.0 / 3.0
@@ -196,23 +190,23 @@ def handle_arg():
     arg_parser.add_argument(
         '-b', '--b0z', metavar='B0_z',
         type=float, default=d_b0,
-        help='set the magnetic field B0 along z-axis in Tesla [%(default)s]',)
+        help='set the magnetic field B0 along z-axis in Tesla [%(default)s]', )
     arg_parser.add_argument(
         '-t', '--theta', metavar='TH',
         type=float, default=d_theta,
-        help='set angle of 1st rotation (along x-axis) in deg [%(default)s]',)
+        help='set angle of 1st rotation (along x-axis) in deg [%(default)s]', )
     arg_parser.add_argument(
         '-p', '--phi', metavar='PH',
         type=float, default=d_phi,
-        help='set angle of 2nd rotation (along y-axis) in deg [%(default)s]',)
+        help='set angle of 2nd rotation (along y-axis) in deg [%(default)s]', )
     arg_parser.add_argument(
         '-i', '--input', metavar='FILE',
         default=d_input_file,
-        help='set input file [%(default)s]',)
+        help='set input file [%(default)s]', )
     arg_parser.add_argument(
         '-o', '--output', metavar='FILE',
         default=d_output_file,
-        help='set output file [%(default)s]',)
+        help='set output file [%(default)s]', )
     return arg_parser
 
 
@@ -225,10 +219,10 @@ if __name__ == '__main__':
     if ARGS.verbose >= VERB_LVL['debug']:
         print(ARGS)
     # perform calculation
-    begin_time = time.time()
-    mrn.simple_filter(
-        ARGS.input, ARGS.output,
-        suscept2fieldshift, [ARGS.b0z, ARGS.theta, ARGS.phi])
-    end_time = time.time()
+    begin_time = datetime.datetime.now()
+    # mrio.simple_filter_1_1(
+    #     ARGS.input, ARGS.output,
+    #     suscept2fieldshift, [ARGS.b0z, ARGS.theta, ARGS.phi])
+    end_time = datetime.datetime.now()
     if ARGS.verbose > VERB_LVL['none']:
-        print('TotTime:\t', datetime.timedelta(0, end_time - begin_time))
+        print('ExecTime: {}'.format(end_time - begin_time))

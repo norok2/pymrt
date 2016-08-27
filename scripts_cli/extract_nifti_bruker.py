@@ -51,7 +51,7 @@ import subprocess  # Subprocess management
 
 # :: Local Imports
 import pymrt.base as mrb
-import utils as mru
+import pymrt.utils as mru
 import pymrt.input_output as mrio
 import pymrt.extras as mre
 # import pymrt.geometry as mrg
@@ -310,11 +310,11 @@ def main():
         print('II:', 'Parsed Arguments:', args)
     if args.verbose > VERB_LVL['low']:
         print(__doc__)
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
     extract_nifti(args.dir, args.extradir, args.force, args.verbose)
-    end_time = time.time()
+    end_time = datetime.datetime.now()
     if args.verbose > VERB_LVL['low']:
-        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+        print('ExecTime: {}'.format(end_time - begin_time))
 
 
 # ======================================================================

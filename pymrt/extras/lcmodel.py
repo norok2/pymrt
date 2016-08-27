@@ -1,7 +1,7 @@
 #!/usr/
 # -*- coding: utf-8 -*-
 """
-pymrt: read files from LCModel.
+pymrt: read_output files from LCModel.
 """
 
 # ======================================================================
@@ -21,6 +21,7 @@ import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 # import argparse  # Parser for command-line options, arguments and subcommands
+import re  # Regular expression operations
 # import itertools  # Functions creating iterators for efficient looping
 # import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
@@ -47,26 +48,28 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as mrb
+import pymrt.base as mrb
+
 # import pymrt.utils as mru
 # import pymrt.input_output as mrio
 # import pymrt.geometry as mrg
 # from pymrt.sequences import mp2rage
+from pymrt import elapsed, print_elapsed
 
 # ======================================================================
 # :: Header information
-HDR = {
+HDR_INPUT = {
+    'section_id': '$',
+    'section_end': 'END',
+    'num': {'section': 'SEQPAR', 'label': 'NumberOfPoints'}
+}
+
+HDR_OUTPUT = {
     'metabolites': 'Conc.  %SD   /Cre   Metabolite',
     'data_cs': 'points on ppm-axis',  # chemical shift in ppm
     'data_s': 'phased data points follow',
     'data_fit': 'points of the fit to the data follow',
     'data_bg': 'background values follow',
-
-    'extra': {
-        'snr': 'S/N',
-        'fwhm': 'FWHM',
-        'echo_time': 'echot',
-    },
 }
 
 
@@ -93,77 +96,133 @@ def percent_to_float(text):
 
 
 # ======================================================================
-def read(
-        filepath,
-        extras=('snr', 'fwhm')):
+def read_input(
+        filepath):
     """
-    Read LCModel results text file.
+    Read LCModel input files (without extension).
 
     Args:
-        filepath (str): The filepath to read
-        extras (tuple[str]): The extra information to extract
+        filepath (str|unicode): The input filepath.
 
     Returns:
-        lcmodel (dict): The extracted information.
-             The concentration information are stored in `metabolites`.
+        content (dict): The extracted information.
+            The input data is stored in `data`.
+            Any extra information is stored into the corresponding sections.
+    """
+    content = {}
+    with open(filepath, 'r') as file:
+        i = 0
+        section = 'base'
+        for line in file:
+            if HDR_INPUT['section_id'] in line:
+                section = line.strip().strip(HDR_INPUT['section_id'])
+                if section == HDR_INPUT['section_end']:
+                    section = 'base'
+                else:
+                    content[section] = {}
+            try:
+                tokens = [item.strip() for item in line.split('=')]
+                label = tokens[0]
+                value = ' '.join(tokens[1:])
+                if section == HDR_INPUT['num']['section'] and \
+                                label == HDR_INPUT['num']['label']:
+                    content['data'] = np.zeros((int(value), 2))
+            except ValueError:
+                pass
+            else:
+                if section and label and value:
+                    content[section][label] = value
+            try:
+                content['data'][i, :] = [float(val) for val in line.split()]
+            except (ValueError, TypeError):
+                pass
+            else:
+                i += 1
+    return content
+
+
+# ======================================================================
+def read_output(
+        filepath):
+    """
+    Read LCModel output files (with extension `.coord` and `.txt`).
+
+    Args:
+        filepath (str): The filepath to read_output
+
+    Returns:
+        content (dict): The extracted information.
+             The concentrations and any extra infos are stored respectively in:
+              - `metabolites`
+              - `extra`
              The spectral data are stored respectively in:
               - `data_cs`: the chemical shift in ppm (the x-axis);
               - `data_s`: the spectrum in arb.units (the y-axis);
               - `data_fit`: the spectrum obtained from the fitting in arb.units;
               - `data_bg`: the background of the spectrum  in arb.units.
-             The extra information is stored in the corresponding entries.
     """
-    lcmodel = {}
+    content = {}
     with open(filepath, 'r') as file:
-        # read file until it finds the concentrations labels
+        # read_output file until it finds the concentrations labels
         for line in file:
-            if HDR['metabolites'] in line:
-                lcmodel['metabolites'] = {}
+            if HDR_OUTPUT['metabolites'] in line:
+                content['metabolites'] = {}
                 break
-        # read concentrations
+        # read_output concentrations
         for line in file:
             try:
                 if line.strip():
                     val, err, over_cre, name = line.split()
-                    lcmodel['metabolites'][name] = {
+                    content['metabolites'][name] = {
                         'val': float(val),
                         'percent_err': percent_to_float(err),
                         'over_cre': float(over_cre)}
             except ValueError:
                 break
 
-        # read file until it finds the first spectra labels
+        # read_output file until it finds the first spectra labels
         labels = ['data_cs', 'data_s', 'data_fit', 'data_bg']
         for label in labels:
             vals = []
             if label == labels[0]:
                 for line in file:
-                    if HDR[label] in line:
+                    if HDR_OUTPUT[label] in line:
                         break
             for line in file:
                 try:
                     vals += [float(val) for val in line.split()]
                 except ValueError:
-                    lcmodel[label] = np.array(vals)
+                    content[label] = np.array(vals)
                     break
 
-        # read extra information
+        # todo: improve support for all output
+        # read_output extra information
         file.seek(0)
         for line in file:
-            for extra in extras:
-                if extra in HDR['extra'] and HDR['extra'][extra] in line:
-                    tokens = line.split()
-                    i = 0
-                    for i, token in enumerate(tokens):
-                        if token == HDR['extra'][extra]:
-                            break
-                    for token in tokens[i:]:
-                        try:
-                            value = float(token)
-                        except ValueError:
-                            continue
-                    lcmodel[extra] = value if value else None
-    return lcmodel
+            if '=' in line or ':' in line or ',' in line:
+                if 'extra' not in content:
+                    content['extra'] = {}
+                label = None
+                items = re.split(r'=| {2}|, |: ', line)
+                for item in items:
+                    item = item.strip()
+                    if item:
+                        while item.count('\'') % 2 != 0:
+                            item += file.readline().strip()
+                        if not label:
+                            label = item.strip()
+                        if label not in content['extra']:
+                            content['extra'][label] = []
+                        add_item = \
+                            label != item and \
+                            label in content['extra'] and \
+                            not content['extra'][label] or \
+                            mrb.is_number(item)
+                        if add_item:
+                            content['extra'][label].append(item)
+                        else:
+                            label = item.strip()
+    return content
 
 
 # ======================================================================
@@ -180,7 +239,7 @@ def test():
     test_filepath_list = []  # 'test/file1.coord']
     try:
         for test_filepath in test_filepath_list:
-            read(test_filepath)
+            read_output(test_filepath)
     except Exception as exception:  # This has to catch all exceptions.
         print(exception)
         print('Test not passed.')
@@ -192,21 +251,34 @@ def test():
 if __name__ == '__main__':
     print(__doc__)
 
-
-    # time the extra tests
-    begin_time = time.time()
     test()
-    end_time = time.time()
-    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
 
+    # todo: move this test to unittest
     s = '/scr/beryllium1/mr16/RM/lcmLONGc_128avg' \
         '/LONGc_128avg160419_RL6T_MET20_Step01_WAT.txt'
 
-    d = read(s)
-    print(d)
-    # import matplotlib.pyplot as plt
-    # plt.figure()
-    # plt.plot(d['data_cs'], d['data_s'], '-b')
-    # plt.plot(d['data_cs'], d['data_fit'], '-r')
-    # plt.plot(d['data_cs'], d['data_bg'], '-y')
-    # plt.show()
+    d = read_output(s)
+    for k, v in sorted(d['metabolites'].items()):
+        print('{} : {}'.format(k, v))
+    print()
+
+    for k, v in sorted(d['extra'].items()):
+        print('{} : {}'.format(k, v))
+    print()
+    if 'data_cs' in d:
+        import matplotlib.pyplot as plt
+
+        plt.figure()
+        plt.plot(d['data_cs'], d['data_s'], '-b')
+        plt.plot(d['data_cs'], d['data_fit'], '-r')
+        plt.plot(d['data_cs'], d['data_bg'], '-y')
+        plt.show()
+
+    s = '/scr/beryllium1/mr16/RM/lcmLONGc_112avg' \
+        '/LONGc_112avg160419_RL6T_MET20_Step01'
+    c = read_input(s)
+    print(c['data'].shape, c)
+
+    elapsed('test lcmodel i/o')
+    print_elapsed()
+    print()

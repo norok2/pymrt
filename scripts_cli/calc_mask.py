@@ -161,7 +161,7 @@ def main():
         print('II:', 'Parsed Arguments:', args)
     if args.verbose > VERB_LVL['low']:
         print(__doc__)
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
 
     if args.output and args.verbose >= VERB_LVL['none']:
         args.output = os.path.dirname(os.path.realpath(args.output))
@@ -180,9 +180,9 @@ def main():
         args.force,
         args.verbose)
 
-    end_time = time.time()
+    end_time = datetime.datetime.now()
     if args.verbose > VERB_LVL['low']:
-        print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+        print('ExecTime: {}'.format(end_time - begin_time))
 
 
 # ======================================================================

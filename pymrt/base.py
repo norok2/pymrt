@@ -14,16 +14,17 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-# import sys  # System-specific parameters and functions
+import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
 import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command
+# import re  # Regular expression operations
 import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 import fractions  # Rational numbers
@@ -33,6 +34,7 @@ import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
 # import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
+import shlex  # Simple lexical analysis
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -53,10 +55,10 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
-from pymrt import _EVENTS
+from pymrt import INFO
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 # ======================================================================
 # :: Custom defined constants
@@ -205,7 +207,7 @@ def accumulate(items, func=lambda x, y: x + y):
     Cumulatively apply the specified function to the elements of the list.
 
     Args:
-        items (list): The list to process.
+        items (iterable): The items to process.
         func (callable): func(x,y) -> z
             The function applied cumulatively to the first n items of the list.
             Defaults to cumulative sum.
@@ -224,7 +226,8 @@ def accumulate(items, func=lambda x, y: x + y):
         [1, 2, 6, 24, 120, 720, 5040, 40320]
     """
     return [
-        functools.reduce(func, items[:idx + 1]) for idx in range(len(items))]
+        functools.reduce(func, list(items)[:idx + 1])
+        for idx in range(len(items))]
 
 
 # ======================================================================
@@ -329,13 +332,16 @@ def set_keyword_parameters(
 # ======================================================================
 def mdot(*arrs):
     """
-    Cumulative application of `numpy.dot` operation.
+    Cumulative application of multiple `numpy.dot` operation.
 
     Args:
-        arrs (tuple[ndarray]): List of input arrays.
+        *arrs (tuple[ndarray]): Tuple of input arrays.
 
     Returns:
         arr (np.ndarray): The result of the tensor product.
+
+    Examples:
+        >>>
     """
     arr = arrs[0]
     for item in arrs[1:]:
@@ -353,6 +359,9 @@ def ndot(arr, dim=-1, step=1):
 
     Returns:
         prod (np.ndarray): The result of the tensor product.
+
+    Examples:
+        >>>
     """
     if dim < 0:
         dim += arr.ndim
@@ -455,24 +464,27 @@ def walk2(
 
 
 # ======================================================================
-def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
+def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
     """
     Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str|unicode|list[str]): Command to execute.
-        use_pipes (bool): Get stdout and stderr streams from the process.
+        cmd (str|unicode): Command to execute.
+        get_pipes (bool): Get stdout and stderr streams from the process.
+            If True, the program flow is halted until the process is completed.
+            Otherwise, the process is spawn in background, continuing execution.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        p_stdout (str|unicode|None): if use_pipes the stdout of the process.
-        p_stderr (str|unicode|None): if use_pipes the stderr of the process.
+        ret_code (str): if get_pipes, the return code of the command.
+        p_stdout (str|unicode|None): if get_pipes, the stdout of the process.
+        p_stderr (str|unicode|None): if get_pipes, the stderr of the process.
     """
-    p_stdout, p_stderr = None, None
+    p_stdout, p_stderr, ret_code = None, None, None
     # ensure cmd is a list of strings
     try:
-        cmd = cmd.split()
+        cmd = shlex.split(cmd)
     except AttributeError:
         pass
 
@@ -482,34 +494,30 @@ def execute(cmd, use_pipes=True, dry=False, verbose=D_VERB_LVL):
         if verbose >= VERB_LVL['medium']:
             print('>> {}'.format(' '.join(cmd)))
 
-        if use_pipes:
-            # # :: deprecated (since Python 2.4)
-            # proc = os.popen3(cmd)
-            # p_stdout, p_stderr = [item.read() for item in proc[1:]]
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False, close_fds=True)
 
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True, close_fds=True)
+        if get_pipes:
             # handle stdout
             p_stdout = ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.read(1)
+                stdout_buffer = proc.stdout.readline().decode('utf8')
                 p_stdout += stdout_buffer
                 if verbose >= VERB_LVL['medium']:
                     print(stdout_buffer, end='')
+                    sys.stdout.flush()
             # handle stderr
-            p_stderr = proc.stderr.read()
+            p_stderr = proc.stderr.read().decode('utf8')
             if verbose >= VERB_LVL['high']:
                 print(p_stderr)
-        else:
-            # # :: deprecated (since Python 2.4)
-            # os.system(cmd)
+            # finally get the return code
+            ret_code = proc.returncode
 
-            subprocess.call(cmd, shell=True)
-    return p_stdout, p_stderr
+    return p_stdout, p_stderr, ret_code
 
 
 # ======================================================================
@@ -1110,8 +1118,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (list[str]): Filepaths used as input of computation.
-        out_filepaths (list[str]): Filepaths used as output of computation.
+        in_filepaths (list[str|unicode]): Input filepaths for computation.
+        out_filepaths (list[str|unicode]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -1122,8 +1130,11 @@ def check_redo(
         IOError: If any of the input files do not exist.
     """
     # todo: include output_dir autocreation
+    # check if input is not empty
     if not in_filepaths:
         raise IndexError('List of input files is empty.')
+
+    # check if input exists
     for in_filepath in in_filepaths:
         if not os.path.exists(in_filepath):
             raise IOError('Input file does not exists.')
@@ -1254,7 +1265,7 @@ def scale(
     Linear convert the value from input interval to output interval
 
     Args:
-        val (float): Value to convert
+        val (float|np.ndarray): Value(s) to convert
         in_interval (float,float): Interval of the input value
         out_interval (float,float): Interval of the output value.
 
@@ -1776,146 +1787,6 @@ def curve_fit(args):
             np.tile(err_val, n_fit_par), \
             np.tile(err_val, (n_fit_par, n_fit_par))
     return result
-
-
-# ======================================================================
-def elapsed(
-        name,
-        time_point=None,
-        events=_EVENTS):
-    """
-    Append a named event point to the events list.
-
-    Args:
-        name (basestring): The name of the event point
-        time_point (float): The time in seconds since the epoch
-        events (list[(basestring,time)]): A list of named event time points.
-            Each event is a 2-tuple: (label, time)
-
-    Returns:
-        None
-    """
-    if not time_point:
-        time_point = time.time()
-    events.append((name, time_point))
-
-
-# ======================================================================
-def msg(
-        text,
-        verb_lvl,
-        verb_threshold=D_VERB_LVL,
-        fmt=None,
-        *args,
-        **kwargs):
-    """
-    Send a feedback msg to output.
-
-    Args:
-        text (str|unicode): Message text to display.
-        verb_lvl (int): Current level of verbosity.
-        verb_threshold (int): Threshold level of verbosity.
-        fmt (str|unicode): Format of the message (if `blessings` supported).
-            If None, a standard formatting is used.
-        *args (tuple): Positional arguments to be passed to `print`.
-        **kwargs (dict): Keyword arguments to be passed to `print`.
-
-    Returns:
-        None.
-    """
-    if verb_lvl >= verb_threshold:
-        try:
-            import blessings
-            term = blessings.Terminal()
-            if not fmt:
-                if verb_lvl == VERB_LVL['medium']:
-                    extra = term.cyan
-                elif verb_lvl == VERB_LVL['high']:
-                    extra = term.yellow
-                elif verb_lvl == VERB_LVL['debug']:
-                    extra = term.magenta + term.bold
-                else:
-                    extra = term.white
-                text = '{e}{t.bold}{fst}{t.normal}{e}{rest}{t.normal}'.format(
-                    t=term, e=extra,
-                    fst=text[:text.find(' ')],
-                    rest=text[text.find(' '):])
-            else:
-                text = fmt.format(text, t=term) + term.normal
-        except ImportError:
-            pass
-        finally:
-            print(text, *args, **kwargs)
-
-
-# ======================================================================
-def dbg(name):
-    """
-    Print content of a variable for debug purposes.
-
-    Args:
-        name: The name to be inspected.
-
-    Returns:
-        None.
-
-    Examples:
-        >>> my_dict = {'a': 1, 'b': 1}
-        >>> dbg(my_dict)
-        dbg(my_dict): {
-            "a": 1,
-            "b": 1
-        }
-        <BLANKLINE>
-        >>> dbg(my_dict['a'])
-        dbg(my_dict['a']): 1
-        <BLANKLINE>
-    """
-    outer_frame = inspect.getouterframes(inspect.currentframe())[1]
-    name_str = outer_frame[4][0][:-1]
-    print(name_str, end=': ')
-    print(json.dumps(name, sort_keys=True, indent=4))
-    print()
-
-
-# ======================================================================
-def print_elapsed(
-        events=_EVENTS,
-        label='\nElapsed Time(s): ',
-        only_last=False):
-    """
-    Print quick-and-dirty elapsed times between named event points.
-
-    Args:
-        events (list[str,time]): A list of named event time points.
-            Each event is a 2-tuple: (label, time)
-        label (str): heading of the elapsed time table
-        only_last (bool): print only the last event (useful inside a loop).
-
-    Returns:
-        None
-    """
-    if not only_last:
-        print(label, end='\n' if len(events) > 2 else '')
-        first_elapsed = events[0][1]
-        for i in range(len(events) - 1):
-            _id = i + 1
-            name = events[_id][0]
-            curr_elapsed = events[_id][1]
-            prev_elapsed = events[_id - 1][1]
-            diff_first = datetime.timedelta(0, curr_elapsed - first_elapsed)
-            diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
-            if diff_first == diff_last:
-                diff_first = '-'
-            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-                name, diff_last, diff_first))
-    else:
-        _id = -1
-        name = events[_id][0]
-        curr_elapsed = events[_id][1]
-        prev_elapsed = events[_id - 1][1]
-        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
-        print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 
 # ======================================================================

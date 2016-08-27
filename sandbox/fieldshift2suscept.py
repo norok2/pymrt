@@ -213,10 +213,10 @@ if __name__ == '__main__':
     if ARGS.verbose >= VERB_LVL['debug']:
         print(ARGS)
     # perform calculation
-    begin_time = time.time()
-    mrio.simple_filter_1_1(
-        ARGS.input, ARGS.output,
-        suscept2fieldshift, ARGS.b0z, ARGS.theta, ARGS.phi)
-    end_time = time.time()
+    begin_time = datetime.datetime.now()
+    # mrio.simple_filter_1_1(
+    #     ARGS.input, ARGS.output,
+    #     suscept2fieldshift, ARGS.b0z, ARGS.theta, ARGS.phi)
+    end_time = datetime.datetime.now()
     if ARGS.verbose > VERB_LVL['none']:
-        print('TotTime:\t', datetime.timedelta(0, end_time - begin_time))
+        print('ExecTime: {}'.format(end_time - begin_time))

@@ -46,9 +46,10 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
+
 # :: Local Imports
 import pymrt.base as mrb
-import utils as mru
+import pymrt.utils as mru
 import pymrt.geometry as mrg
 # import pymrt.plot as mrp
 import pymrt.registration as mrr
@@ -897,7 +898,7 @@ def plot_histogram(
         force=False,
         verbose=D_VERB_LVL):
     """
-    Plot the histogram of values for the image
+    Plot the histogram of values for the image.
 
     Parameters
     ==========
@@ -1003,6 +1004,7 @@ def plot_sample(
         plot_title = '{} / {} ({})'.format(
             val_type, val_units,
             mru.filename2label(img_filepath, max_length=32))
+        print(img_filepath)
         mrio.plot_sample2d(
             img_filepath, axis, index, title=plot_title,
             array_interval=val_interval,
@@ -1377,10 +1379,10 @@ def check_correlation(
             print('I: values inteval guessed from image-specific values.')
     else:
         val_interval = sorted(val_interval)
-    if np.ptp(val_interval) == 0.0:
-        if verbose >= VERB_LVL['low']:
-            print('E: values inteval has size 0. Aborting!')
-        return
+        if np.ptp(val_interval) == 0.0:
+            if verbose >= VERB_LVL['low']:
+                print('E: values inteval has size 0. Aborting!')
+            return
     if not val_units:
         val_units = 'a.u.'
         if verbose >= VERB_LVL['medium']:
@@ -1390,10 +1392,10 @@ def check_correlation(
     target_list, corr_list = [], []
     if os.path.exists(dirpath):
         filepath_list = mrb.listdir(dirpath, mrb.EXT['niz'])
-        source_list = [filepath for filepath in filepath_list
+        sources = [os.path.realpath(filepath) for filepath in filepath_list
                        if not val_type or
                        mru.parse_filename(filepath)['type'] == val_type]
-        if len(source_list) > 0:
+        if len(sources) > 0:
             # :: create output directories
             # NOTE: use tmp/reg/msk/cmp/fig_path in code
             path_list = []
@@ -1406,9 +1408,10 @@ def check_correlation(
                 if path:
                     if not os.path.exists(path):
                         os.makedirs(path)
+
             # :: ensure the presence of a reference file
             ref_list, ref_src_list = \
-                _get_ref_list(dirpath, source_list, None, reg_ref_ext)
+                _get_ref_list(dirpath, sources, None, reg_ref_ext)
             ref = ref_list[0]
             ref_src = ref_src_list[0] if len(ref_src_list) > 0 else ''
             # registration instructions
@@ -1428,11 +1431,12 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filepath = mrb.change_ext(
+                    mask_filename = mrb.change_ext(
                         MASK_FILENAME, mrb.EXT['niz'])
+                    mask_filepath = os.path.realpath(mask_filename)
                 # add current directory if it was not specified
                 if not os.path.exists(mask_filepath):
-                    mask_filepath = os.path.join(dirpath, mask_filepath)
+                    mask_filepath = os.path.join(dirpath, mask_filename)
                 # if mask not found, create one from registration reference
                 if not os.path.exists(mask_filepath):
                     if 'calc_mask' not in reg_info:
@@ -1442,6 +1446,8 @@ def check_correlation(
                         **reg_info['calc_mask'])
             else:
                 mask_filepath = None
+            if mask_filepath in sources:
+                sources.remove(mask_filepath)
             if verbose >= VERB_LVL['medium']:
                 print('I: mask: {}'.format(mask_filepath))
             # :: co-register targets
@@ -1451,13 +1457,13 @@ def check_correlation(
                 if reg_info['func_register'] not in reg_info:
                     reg_info[reg_info['func_register']] = {}
                 target_list = registering(
-                    source_list, ref, mask_filepath, reg_path,
+                    sources, ref, mask_filepath, reg_path,
                     register_func=eval(reg_info['func_register']),
                     register_args=(),
                     register_kwargs=reg_info[reg_info['func_register']],
                     use_mp=False, force=force, verbose=verbose)
             else:
-                target_list = source_list
+                target_list = sources
             # :: mask targets
             if msk_path:
                 target_list = masking(

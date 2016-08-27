@@ -382,7 +382,7 @@ def external_registration(
     ==========
     array :
     """
-    # todo: generalize to support any tool
+    # todo: generalize to support any tool?
     # temporary filepaths
     img_filepath = tmp_output.format('img')
     fix_filepath = tmp_output.format('ref')
@@ -455,20 +455,20 @@ def my_reg(array_list, *args, **kwargs):
 # ======================================================================
 if __name__ == '__main__':
     print(__doc__)
-    begin_time = time.time()
+    begin_time = datetime.datetime.now()
 
     # for idx, (linear, shift) in enumerate(_discrete_generator(
     # 'reflection', 3)):
     #     print(idx)
     #     print(linear)
-
-    mrio.simple_filter_n_1(
-        [s1, s2], t12, my_reg,
-        transform='rigid', interp_order=1, init_guess=('none', 'none'))
+    # mrio.simple_filter_n_1(
+    #     [s1, s2], t12, my_reg,
+    #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
     # mrio.simple_filter_n_1(
     #     [s1, s3], t13, my_reg,
     #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
-    end_time = time.time()
-    print('ExecTime: ', datetime.timedelta(0, end_time - begin_time))
+    end_time = datetime.datetime.now()
+    print('ExecTime: {}'.format(end_time - begin_time))
+    mrb.print_elapsed()
