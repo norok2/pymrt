@@ -52,18 +52,18 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as mrb
-# import pymrt.utils as mru
-# import pymrt.input_output as mrio
-# import pymrt.computation as mrc
-import pymrt.correlation as mrl
-# import pymrt.geometry as mrg
+import pymrt.base as pmb
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.computation as pmc
+import pymrt.correlation as pml
+# import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -155,18 +155,16 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
-    if args.verbose > VERB_LVL['low']:
-        print(__doc__)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
     begin_time = datetime.datetime.now()
 
     if args.output and args.verbose >= VERB_LVL['none']:
-        args.output = os.path.dirname(os.path.realpath(args.output))
-        print('OutDir:\t{}'.format(args.output))
-    mrl.calc_mask(
+        args.output = os.path.dirname(pmb.realpath(args.output))
+        print('OutDir: {}'.format(args.output))
+    pml.calc_mask(
         args.input,
         args.output,
         args.val_threshold,

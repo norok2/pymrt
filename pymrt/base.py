@@ -15,50 +15,29 @@ from __future__ import unicode_literals
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
-# import shutil  # High-level file operations
 import math  # Mathematical functions
-# import time  # Time access and conversions
-# import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
-# import argparse  # Parser for command-line options, arguments and sub-command
-# import re  # Regular expression operations
 import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
 import fractions  # Rational numbers
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
-# import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
 import shlex  # Simple lexical analysis
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -79,12 +58,6 @@ EXT = {
 }
 D_TAB_SIZE = 8
 
-
-# :: TTY amenities
-# TTY_COLORS = {
-#     'r': 31, 'g': 32, 'b': 34, 'c': 36, 'm': 35, 'y': 33, 'w': 37, 'k': 30,
-#     'R': 41, 'G': 42, 'B': 44, 'C': 46, 'M': 45, 'Y': 43, 'W': 47, 'K': 40,
-# }
 
 # ======================================================================
 def _is_hidden(filepath):
@@ -125,6 +98,54 @@ def _is_special(stats_mode):
                  not stat.S_ISLNK(stats_mode)
     return is_special
 
+
+# ======================================================================
+def auto_repeat(obj, n, force=False):
+    """
+    Automatically repeat the specified object n times.
+
+    If the object is not iterable, a tuple with the specified size is returned.
+    If the object is iterable, the object is left untouched.
+
+    Args:
+        obj: The object to operate with.
+        n (int): The length of the output object.
+        force (bool): Ensure that the object has length n.
+
+    Returns:
+        val (tuple): If obj is not iterable, returns obj repeated n times.
+
+    Raises:
+        AssertionError: If force is True and the object does not have length n.
+    """
+    try:
+        iter(obj)
+    except TypeError:
+        obj = (obj,) * n
+    if force:
+        assert (len(obj) == n)
+    return obj
+
+
+def max_iter_len(items):
+    """
+    Determine the maximum length of a item within a collection of items.
+
+    Args:
+        items (iterable): The collection of items to inspect.
+
+    Returns:
+        num (int): The maximum length of the collection.
+    """
+    num = 1
+    for val in items:
+        try:
+            iter(val)
+        except TypeError:
+            pass
+        else:
+            num = max(len(val), num)
+    return num
 
 # ======================================================================
 def gcd(*numbers):
@@ -190,10 +211,15 @@ def merge_dicts(*dicts):
         merged (dict): The merged dict (new keys overwrite the old ones).
 
     Examples:
-        >>> merge_dicts({1: 2, 3: 4, 5: 6}, {2: 1, 4: 3, 6: 5})
-        {1: 2, 2: 1, 3: 4, 4: 3, 5: 6, 6: 5}
-        >>> merge_dicts({1: 2, 3: 4, 5: 6}, {1: 1, 3: 3, 6: 5})
-        {1: 1, 3: 3, 5: 6, 6: 5}
+        >>> d1 = {1: 2, 3: 4, 5: 6}
+        >>> d2 = {2: 1, 4: 3, 6: 5}
+        >>> d3 = {1: 1, 3: 3, 6: 5}
+        >>> dd = merge_dicts(d1, d2)
+        >>> print(tuple(sorted(dd.items())))
+        ((1, 2), (2, 1), (3, 4), (4, 3), (5, 6), (6, 5))
+        >>> dd = merge_dicts(d1, d3)
+        >>> print(tuple(sorted(dd.items())))
+        ((1, 1), (3, 3), (5, 6), (6, 5))
     """
     merged = {}
     for item in dicts:
@@ -489,10 +515,9 @@ def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
         pass
 
     if dry:
-        print('$$ {}'.format(' '.join(cmd)))
+        msg('$$ {}'.format(' '.join(cmd)))
     else:
-        if verbose >= VERB_LVL['medium']:
-            print('>> {}'.format(' '.join(cmd)))
+        msg('>> {}'.format(' '.join(cmd)), verbose, VERB_LVL['medium'])
 
         proc = subprocess.Popen(
             cmd,
@@ -542,10 +567,7 @@ def grouping(items, num_elems):
         >>> grouping(range(10), (2, 4, 1, 20))
         [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
     """
-    try:
-        iter(num_elems)
-    except TypeError:
-        num_elems = (num_elems,) * (len(items) // num_elems)
+    num_elems = auto_repeat(num_elems, len(items) // num_elems)
     group, groups = [], []
     j = 0
     count = num_elems[j] if j < len(num_elems) else len(items) + 1
@@ -570,6 +592,26 @@ def grouping(items, num_elems):
 
 
 # ======================================================================
+def realpath(path):
+    """
+    Get the expanded absolute path from its short or relative counterpart.
+
+    Args:
+        path (str): The path to expand.
+
+    Returns:
+        new_path (str|unicode): the expanded path.
+
+    Raises:
+        OSError: if the expanded path does not exists.
+    """
+    new_path = os.path.abspath(os.path.realpath(os.path.expanduser(path)))
+    if not os.path.exists(new_path):
+        raise (OSError)
+    return new_path
+
+
+# ======================================================================
 def listdir(
         path,
         file_ext='',
@@ -591,15 +633,15 @@ def listdir(
         list[str]: List of file names/paths
     """
     if file_ext is None:
-        if verbose >= VERB_LVL['debug']:
-            print('Scanning for DIRS on:\n{}'.format(path))
+        msg('Scanning for DIRS on:\n{}'.format(path),
+            verbose, VERB_LVL['debug'])
         filepaths = [
             os.path.join(path, filename) if full_path else filename
             for filename in os.listdir(path)
             if os.path.isdir(os.path.join(path, filename))]
     else:
-        if verbose >= VERB_LVL['debug']:
-            print("Scanning for '{}' on:\n{}".format(file_ext, path))
+        msg('Scanning for `{}` on:\n{}'.format(file_ext, path),
+            verbose, VERB_LVL['debug'])
         # extracts only those ending with specific file_ext
         filepaths = [
             os.path.join(path, filename) if full_path else filename
@@ -741,8 +783,8 @@ def compact_num_str(
                 limit = 0
             val_str = '{:.{size}f}'.format(val, size=limit)
     except (TypeError, ValueError):
-        print('EE:', 'Could not convert to float: {}'.format(val))
-        val_str = 'NAN'
+        warnings.warn('Could not convert value `{}` to float'.format(val))
+        val_str = 'NaN'
     return val_str
 
 
@@ -1118,8 +1160,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (list[str|unicode]): Input filepaths for computation.
-        out_filepaths (list[str|unicode]): Output filepaths for computation.
+        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
+        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -1289,24 +1331,6 @@ def scale(
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
-# :: use numpy.ptp instead
-# # ======================================================================
-# def interval_size(interval):
-#     """
-#     Calculate the (signed) size of an interval given as a 2-tuple (A,B)
-#
-#     Args:
-#         interval (float,float): Interval for computation
-#
-#     Returns:
-#         val (float): The converted value
-#
-#     Examples:
-#
-#     """
-#     return interval[1] - interval[0]
-
-
 # ======================================================================
 def combine_interval(
         interval1,
@@ -1362,12 +1386,253 @@ def midval(arr):
 
 
 # ======================================================================
-def unwrap(arr, voxel_sizes=None):
+def subst(
+        arr,
+        subst=((np.inf, 0.0), (-np.inf, 0.0), (np.nan, 0.0))):
+    """
+    Substitute all occurrences of a value in an array.
+
+    Useful to remove specific values, e.g. singularities.
+
+    Args:
+        arr (np.ndarray): The input array.
+        subst (tuple[tuple]): The substitution rules.
+            Each rule consist of a value to replace and its replacement.
+            Each rule is applied sequentially in the order they appear and
+            modify the content of the array immediately.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Examples:
+        >>> a = np.arange(10)
+        >>> subst(a, ((1, 100), (7, 700)))
+        array([  0, 100,   2,   3,   4,   5,   6, 700,   8,   9])
+        >>> a = np.tile(np.arange(4), 3)
+        >>> subst(a, ((1, 100), (7, 700)))
+        array([  0, 100,   2,   3,   0, 100,   2,   3,   0, 100,   2,   3])
+        >>> a = np.tile(np.arange(4), 3)
+        >>> subst(a, ((1, 100), (3, 300)))
+        array([  0, 100,   2, 300,   0, 100,   2, 300,   0, 100,   2, 300])
+        >>> a = np.array([0.0, 1.0, np.inf, -np.inf, np.nan, -np.nan])
+        >>> subst(a)
+        array([ 0.,  1.,  0.,  0.,  0.,  0.])
+        >>> a = np.array([0.0, 1.0, np.inf, 2.0, np.nan])
+        >>> subst(a, ((np.inf, 0.0), (0.0, np.inf), (np.nan, 0.0)))
+        array([ inf,   1.,  inf,   2.,   0.])
+        >>> subst(a, ((np.inf, 0.0), (np.nan, 0.0), (0.0, np.inf)))
+        array([ inf,   1.,  inf,   2.,  inf])
+    """
+    for k, v in subst:
+        if k is np.nan:
+            arr[np.isnan(arr)] = v
+        else:
+            arr[arr == k] = v
+    return arr
+
+
+# ======================================================================
+def dft(arr):
+    """
+    Discrete Fourier Transform.
+
+    Interface to numpy.fft.fftn combined with numpy.fft.fftshift.
+
+    Args:
+        arr (np.ndarray): Input n-dim array.
+
+    Returns:
+        arr (np.ndarray): Output n-dim array.
+
+    Examples:
+        >>> a = np.arange(10)
+        >>> dft(a)
+        array([ -5. +4.44089210e-16j,  -5. -1.62459848e+00j,\
+  -5. -3.63271264e+00j,
+                -5. -6.88190960e+00j,  -5. -1.53884177e+01j,\
+  45. +0.00000000e+00j,
+                -5. +1.53884177e+01j,  -5. +6.88190960e+00j,\
+  -5. +3.63271264e+00j,
+                -5. +1.62459848e+00j])
+        >>> print(np.allclose(a, dft(idft(a))))
+        True
+    """
+    return np.fft.fftshift(np.fft.fftn(arr))
+
+
+# ======================================================================
+def idft(arr):
+    """
+    Inverse Discrete Fourier transform.
+
+    Interface to numpy.fft.ifftn combined with numpy.fft.ifftshift.
+
+    Args:
+        arr (np.ndarray): Input n-dim array.
+
+    Returns:
+        arr (np.ndarray): Output n-dim array.
+
+    Examples:
+        >>> a = np.arange(10)
+        >>> idft(a)
+        array([ 4.5 +0.00000000e+00j,  0.5 +1.53884177e+00j,\
+ -0.5 -6.88190960e-01j,
+                0.5 +3.63271264e-01j, -0.5 -1.62459848e-01j,\
+  0.5 +4.44089210e-17j,
+               -0.5 +1.62459848e-01j,  0.5 -3.63271264e-01j,\
+ -0.5 +6.88190960e-01j,
+                0.5 -1.53884177e+00j])
+        >>> print(np.allclose(a, idft(dft(a))))
+        True
+    """
+    return np.fft.ifftn(np.fft.ifftshift(arr))
+
+
+# ======================================================================
+def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
+    """
+    Calculate the generic x_i coordinates for N-dim operations.
+
+    Args:
+        shape (tuple[int]): The shape of the mask in px.
+        origin (float|tuple[float]): Relative position of the origin.
+            Values are in the [0, 1] interval.
+        is_relative (bool): Interpret origin as relative.
+        dense (bool): Determine the shape of the mesh-grid arrays.
+        use_ints (bool):
+
+    Returns:
+        coord (list[np.ndarray]): mesh-grid ndarrays.
+            The shape is identical if dense is True, otherwise only one
+            dimension is larger than 1.
+
+    Examples:
+        >>> coord((4, 4))
+        [array([[-2],
+               [-1],
+               [ 0],
+               [ 1]]), array([[-2, -1,  0,  1]])]
+        >>> coord((5, 5))
+        [array([[-2],
+               [-1],
+               [ 0],
+               [ 1],
+               [ 2]]), array([[-2, -1,  0,  1,  2]])]
+        >>> coord((2, 2))
+        [array([[-1],
+               [ 0]]), array([[-1,  0]])]
+        >>> coord((2, 2), dense=True)
+        array([[[-1, -1],
+                [ 0,  0]],
+        <BLANKLINE>
+               [[-1,  0],
+                [-1,  0]]])
+        >>> coord((2, 3), origin=(0.0, 0.5))
+        [array([[0],
+               [1]]), array([[-1,  0,  1]])]
+        >>> coord((3, 9), origin=(1, 4), is_relative=False)
+        [array([[-1],
+               [ 0],
+               [ 1]]), array([[-4, -3, -2, -1,  0,  1,  2,  3,  4]])]
+        >>> coord((3, 9), origin=0.2, is_relative=True)
+        [array([[0],
+               [1],
+               [2]]), array([[-1,  0,  1,  2,  3,  4,  5,  6,  7]])]
+        >>> coord((4, 4), use_int=False)
+        [array([[-1.5],
+               [-0.5],
+               [ 0.5],
+               [ 1.5]]), array([[-1.5, -0.5,  0.5,  1.5]])]
+        >>> coord((5, 5), use_int=False)
+        [array([[-2.],
+               [-1.],
+               [ 0.],
+               [ 1.],
+               [ 2.]]), array([[-2., -1.,  0.,  1.,  2.]])]
+        >>> coord((2, 3), origin=(0.0, 0.0), use_int=False)
+        [array([[ 0.],
+               [ 1.]]), array([[ 0.,  1.,  2.]])]
+    """
+    origin = auto_repeat(origin, len(shape), force=True)
+    # if any([dim % 2 for dim in shape]):
+    #     warnings.warn('Even coordinates will not be symmetric')
+    if is_relative:
+        if use_int:
+            origin = [int(scale(x, (0, 1), (0, dim)))
+                      for x, dim in zip(origin, shape)]
+        else:
+            origin = [scale(x, (0, 1), (0, dim - 1))
+                      for x, dim in zip(origin, shape)]
+    elif any([not isinstance(x, int) for x in origin]) and use_int:
+        raise TypeError('Absolute origin must be integer.')
+    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
+    return np.ogrid[grid] if not dense else np.mgrid[grid]
+
+
+# ======================================================================
+def _kk_2(shape):
+    kk = coord(shape)
+    kk_2 = np.zeros(shape)
+    for k_i, dim in zip(kk, shape):
+        kk_2 += k_i ** 2
+    return kk_2
+
+
+# ======================================================================
+def laplacian(
+        arr,
+        ft_factor=(2 * np.pi)):
+    """
+    Calculate the Laplacian operator in the Fourier domain.
+
+    Args:
+        arr (np.ndarray): The input array.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    kk_2 = _kk_2(arr.shape)
+    return ((1j * ft_factor) ** 2) * idft(kk_2 * dft(arr))
+
+
+# ======================================================================
+def inv_laplacian(
+        arr,
+        ft_factor=(2 * np.pi)):
+    """
+    Calculate the inverse Laplacian operator in the Fourier domain.
+
+    Args:
+        arr (np.ndarray): The input array.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    one_over_kk_2 = 1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),))
+    return ((-1j / ft_factor) ** 2) * idft(one_over_kk_2 * dft(arr))
+
+
+# ======================================================================
+def unwrap_phase_laplacian(arr, correction=lambda x: -(x * 2.0 - 3.0 * np.pi)):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
 
+    Phase unwrapping by using the following equality:
+
+    L = (d / dx)^2
+
+    L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
+
+    phi = L^-1(L(phi))
+
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
+        correction (callable): A correction function for improved accuracy.
 
     Returns:
         arr (np.ndarray): The multi-dimensional unwrapped array.
@@ -1375,22 +1640,47 @@ def unwrap(arr, voxel_sizes=None):
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
-    if not voxel_sizes:
-        voxel_sizes = np.ones_like(arr.shape)
-    # calculate the Laplacian kernel
-    k_range = [slice(-k_size / 2.0, +k_size / 2.0) for k_size in arr.shape]
-    kk = np.ogrid[k_range]
-    kk_2 = np.zeros_like(arr)
-    for i, dim in enumerate(arr.shape):
-        kk_2 += np.fft.fftshift(kk[i] / dim / voxel_sizes[i]) ** 2
-    # perform the Laplacian-based Fourier unwrapping
-    arr = np.fft.fftn(
-        np.cos(arr) * np.fft.ifftn(kk_2 * np.fft.fftn(np.sin(arr))) -
-        np.sin(arr) * np.fft.ifftn(kk_2 * np.fft.fftn(np.cos(arr)))) / kk_2
-    # removes the singularity generated by the division by kk_2
-    arr[np.isinf(arr)] = 0.0
-    arr = np.real(np.fft.ifftn(arr))
+    arr = np.real(inv_laplacian(
+        np.cos(arr) * laplacian(np.sin(arr)) -
+        np.sin(arr) * laplacian(np.cos(arr))))
+    if correction:
+        arr = correction(arr)
     return arr
+
+
+# ======================================================================
+def gaussian_nd(
+        shape,
+        sigmas,
+        origin=0.5,
+        n_dim=None,
+        normalize=True):
+    """
+    Generate an N-dim Gaussian function.
+
+    Args:
+        shape ():
+        sigmas ():
+        origin ():
+        n_dim ():
+        normalize ():
+
+    Returns:
+
+    """
+    if not n_dim:
+        n_dim = max_iter_len((shape, sigmas, origin))
+
+    shape = auto_repeat(shape, n_dim)
+    sigmas = auto_repeat(sigmas, n_dim)
+    origin = auto_repeat(origin, n_dim)
+
+    xx = coord(shape, origin)
+    kernel = np.exp(
+        -(sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
+    if normalize:
+        kernel = kernel / np.sum(kernel)
+    return kernel
 
 
 # ======================================================================
@@ -1430,7 +1720,7 @@ def complex2cartesian(z):
     Calculate the real and the imaginary part of a complex number.
 
     Args:
-        z (complex): The complex number: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
 
     Returns:
         tuple[float]:
@@ -1446,7 +1736,7 @@ def complex2polar(z):
     Calculate the real and the imaginary part of a complex number
 
     Args:
-        z (complex): The complex number: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
 
     Returns:
         tuple[float]:
@@ -1525,27 +1815,35 @@ def calc_stats(
                 - 'num': number of elements
 
     Examples:
-        >>> d = calc_stats(np.arange(20))
-        >>> for k in sorted(d.keys()): print(k, ':', d[k])  # display dict
-        avg : 9.5
-        max : 19
-        min : 0
-        num : 20
-        std : 5.76628129734
-        sum : 190
+        >>> a = np.arange(2)
+        >>> d = calc_stats(a)
+        >>> print(tuple(sorted(d.items())))
+        (('avg', 0.5), ('max', 1), ('min', 0), ('num', 2), ('std', 0.5),\
+ ('sum', 1))
+        >>> a = np.arange(200)
+        >>> d = calc_stats(a)
+        >>> print(tuple(sorted(d.items())))
+        (('avg', 99.5), ('max', 199), ('min', 0), ('num', 200),\
+ ('std', 57.734305226615483), ('sum', 19900))
     """
-    if mask_nan:
+    stats_dict = {
+        'avg': None, 'std': None,
+        'min': None, 'max': None,
+        'sum': None, 'num': None}
+    if mask_nan and len(arr) > 0:
         arr = arr[~np.isnan(arr)]
-    if mask_inf:
+    if mask_inf and len(arr) > 0:
         arr = arr[~np.isinf(arr)]
     if not mask_vals:
         mask_vals = []
     for val in mask_vals:
-        arr = arr[arr != val]
-    if val_interval is None:
+        if len(arr) > 0:
+            arr = arr[arr != val]
+    if val_interval is None and len(arr) > 0:
         val_interval = minmax(arr)
-    arr = arr[arr > val_interval[0]]
-    arr = arr[arr < val_interval[1]]
+    if len(arr) > 0:
+        arr = arr[arr >= val_interval[0]]
+        arr = arr[arr <= val_interval[1]]
     if len(arr) > 0:
         stats_dict = {
             'avg': np.mean(arr),
@@ -1554,11 +1852,6 @@ def calc_stats(
             'max': np.max(arr),
             'sum': np.sum(arr),
             'num': np.size(arr),}
-    else:
-        stats_dict = {
-            'avg': None, 'std': None,
-            'min': None, 'max': None,
-            'sum': None, 'num': None}
     if save_path or title:
         label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
         val_list = []
@@ -1779,8 +2072,6 @@ def curve_fit(args):
     try:
         result = sp.optimize.curve_fit(*args)
     except (RuntimeError, RuntimeWarning, ValueError):
-        #        print('EE: Fitting error. Params were: {}', param_list)  #
-        # DEBUG
         err_val = 0.0
         n_fit_par = len(args[3])  # number of fitting parameters
         result = \
@@ -1791,8 +2082,8 @@ def curve_fit(args):
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()
 
 # ======================================================================
-elapsed('pymrt.base')
+elapsed(os.path.basename(__file__))

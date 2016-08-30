@@ -54,12 +54,11 @@ import scipy.constants  # SciPy: Constants
 
 
 # :: Local Imports
-# import pymrt.modules.base as mrb
-# import pymrt.modules.plot as mrp
+# import pymrt.modules.base as pmb
+# import pymrt.modules.plot as pmp
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -203,7 +202,7 @@ def ernst_calc(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     doctest.testmod()
 
     ss = steady_state(evolution_flash)

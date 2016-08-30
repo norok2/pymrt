@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: generate output for LaTeX.
+PyMRT: generate output for LaTeX.
 """
 
 # ======================================================================
@@ -48,13 +48,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -106,7 +105,7 @@ def tabular(labels, rows, label_filters, row_filters, format_dict):
     # separator
     output_str += '\hline\n'
     # write data
-    seps = mrb.accumulate(grouping) if grouping else []
+    seps = pmb.accumulate(grouping) if grouping else []
     for i, row in enumerate(rows):
         for j, col in enumerate(row):
             if row_filters:
@@ -205,4 +204,4 @@ def make(
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())

@@ -16,12 +16,12 @@ import os
 import functools
 import argparse
 
-import pymrt.base as mrb
-import pymrt.input_output as mrio
+import pymrt.base as pmb
+import pymrt.input_output as pmio
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -44,18 +44,18 @@ def mt_jigsaw(
 
     """
     # find real dirpath
-    dirpath = os.path.realpath(dirpath)
+    dirpath = pmb.realpath(dirpath)
     if verbose >= VERB_LVL['low']:
         print('Dir: ', dirpath)
         print('Target: ', target)
     # autodetect input files
     jigsaw = {}
-    for filepath, stats in mrb.walk2(dirpath):
+    for filepath, stats in pmb.walk2(dirpath):
         last_subdir = os.path.basename(os.path.dirname(filepath))
         name = last_subdir.split(sep)[0]
         if name == target:
-            key = mrb.change_ext(
-                os.path.basename(filepath), '', mrb.EXT['niz'])
+            key = pmb.change_ext(
+                os.path.basename(filepath), '', pmb.EXT['niz'])
             if key in jigsaw:
                 jigsaw[key].append(filepath)
             else:
@@ -67,10 +67,10 @@ def mt_jigsaw(
     for key, in_filepaths in jigsaw.items():
         out_filepath = os.path.join(
             target_dirpath,
-            mrb.change_ext(sep.join((target, key)), mrb.EXT['niz']))
+            pmb.change_ext(sep.join((target, key)), pmb.EXT['niz']))
         if verbose >= VERB_LVL['low']:
             print('Out: ', out_filepath)
-        mrio.simple_filter_n_1(
+        pmio.simple_filter_n_1(
             in_filepaths, out_filepath,
             lambda imgs: functools.reduce(lambda x, y: x + y, imgs))
         if clean:
@@ -82,7 +82,7 @@ def mt_jigsaw(
     if clean:
         if verbose >= VERB_LVL['low']:
             print('Cleaning up...')
-        for filepath, stats in mrb.walk2(dirpath):
+        for filepath, stats in pmb.walk2(dirpath):
             last_subdir = os.path.basename(filepath)
             name = last_subdir.split(sep)[0]
             if name == target:
@@ -156,11 +156,10 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print('II:', 'Parsed Arguments:', args)
-    if args.verbose > VERB_LVL['low']:
-        print(__doc__)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
 
     args = {
         'dirpath': args.dirpath,
@@ -171,8 +170,8 @@ def main():
     }
     mt_jigsaw(**args)
 
-    mrb.elapsed(os.path.basename(__file__))
-    mrb.print_elapsed()
+    pmb.elapsed(os.path.basename(__file__))
+    pmb.print_elapsed()
 
 # ======================================================================
 if __name__ == '__main__':

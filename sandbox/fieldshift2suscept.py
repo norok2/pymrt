@@ -86,7 +86,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.input_output as mrio
+import pymrt.input_output as pmio
 
 # ======================================================================
 # :: supported verbosity levels (level 4 skipped on purpose)
@@ -214,7 +214,7 @@ if __name__ == '__main__':
         print(ARGS)
     # perform calculation
     begin_time = datetime.datetime.now()
-    # mrio.simple_filter_1_1(
+    # pmio.simple_filter_1_1(
     #     ARGS.input, ARGS.output,
     #     suscept2fieldshift, ARGS.b0z, ARGS.theta, ARGS.phi)
     end_time = datetime.datetime.now()

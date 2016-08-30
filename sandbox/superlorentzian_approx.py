@@ -59,17 +59,16 @@ from numpy import pi, sin, cos, exp, sqrt
 # from sympy import pi, sin, cos, exp, sqrt, re, im
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 
 
-# import pymrt.geometry as mrg
-# import pymrt.plot as mrp
-# import pymrt.segmentation as mrs
+# import pymrt.geometry as pmg
+# import pymrt.plot as pmp
+# import pymrt.segmentation as pms
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -200,6 +199,6 @@ def main():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     main()
     # profile.run('main()', sort=2)

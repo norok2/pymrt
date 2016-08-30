@@ -45,18 +45,18 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
-# import pymrt.utils as mru
-# import pymrt.input_output as mrio
-# import pymrt.compute as mrc
-import pymrt.correlation as mrl
-# import pymrt.geometry as mrg
+import pymrt.base as pmb
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.compute as pmc
+import pymrt.correlation as pml
+# import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 # import dcmpi.lib.common as dcmlib
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -114,11 +114,11 @@ def handle_arg():
         help='set exact mask file [%(default)s]')
     arg_parser.add_argument(
         '--reg_ref_ext', metavar='FILE_EXT',
-        default=mrl.EXT['reg_ref'],
+        default=pml.EXT['reg_ref'],
         help='file extension of registration reference flag [%(default)s]')
     arg_parser.add_argument(
         '--corr_ref_ext', metavar='FILE_EXT',
-        default=mrl.EXT['corr_ref'],
+        default=pml.EXT['corr_ref'],
         help='file extension of correlation reference flag [%(default)s]')
     arg_parser.add_argument(
         '--tmp_dir', metavar='SUBDIR',
@@ -152,11 +152,10 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print('II:', 'Parsed Arguments:', args)
-    if args.verbose > VERB_LVL['low']:
-        print(__doc__)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
 
     kwargs = {
         'dirpath': args.dirpath,
@@ -174,11 +173,11 @@ def main():
         'force': args.force,
         'verbose': args.verbose,
     }
-    mrl.check_correlation(**kwargs)
+    pml.check_correlation(**kwargs)
 
     if args.verbose > VERB_LVL['low']:
-        mrb.elapsed(os.path.basename(__file__))
-        mrb.print_elapsed()
+        pmb.elapsed(os.path.basename(__file__))
+        pmb.print_elapsed()
 
 
 # ======================================================================

@@ -12,119 +12,75 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
+import random  # Generate pseudo-random numbers
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import neurolab as nnl  # NeuroLab (neural network with MATLAB-like interface)
+import skimage as ski
 
 # :: External Imports Submodules
 import scipy.linalg
 import scipy.ndimage
 import scipy.signal
 
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+import matplotlib.pyplot as plt  # Matplotlib's MATLAB-like interface
 
+# :: Local Imports
+from pymrt.base import check_redo, scale, auto_repeat, calc_stats, subst
+from pymrt.base import realpath, change_ext, EXT
+from pymrt.base import dft, idft, coord, gaussian_nd, laplacian, inv_laplacian
+from pymrt.base import unwrap_phase_laplacian as unwrap_phase
+from pymrt.recipes.chi import dipole_kernel
+
+from pymrt.geometry import rand_mask
+from pymrt.input_output import load, save
+
+from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
-import pymrt.input_output as mrio
+from pymrt import VERB_LVL, D_VERB_LVL
 
 
 # ======================================================================
-def scale(
-        val,
-        in_interval=(0.0, 1.0),
-        out_interval=(0.0, 1.0)):
-    """
-    Linear convert the value from input interval to output interval
+def my_qsm(cx_arr, b0z=3.0, theta=0.0, phi=0.0):
+    # susceptibility in Fourier space (zero-centered)
 
-    Args:
-        val (float|np.ndarray): Value(s) to convert
-        in_interval (float,float): Interval of the input value
-        out_interval (float,float): Interval of the output value.
+    assert (len(cx_arr.shape) == 3)
 
-    Returns:
-        val (float): The converted value
+    from skimage.restoration import unwrap_phase, denoise_tv_chambolle
+    mag_arr = np.abs(cx_arr)
+    phs_arr = unwrap_phase(np.angle(cx_arr))
+    re_arr = np.real(cx_arr)
+    im_arr = np.imag(cx_arr)
+    dn_re_arr = denoise_tv_chambolle(re_arr, weight=0.2)
+    dn_im_arr = denoise_tv_chambolle(im_arr, weight=0.2)
+    dn_phs_arr = np.angle((re_arr - dn_re_arr) + 1j * (im_arr - dn_im_arr))
 
-    Examples:
-        >>> scale(100, (0, 100), (0, 1000))
-        1000.0
-        >>> scale(50, (-100, 100), (0, 1000))
-        750.0
-        >>> scale(50, (0, 1), (0, 10))
-        500.0
-        >>> scale(0.5, (0, 1), (-10, 10))
-        0.0
-        >>> scale(np.pi / 3, (0, np.pi), (0, 180))
-        60.0
-    """
-    in_min, in_max = in_interval
-    out_min, out_max = out_interval
-    return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
+    # threshold = 0.0  # np.percentile(mag_arr, 0)
+    # mask = mag_arr >= threshold
+    # msg('Mask Size: {:%}'.format(np.sum(mask) / np.size(mask)))
+    # phs_arr[~mask] = 0.0
+
+    chi_arr = unwrap_phase(dn_phs_arr)
+
+    # arr_phs_k = dft(arr_phs)
+    # arr_dk_k = dipole_kernel(arr_cx)
+    # # field shift along z in Tesla in Fourier space
+    # chi_k = arr_phs_k / arr_dk_k
+    # arr_chi = np.real(idft(arr_chi_k))
+    return chi_arr
 
 
 # ======================================================================
-def minmax(arr):
-    """
-    Calculate the minimum and maximum of an array: (min, max).
-
-    Args:
-        arr (np.ndarray): The input array.
-
-    Returns:
-        min (float): the minimum value of the array
-        max (float): the maximum value of the array
-
-    Examples:
-        >>> minmax(np.arange(10))
-        (0, 9)
-    """
-    return np.min(arr), np.max(arr)
-
-
-# ======================================================================
-def auto_replicate(val, n):
-    try:
-        iter(val)
-    except TypeError:
-        val = (val,) * n
-    return val
-
-
-# ======================================================================
-def gaussian_kernel(shape, sigmas, center=0.0, ndim=1, normalize=True):
-    for val in (shape, sigmas, center):
-        try:
-            iter(val)
-        except TypeError:
-            pass
-        else:
-            ndim = max(len(val), ndim)
-
-    shape = auto_replicate(shape, ndim)
-    sigmas = auto_replicate(sigmas, ndim)
-    center = auto_replicate(center, ndim)
-
-    assert (len(sigmas) == len(shape))
-    assert (len(center) == len(shape))
-
-    grid = [slice(-(x - x0) // 2 + 1, (x - x0) // 2 + 1)
-            for x, x0 in zip(shape, center)]
-    coord = np.ogrid[grid]
-    kernel = np.exp(
-        -(sum([x ** 2 / (2 * sigma ** 2) for x, sigma in zip(coord, sigmas)])))
-    if normalize:
-        kernel = kernel / np.sum(kernel)
-    return kernel
-
-
-# ======================================================================
-def rmse(
+def rdif(
         arr1,
         arr2,
-        scaling=100):
+        arr_interval=None):
     """
-    Calculate the root mean squared error of the first vs the second array.
+    Calculate the mean of the abs. difference, scaled to the values interval.
 
-    RMSE = A * ||arr1 - arr2|| / ||arr2||
+    RDIF = |arr1 - arr2| / (max(arr1, arr2) - min(arr1, arr2))
 
     Args:
         arr1 (np.ndarray): The first input array.
@@ -136,9 +92,33 @@ def rmse(
         rmse (float): The root mean squared error
     """
     assert (arr1.shape == arr2.shape)
+    if not arr_interval:
+        arr_interval = (
+            min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
+    rdif = np.mean(np.abs(arr1 - arr2)) / np.ptp(arr_interval)
+    return rdif
+
+
+# ======================================================================
+def rmse(
+        arr1,
+        arr2):
+    """
+    Calculate the root mean squared error of the first vs the second array.
+
+    RMSE = A * ||arr1 - arr2|| / ||arr2||
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+
+    Returns:
+        rmse (float): The root mean squared error.
+    """
+    assert (arr1.shape == arr2.shape)
     norm = scipy.linalg.norm
-    rmse = scaling * norm(arr1 - arr2) / norm(arr2)
-    return rmse
+    rmse_val = norm(arr1 - arr2) / norm(arr2)
+    return rmse_val
 
 
 # ======================================================================
@@ -167,14 +147,14 @@ def hfen(
     assert (arr1.shape == arr2.shape)
     ndim = arr1.ndim
 
-    filter_sizes = auto_replicate(filter_sizes, ndim)
-    sigmas = auto_replicate(sigmas, ndim)
+    filter_sizes = auto_repeat(filter_sizes, ndim)
+    sigmas = auto_repeat(sigmas, ndim)
     assert (len(sigmas) == len(filter_sizes))
 
     grid = [slice(-filter_size // 2 + 1, filter_size // 2 + 1)
             for filter_size in filter_sizes]
     coord = np.ogrid[grid]
-    gaussian_filter = gaussian_kernel(filter_sizes, sigmas)
+    gaussian_filter = gaussian_nd(filter_sizes, sigmas)
     hfen_factor = \
         sum([x ** 2 / sigma ** 4 for x, sigma in zip(coord, sigmas)]) + \
         - sum([1 / sigma ** 2 for sigma in sigmas])
@@ -189,15 +169,15 @@ def hfen(
     # arr2_corr = scipy.ndimage.filters.correlate(arr2, arr_filter)
     arr2_corr = scipy.signal.fftconvolve(arr2, arr_filter, 'same')
 
-    hfen = rmse(arr1_corr, arr2_corr)
-    return hfen
+    hfen_val = rmse(arr1_corr, arr2_corr)
+    return hfen_val
 
 
 # ======================================================================
 def ssim(
         arr1,
         arr2,
-        arr_interval=None,
+        vals_interval=None,
         aa=(1, 1, 1),
         kk=(0.010, 0.030, 0.015)):
     """
@@ -233,9 +213,14 @@ def ssim(
         600–612. doi:10.1109/TIP.2003.819861.
     """
     assert (arr1.shape == arr2.shape)
-    if arr_interval is None:
-        arr_interval = (
-            min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
+    arr_interval = (
+        min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
+    if vals_interval:
+        msk1 = arr1 != 0.0
+        msk2 = arr2 != 0.0
+        arr1[msk1] = scale(arr1[msk1], arr_interval, arr_interval)
+        arr2[msk2] = scale(arr2[msk2], arr_interval, arr_interval)
+        arr_interval = vals_interval
     interval_size = np.ptp(arr_interval)
     cc = [(k * interval_size) ** 2 for k in kk]
     mu1 = np.mean(arr1)
@@ -248,120 +233,210 @@ def ssim(
         (2 * sigma1 * sigma2 + cc[1]) / (sigma1 ** 2 + sigma2 ** 2 + cc[1]),
         (sigma12 + cc[2]) / (sigma1 * sigma2 + cc[2])
     ]
-    ssim = np.prod(np.array([f ** a for (f, a) in zip(ff, aa)]), 0)
-    return ssim
+    ssim_val = np.prod(np.array([f ** a for (f, a) in zip(ff, aa)]), 0)
+    return ssim_val
 
 
 # ======================================================================
-def ssim_map(
-        arr1,
-        arr2,
-        filter_sizes=5,
-        sigmas=1.5,
-        arr_interval=None,
-        aa=(1, 1, 1),
-        kk=(0.010, 0.030, 0.015)):
+def check_performance(test, ref, name):
+    rdif_val = rdif(test, ref)
+    rmse_val = rmse(test, ref)
+    hfen_val = hfen(test, ref)
+    ssim_val = ssim(test, ref)
+    msg('RDIF to {}: {:.2f}'.format(name, rdif_val))
+    msg('RMSE to {}: {:.2%}'.format(name, rmse_val))
+    msg('HFEN to {}: {:.2%}'.format(name, hfen_val))
+    msg('SSIM to {}: {:.2%}'.format(name, ssim_val))
+
+
+# ======================================================================
+def meta_to_str(metas, pre='__', post='__'):
+    def preprocess(val):
+        val = str(val)
+        if '_' in val:
+            val = val.replace('_', '-')
+        if ' ' in val:
+            val = ''.join(val.split())  # remove all whitespaces
+        return val
+
+    text = '_'.join(
+        ['{}={:s}'.format(key, preprocess(val))
+         for key, val in sorted(metas.items())])
+    if text:
+        text = pre + text + post
+    return text
+
+
+def test_my_qsm(
+        base=realpath('~/hd2/cache/qsm_2016_challenge/challenge'),
+        target='chi_cosmos.nii.gz',
+        force=True,
+        verbose=D_VERB_LVL):
     """
-    Calculate the local structure similarity index map.
 
     Args:
-        arr1 (np.ndarray): The first input array.
-        arr2 (np.ndarray): The second input array.
-        filter_sizes (tuple[int]|int): The size of the filter in px.
-            If a single value is given, is is assumed to be equal in all dims.
-        sigmas (tuple[float]|float): The sigma of the gaussian kernel in px.
-            If a single value is given, it is assumed to be equal in all dims.
-        arr_interval (tuple[float]): Minimum and maximum allowed values.
-            The values of both arr1 and arr2 should be within this interval.
-        aa (tuple[float]): The exponentiation weight factors. Must be 3.
-            Modulate the relative weight of the three SSIM components
-            (luminosity, contrast and structural information).
-            If they are all equal to 1, the computation can be simplified.
-        kk (tuple[float]): The ratio regularization constant factors. Must be 3.
-            Determine the regularization constants as a factors of the total
-            interval size (squared) for the three SSIM components
-            (luminosity, contrast and structural information).
-            Must be numbers much smaller than 1.
+        base ():
+        target():
+        force ():
+        verbose ():
 
     Returns:
-        ssim_arr (np.ndarray): The local structure similarity index map
-        ssim (float): The global (mean) structure similarity index.
 
-    See Also:
-        Wang, Zhou, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli. “Image
-        Quality Assessment: From Error Visibility to Structural Similarity.”
-        IEEE Transactions on Image Processing 13, no. 4 (April 2004):
-        600–612. doi:10.1109/TIP.2003.819861.
     """
-    assert (arr1.shape == arr2.shape)
-    if arr_interval is None:
-        arr_interval = (
-            min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
-    interval_size = np.ptp(arr_interval)
-    ndim = arr1.ndim
-    arr_filter = gaussian_kernel(
-        auto_replicate(filter_sizes, ndim), auto_replicate(sigmas, ndim))
-    convolve = scipy.signal.fftconvolve
-    mu1 = convolve(arr1, arr_filter, 'same')
-    mu2 = convolve(arr2, arr_filter, 'same')
-    mu1_mu1 = mu1 ** 2
-    mu2_mu2 = mu2 ** 2
-    mu1_mu2 = mu1 * mu2
-    sg1_sg1 = convolve(arr1 ** 2, arr_filter, 'same') - mu1_mu1
-    sg2_sg2 = convolve(arr2 ** 2, arr_filter, 'same') - mu2_mu2
-    sg12 = convolve(arr1 * arr2, arr_filter, 'same') - mu1_mu2
-    cc = [(k * interval_size) ** 2 for k in kk]
-    # determine whether to use the simplified expression
-    if all(aa) == 1 and 2 * cc[2] == cc[1]:
-        ssim_arr = ((2 * mu1_mu2 + cc[0]) * (2 * sg12 + cc[1])) / (
-            (mu1_mu1 + mu2_mu2 + cc[0]) * (sg1_sg1 + sg2_sg2 + cc[1]))
+    msg('Dirpath: {}'.format(base))
+    filepaths = {
+        'mag': os.path.join(base, 'mag.nii.gz'),
+        'phs': os.path.join(base, 'phs.nii.gz'),
+        'tgt': os.path.join(base, target),
+    }
+    arr_mag = load(filepaths['mag']).astype(np.float64)
+    arr_phs = load(filepaths['phs']).astype(np.float64)
+    arr_tgt = load(filepaths['tgt']).astype(np.float64)
+
+    metas = {}
+
+    chi_filename = 'chi_myqsm' + meta_to_str(metas, post='') + '.' + EXT['niz']
+    chi_filepath = os.path.join(base, chi_filename)
+    msg('chi_myqsm: {}'.format(chi_filepath), verbose)
+    if check_redo(list(filepaths.values()), [chi_filepath], force):
+        msg('Calculating ...')
+        arr_cx = arr_mag / np.max(arr_mag) * np.exp(-1j * arr_phs)
+        arr_chi = my_qsm(arr_cx)
+
+        save(chi_filepath, arr_chi)
     else:
-        sg1 = np.sqrt(np.abs(sg1_sg1))
-        sg2 = np.sqrt(np.abs(sg2_sg2))
-        ff = [
-            (2 * mu1_mu2 + cc[0]) / (mu1_mu1 + mu2_mu2 + cc[0]),
-            (2 * sg1 * sg2 + cc[1]) / (sg1_sg1 + sg2_sg2 + cc[1]),
-            (sg12 + cc[2]) / (sg1 * sg2 + cc[2])
-        ]
-        ssim_arr = np.prod(np.array([f ** a for (f, a) in zip(ff, aa)]), 0)
-    ssim = np.mean(ssim_arr)
-    return ssim_arr, ssim
+        msg('Loading ...')
+        arr_chi = load(chi_filepath)
+
+    if verbose >= VERB_LVL['low']:
+        check_performance(
+            arr_chi, arr_tgt, change_ext(target, '', EXT['niz']))
 
 
-a1 = mrio.load(
-    '/nobackup/isar2/cache/qsm_2016_challenge/backup/data/chi_cosmos.nii.gz'
-    '').astype(np.float64)
-a2 = mrio.load(
-    '/nobackup/isar2/cache/qsm_2016_challenge/backup/data/phs_unwrap.nii.gz'
-    '').astype(np.float64)
+# ======================================================================
+def test_ann_1(
+        base=os.path.expanduser('~/hd2/cache/qsm_2016_challenge/challenge'),
+        target='chi_cosmos.nii.gz',
+        density=0.20,
+        force=False,
+        verbose=D_VERB_LVL):
+    """
 
-# import profile
-# profile.run('compute_hfen(arr1, arr2)', sort=1)
+    Args:
+        base ():
+        target ():
+        density ():
+        force ():
+        verbose ():
 
-# print(rmse(a1, a2))
-# elapsed('rmse')
+    Returns:
 
-# print(hfen(a1, a2))
-# elapsed('hfen')
+    """
+    msg('Dirpath: {}'.format(base))
+    filepaths = {
+        'mag': os.path.join(base, 'mag.nii.gz'),
+        'phs': os.path.join(base, 'phs.nii.gz'),
+        'msk': os.path.join(base, 'mask.nii.gz'),
+        'tgt': os.path.join(base, target),
+    }
+    arr_mag = load(filepaths['mag']).astype(np.float64)
+    arr_phs = load(filepaths['phs']).astype(np.float64)
+    arr_msk = load(filepaths['msk']).astype(np.bool)
+    arr_tgt = load(filepaths['tgt']).astype(np.float64)
 
-msk1 = a1 != 0.0
-msk2 = a2 != 0.0
-a12 = np.stack((a1, a2))
-min12 = np.min(a12)
-max12 = np.max(a12)
-a1[msk1] = scale(a1[msk1], minmax(a12), (0, 255))
-a2[msk2] = scale(a2[msk2], minmax(a12), (0, 255))
-elapsed('prepare for ssim')
+    arr_cx = arr_mag / np.max(arr_mag) * np.exp(-1j * arr_phs)
+    arr_cx_k = dft(arr_cx)
+    arr_cxm = arr_cx * arr_msk
+    arr_cxm_k = dft(arr_cxm)
 
-print(ssim(a1, a2))
-elapsed('ssim')
+    arr_dk_k = dipole_kernel(arr_cx.shape)
 
-ssim_arr, val = ssim_map(a1, a2)
-print(val)
-elapsed('ssim_map')
-from skimage.measure import compare_ssim
+    # calculate ANN parameters
+    np.random.seed(0)
+    mask = rand_mask(arr_cxm_k, density=density)
+    # mask *= arr_msk
+    arr_input = np.stack(
+        (np.real(arr_cxm_k[mask]), np.imag(arr_cxm_k[mask]), arr_dk_k[mask]),
+        axis=-1)
+    input_dims = arr_input.shape[-1]
 
-print(compare_ssim(a1, a2, win_size=5, gaussian_weights=True, sigma=1.5,
-                   dynamic_range=np.ptp((0, 255))))
-elapsed('ssim_scikit')
-print_elapsed()
+    arr_target = arr_tgt[mask].reshape(-1, 1)
+    hidden_layers = [24, 20, 16]
+
+    metas = {
+        'a': change_ext(target, '', EXT['niz']),
+        'dens': density,
+        'hidden-layers': hidden_layers,
+        'regular': 1e-3,
+        'z-stop': 1e-6,
+    }
+    for k, v in sorted(metas.items()):
+        msg('{}: {:s}'.format(k, str(v)), verbose)
+    ann_filename = 'chi_ann__' + meta_to_str(metas) + '.neurolab.ann'
+    ann_filepath = os.path.join(base, ann_filename)
+    msg('ANN: {}'.format(ann_filename), verbose)
+    if check_redo(tuple(filepaths.values()), [ann_filepath], force):
+        msg('Calculating ...')
+        ann = nnl.net.newff([[-1, 1]] * input_dims, hidden_layers + [1])
+        err = ann.train(
+            arr_input, arr_target,
+            epochs=4096, show=16,
+            goal=metas['z-stop'], rr=metas['regular'])
+
+        ann.save(ann_filepath)
+    else:
+        msg('Loading ...')
+        ann = nnl.load(ann_filepath)
+
+    chi_filename = 'chi_ann__' + meta_to_str(metas) + '.' + EXT['niz']
+    chi_filepath = os.path.join(base, chi_filename)
+    msg('chi_ann: {}'.format(ann_filepath), verbose)
+    if check_redo(list(filepaths.values()) + [ann_filepath],
+                  [chi_filepath], force):
+        msg('Calculating ...')
+        arr_input_all = np.stack(
+            (np.real(arr_cx_k), np.imag(arr_cx_k), arr_dk_k), axis=-1)
+        arr_chiann = np.real(idft(ann.sim(
+            arr_input_all.reshape((-1, input_dims))).reshape(arr_cx.shape)))
+
+        save(chi_filepath, arr_chiann)
+    else:
+        msg('Loading ...')
+        arr_chiann = load(chi_filepath)
+
+    if verbose >= VERB_LVL['low']:
+        check_performance(
+            arr_chiann, arr_tgt, change_ext(target, '', EXT['niz']))
+
+
+# ======================================================================
+def test_metrics():
+    base_path = os.path.expanduser('~/hd2/cache/qsm_2016_challenge/backup')
+    a1 = load(
+        os.path.join(base_path, 'data', 'chi_cosmos.nii.gz')).astype(np.float64)
+    a2 = load(
+        os.path.join(base_path, 'data', 'chi_33.nii.gz')).astype(np.float64)
+
+    # import profile
+    # profile.run('compute_hfen(arr1, arr2)', sort=1)
+
+    print(rdif(a1, a2))
+    elapsed('std_diff')
+
+    print(rmse(a1, a2))
+    elapsed('rmse')
+
+    print(hfen(a1, a2))
+    elapsed('hfen')
+
+    print(ssim(a1, a2))
+    elapsed('ssim')
+    print_elapsed()
+
+
+# ======================================================================
+if __name__ == '__main__':
+    msg(__doc__.strip())
+    # test_metrics()
+    # test_ann_1()
+    test_my_qsm()

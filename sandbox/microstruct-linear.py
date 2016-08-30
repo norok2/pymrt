@@ -63,13 +63,13 @@ import xarray as xr  # N-D labeled arrays and datasets in Python
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.utils as mru
-# import pymrt.plot as mrp
-# import pymrt.registration as mrr
-import pymrt.computation as mrc
-# import pymrt.correlation as mrl
-import pymrt.input_output as mrio
+import pymrt.base as pmb
+import pymrt.naming as pmn
+# import pymrt.plot as pmp
+# import pymrt.registration as pmr
+import pymrt.computation as pmc
+# import pymrt.correlation as pml
+import pymrt.input_output as pmio
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
@@ -78,8 +78,8 @@ from pymrt import msg, dbg
 # ======================================================================
 # :: Paths
 PATHS = {
-    'acquisition': '/nobackup/isar3/data/siemens/RME**ME-MP2RAGE',
-    'cache': '/nobackup/isar2/cache',
+    'acquisition': '~/hd3/data/siemens/RME**ME-MP2RAGE',
+    'cache': '~/hd2/cache',
 }
 
 PATHS['base'] = os.path.join(PATHS['cache'], 'microstruct', 'linear')
@@ -91,9 +91,9 @@ PATHS['masks'] = os.path.join(PATHS['base'], 'masks')
 PATHS['prior'] = os.path.join(PATHS['sandbox'], 'prior')
 PATHS['model'] = os.path.join(PATHS['sandbox'], 'model')
 
-PATHS['samples'] = mrb.listdir(PATHS['sources'], None, full_path=False)
+PATHS['samples'] = pmb.listdir(PATHS['sources'], None, full_path=False)
 
-# PATHS['masks'] = mrb.listdir(PATHS['masks'], mrn.D_EXT)
+# PATHS['masks'] = pmb.listdir(PATHS['masks'], pmn.D_EXT)
 
 # make sure output directory exists
 for item in [PATHS['sandbox'], PATHS['prior'], PATHS['model']]:
@@ -132,9 +132,9 @@ def priors_to_models(priors):
 
 # ======================================================================
 def get_map(dirpath, type):
-    filepaths = mrb.listdir(dirpath, mrb.EXT['niz'])
+    filepaths = pmb.listdir(dirpath, pmb.EXT['niz'])
     for filepath in filepaths:
-        if mru.parse_filename(filepath)['type'] == type:
+        if pmn.parse_filename(filepath)['type'] == type:
             return filepath
 
 
@@ -152,7 +152,7 @@ def calc_wm_to_brain_ratio(
     }
     img = {}
     for name, filename in names.items():
-        img[name] = mrio.load(os.path.join(dirpath, filename))
+        img[name] = pmio.load(os.path.join(dirpath, filename))
     wm = img['lwm'] + img['rwm']
     c = img['lc'] + img['rc']
     b = wm + c
@@ -190,14 +190,14 @@ def time_to_rate(
         rate_maps = [
             os.path.join(dirpath, os.path.basename(filepath))
             for filepath in (
-                mru.change_img_type(time_maps[0], 'R1'),
-                mru.change_img_type(time_maps[1], 'R2S'))]
+                pmn.change_img_type(time_maps[0], 'R1'),
+                pmn.change_img_type(time_maps[1], 'R2S'))]
         if not os.path.isdir(dirpath):
             os.makedirs(dirpath)
         for time_map, rate_map in zip(time_maps, rate_maps):
-            if mrb.check_redo([time_map], [rate_map], force):
+            if pmb.check_redo([time_map], [rate_map], force):
                 msg('converting `{}` to `{}`...')
-                mrio.simple_filter_1_1(time_map, rate_map, mrc.time_to_rate)
+                pmio.simple_filter_1_1(time_map, rate_map, mrc.time_to_rate)
 
 
 # ======================================================================
@@ -213,27 +213,27 @@ def get_roi_values(
     msg(':: Calculating ROI values in maps...')
     stats = {'avg': np.mean, 'std': np.std}
     subdirpaths = [
-        item for item in mrb.listdir(dirpath, None) if os.access(item, os.W_OK)]
+        item for item in pmb.listdir(dirpath, None) if os.access(item, os.W_OK)]
     inputs = []
     for subdirpath in subdirpaths:
         inputs += [
-            mask for mask in mrb.listdir(subdirpath, mrb.EXT['niz'])
+            mask for mask in pmb.listdir(subdirpath, pmb.EXT['niz'])
             if os.path.basename(mask).startswith('mask')]
     out_filepath = os.path.join(dirpath, out_filename)
-    if mrb.check_redo(inputs, [out_filepath], force):
+    if pmb.check_redo(inputs, [out_filepath], force):
         roi_values = {}
         for subdirpath in subdirpaths:
             subdirname = os.path.basename(subdirpath)
             individual_stat = {}
             masks = [
-                (mru.parse_filename(mask)['type'], mask)
-                for mask in mrb.listdir(subdirpath, mrb.EXT['niz'])
+                (pmn.parse_filename(mask)['type'], mask)
+                for mask in pmb.listdir(subdirpath, pmb.EXT['niz'])
                 if os.path.basename(mask).startswith('mask')]
-            r1_arr = mrio.load(get_map(subdirpath, 'R1'))
-            r2s_arr = mrio.load(get_map(subdirpath, 'R2S'))
+            r1_arr = pmio.load(get_map(subdirpath, 'R1'))
+            r2s_arr = pmio.load(get_map(subdirpath, 'R2S'))
             msg('Calculating on `{}`'.format(subdirname))
             for key, mask_path in masks:
-                mask = mrio.load(mask_path).astype(bool)
+                mask = pmio.load(mask_path).astype(bool)
                 parameters = {'R1': r1_arr, 'R2S': r2s_arr}
                 individual_stat[key] = {}
                 for name, arr in parameters.items():
@@ -370,7 +370,7 @@ def affine_model(
             sym.symbols('_'.join((name, roi))): priors['P'][roi][name]
             for name in parameters for roi in priors['P'].keys()}
         # print(parameters_priors)
-        subst = mrb.merge_dicts(relaxants_priors, parameters_priors)
+        subst = pmb.merge_dicts(relaxants_priors, parameters_priors)
         # print(subst)
         aa_arr = np.array(
             [sols[aa[i, j]].subs(subst)
@@ -413,13 +413,13 @@ def estimate_relaxants_content(
             subpath = os.path.join(model_dirpath, sample, model_name)
             rate_maps = [get_map(dirpath, param) for param in params]
             conc_maps = [
-                os.path.join(subpath, mru.change_param_val(mru.change_img_type(
+                os.path.join(subpath, pmn.change_param_val(pmn.change_img_type(
                     os.path.basename(rate_maps[1]), img_type), 'm', idx))
                 for img_type in relaxants]
             if not os.path.isdir(subpath):
                 os.makedirs(subpath)
-            if mrb.check_redo(rate_maps, conc_maps, force):
-                mrio.simple_filter_n_m(
+            if pmb.check_redo(rate_maps, conc_maps, force):
+                pmio.simple_filter_n_m(
                     rate_maps, conc_maps, apply_affine, *affines[model])
 
 
@@ -450,20 +450,20 @@ def validate_results(
                 subpath = os.path.join(model_dirpath, sample, model_name)
                 rate_maps = [get_map(dirpath, param) for param in params]
                 conc_maps = [
-                    os.path.join(subpath, mru.change_param_val(mru.change_img_type(
+                    os.path.join(subpath, pmn.change_param_val(pmn.change_img_type(
                         os.path.basename(rate_maps[1]), img_type), 'm', idx))
                     for img_type in relaxants]
                 model_priors = sorted(set([elem.split('_')[1] for elem in model]))
                 masks = [
-                    (mru.parse_filename(mask)['type'], mask)
-                    for mask in mrb.listdir(dirpath, mrb.EXT['niz'])
+                    (pmn.parse_filename(mask)['type'], mask)
+                    for mask in pmb.listdir(dirpath, pmb.EXT['niz'])
                     if os.path.basename(mask).startswith('mask') and
-                    mru.parse_filename(mask)['type'] not in model_priors]
-                relaxant_arrs = [mrio.load(filepath) for filepath in conc_maps]
+                    pmn.parse_filename(mask)['type'] not in model_priors]
+                relaxant_arrs = [pmio.load(filepath) for filepath in conc_maps]
                 export[model_name][sample] = {}
                 for key, mask_path in masks:
                     export[model_name][sample][key] = {}
-                    mask = mrio.load(mask_path).astype(bool)
+                    mask = pmio.load(mask_path).astype(bool)
                     for i, relaxant in enumerate(relaxants):
                         export[model_name][sample][key][relaxant] = \
                             np.mean(relaxant_arrs[i][mask]), \
@@ -529,8 +529,8 @@ if __name__ == '__main__':
 
     main()
 
-    mrb.elapsed('microstruct-linear')
-    mrb.print_elapsed()
+    pmb.elapsed('microstruct-linear')
+    pmb.print_elapsed()
 
 # IDK what it does
 # for subject in PATHS['subjects']:
@@ -546,29 +546,29 @@ if __name__ == '__main__':
 #     fnirt_filepath = os.path.join(dirpath, 'fnirt.nii.gz')
 #     in_filepath = os.path.join(
 #         dirpath,
-#         mru.change_img_type(os.path.basename(inv2m_filepath), 'T1W'))
+#         pmn.change_img_type(os.path.basename(inv2m_filepath), 'T1W'))
 #     if not os.path.isdir(dirpath):
 #         os.makedirs(dirpath)
-#     mrn.simple_filter_n(
+#     pmn.simple_filter_n(
 #         [inv2m_filepath, uniform_filepath], in_filepath,
 #         lambda x:
 #         x[0][..., 0].astype(float) * x[1][..., 0].astype(float) / 1e3)
 #
 #     # brain extract
-#     if mrb.check_redo([in_filepath], [bet_filepath]):
+#     if pmb.check_redo([in_filepath], [bet_filepath]):
 #         print('bet')
 #         cmd = 'bet {} {} -R'.format(in_filepath, bet_filepath)
-#         mrb.execute(cmd)
+#         pmb.execute(cmd)
 #     # linear registration matrix
-#     if mrb.check_redo(
+#     if pmb.check_redo(
 #             [bet_filepath, tpl_t1w_b],
 #             [aff_filepath, flirt_filepath]):
 #         print('flirt')
 #         cmd = 'flirt -in {} -ref {} -omat {} -out {}'.format(
 #             tpl_t1w_b, bet_filepath, aff_filepath, flirt_filepath)
-#         mrb.execute(cmd)
+#         pmb.execute(cmd)
 #     # non-linear registration matrix
-#     if mrb.check_redo(
+#     if pmb.check_redo(
 #             [in_filepath, tpl_t1w, aff_filepath],
 #             [warp_filepath, fnirt_filepath]):
 #         print('fnirt')
@@ -576,14 +576,14 @@ if __name__ == '__main__':
 # }'.format(
 # tpl_t1w, in_filepath, aff_filepath, warp_filepath,
 # fnirt_filepath)
-# mrb.execute(cmd)
+# pmb.execute(cmd)
 # # apply registration to masks
 # for mask in PATHS['masks']:
 #     print('applywarp')
 # reg_mask = os.path.join(dirpath, os.path.basename(mask))
-# if mrb.check_redo(
+# if pmb.check_redo(
 #         [mask, tpl_t1w, aff_filepath, warp_filepath],
 #         [reg_mask]):
 #     cmd = 'applywarp -i {} -o {} -r {} -w {}'.format(
 #         mask, reg_mask, tpl_t1w, warp_filepath)
-# mrb.execute(cmd)
+# pmb.execute(cmd)

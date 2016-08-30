@@ -25,25 +25,25 @@ import h5py
 import scipy.optimize
 import matplotlib.pyplot as plt
 
-import pymrt.base as mrb
-import pymrt.input_output as mrio
+import pymrt.base as pmb
+import pymrt.input_output as pmio
 import pymrt.sequences.matrix_algebra as ma
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
 def _extract_mt_mask(d=1, n=96, l=1):
     in_filepath = 'mask.nii.gz'
     out_filepath = 'mt_mask.nii.gz'
-    img, aff, hdr = mrio.load(in_filepath, True)
+    img, aff, hdr = pmio.load(in_filepath, True)
     mask = []
     for i in range(img.ndims):
         mask.append(slice(None) if i != d else slice(n, n + l))
     img[not mask] = 0.0
-    mrio.save(out_filepath, img, aff, hdr)
+    pmio.save(out_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -78,7 +78,7 @@ def mt_fit_quick(
         }
     filepaths = {}
     for item, filename in filenames.items():
-        filepaths[item] = os.path.realpath(filename)
+        filepaths[item] = pmb.realpath(filename)
         if not os.path.exists(filepaths[item]):
             filepaths[item] = os.path.join(dirpath, filename)
         if not os.path.exists(filepaths[item]):
@@ -93,21 +93,21 @@ def mt_fit_quick(
     with open(filepaths['data_sources'], 'r') as src_file:
         data_sources = json.load(src_file)
 
-    img_mask, aff_mask, hdr_mask = mrio.load(filepaths['mask'], True)
+    img_mask, aff_mask, hdr_mask = pmio.load(filepaths['mask'], True)
     mask = img_mask.astype(bool)
     try:
         filepaths['target']
     except NameError:
         pass
     else:
-        target_mask = mrio.load(filepaths['target']).astype(bool)
+        target_mask = pmio.load(filepaths['target']).astype(bool)
         mask = mask * target_mask
 
-    b1t_arr = mrio.load(filepaths['b1t'])[mask]
-    b0_arr = mrio.load(filepaths['b0'])[mask]
+    b1t_arr = pmio.load(filepaths['b1t'])[mask]
+    b0_arr = pmio.load(filepaths['b0'])[mask]
 
-    t1 = mrio.load(filepaths['t1']).astype(float)
-    t2s = mrio.load(filepaths['t2s']).astype(float)
+    t1 = pmio.load(filepaths['t1']).astype(float)
+    t2s = pmio.load(filepaths['t2s']).astype(float)
     r1a_arr = np.zeros_like(t1)
     r2a_arr = np.zeros_like(t2s)
 
@@ -142,11 +142,11 @@ def mt_fit_quick(
                     print(p_filepath, ': not found!')
                 else:
                     print(': {} {} {}'.format(filename, flip_angle, freq))
-            img, aff, hdr = mrio.load(p_filepath, True)
+            img, aff, hdr = pmio.load(p_filepath, True)
             p_imgs.append(img[mask])
             flip_angles.append(flip_angle)
             freqs.append(freq)
-        mt_arr = mrb.ndstack(p_imgs)
+        mt_arr = pmb.ndstack(p_imgs)
 
         h5f = h5py.File(mt_data_filepath, 'w')
         h5d = h5f.create_dataset('mt_data', data=mt_arr)
@@ -195,7 +195,7 @@ def mt_fit_quick(
             ax.set_ylabel('Frequency offset / Hz (log10 scale)')
             ax.set_zlabel('Signal Intensity / arb.units')
             ax.scatter(
-                flip_angles, mrb.sgnlog(freqs, 10), mt_data, c='b', marker='o')
+                flip_angles, pmb.sgnlog(freqs, 10), mt_data, c='b', marker='o')
             plt.show(block=False)
 
         # :: the definition of the sequence
@@ -246,7 +246,7 @@ def mt_fit_quick(
 
         if verbose >= VERB_LVL['debug']:
             ax.scatter(
-                flip_angles, mrb.sgnlog(freqs, 10), mt_signal(x_data, *p0),
+                flip_angles, pmb.sgnlog(freqs, 10), mt_signal(x_data, *p0),
                 c='g', marker='s')
             plt.show(block=False)
 
@@ -298,7 +298,7 @@ def mt_fit_quick(
             print()
         if verbose >= VERB_LVL['debug']:
             ax.scatter(
-                flip_angles, mrb.sgnlog(freqs, 10), mt_signal(x_data, *p_opt),
+                flip_angles, pmb.sgnlog(freqs, 10), mt_signal(x_data, *p_opt),
                 c='r', marker='o')
             plt.show()
 
@@ -308,33 +308,33 @@ def mt_fit_quick(
         else:
             print(error_msg)
 
-    dirpath = mrb.change_ext(filepaths['target'], '', mrb.EXT['niz'])
+    dirpath = pmb.change_ext(filepaths['target'], '', pmb.EXT['niz'])
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
     p_imgs, dp_imgs = [], []
-    fit_results = fitting_names, mrb.ndsplit(p_arr), mrb.ndsplit(dp_arr)
+    fit_results = fitting_names, pmb.ndsplit(p_arr), pmb.ndsplit(dp_arr)
     for fitting_name, image_flat, error_flat in zip(*fit_results):
         # save the parameter map
         p_img = np.zeros_like(mask, float)
         p_img[mask] = image_flat
         p_filepath = os.path.join(
-            dirpath, mrb.change_ext('p_' + fitting_name, mrb.EXT['niz']))
-        mrio.save(p_filepath, p_img, aff_mask)
+            dirpath, pmb.change_ext('p_' + fitting_name, pmb.EXT['niz']))
+        pmio.save(p_filepath, p_img, aff_mask)
         p_imgs.append(p_img)
         # save the error map
         dp_img = np.zeros_like(mask, float)
         dp_img[mask] = error_flat
         dp_filepath = os.path.join(
-            dirpath, mrb.change_ext('dp_' + fitting_name, mrb.EXT['niz']))
-        mrio.save(dp_filepath, dp_img, aff_mask)
+            dirpath, pmb.change_ext('dp_' + fitting_name, pmb.EXT['niz']))
+        pmio.save(dp_filepath, dp_img, aff_mask)
         dp_imgs.append(dp_img)
     # save combined
     p_filepath = os.path.join(
-        dirpath, mrb.change_ext('p_all', mrb.EXT['niz']))
-    mrio.save(p_filepath, mrb.ndstack(p_imgs), aff_mask)
+        dirpath, pmb.change_ext('p_all', pmb.EXT['niz']))
+    pmio.save(p_filepath, pmb.ndstack(p_imgs), aff_mask)
     dp_filepath = os.path.join(
-        dirpath, mrb.change_ext('dp_all', mrb.EXT['niz']))
-    mrio.save(dp_filepath, mrb.ndstack(dp_imgs), aff_mask)
+        dirpath, pmb.change_ext('dp_all', pmb.EXT['niz']))
+    pmio.save(dp_filepath, pmb.ndstack(dp_imgs), aff_mask)
 
 
 # ======================================================================
@@ -426,11 +426,10 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print('II:', 'Parsed Arguments:', args)
-    if args.verbose > VERB_LVL['low']:
-        print(__doc__)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
 
     args = {
         'dirpath': args.dirpath,
@@ -450,8 +449,8 @@ def main():
     }
     mt_fit_quick(**args)
 
-    mrb.elapsed(os.path.basename(__file__))
-    mrb.print_elapsed()
+    pmb.elapsed(os.path.basename(__file__))
+    pmb.print_elapsed()
 
 
 # ======================================================================

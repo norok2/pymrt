@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: useful I/O utilities.
+PyMRT: useful I/O utilities.
 
 TODO:
 - improve affine support
@@ -52,17 +52,16 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import pymrt.base as mrb
-# import pymrt.geometry as mrg
-import pymrt.plot as mrp
-# import pymrt.segmentation as mrs
-import pymrt.input_output as mrio
+import pymrt.base as pmb
+# import pymrt.geometry as pmg
+import pymrt.plot as pmp
+# import pymrt.segmentation as pms
+import pymrt.input_output as pmio
 
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
+# from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -93,7 +92,7 @@ def bicorr(
     save_filepath = os.path.join(dirpath, save_filename.format(subpath))
     if os.path.isfile(mask_filepath):
         print(save_filepath)
-        mrio.plot_histogram2d(
+        pmio.plot_histogram2d(
             in1_filepath, in2_filepath, mask_filepath, mask_filepath,
             save_filepath=save_filepath, scale='log',
             # array_interval=((700, 3000), (700, 3000)))
@@ -104,20 +103,20 @@ def bicorr(
 
 # ======================================================================
 def sharpness(dirpath, mask_filename='mask.nii.gz', ):
-    in_filepaths = mrb.listdir(dirpath, mrb.EXT['niz'])
+    in_filepaths = pmb.listdir(dirpath, pmb.EXT['niz'])
     in_filepaths = [item for item in in_filepaths if mask_filename not in item]
     mask_filepath = os.path.join(dirpath, mask_filename)
-    msk = mrio.load(mask_filepath).astype(bool)
+    msk = pmio.load(mask_filepath).astype(bool)
     for in_filepath in in_filepaths:
-        img = mrio.load(in_filepath)
-        mrb.calc_stats(img[msk], title=os.path.basename(in_filepath))
+        img = pmio.load(in_filepath)
+        pmb.calc_stats(img[msk], title=os.path.basename(in_filepath))
 
 
 # ======================================================================
 def sobel_gen(
         dirpath,
         src_names=('t1', 't2s')):
-    subpaths = mrb.listdir(dirpath, None, full_path=False)
+    subpaths = pmb.listdir(dirpath, None, full_path=False)
     subpaths = [item for item in subpaths if 'sobel' not in item]
     # generate for sharpness calculation
     for subpath in subpaths:
@@ -125,34 +124,34 @@ def sobel_gen(
         out_path = os.path.join(dirpath, 'sobel')
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        filenames = mrb.listdir(in_path, mrb.EXT['niz'], full_path=False)
+        filenames = pmb.listdir(in_path, pmb.EXT['niz'], full_path=False)
         for filename in filenames:
-            if mrb.change_ext(filename, '', mrb.EXT['niz']) in src_names:
+            if pmb.change_ext(filename, '', pmb.EXT['niz']) in src_names:
                 in_filepath = os.path.join(in_path, filename)
                 out_filepath = os.path.join(out_path, subpath + '__' + filename)
-                mrio.simple_filter_1_1(in_filepath, out_filepath, sobel)
+                pmio.simple_filter_1_1(in_filepath, out_filepath, sobel)
     # generate for bicorrelation
     for subpath in subpaths:
         in_path = os.path.join(dirpath, subpath)
         out_path = os.path.join(dirpath, 'sobel__' + subpath)
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        filenames = mrb.listdir(in_path, mrb.EXT['niz'], full_path=False)
+        filenames = pmb.listdir(in_path, pmb.EXT['niz'], full_path=False)
         for filename in filenames:
-            if mrb.change_ext(filename, '', mrb.EXT['niz']) in src_names:
+            if pmb.change_ext(filename, '', pmb.EXT['niz']) in src_names:
                 in_filepath = os.path.join(in_path, filename)
                 out_filepath = os.path.join(out_path, filename)
-                mrio.simple_filter_1_1(in_filepath, out_filepath, sobel)
+                pmio.simple_filter_1_1(in_filepath, out_filepath, sobel)
 
 
 # ======================================================================
 def main():
-    dirpath = '/nobackup/isar2/cache/me-mp2rage/misreg/bicorr/'
+    dirpath = '~/hd2/cache/me-mp2rage/misreg/bicorr/'
     # sharpness
     # sobel_gen(dirpath)
     # sharpness(os.path.join(dirpath, 'sobel'))
     # joint correlation
-    subpaths = mrb.listdir(dirpath, None, full_path=False)
+    subpaths = pmb.listdir(dirpath, None, full_path=False)
     for subpath in subpaths:
         if 'sobel__' in subpath:
             bicorr(

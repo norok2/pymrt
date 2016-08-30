@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt: read_output files with a JCAMP-DX-like structure.
+PyMRT: read_output files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """
@@ -50,10 +50,10 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as mrb
-# import pymrt.utils as mru
-# import pymrt.input_output as mrio
-# import pymrt.geometry as mrg
+# import pymrt.base as pmb
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 
 
@@ -183,7 +183,7 @@ def test():
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
+    msg(__doc__.strip())
     # time the tests
     begin_time = datetime.datetime.now()
     test()

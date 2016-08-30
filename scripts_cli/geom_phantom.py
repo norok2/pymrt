@@ -48,22 +48,22 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as mrb
-# import pymrt.utils as mru
-import pymrt.geometry as mrg
-# import pymrt.plot as mrp
-# import pymrt.registration as mrr
-# import pymrt.segmentation as mrs
-# import pymrt.computation as mrc
-# import pymrt.correlation as mrl
-import pymrt.input_output as mrio
-# import pymrt.sequences as mrq
+# import pymrt.base as pmb
+# import pymrt.naming as pmn
+import pymrt.geometry as pmg
+# import pymrt.plot as pmp
+# import pymrt.registration as pmr
+# import pymrt.segmentation as pms
+# import pymrt.computation as pmc
+# import pymrt.correlation as pml
+import pymrt.input_output as pmio
+# import pymrt.sequences as pmq
 # from pymrt.debug import dbg
 # from pymrt.sequences import mp2rage
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -120,15 +120,15 @@ def make_phantom(
     position = position
     # :: create the mask
     if phantom == 'cuboid':
-        mask = mrg.cuboid(shape, position, lengths)
+        mask = pmg.cuboid(shape, position, lengths)
     elif phantom == 'ellipsoid':
-        mask = mrg.ellipsoid(shape, position, lengths)
+        mask = pmg.ellipsoid(shape, position, lengths)
     elif phantom == 'rhomboid':
-        mask = mrg.rhomboid(shape, position, lengths)
+        mask = pmg.rhomboid(shape, position, lengths)
     elif phantom == 'cylinder':
-        mask = mrg.cylinder(shape, position, lengths[0], lengths[1])
+        mask = pmg.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
-    img_append = mrg.render(mask, fill)
+    img_append = pmg.render(mask, fill)
     if append == APPEND_MODE['sum']:
         img += img_append
     elif append == APPEND_MODE['prod']:
@@ -148,7 +148,7 @@ def make_phantom(
             fill,
             append, i_filepath,
             o_filepath))
-    mrio.save(o_filepath, img, aff, hdr)
+    pmio.save(o_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -162,13 +162,13 @@ def handle_arg():
     # number of dimensions of the image
     d_dim = 3
     # size of the resulting image
-    d_sizes = tuple([mrg.D_SHAPE] * d_dim)
+    d_sizes = tuple([pmg.D_SHAPE] * d_dim)
     # phantom to create
     d_phantom = PHANTOMS[0]
     # proportional position of the center relative to the middle
     d_position = (0.0, 0.0, 0.0)
     # lengths of the resulting object
-    d_lengths = tuple([mrg.D_LENGTH_1] * d_dim)
+    d_lengths = tuple([pmg.D_LENGTH_1] * d_dim)
     # lengths of the resulting object
     d_angles = tuple([0.0] * d_dim)
     # intensity values (internal, external)
@@ -254,10 +254,9 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
     make_phantom(
         args.infile, args.sizes, args.append, args.phantom, args.position,

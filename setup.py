@@ -30,7 +30,7 @@ VERSION_SOURCE_FILEPATH = 'pymrt/__init__.py'
 README_SOURCE_FILE = 'README.rst'
 
 # get the working directory for the setup script
-CWD = os.path.realpath(os.path.dirname(__file__))
+CWD = pmb.realpath(os.path.dirname(__file__))
 
 # get the long description from the README file
 with open(os.path.join(CWD, README_SOURCE_FILE),
@@ -137,10 +137,9 @@ setup(
         'setuptools_scm'
     ],
 
-    extras_require=[
-        'PySide',
-        'blessings'
-    ],
+    extras_require={
+        'blessed': 'blessed',
+    },
 
     package_data={
         'pymrt': ['sequences/pulses/*.csv', ],

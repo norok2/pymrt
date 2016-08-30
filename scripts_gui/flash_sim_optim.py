@@ -33,13 +33,13 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as mrb
-# import pymrt.utils as mru
-# import pymrt.input_output as mrio
-# import pymrt.geometry as mrg
+# import pymrt.base as pmb
+# import pymrt.naming as pmn
+# import pymrt.input_output as pmio
+# import pymrt.geometry as pmg
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -85,11 +85,10 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
-    print(__doc__)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+    msg(__doc__.strip())
 
     T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]
     th_E_val = np.rad2deg(np.arccos(np.exp(-TR_val / T1_val)))

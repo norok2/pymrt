@@ -39,52 +39,45 @@ from __future__ import unicode_literals  # DEBUG: sympy complains about it
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Operating System facilities
-# import math  # Mathematical Functions
-import collections  # Collections of Items
+import os  # Operating System facilities
 import argparse  # Argument Parsing
-# import time  # Time-related functions
+
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import scipy.optimize
 
 # :: Local Imports
-import pymrt.base as mrb
+import pymrt.base as pmb
 import pymrt.sequences.mp2rage as mp2rage
 
 from pymrt import INFO
-from pymrt import VERB_LVL
-from pymrt import D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 # ======================================================================
 # :: sequence default parameters (MARQUES TR8)
 D_EFF = 0.96  # %
-D_N = 160  # #
-D_TR_GRE = mp2rage.D_TR_GRE  # ms
-D_A1 = mp2rage.D_A1  # deg
-D_A2 = mp2rage.D_A2  # deg
-D_TR_SEQ = mp2rage.D_TR_SEQ  # ms
-D_TI1 = mp2rage.D_TI1  # ms
-D_TI2 = mp2rage.D_TI2  # ms
-D_TA = mp2rage.D_TA  # ms
-D_TB = mp2rage.D_TB  # ms
-D_TC = mp2rage.D_TC  # ms
+D_N_GRE = 160  # #
+D_TR_GRE = 7.0  # ms
+D_A1 = 4.0  # deg
+D_A2 = 5.0  # deg
+D_TR_SEQ = 8000.0  # ms
+D_TI1 = 1100.0  # ms
+D_TI2 = 3300.0  # ms
+D_TA = 440.0  # ms
+D_TB = 1180.0  # ms
+D_TC = 4140.0 # ms
 # :: GUI constants
 T1_NUM = 256.0
 T1_INTERVAL = (100.0, 5000.0)
 T1_LINSPACE = T1_INTERVAL + (T1_NUM,)
 EFF_SLIDER = (0.0, 1.0, D_EFF)  # %
-N_SLIDER = (32, 512, D_N)  # #
+N_SLIDER = (32, 512, D_N_GRE)  # #
 TR_GRE_SLIDER = (0.1, 50.0, D_TR_GRE)  # ms
 A1_SLIDER = (0.1, 90.0 / 4, D_A1)  # deg
 A2_SLIDER = (0.1, 90.0 / 4, D_A2)  # deg
@@ -95,9 +88,9 @@ TR_SEQ_SLIDER = (1000.0, 10000.0, D_TR_SEQ)  # ms
 TI1_SLIDER = (10.0, 5000.0, D_TI1)  # ms
 TI2_SLIDER = (10.0, 10000.0, D_TI2)  # ms
 # only in direct mode
-TA_SLIDER = (10.0, 8000.0, D_TA)  # ms
-TB_SLIDER = (10.0, 8000.0, D_TB)  # ms
-TC_SLIDER = (10.0, 8000.0, D_TC)  # ms
+TA_SLIDER = (1.0, 10000.0, D_TA)  # ms
+TB_SLIDER = (1.0, 10000.0, D_TB)  # ms
+TC_SLIDER = (1.0, 10000.0, D_TC)  # ms
 
 # optimization parameters
 OPTIM_T1_INTERVAL = (1.0, 4000.0)
@@ -152,7 +145,7 @@ def ui_plot(
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
         if use_dicom_INTERVAL:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
-                mrb.scale(
+                pmb.scale(
                     ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
@@ -175,16 +168,16 @@ def ui_plot(
         plt_m2.set_label('B1+ -{:.0f}%'.format(2 * b1t_tune[1] * 100))
         # update title
         if is_direct:
-            tr_t = mp2rage.calc_tr_t(*par)
-            ti1 = mp2rage.calc_ti1(*par)
-            ti2 = mp2rage.calc_ti2(*par)
+            tr_t = mp2rage._calc_tr_seq(*par)
+            ti1 = mp2rage._calc_ti1(*par)
+            ti2 = mp2rage._calc_ti2(*par)
             ax_main.set_title('MP2RAGE: ' +
                               'TR_t={:.1f} ms, TI1={:.1f} ms, TI2={:.1f} ms'
                               .format(tr_t, ti1, ti2))
         else:
-            t_a = mp2rage.calc_ta(*par)
-            t_b = mp2rage.calc_tb(*par)
-            t_c = mp2rage.calc_tc(*par)
+            t_a = mp2rage._calc_ta(*par)
+            t_b = mp2rage._calc_tb(*par)
+            t_c = mp2rage._calc_tc(*par)
             ax_main.set_title('MP2RAGE: ' +
                               'TA={:.1f} ms, TB={:.1f} ms, TC={:.1f} ms'
                               .format(t_a, t_b, t_c))
@@ -228,7 +221,7 @@ def ui_plot(
 
     # define parameter list
     if is_direct:
-        mp2rage_ii = mp2rage.calc_signal
+        mp2rage_ii = mp2rage.signal
         param_list = [
             ['eff / #', EFF_SLIDER],
             ['n_GRE / #', N_SLIDER],
@@ -239,7 +232,7 @@ def ui_plot(
             ['a1 / deg', A1_SLIDER],
             ['a2 / deg', A2_SLIDER]]
     else:
-        mp2rage_ii = mp2rage.calc_signal2
+        mp2rage_ii = mp2rage._signal2
         param_list = [
             ['$\\eta$ / #', EFF_SLIDER],
             ['$n_{GRE}$ / #', N_SLIDER],
@@ -255,7 +248,7 @@ def ui_plot(
         ['$B_1^+$ -', B1T_MINUS_SLIDER]]
     slider_list = param_list + b1t_tune_list
     num_sliders = len(slider_list)
-    # :: Calculate plotting values
+    # :: Calculate rhoting values
     t1_val = np.linspace(*t1_linspace)
     # :: figure to plot
     fig, ax_main = plt.subplots()
@@ -383,12 +376,16 @@ def main():
     if args.quiet:
         args.verbose = VERB_LVL['none']
     # :: print debug info
-    if args.verbose == VERB_LVL['debug']:
+    if args.verbose >= VERB_LVL['debug']:
         arg_parser.print_help()
-        print()
-        print('II:', 'Parsed Arguments:', args)
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+
     ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1,
             args.ot1)
+
+    elapsed(os.path.basename(__file__))
+    print_elapsed()
+
 
 
 # ======================================================================

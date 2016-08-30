@@ -18,7 +18,7 @@ The 3D geometrical shapes currently available are:
 - ellipsoid
 - cylinder
 
-The N-D geometrical shapes currentyl available are:
+The N-D geometrical shapes currently available are:
 - cuboid: sum[abs(x_n/a_n)^inf] < 1
 - superellipsoid: sum[abs(x_n/a_n)^k] < 1
 - prism: stack (N-1)-D mask on given axis
@@ -35,102 +35,89 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
-# import shutil  # High-level file operations
-import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
 import itertools  # Functions creating iterators for efficient looping
-# import functools  # Higher-order functions and operations on callable objects
-# import argparse  # Parser for command-line options, arguments and subcommands
-# import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
-# import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
-# import unittest  # Unit testing framework
+import random  # Generate pseudo-random numbers
 import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: External Imports Submodules
-# import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematical and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as mrb
-import pymrt.plot as mrp
+import pymrt.base as pmb
+import pymrt.plot as pmp
 
-# from pymrt import INFO
-# from pymrt import VERB_LVL
-# from pymrt import D_VERB_LVL
-# from pymrt import get_first_line
+from pymrt import elapsed, print_elapsed
+from pymrt import msg, dbg
 
 
 # ======================================================================
-# :: Custom defined constants
-# POS_MODE_ABS = 'abs'
-# POS_MODE_PROP = 'prop'
-
-# ======================================================================
-# :: Default values usable in functions.
-D_POSITION = 0.5
-D_SHAPE = 128
-D_LENGTH_1 = 16.0
-D_LENGTH_2 = (8.0, 16.0)
-D_LENGTH_3 = (8.0, 16.0, 32.0)
-D_ANGLE_1 = math.pi / 3.0
-D_ANGLE_2 = (math.pi / 3.0, math.pi / 4.0)
-D_ANGLE_3 = (math.pi / 2.0, math.pi / 3.0, math.pi / 4.0)
-
-
-# ======================================================================
-def relative2coord(shape, position):
+def pos_rel2abs(shape, rel_position=0.5):
     """
-    Calculate the absolute position with respect to a given shape.
+    Calculate the absolute position from a relative position for a given shape.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
+        shape (int|tuple[int]): The shape of the mask in px.
+        rel_position (float|tuple[float]): Relative position (to the lowest
+        edge).
+            Each element of the tuple should be in the range [0, 1].
 
     Returns:
-        coord (tuple[int]): Coordinate of the position inside the shape.
+        position (float|tuple[float]): Absolute position inside the shape.
+            Each element of the tuple should be in the range [0, dim - 1],
+            where dim is the corresponding dimension of the shape.
+
+    Examples:
+        >>> pos_rel2abs((100, 100, 101, 101), (0.0, 1.0, 0.0, 1.0))
+        (0.0, 99.0, 0.0, 100.0)
+        >>> pos_rel2abs((100, 99, 101))
+        (49.5, 49.0, 50.0)
+        >>> pos_rel2abs((100, 200, 50, 99, 37), (0.0, 1.0, 0.2, 0.3, 0.4))
+        (0.0, 199.0, 9.8, 29.4, 14.4)
+        >>> pos_rel2abs((100, 100, 100), (1.0, 10.0, -1.0))
+        (99.0, 990.0, -99.0)
+        >>> shape = (100, 100, 100, 100, 100)
+        >>> pos_abs2rel(shape, pos_rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
+        (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    if len(position) != len(shape):
-        raise IndexError('length of tuples must match')
-    return tuple((s - 1.0) * p for p, s in zip(position, shape))
+    rel_position = pmb.auto_repeat(rel_position, len(shape), force=True)
+    return tuple((s - 1.0) * p for p, s in zip(rel_position, shape))
 
 
 # ======================================================================
-def coord2relative(coord, shape):
+def pos_abs2rel(shape, abs_position=0):
     """
-    Calculate the proportional position with respect to a given shape.
+    Calculate the relative position from an absolute position for a given shape.
 
     Args:
-        coord (tuple[int]): Coordinate of the position inside the shape.
-        shape (tuple[int]): The shape of the mask in px.
+        shape (int|tuple[int]): The shape of the mask in px.
+        abs_position (float|tuple[float]): Absolute position inside the shape.
+            Each element of the tuple should be in the range [0, dim - 1],
+            where dim is the corresponding dimension of the shape.
 
     Returns:
-        position (tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
+        position (float|tuple[float]): Relative position (to the lowest edge).
+            Each element of the tuple should be in the range [0, 1].
+
+    Examples:
+        >>> pos_abs2rel((100, 100, 101, 99), (0, 100, 100, 100))
+        (0.0, 1.0101010101010102, 1.0, 1.0204081632653061)
+        >>> pos_abs2rel((100, 99, 101))
+        (0.0, 0.0, 0.0)
+        >>> pos_abs2rel((412, 200, 37), (30, 33, 11.7))
+        (0.072992700729927, 0.1658291457286432, 0.32499999999999996)
+        >>> pos_abs2rel((100, 100, 100), (250, 10, -30))
+        (2.525252525252525, 0.10101010101010101, -0.30303030303030304)
+        >>> shape = (100, 100, 100, 100, 100)
+        >>> pos_abs2rel(shape, pos_rel2abs(shape, (0, 25, 50, 75, 100)))
+        (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    if len(coord) != len(shape):
-        raise IndexError('length of tuples must match')
-    return tuple(c / (s - 1.0) for c, s in zip(coord, shape))
+    abs_position = pmb.auto_repeat(abs_position, len(shape), force=True)
+    return tuple(p / (s - 1.0) for p, s in zip(abs_position, shape))
 
 
 # ======================================================================
@@ -167,24 +154,28 @@ def square(
     Generate a mask whose shape is a square.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         side (float): The side of the square in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> square(4, 0.5, 2)
+        array([[False, False, False, False],
+               [False,  True,  True, False],
+               [False,  True,  True, False],
+               [False, False, False, False]], dtype=bool)
+        >>> square(5, 0.5, 3)
+        array([[False, False, False, False, False],
+               [False,  True,  True,  True, False],
+               [False,  True,  True,  True, False],
+               [False,  True,  True,  True, False],
+               [False, False, False, False, False]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 2
-    # check parameters
-    if not (len(shape) == len(position) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semisides
-    semisides = (side / 2.0,) * n_dim
-    # use n-dim function
-    return nd_cuboid(shape, position, semisides)
+    return nd_cuboid(shape, position, side / 2.0, 2)
 
 
 # ======================================================================
@@ -196,22 +187,39 @@ def rectangle(
     Generate a mask whose shape is a rectangle.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the rectangle in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    >>> rectangle(6, 0.5, (2, 1))
+    array([[False, False, False, False, False, False],
+           [False, False,  True,  True, False, False],
+           [False, False,  True,  True, False, False],
+           [False, False,  True,  True, False, False],
+           [False, False,  True,  True, False, False],
+           [False, False, False, False, False, False]], dtype=bool)
+    >>> rectangle(5, 0.5, (2, 1))
+    array([[False,  True,  True,  True, False],
+           [False,  True,  True,  True, False],
+           [False,  True,  True,  True, False],
+           [False,  True,  True,  True, False],
+           [False,  True,  True,  True, False]], dtype=bool)
+    >>> rectangle(4, 0, (1, 0.5))
+    array([[ True, False, False, False],
+           [ True, False, False, False],
+           [False, False, False, False],
+           [False, False, False, False]], dtype=bool)
+    >>> rectangle(4, 0, (2, 1))
+    array([[ True,  True, False, False],
+           [ True,  True, False, False],
+           [ True,  True, False, False],
+           [False, False, False, False]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 2
-    # check parameters
-    if not (len(shape) == len(position) == len(semisides) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # use n-dim function
-    return nd_cuboid(shape, position, semisides)
+    return nd_cuboid(shape, position, semisides, 2)
 
 
 # ======================================================================
@@ -223,27 +231,29 @@ def rhombus(
     Generate a mask whose shape is a rhombus.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
-        semidiagonals (tuple[float]): The semidiagonals of the rhombus in px.
+        semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> rhombus(5, 0.5, 2)
+        array([[False, False,  True, False, False],
+               [False,  True,  True,  True, False],
+               [ True,  True,  True,  True,  True],
+               [False,  True,  True,  True, False],
+               [False, False,  True, False, False]], dtype=bool)
+        >>> rhombus(5, 0.5, (2, 1))
+        array([[False, False,  True, False, False],
+               [False, False,  True, False, False],
+               [False,  True,  True,  True, False],
+               [False, False,  True, False, False],
+               [False, False,  True, False, False]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 2
-    # check parameters
-    if not (len(shape) == len(position) == len(semidiagonals) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semiaxes
-    semiaxes = semidiagonals
-    # set index value
-    rhombus_index = 1.0
-    index = (rhombus_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, semidiagonals, 1.0, 2)
 
 
 # ======================================================================
@@ -255,27 +265,35 @@ def circle(
     Generate a mask whose shape is a circle.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         radius (float): The radius of the circle in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> circle(5, 0.5, 1)
+        array([[False, False, False, False, False],
+               [False, False,  True, False, False],
+               [False,  True,  True,  True, False],
+               [False, False,  True, False, False],
+               [False, False, False, False, False]], dtype=bool)
+        >>> circle(6, 0.5, 2)
+        array([[False, False, False, False, False, False],
+               [False, False,  True,  True, False, False],
+               [False,  True,  True,  True,  True, False],
+               [False,  True,  True,  True,  True, False],
+               [False, False,  True,  True, False, False],
+               [False, False, False, False, False, False]], dtype=bool)
+        >>> circle(4, 0, 2)
+        array([[ True,  True,  True, False],
+               [ True,  True, False, False],
+               [ True, False, False, False],
+               [False, False, False, False]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 2
-    # check parameters
-    if not (len(shape) == len(position) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semiaxes
-    semiaxes = (radius,) * n_dim
-    # set index value
-    circle_index = 2.0
-    index = (circle_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, radius, 2.0, 2)
 
 
 # ======================================================================
@@ -287,25 +305,31 @@ def ellipsis(
     Generate a mask whose shape is an ellipsis.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
-        semiaxes (tuple[float]): The semiaxes of the ellipsis in px.
+        semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> ellipsis(6, 0.5, (2, 3))
+        array([[False, False, False, False, False, False],
+               [False,  True,  True,  True,  True, False],
+               [ True,  True,  True,  True,  True,  True],
+               [ True,  True,  True,  True,  True,  True],
+               [False,  True,  True,  True,  True, False],
+               [False, False, False, False, False, False]], dtype=bool)
+        >>> ellipsis(6, 0, (5, 3))
+        array([[ True,  True,  True,  True, False, False],
+               [ True,  True,  True, False, False, False],
+               [ True,  True,  True, False, False, False],
+               [ True,  True,  True, False, False, False],
+               [ True,  True, False, False, False, False],
+               [ True, False, False, False, False, False]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 2
-    # check parameters
-    if not (len(shape) == len(position) == len(semiaxes) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # set index value
-    ellipsis_index = 2.0
-    index = (ellipsis_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, semiaxes, 2.0, 2)
 
 
 # ======================================================================
@@ -317,24 +341,37 @@ def cube(
     Generate a mask whose shape is a cube.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         side (float): The side of the cube in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> cube(4, 0.5, 2)
+        array([[[False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False],
+                [False,  True,  True, False],
+                [False,  True,  True, False],
+                [False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False],
+                [False,  True,  True, False],
+                [False,  True,  True, False],
+                [False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semisides
-    semisides = (side / 2.0,) * n_dim
-    # use n-dim function
-    return nd_cuboid(shape, position, semisides)
+    return nd_cuboid(shape, position, side / 2.0, 3)
 
 
 # ======================================================================
@@ -346,22 +383,32 @@ def cuboid(
     Generate a mask whose shape is a cuboid.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the cuboid in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> cuboid((3, 4, 6), 0.5, (0.5, 2, 1))
+        array([[[False, False, False, False, False, False],
+                [False, False, False, False, False, False],
+                [False, False, False, False, False, False],
+                [False, False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False,  True,  True, False, False],
+                [False, False,  True,  True, False, False],
+                [False, False,  True,  True, False, False],
+                [False, False,  True,  True, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False, False],
+                [False, False, False, False, False, False],
+                [False, False, False, False, False, False],
+                [False, False, False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == len(semisides) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # use n-dim function
-    return nd_cuboid(shape, position, semisides)
+    return nd_cuboid(shape, position, semisides, 3)
 
 
 # ======================================================================
@@ -373,27 +420,35 @@ def rhomboid(
     Generate a mask whose shape is a rhomboid.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> rhomboid((3, 5, 7), 0.5, (1, 1, 2))
+        array([[[False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False],
+                [False, False, False,  True, False, False, False],
+                [False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False, False, False],
+                [False, False, False,  True, False, False, False],
+                [False,  True,  True,  True,  True,  True, False],
+                [False, False, False,  True, False, False, False],
+                [False, False, False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False],
+                [False, False, False,  True, False, False, False],
+                [False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == len(semidiagonals) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semiaxes
-    semiaxes = semidiagonals
-    # set index value
-    rhombus_index = 1.0
-    index = (rhombus_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, semidiagonals, 1.0, 3)
 
 
 # ======================================================================
@@ -405,27 +460,59 @@ def sphere(
     Generate a mask whose shape is a sphere.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         radius (float): The radius of the sphere in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> sphere(3, 0.5, 1)
+        array([[[False, False, False],
+                [False,  True, False],
+                [False, False, False]],
+        <BLANKLINE>
+               [[False,  True, False],
+                [ True,  True,  True],
+                [False,  True, False]],
+        <BLANKLINE>
+               [[False, False, False],
+                [False,  True, False],
+                [False, False, False]]], dtype=bool)
+        >>> sphere(5, 0.5, 2)
+        array([[[False, False, False, False, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False,  True, False, False],
+                [False,  True,  True,  True, False],
+                [ True,  True,  True,  True,  True],
+                [False,  True,  True,  True, False],
+                [False, False,  True, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
+                [False, False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # adjust semiaxes
-    semiaxes = (radius,) * n_dim
-    # set index value
-    circle_index = 2.0
-    index = (circle_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, radius, 2.0, 3)
 
 
 # ======================================================================
@@ -437,25 +524,47 @@ def ellipsoid(
     Generate a mask whose shape is an ellipsoid.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
-        semiaxes (tuple[float]): The semiaxes of the ellipsoid in px.
+        semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> sphere(5, 0.5, 2)
+        array([[[False, False, False, False, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False,  True, False, False],
+                [False,  True,  True,  True, False],
+                [ True,  True,  True,  True,  True],
+                [False,  True,  True,  True, False],
+                [False, False,  True, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False,  True,  True,  True, False],
+                [False, False, False, False, False]],
+        <BLANKLINE>
+               [[False, False, False, False, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
+                [False, False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
-    n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == len(semiaxes) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # set index value
-    ellipsis_index = 2.0
-    index = (ellipsis_index,) * n_dim
-    # use n-dim function
-    return nd_superellipsoid(shape, position, semiaxes, index)
+    return nd_superellipsoid(shape, position, semiaxes, 2.0, 3)
 
 
 # ======================================================================
@@ -463,63 +572,88 @@ def cylinder(
         shape,
         position,
         height,
-        radius):
+        radius,
+        axis=-1):
     """
     Generate a mask whose shape is a cylinder.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         height (float): The height of the cylinder in px.
         radius (float): The radius of the cylinder in px.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
+
+    Examples:
+        >>> cylinder(4, 0.5, 2, 2, 0)
+        array([[[False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False]],
+        <BLANKLINE>
+               [[False,  True,  True, False],
+                [ True,  True,  True,  True],
+                [ True,  True,  True,  True],
+                [False,  True,  True, False]],
+        <BLANKLINE>
+               [[False,  True,  True, False],
+                [ True,  True,  True,  True],
+                [ True,  True,  True,  True],
+                [False,  True,  True, False]],
+        <BLANKLINE>
+               [[False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False],
+                [False, False, False, False]]], dtype=bool)
     """
-    # set correct dimensions
     n_dim = 3
-    # check parameters
-    if not (len(shape) == len(position) == n_dim):
-        e_msg = 'length of tuples must be {}'.format(n_dim)
-        raise IndexError(e_msg)
-    # calculate base mask
-    axis = n_dim - 1
-    base_mask = circle(shape[0:axis], position[0:axis], radius)
+    shape = pmb.auto_repeat(shape, n_dim)
+    position = pmb.auto_repeat(position, n_dim)
+    # generate base
+    base_shape = tuple(
+        dim for i, dim in enumerate(shape) if axis % n_dim != i)
+    base_position = tuple(
+        dim for i, dim in enumerate(position) if axis % n_dim != i)
+    base = circle(base_shape, base_position, radius)
     # use n-dim function
-    return nd_prism(base_mask, shape[axis], axis, position[axis], height / 2.0)
+    return nd_prism(base, shape[axis], axis, position[axis], height)
 
 
 # ======================================================================
 def nd_cuboid(
         shape,
         position,
-        semisides):
+        semisides,
+        n_dim=None):
     """
-    Generate a mask whose shape is an ND cuboid.
+    Generate a mask whose shape is an N-dim cuboid.
     The cartesian equations are: sum[abs(x_n/a_n)^inf] < 1.0
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
-        semisides (tuple[float]): The semisides of the ND cuboid in px.
+        semisides (float|tuple[float]): The N-dim cuboid semisides in px.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
+    if not n_dim:
+        n_dim = pmb.max_iter_len((shape, position, semisides))
     # check compatibility of given parameters
-    if not (len(shape) == len(position) == len(semisides)):
-        raise IndexError('length of tuples must match')
-    # calculate the position of the center of the solid inside the mask
-    origin = relative2coord(shape, position)
-    # create the grid with origin in the specified position
-    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
-    coord = np.ogrid[grid]
+    shape = pmb.auto_repeat(shape, n_dim, True)
+    position = pmb.auto_repeat(position, n_dim, True)
+    semisides = pmb.auto_repeat(semisides, n_dim, True)
+    xx = pmb.coord(shape, position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
-    for x_i, semiside in zip(coord, semisides):
-        mask *= (np.abs(x_i) < semiside)
+    for x_i, semiside in zip(xx, semisides):
+        mask *= (np.abs(x_i) <= semiside)
     return mask
 
 
@@ -528,49 +662,52 @@ def nd_superellipsoid(
         shape,
         position,
         semiaxes,
-        indexes):
+        indexes,
+        n_dim=None):
     """
-    Generate a mask whose shape is an ND superellipsoid.
+    Generate a mask whose shape is an N-dim superellipsoid.
     The cartesian equations are: sum[abs(x_n/a_n)^k] < 1.0
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        position (tuple[float]): Relative position (to the lowest edge).
+        shape (int|tuple[int]): The shape of the mask in px.
+        position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
-        semiaxes (tuple[float]): The semiaxes of the ND superellipsoid in px.
-        indexes (tuple[float]): The exponent of the summed terms.
+        semiaxes (float|tuple[float]): The N-dim superellipsoid axes in px.
+        indexes (float|tuple[float]): The exponent of the summed terms.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
+    if not n_dim:
+        n_dim = pmb.max_iter_len((shape, position, semiaxes, indexes))
     # check compatibility of given parameters
-    if not (len(shape) == len(position) == len(semiaxes) == len(indexes)):
-        raise IndexError('length of tuples must match')
-    # calculate the position of the center of the solid inside the mask
-    origin = relative2coord(shape, position)
-    # create the grid with origin in the middle
-    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
-    coord = np.ogrid[grid]
+    shape = pmb.auto_repeat(shape, n_dim, True)
+    position = pmb.auto_repeat(position, n_dim, True)
+    semiaxes = pmb.auto_repeat(semiaxes, n_dim, True)
+    indexes = pmb.auto_repeat(indexes, n_dim, True)
+    xx = pmb.coord(shape, position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
-    for x_i, semiaxis, index in zip(coord, semiaxes, indexes):
+    for x_i, semiaxis, index in zip(xx, semiaxes, indexes):
         mask += (np.abs(x_i / semiaxis) ** index)
-    mask = mask < 1.0
+    mask = mask <= 1.0
     return mask
 
 
 # ======================================================================
 def nd_prism(
-        base_mask,
+        base,
         extra_shape,
         axis,
         position,
         height):
     """
-    Generate a mask whose shape is a ND prism.
+    Generate a mask whose shape is a N-dim prism.
 
     Args:
-        base_mask (np.ndarray): Base (N-1)-dim mask to stack as prism.
+        base (np.ndarray): Base (N-1)-dim mask to stack as prism.
         extra_shape (int): Size of the new dimension to be added.
         axis (int): Orientation of the prism in the N-dim space.
         position (float): Relative position (to the lowest edge).
@@ -581,27 +718,23 @@ def nd_prism(
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
-    n_dim = base_mask.ndim + 1
+    n_dim = base.ndim + 1
     if axis > n_dim:
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
-    # calculate the position of the center of the solid inside the mask
-    origin = relative2coord((extra_shape,), (position,))[0]
-    # create a grid with origin in the middle
-    iii = slice(-origin, extra_shape - origin)
-    xxx = np.ogrid[iii]
+    x_0 = pmb.coord((extra_shape,), (position,), use_int=False)[0]
     # create the extra mask (height)
-    extra_mask = np.abs(xxx) < (height / 2.0)
+    extra_mask = np.abs(x_0) <= (height / 2.0)
     # calculate mask shape
     shape = (
-        base_mask.shape[:axis] + (extra_shape,) + base_mask.shape[axis:])
+        base.shape[:axis] + (extra_shape,) + base.shape[axis:])
     # create indefinite prism
     mask = np.zeros(shape, dtype=bool)
     for i in range(extra_shape):
         if extra_mask[i]:
             index = [slice(None)] * n_dim
             index[axis] = i
-            mask[tuple(index)] = base_mask
+            mask[tuple(index)] = base
     return mask
 
 
@@ -629,10 +762,7 @@ def frame(
     See Also:
         reframe
     """
-    try:
-        iter(borders)
-    except TypeError:
-        borders = [borders] * arr.ndim
+    borders = pmb.auto_repeat(borders, arr.ndim)
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
     if use_longest:
@@ -660,7 +790,7 @@ def reframe(
 
     Args:
         arr (np.ndarray): The input array.
-        new_shape (tuple[int]): The shape of the output array.
+        new_shape (int|tuple[int]): The shape of the output array.
             The number of dimensions between the input and the output array
             must match. Additionally, each dimensions of the new shape cannot
         background (int|float): The background value to be used for the frame.
@@ -700,20 +830,15 @@ def zoom_prepare(
 
     Args:
         zoom (float|tuple[float]): The zoom factors for each directions.
-        shape (tuple[int]): The shape of the array to operate with.
+        shape (int|tuple[int]): The shape of the array to operate with.
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
 
     Returns:
         zoom (tuple[float]): The zoom factors for each directions.
-        shape (tuple[int]): The shape of the array to operate with.
+        shape (int|tuple[int]): The shape of the array to operate with.
     """
-    try:
-        iter(zoom)
-    except TypeError:
-        zoom = [zoom] * len(shape)
-    else:
-        zoom = list(zoom)
+    zoom = list(pmb.auto_repeat(zoom, len(shape)))
     if extra_dim:
         shape = list(shape) + [1.0] * (len(zoom) - len(shape))
     else:
@@ -732,8 +857,8 @@ def shape2zoom(
     Calculate zoom (or conversion) factor between two shapes.
 
     Args:
-        old_shape (tuple[int]): The shape of the source array.
-        new_shape (tuple[int]): The target shape of the array.
+        old_shape (int|tuple[int]): The shape of the source array.
+        new_shape (int|tuple[int]): The target shape of the array.
         aspect (callable|None): Function for the manipulation of the zoom.
             Signature: aspect(tuple[float]) -> float.
             None to leave the zoom unmodified. It specified, the function is
@@ -777,7 +902,7 @@ def apply_to_complex(
     """
     real = func(np.real(arr), *args, **kwargs)
     imag = func(np.imag(arr), *args, **kwargs)
-    arr = mrb.cartesian2complex(real, imag)
+    arr = pmb.cartesian2complex(real, imag)
     return arr
 
 
@@ -937,7 +1062,7 @@ def affine_transform(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(linear, origin + shift)
     arr = sp.ndimage.affine_transform(arr, linear, offset, *args, **kwargs)
     return arr
@@ -951,7 +1076,8 @@ def weighted_center(
     """
     Determine the covariance mass matrix with respect to the origin.
 
-    $$\sum_i (\vec{x}_i - \vec{o}_i) (\vec{x}_i - \vec{o}_i)^T$$
+    .. math::
+        \\sum_i w_i (\\vec{x}_i - \\vec{o}_i)
 
     for i spanning through all support space.
 
@@ -978,7 +1104,7 @@ def weighted_center(
     # numpy.double to improve the accuracy of the norm and the weighted center
     arr = arr.astype(np.double)
     norm = sp.ndimage.sum(arr, labels, index)
-    grid = np.ogrid[[slice(0, i) for i in array.shape]]
+    grid = np.ogrid[[slice(0, i) for i in arr.shape]]
     # numpy.double to improve the accuracy of the result
     center = np.zeros(arr.ndim).astype(np.double)
     for i in range(arr.ndim):
@@ -995,7 +1121,8 @@ def weighted_covariance(
     """
     Determine the weighted covariance matrix with respect to the origin.
 
-    \[\sum_i w_i (\vec{x}_i - \vec{o}) (\vec{x}_i - \vec{o})^T\]
+    .. math::
+        \\sum_i w_i (\\vec{x}_i - \\vec{o}) (\\vec{x}_i - \\vec{o})^T
 
     for i spanning through all support space, where:
     o is the origin vector,
@@ -1029,7 +1156,7 @@ def weighted_covariance(
     norm = sp.ndimage.sum(arr, labels, index)
     if origin is None:
         origin = np.array(sp.ndimage.center_of_mass(arr, labels, index))
-    grid = np.ogrid[[slice(0, i) for i in array.shape]] - origin
+    grid = np.ogrid[[slice(0, i) for i in arr.shape]] - origin
     # numpy.double to improve the accuracy of the result
     cov = np.zeros((arr.ndim, arr.ndim)).astype(np.double)
     for i in range(arr.ndim):
@@ -1192,7 +1319,7 @@ def auto_rotate(
         kwargs = {}
     rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(rot_matrix, origin)
     rotated = sp.ndimage.affine_transform(
         arr, rot_matrix, offset, *args, **kwargs)
@@ -1247,7 +1374,7 @@ def auto_shift(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = relative2coord(arr.shape, (0.5,) * arr.ndim)
+        origin = pos_rel2abs(arr.shape, (0.5,) * arr.ndim)
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     offset = com - origin
     shifted = sp.ndimage.affine_transform(
@@ -1309,11 +1436,34 @@ def realign(
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(relative2coord(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = com - np.dot(rot_matrix, origin)
     aligned = sp.ndimage.affine_transform(
         arr, rot_matrix, offset, *args, **kwargs)
     return aligned, rot_matrix, offset
+
+
+# ======================================================================
+def rand_mask(
+        arr,
+        density=0.01):
+    """
+    Calculate a randomly distributed mask of specified density.
+
+    Args:
+        arr (np.ndarray): The target array.
+        density (float): The density of the mask.
+            Must be in the (0, 1) interval.
+
+    Returns:
+        mask
+    """
+    if not 0 < density < 1:
+        raise ValueError('Density must be between 0 and 1')
+    shape = arr.shape
+    mask = np.zeros_like(arr).astype(np.bool).ravel()
+    mask[random.sample(range(arr.size), int(arr.size * density))] = True
+    return mask.reshape(shape)
 
 
 # ======================================================================
@@ -1327,36 +1477,37 @@ def _self_test_interactive():
     Returns:
         None
     """
+    pos = 0.5
+    dim = 128
+    l1, l2, l3 = (16.0, 8.0, 32.0)
+    # a1, a2, a3 = (math.pi / 3.0, math.pi / 2.0, math.pi / 4.0)
+
     # :: 2D Tests
-    shape_2d = (D_SHAPE,) * 2
-    position_2d = (D_POSITION,) * 2
     # :: - shape test
-    mrp.quick(square(shape_2d, position_2d, D_LENGTH_1))
-    mrp.quick(rectangle(shape_2d, position_2d, D_LENGTH_2))
-    mrp.quick(rhombus(shape_2d, position_2d, D_LENGTH_2))
-    mrp.quick(circle(shape_2d, position_2d, D_LENGTH_1))
-    mrp.quick(ellipsis(shape_2d, position_2d, D_LENGTH_2))
+    pmp.quick(square(dim, pos, l1))
+    pmp.quick(rectangle(dim, pos, (l1, l2)))
+    pmp.quick(rhombus(dim, pos, (l1, l2)))
+    pmp.quick(circle(dim, pos, l1))
+    pmp.quick(ellipsis(dim, pos, (l1, l2)))
     # :: - Position test
-    mrp.quick(ellipsis(shape_2d, (0.2, 0.7), D_LENGTH_2))
+    pmp.quick(ellipsis(dim, (0.2, 0.7), (l1, l2)))
 
     # :: 3D Tests
-    shape_3d = (D_SHAPE,) * 3
-    position_3d = (D_POSITION,) * 3
     # :: - shape test
-    mrp.quick(cube(shape_3d, position_3d, D_LENGTH_1))
-    mrp.quick(cuboid(shape_3d, position_3d, D_LENGTH_3))
-    mrp.quick(rhomboid(shape_3d, position_3d, D_LENGTH_3))
-    mrp.quick(sphere(shape_3d, position_3d, D_LENGTH_1))
-    mrp.quick(ellipsoid(shape_3d, position_3d, D_LENGTH_3))
-    mrp.quick(cylinder(shape_3d, position_3d, 2.0 * D_LENGTH_1, D_LENGTH_1))
+    pmp.quick(cube(dim, pos, l1))
+    pmp.quick(cuboid(dim, pos, (l1, l2, l3)))
+    pmp.quick(rhomboid(dim, pos, (l1, l2, l3)))
+    pmp.quick(sphere(dim, pos, l1))
+    pmp.quick(ellipsoid(dim, pos, (l1, l2, l3)))
+    pmp.quick(cylinder(dim, pos, 2.0 * l1, l1))
     # :: - Position test
-    mrp.quick(ellipsoid(shape_3d, (0.0, 1.0, 0.5), D_LENGTH_3))
+    pmp.quick(ellipsoid(dim, (0.0, 1.0, 0.5), (l1, l2, l3)))
 
 
 # ======================================================================
 if __name__ == '__main__':
-    print(__doc__)
-    # doctest.testmod()
-    _self_test_interactive()
-    mrb.elapsed('self_test_interactive')
-    mrb.print_elapsed()
+    msg(__doc__.strip())
+    doctest.testmod()
+    # _self_test_interactive()
+    # elapsed('self_test_interactive')
+    # print_elapsed()
