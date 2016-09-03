@@ -179,11 +179,12 @@ def test_approx_propagator(
     w_c = GAMMA * B0
 
     modes = ['exact']
-    modes += ['linear', 'reduced']
-    # modes += ['sum_simple', 'sum_order1', 'sum_sep', 'reduced']
-    modes += ['poly_{}'.format(order) for order in range(4, 5)]
-    modes += ['interp_{}_{}'.format(mode, num_samples)
-              for mode in ['linear', 'cubic'] for num_samples in range(4, 5)]
+    modes.extend(['linear', 'reduced'])
+    # modes.extend(['sum_simple', 'sum_order1', 'sum_sep', 'reduced'])
+    modes.extend(['poly_{}'.format(order) for order in range(4, 5)])
+    modes.extend(['interp_{}_{}'.format(mode, num_samples)
+                  for mode in ['linear', 'cubic']
+                  for num_samples in range(4, 5)])
     modes = {
         'linear': {
             'num_samples': tuple(range(10, 20, 5))},
@@ -411,6 +412,7 @@ def test_fit_spin_model(
         # ax.plot_surface(
         #     X, Y, fitted, cmap=plt.cm.bone,
         #     rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+
 
 # ======================================================================
 if __name__ == '__main__':

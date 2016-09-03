@@ -190,7 +190,7 @@ def read_output(
                         break
             for line in file:
                 try:
-                    vals += [float(val) for val in line.split()]
+                    vals.extend([float(val) for val in line.split()])
                 except ValueError:
                     content[label] = np.array(vals)
                     break

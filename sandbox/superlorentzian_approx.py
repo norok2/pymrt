@@ -152,16 +152,16 @@ def optimize_interpolation():
         ('sp.interp1d LIN *', f_j),
     ]
 
-    approx_func_list += [
+    approx_func_list.extend([
         ('sp.interp1d LOG {}'.format(order),
          lambda x: scipy.interpolate.interp1d(x_i, y_i, kind=order, **kwargs)(
                  np.abs(x)))
-        for order in (1, 2, 5)]
+        for order in (1, 2, 5)])
 
-    approx_func_list += [
+    approx_func_list.extend([
         ('sp.interp1d LIN {}'.format(order),
          scipy.interpolate.interp1d(x_j, y_j, kind=order, **kwargs))
-        for order in (1, 5)]
+        for order in (1, 5)])
 
     fig = plt.figure()
     for name, func in approx_func_list:
