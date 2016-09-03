@@ -73,8 +73,8 @@ import pymrt.base as pmb
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
-from pymrt.base import elapsed, print_elapsed
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
@@ -954,7 +954,7 @@ class SpinModel:
             k_op[index[::-1]] = k
         return k_op
 
-    def __repr__(self):
+    def __str__(self):
         text = 'SpinModel: '
         names = ['m0', 'w0', 'r1', 'r2', 'k']
         for name in names:
@@ -1169,7 +1169,7 @@ class PulseExc:
                 p_op = pmb.mdot(*p_op_list[::-1])
         return p_op
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
             'flip_angle', round(self.flip_angle, 1),
@@ -1232,7 +1232,7 @@ class Spoiler:
                 num_exact += 1
         return np.diag(p_op_diag)
 
-    def __repr__(self):
+    def __str__(self):
         text = 'Spoiler: '
         names = ['efficiency']
         for name in names:
@@ -1249,7 +1249,7 @@ class Delay(PulseExc):
         PulseExc.__init__(self, duration, np.zeros(1), w_c)
         self.shape = 'rect'
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         names = ['duration', 'w_c']
         for name in names:
@@ -1282,7 +1282,7 @@ class PulseSequence:
             spin_model.det, self.propagator(spin_model), spin_model.m_eq)
         return np.abs(signal)
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}'.format(self.__class__.__name__)
         if hasattr(self, 'num_repetitions'):
             text += ' (num_repetitions={})'.format(self.num_repetitions)
