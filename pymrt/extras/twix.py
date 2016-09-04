@@ -340,7 +340,7 @@ def _parse_vb_header(
 
 
 # ======================================================================
-class Twix:
+class Twix(object):
     """
     Manages the extraction of data from the disk.
     """

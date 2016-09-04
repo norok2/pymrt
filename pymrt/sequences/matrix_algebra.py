@@ -726,7 +726,7 @@ def z_spectrum(spin_model, pulse_sequence, amplitudes, freqs):
 
 
 # ======================================================================
-class SpinModel:
+class SpinModel(object):
     """
     Model of the spin system
     """
@@ -963,7 +963,7 @@ class SpinModel:
 
 
 # ======================================================================
-class PulseExc:
+class PulseExc(object):
     """
     Pulse excitation interacting with the spin system
     """
@@ -988,7 +988,7 @@ class PulseExc:
         """
         # todo: add something to memorize shape
         # so that setting flip angle to 0 does not munge the shape
-        self.shape = 'custom'
+        self.shape = 'custom'(object)
         self.duration = duration
         self.w_c = w_c if w_c is not None else 0.0
         self.w1_arr = w1_arr if w1_arr is not None else np.array((1.0,))
@@ -1186,7 +1186,7 @@ class PulseExc:
 
 
 # ======================================================================
-class Spoiler:
+class Spoiler(object):
     def __init__(
             self,
             efficiency=1.0):
