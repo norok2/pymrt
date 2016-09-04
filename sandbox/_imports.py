@@ -28,8 +28,10 @@ import multiprocessing  # Process-based parallelism
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
-import cProfile as profile  # Deterministic profiling of Python programs
+import profile  # Deterministic profiling of Python programs
 import warnings  # Warning control
+import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 
 # Configuration file parser
 try:
