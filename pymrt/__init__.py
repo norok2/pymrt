@@ -39,8 +39,12 @@ You are welcome to redistribute it under its terms and conditions.
 }
 
 # ======================================================================
-# :: supported verbosity levels (level 4 skipped on purpose)
-VERB_LVL = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'debug': 5}
+# :: supported verbosity levels
+VERB_LVL_NAMES = (
+    'none', 'lowest', 'lower', 'low', 'medium', 'high', 'higher', 'highest',
+    'warning', 'debug')
+VERB_LVL = {
+    k: v for k, v in zip(VERB_LVL_NAMES, range(len(VERB_LVL_NAMES)))}
 D_VERB_LVL = VERB_LVL['low']
 
 # ======================================================================

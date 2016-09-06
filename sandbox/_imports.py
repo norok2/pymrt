@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
+import sys  # System-specific parameters and functions
 import shutil  # High-level file operations
 import math  # Mathematical functions
 import cmath  # Mathematical functions for complex numbers
@@ -28,8 +29,18 @@ import multiprocessing  # Process-based parallelism
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
-import cProfile as profile  # Deterministic profiling of Python programs
+import profile  # Deterministic profiling of Python programs
 import warnings  # Warning control
+import urllib  # URL handling modules
+import difflib  # Helpers for computing deltas
+import email  # An email and MIME handling package
+import shlex  # Simple lexical analysis
+import hashlib  # Secure hashes and message digests
+import warnings  # Warning control
+import getpass  # Portable password input
+import socket  # Low-level networking interface
+import smtplib  # SMTP protocol client
+import tempfile  # Generate temporary files and directories
 
 # Configuration file parser
 try:

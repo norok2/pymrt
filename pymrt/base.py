@@ -490,24 +490,30 @@ def walk2(
 
 
 # ======================================================================
-def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
+def execute(
+        cmd,
+        in_pipe=None,
+        get_out_pipes=True,
+        dry=False,
+        verbose=D_VERB_LVL):
     """
     Execute command and retrieve/print output at the end of execution.
 
     Args:
         cmd (str|unicode): Command to execute.
-        get_pipes (bool): Get stdout and stderr streams from the process.
+        in_pipe (str|unicode): Input data to be used as stdin of the process.
+        get_out_pipes (bool): Get stdout and stderr streams from the process.
             If True, the program flow is halted until the process is completed.
             Otherwise, the process is spawn in background, continuing execution.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        ret_code (str): if get_pipes, the return code of the command.
+        ret_code (int): if get_pipes, the return code of the command.
         p_stdout (str|unicode|None): if get_pipes, the stdout of the process.
         p_stderr (str|unicode|None): if get_pipes, the stderr of the process.
     """
-    p_stdout, p_stderr, ret_code = None, None, None
+    ret_code, p_stdout, p_stderr = None, None, None
     # ensure cmd is a list of strings
     try:
         cmd = shlex.split(cmd)
@@ -517,32 +523,37 @@ def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
     if dry:
         msg('$$ {}'.format(' '.join(cmd)))
     else:
-        msg('>> {}'.format(' '.join(cmd)), verbose, VERB_LVL['medium'])
+        msg('>> {}'.format(' '.join(cmd)), verbose, VERB_LVL['higher'])
 
         proc = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=False, close_fds=True)
+            shell=False, close_fds=True, universal_newlines=True)
 
-        if get_pipes:
+        if in_pipe is not None:
+            msg('< {}'.format(in_pipe), verbose, VERB_LVL['higher'])
+            proc.stdin.write(in_pipe)
+            proc.stdin.detach()
+
+        if get_out_pipes:
             # handle stdout
             p_stdout = ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.readline().decode('utf8')
+                stdout_buffer = proc.stdout.readline()
                 p_stdout += stdout_buffer
-                if verbose >= VERB_LVL['medium']:
+                if verbose >= VERB_LVL['highest']:
                     print(stdout_buffer, end='')
                     sys.stdout.flush()
             # handle stderr
-            p_stderr = proc.stderr.read().decode('utf8')
+            p_stderr = proc.stderr.read()
             if verbose >= VERB_LVL['high']:
                 print(p_stderr)
             # finally get the return code
-            ret_code = proc.returncode
+            ret_code = int(proc.returncode)
 
-    return p_stdout, p_stderr, ret_code
+    return ret_code, p_stdout, p_stderr
 
 
 # ======================================================================
