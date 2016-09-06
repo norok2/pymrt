@@ -87,9 +87,136 @@ def interval_size(interval):
         val (float): The converted value
 
     Examples:
-
+        >>> interval_size((0, 1))
+        1
     """
     return interval[1] - interval[0]
+
+
+def guess_decimals(
+        val,
+        n_max=16,
+        base=10,
+        fp=16):
+    """
+    Guess the number of decimals in a given float number.
+
+    Args:
+        val ():
+        n_max (int): Maximum number of guessed decimals.
+        base (int): The base used for the number representation.
+        fp (int): The floating point maximum precision.
+            A number with precision is approximated by the underlying platform.
+            The default value corresponds to the limit of the IEEE-754 floating
+            point arithmetic, i.e. 53 bits of precision: log10(2 ** 53) = 16
+            approximately. This value should not be changed unless the
+            underlying platform follows a different floating point arithmetic.
+
+    Returns:
+        prec (int): the guessed number of decimals.
+
+    Examples:
+        >>> guess_decimals(10)
+        0
+        >>> guess_decimals(1)
+        0
+        >>> guess_decimals(0.1)
+        1
+        >>> guess_decimals(0.01)
+        2
+        >>> guess_decimals(0.000001)
+        6
+        >>> guess_decimals(-0.72)
+        2
+        >>> guess_decimals(0.9567)
+        4
+        >>> guess_decimals(0.12345678)
+        8
+        >>> guess_decimals(0.9999999999999)
+        13
+        >>> guess_decimals(0.1234567890123456)
+        16
+        >>> guess_decimals(0.9999999999999999)
+        16
+        >>> guess_decimals(0.1234567890123456, 6)
+        6
+        >>> guess_decimals(0.54235, 10)
+        5
+        >>> guess_decimals(0x654321 / 0x10000, 16, 16)
+        4
+    """
+    offset = 2
+    prec = 0
+    tol = 10 ** -fp
+    x = (val - int(val)) * base
+    while base - abs(x) > tol and abs(x % tol) < tol < abs(x) and prec < n_max:
+        x = (x - int(x)) * base
+        tol = 10 ** -(fp - prec - offset)
+        prec += 1
+    return prec
+
+
+# ======================================================================
+def sequence(
+        start,
+        stop,
+        step=None,
+        precision=None):
+    """
+    Generate a sequence that steps linearly from start to stop.
+
+    Args:
+        start (int|float): The starting value.
+        stop (int|float): The final value.
+            This value is present in the resulting sequence only if the step is
+            a multiple of the interval size.
+        step (int|float): The step value.
+            If None, it is automatically set to unity (with appropriate sign).
+        precision (int): The number of decimal places to use for rounding.
+            If None, this is estimated from the `step` paramenter.
+
+    Yields:
+        item (int|float): the next element of the sequence.
+
+    Example:
+        >>> list(sequence(0, 1, 0.1))
+        [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+        >>> list(sequence(0, 1, 0.3))
+        [0.0, 0.3, 0.6, 0.9]
+        >>> list(sequence(0, 10, 1))
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        >>> list(sequence(0.4, 4.6, 0.72))
+        [0.4, 1.12, 1.84, 2.56, 3.28, 4.0]
+        >>> list(sequence(0.4, 4.72, 0.72, 2))
+        [0.4, 1.12, 1.84, 2.56, 3.28, 4.0, 4.72]
+        >>> list(sequence(0.4, 4.72, 0.72, 4))
+        [0.4, 1.12, 1.84, 2.56, 3.28, 4.0, 4.72]
+        >>> list(sequence(0.4, 4.72, 0.72, 1))
+        [0.4, 1.1, 1.8, 2.6, 3.3, 4.0, 4.7]
+        >>> list(sequence(0.73, 5.29))
+        [0.73, 1.73, 2.73, 3.73, 4.73]
+        >>> list(sequence(-3.5, 3.5))
+        [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5]
+        >>> list(sequence(3.5, -3.5))
+        [3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5]
+        >>> list(sequence(10, 1, -1))
+        [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+        >>> list(sequence(10, 1, 1))
+        []
+        >>> list(sequence(10, 20, 10))
+        [10, 20]
+        >>> list(sequence(10, 20, 15))
+        [10]
+    """
+    if step is None:
+        step = 1 if stop > start else -1
+    if precision is None:
+        precision = guess_decimals(step)
+    for i in range(int(round(stop - start, precision + 1) / step) + 1):
+        item = start + i * step
+        if precision:
+            item = round(item, precision)
+        yield item
 
 
 # ======================================================================

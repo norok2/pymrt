@@ -54,7 +54,7 @@ import xarray as xr  # N-D labeled arrays and datasets in Python
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-# import dicom as pydcm  # PyDicom (Read, modify and write DICOM files.)
+# import dicom as dcm  # PyDicom (Read, modify and write DICOM files.)
 
 # :: External Imports Submodules
 # import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
