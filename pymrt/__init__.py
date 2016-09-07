@@ -43,9 +43,8 @@ You are welcome to redistribute it under its terms and conditions.
 VERB_LVL_NAMES = (
     'none', 'lowest', 'lower', 'low', 'medium', 'high', 'higher', 'highest',
     'warning', 'debug')
-VERB_LVL = {
-    k: v for k, v in zip(VERB_LVL_NAMES, range(len(VERB_LVL_NAMES)))}
-D_VERB_LVL = VERB_LVL['low']
+VERB_LVL = {k: v for k, v in zip(VERB_LVL_NAMES, range(len(VERB_LVL_NAMES)))}
+D_VERB_LVL = VERB_LVL['lowest']
 
 # ======================================================================
 # :: quick and dirty timing facility
