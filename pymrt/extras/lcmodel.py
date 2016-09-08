@@ -102,7 +102,7 @@ def read_input(
     Read LCModel input files (without extension).
 
     Args:
-        filepath (str|unicode): The input filepath.
+        filepath (str): The input filepath.
 
     Returns:
         content (dict): The extracted information.

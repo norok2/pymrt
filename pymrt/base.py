@@ -147,6 +147,7 @@ def max_iter_len(items):
             num = max(len(val), num)
     return num
 
+
 # ======================================================================
 def gcd(*numbers):
     """
@@ -500,8 +501,8 @@ def execute(
     Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str|unicode): Command to execute.
-        in_pipe (str|unicode): Input data to be used as stdin of the process.
+        cmd (str): Command to execute.
+        in_pipe (str): Input data to be used as stdin of the process.
         get_out_pipes (bool): Get stdout and stderr streams from the process.
             If True, the program flow is halted until the process is completed.
             Otherwise, the process is spawn in background, continuing execution.
@@ -510,8 +511,8 @@ def execute(
 
     Returns:
         ret_code (int): if get_pipes, the return code of the command.
-        p_stdout (str|unicode|None): if get_pipes, the stdout of the process.
-        p_stderr (str|unicode|None): if get_pipes, the stderr of the process.
+        p_stdout (str|None): if get_pipes, the stdout of the process.
+        p_stderr (str|None): if get_pipes, the stderr of the process.
     """
     ret_code, p_stdout, p_stderr = None, None, None
     # ensure cmd is a list of strings
@@ -611,7 +612,7 @@ def realpath(path):
         path (str): The path to expand.
 
     Returns:
-        new_path (str|unicode): the expanded path.
+        new_path (str): the expanded path.
 
     Raises:
         OSError: if the expanded path does not exists.
@@ -1146,6 +1147,8 @@ def string_between(
         'oses a'
         >>> string_between('roses are red, or not?', 'r', 's', True, False)
         'rose'
+        >>> string_between('roses are red violets are blue', 'x', 'y')
+        ''
     """
     incl_begin = len(begin_str) if not incl_begin else 0
     incl_end = len(end_str) if incl_end else 0
@@ -1171,8 +1174,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
-        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
+        in_filepaths (iterable[str]): Input filepaths for computation.
+        out_filepaths (iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -1862,7 +1865,7 @@ def calc_stats(
             'min': np.min(arr),
             'max': np.max(arr),
             'sum': np.sum(arr),
-            'num': np.size(arr),}
+            'num': np.size(arr), }
     if save_path or title:
         label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
         val_list = []
@@ -2009,60 +2012,6 @@ def euclid_dist(
     if unsigned:
         array = np.abs(array)
     return array
-
-
-# :: ndstack and ndsplit have been obsoleted by: numpy.stack and numpy.split
-# # ======================================================================
-# def ndstack(arrays, axis=-1):
-#     """
-#     Stack a list of arrays of the same size along a specific axis
-#
-#     Args:
-#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-#         axis (int): Direction for the concatenation of the arrays
-#
-#     Returns:
-#         array (ndarray): The concatenated N-dim array
-#     """
-#     array = arrays[0]
-#     n_dim = array.ndim + 1
-#     if axis < 0:
-#         axis += n_dim
-#     if axis < 0:
-#         axis = 0
-#     if axis > n_dim:
-#         axis = n_dim
-#     # calculate new shape
-#     shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
-#     # stack arrays together
-#     array = np.zeros(shape, dtype=array.dtype)
-#     for i, src in enumerate(arrays):
-#         index = [slice(None)] * n_dim
-#         index[axis] = i
-#         array[tuple(index)] = src
-#     return array
-#
-#
-# # ======================================================================
-# def ndsplit(array, axis=-1):
-#     """
-#     Split an array along a specific axis into a list of arrays
-#
-#     Args:
-#         array (ndarray): The N-dim array to split
-#         axis (int): Direction for the splitting of the array
-#
-#     Returns:
-#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-#     """
-#     # split array apart
-#     arrays = []
-#     for i in range(array.shape[axis]):
-#         # determine index for slicing
-#         index = [slice(None)] * array.ndim
-#         index[axis] = i
-#         arrays.append(array[index])
-#     return arrays
 
 
 # ======================================================================

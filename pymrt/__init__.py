@@ -78,10 +78,10 @@ def msg(
     Display a feedback message to the standard output.
 
     Args:
-        text (str|unicode): Message to display.
+        text (str): Message to display.
         verb_lvl (int): Current level of verbosity.
         verb_threshold (int): Threshold level of verbosity.
-        fmt (str|unicode): Format of the message (if `blessed` supported).
+        fmt (str): Format of the message (if `blessed` supported).
             If None, a standard formatting is used.
         *args (tuple): Positional arguments to be passed to `print`.
         **kwargs (dict): Keyword arguments to be passed to `print`.
@@ -155,7 +155,7 @@ def dbg(obj, fmt=None):
 
     Args:
         obj: The name to be inspected.
-        fmt (str|unicode): Format of the message (if `blessed` supported).
+        fmt (str): Format of the message (if `blessed` supported).
             If None, a standard formatting is used.
 
     Returns:
@@ -188,9 +188,9 @@ def elapsed(
     Append a named event point to the events list.
 
     Args:
-        name (str|unicode): The name of the event point.
+        name (str): The name of the event point.
         time_point (float): The time in seconds since the epoch.
-        events (list[(str|unicode,time)]): A list of named event time points.
+        events (list[(str,time)]): A list of named event time points.
             Each event is a 2-tuple: (label, time).
 
     Returns:
@@ -219,9 +219,9 @@ def print_elapsed(
     Print quick-and-dirty elapsed times between named event points.
 
     Args:
-        events (list[str|unicode,time]): A list of named event time points.
+        events (list[str,time]): A list of named event time points.
             Each event is a 2-tuple: (label, time).
-        label (str|unicode): heading of the elapsed time table.
+        label (str): heading of the elapsed time table.
         only_last (bool): print only the last event (useful inside a loop).
 
     Returns:
