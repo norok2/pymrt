@@ -490,59 +490,130 @@ def walk2(
 
 
 # ======================================================================
-def execute(cmd, get_pipes=True, dry=False, verbose=D_VERB_LVL):
+def which(args):
+    """
+    Determine the full path of an executable, if possible.
+
+    It mimics the behavior of the POSIX command `which`.
+
+    Args:
+        args (str|list[str]): Command to execute as a list of tokens.
+            Optionally can accept a string which will be tokenized.
+
+    Returns:
+        args (list[str]): Command to execute as a list of tokens.
+            The first item of the list is the full path of the executable.
+            If the executable is not found in path, returns the first token of
+            the input.
+            Other items are identical to input, if the input was a str list.
+            Otherwise it will be the tokenized version of the passed string,
+            except for the first token.
+        is_valid (bool): True if path of executable is found, False otherwise.
+    """
+
+    def is_executable(file_path):
+        return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
+
+    # ensure args in the correct format
+    try:
+        args = shlex.split(args)
+    except AttributeError:
+        pass
+
+    cmd = args[0]
+    dirpath, filename = os.path.split(cmd)
+    if dirpath:
+        is_valid = is_executable(cmd)
+    else:
+        is_valid = False
+        for dirpath in os.environ['PATH'].split(os.pathsep):
+            dirpath = dirpath.strip('"')
+            tmp = os.path.join(dirpath, cmd)
+            is_valid = is_executable(tmp)
+            if is_valid:
+                cmd = tmp
+                break
+    return [cmd] + args[1:], is_valid
+
+
+# ======================================================================
+def execute(
+        args,
+        in_pipe=None,
+        mode='call',
+        timeout=None,
+        encoding='utf-8',
+        dry=False,
+        verbose=D_VERB_LVL):
     """
     Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str|unicode): Command to execute.
-        get_pipes (bool): Get stdout and stderr streams from the process.
-            If True, the program flow is halted until the process is completed.
-            Otherwise, the process is spawn in background, continuing execution.
+        args (str|list[str]): Command to execute as a list of tokens.
+            Optionally can accept a string.
+        in_pipe (str|None): Input data to be used as stdin of the process.
+        mode (str): Set the execution mode (affects the return values).
+            Allowed modes:
+             - 'spawn': Spawn a new process. stdout and stderr will be lost.
+             - 'call': Call new process and wait for execution.
+                Once completed, obtain the return code, stdout, and stderr.
+             - 'flush': Call new process and get stdout+stderr immediately.
+                Once completed, obtain the return code.
+                Unfortunately, there is no easy
+        timeout (float): Timeout of the process in seconds.
+        encoding (str): The encoding to use.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        ret_code (str): if get_pipes, the return code of the command.
-        p_stdout (str|unicode|None): if get_pipes, the stdout of the process.
-        p_stderr (str|unicode|None): if get_pipes, the stderr of the process.
+        ret_code (int|None): if mode not `spawn`, return code of the process.
+        p_stdout (str|None): if mode not `spawn`, the stdout of the process.
+        p_stderr (str|None): if mode is `call`, the stderr of the process.
     """
-    p_stdout, p_stderr, ret_code = None, None, None
-    # ensure cmd is a list of strings
-    try:
-        cmd = shlex.split(cmd)
-    except AttributeError:
-        pass
+    ret_code, p_stdout, p_stderr = None, None, None
 
-    if dry:
-        msg('$$ {}'.format(' '.join(cmd)))
+    args, is_valid = which(args)
+    if is_valid:
+        msg('{} {}'.format('$$' if dry else '>>', ' '.join(args)),
+            verbose, D_VERB_LVL if dry else VERB_LVL['medium'])
     else:
-        msg('>> {}'.format(' '.join(cmd)), verbose, VERB_LVL['medium'])
+        msg('W: `{}` is not in available in $PATH.'.format(args[0]))
+
+    if not dry and is_valid:
+        if in_pipe is not None:
+            msg('< {}'.format(in_pipe),
+                verbose, VERB_LVL['highest'])
 
         proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=False, close_fds=True)
+            args,
+            stdin=subprocess.PIPE if in_pipe and not mode == 'flush' else None,
+            stdout=subprocess.PIPE if mode != 'spawn' else None,
+            stderr=subprocess.PIPE if mode == 'call' else subprocess.STDOUT,
+            shell=False)
 
-        if get_pipes:
-            # handle stdout
-            p_stdout = ''
+        # handle stdout nd stderr
+        if mode == 'flush' and not in_pipe:
+            p_stdout, p_stderr = '', ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.readline().decode('utf8')
-                p_stdout += stdout_buffer
-                if verbose >= VERB_LVL['medium']:
-                    print(stdout_buffer, end='')
-                    sys.stdout.flush()
-            # handle stderr
-            p_stderr = proc.stderr.read().decode('utf8')
-            if verbose >= VERB_LVL['high']:
-                print(p_stderr)
-            # finally get the return code
-            ret_code = proc.returncode
+                out_buff = proc.stdout.readline().decode(encoding)
+                p_stdout += out_buff
+                msg(out_buff, fmt='', end='')
+                sys.stdout.flush()
+        elif mode == 'call':
+            try:
+                p_stdout, p_stderr = proc.communicate(
+                    in_pipe.encode(encoding) if in_pipe else None, timeout)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                p_stdout, p_stderr = proc.communicate()
+            p_stdout = p_stdout.decode(encoding)
+            p_stderr = p_stderr.decode(encoding)
+            msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
+            msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+        else:
+            msg('E: mode `{}` and `in_pipe` not supported.'.format(mode))
 
-    return p_stdout, p_stderr, ret_code
+    return ret_code, p_stdout, p_stderr
 
 
 # ======================================================================
