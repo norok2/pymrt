@@ -147,6 +147,7 @@ def max_iter_len(items):
             num = max(len(val), num)
     return num
 
+
 # ======================================================================
 def gcd(*numbers):
     """
@@ -671,7 +672,7 @@ def realpath(path):
         path (str): The path to expand.
 
     Returns:
-        new_path (str|unicode): the expanded path.
+        new_path (str): the expanded path.
 
     Raises:
         OSError: if the expanded path does not exists.
@@ -1206,6 +1207,8 @@ def string_between(
         'oses a'
         >>> string_between('roses are red, or not?', 'r', 's', True, False)
         'rose'
+        >>> string_between('roses are red violets are blue', 'x', 'y')
+        ''
     """
     incl_begin = len(begin_str) if not incl_begin else 0
     incl_end = len(end_str) if incl_end else 0
@@ -1922,7 +1925,7 @@ def calc_stats(
             'min': np.min(arr),
             'max': np.max(arr),
             'sum': np.sum(arr),
-            'num': np.size(arr),}
+            'num': np.size(arr), }
     if save_path or title:
         label_list = ['avg', 'std', 'min', 'max', 'sum', 'num']
         val_list = []

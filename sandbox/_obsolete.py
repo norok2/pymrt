@@ -93,6 +93,61 @@ def interval_size(interval):
     return interval[1] - interval[0]
 
 
+# :: ndstack obsoleted by: numpy.stack
+# ======================================================================
+def ndstack(arrays, axis=-1):
+    """
+    Stack a list of arrays of the same size along a specific axis
+
+    Args:
+        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+        axis (int): Direction for the concatenation of the arrays
+
+    Returns:
+        array (ndarray): The concatenated N-dim array
+    """
+    array = arrays[0]
+    n_dim = array.ndim + 1
+    if axis < 0:
+        axis += n_dim
+    if axis < 0:
+        axis = 0
+    if axis > n_dim:
+        axis = n_dim
+    # calculate new shape
+    shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
+    # stack arrays together
+    array = np.zeros(shape, dtype=array.dtype)
+    for i, src in enumerate(arrays):
+        index = [slice(None)] * n_dim
+        index[axis] = i
+        array[tuple(index)] = src
+    return array
+
+
+# :: ndsplit obsoleted by: numpy.split
+# ======================================================================
+def ndsplit(array, axis=-1):
+    """
+    Split an array along a specific axis into a list of arrays
+
+    Args:
+        array (ndarray): The N-dim array to split
+        axis (int): Direction for the splitting of the array
+
+    Returns:
+        arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+    """
+    # split array apart
+    arrays = []
+    for i in range(array.shape[axis]):
+        # determine index for slicing
+        index = [slice(None)] * array.ndim
+        index[axis] = i
+        arrays.append(array[index])
+    return arrays
+
+
 def guess_decimals(
         val,
         n_max=16,

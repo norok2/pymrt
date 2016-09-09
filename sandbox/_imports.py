@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
+import sys  # System-specific parameters and functions
 import shutil  # High-level file operations
 import math  # Mathematical functions
 import cmath  # Mathematical functions for complex numbers
@@ -32,6 +33,16 @@ import profile  # Deterministic profiling of Python programs
 import warnings  # Warning control
 import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
+import urllib  # URL handling modules
+import difflib  # Helpers for computing deltas
+import email  # An email and MIME handling package
+import shlex  # Simple lexical analysis
+import hashlib  # Secure hashes and message digests
+import warnings  # Warning control
+import getpass  # Portable password input
+import socket  # Low-level networking interface
+import smtplib  # SMTP protocol client
+import tempfile  # Generate temporary files and directories
 
 # Configuration file parser
 try:

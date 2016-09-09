@@ -520,7 +520,7 @@ def calc_mask(
             cmd_tokens = [
                 ext_cmd, in_tmp_filepath, bet_tmp_filepath, bet_params]
             cmd = ' '.join(cmd_tokens)
-            p_stdout, p_stderr = pmb.execute(cmd, verbose)
+            ret_code, p_stdout, p_stderr = pmb.execute(cmd, verbose=verbose)
         in_tmp_filepath = bet_tmp_filepath
 
     # extract mask using a threshold

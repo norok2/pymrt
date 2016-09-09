@@ -803,14 +803,14 @@ class SpinModel(object):
     #         duration (float): duration of the pulse in s
     #         flip_angle (float): flip angle of the excitation in deg
     #         num_steps (int): number of sampling point for the pulse
-    #         shape (str|unicode): name of the desired pulse shape.
+    #         shape (str): name of the desired pulse shape.
     #             Note: a function named '_shape_[SHAPE]' must exist.
     #                 [normal|cauchy|sinc|cos_sin]
     #         shape_kwargs (dict|None): keyword arguments for the shape
     # function
     #         w_c (float): carrier angular frequency of the pulse excitation in
     #             rad/s
-    #         propagator_mode (str|unicode): calculation mode for the
+    #         propagator_mode (str): calculation mode for the
     # propagator.
     #             Note: a function named '_propagator_[MODE]' must exist.
     #                 [sum|sum_order1|sum_sep|poly|interp|linear|reduced]

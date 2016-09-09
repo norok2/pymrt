@@ -284,8 +284,8 @@ def affine_model(
             To each model element is associated an equation and an estimate
             of the concentration for the corresponding relaxant.
         priors (dict): Prior information required to calculate the model.
-        dirpath (str|unicode): Path to directory of model results.
-        filename (str|unicode|None): File name of model results.
+        dirpath (str): Path to directory of model results.
+        filename (str|None): File name of model results.
             If None, it is generated from the model.
 
     Returns:

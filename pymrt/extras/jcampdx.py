@@ -134,7 +134,7 @@ def read(filepath):
     Read files with JCAMP-DX-like structure.
 
     Args:
-        filepath (str|unicode): Path to file to parse.
+        filepath (str): Path to file to parse.
 
     Returns:
         ldr_std (dict): Dictionary of the standard Labelled-Data-Records found.
