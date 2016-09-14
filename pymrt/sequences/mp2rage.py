@@ -252,8 +252,8 @@ def acq_to_seq_params(
         matrix_sizes[pe1], grappa_factors[pe1], part_fourier_factors[pe1],
         grappa_refs[pe1])
     tr_gre = round(
-        sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]) + tr_gre_delta,
-        2)
+        sum([1 / bw * 2 * matrix_sizes[0]
+             for bw in bandwidths]) + tr_gre_delta, 2)
     t_gre_block = n_gre * tr_gre
     center_k = part_fourier_factors[1] / 2
     td = ((ti[0] - center_k * t_gre_block),) + \
@@ -267,7 +267,7 @@ def acq_to_seq_params(
     extra_info = {
         't_acq': tr_seq * 1e-3 * k_space_lines(
             matrix_sizes[pe2], grappa_factors[pe2], part_fourier_factors[pe2],
-            grappa_refs[pe2])
+            grappa_refs[pe2]),
     }
     return seq_params, extra_info
 
