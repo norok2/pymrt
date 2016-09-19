@@ -22,10 +22,8 @@ Additionally, Conversion from acquisition to sequence parameters is supported.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -63,40 +61,46 @@ DICOM_INTERVAL = (0, 4096)
 
 
 # ======================================================================
+def _mz_nrf(mz0, t1, n_gre, tr_gre, alpha, m0):
+    """Magnetization during the GRE block"""
+    from sympy import exp, cos
+    return mz0 * (cos(alpha) * exp(-tr_gre / t1)) ** n_gre + \
+           m0 * (1 - exp(-tr_gre / t1)) * \
+           (1 - (cos(alpha) * exp(-tr_gre / t1)) ** n_gre) / \
+           (1 - cos(alpha) * exp(-tr_gre / t1))
+
+
+def _mz_0rf(mz0, t1, t, m0):
+    """Magnetization during the period with no pulses"""
+    from sympy import exp
+    return mz0 * exp(-t / t1) + m0 * (1 - exp(-t / t1))
+
+
+def _mz_i(mz0, eff):
+    """Magnetization after adiabatic inversion pulse"""
+    return -eff * mz0
+
+
+# ======================================================================
 # :: solve the MP2RAGE signal expression analytically
 def _prepare():
     from sympy import exp, sin, cos
-
-    def mz_nrf(mz0, t1, n_gre, tr_gre, alpha, m0):
-        """Magnetization during the GRE block"""
-        return mz0 * (cos(alpha) * exp(-tr_gre / t1)) ** n_gre + \
-               m0 * (1 - exp(-tr_gre / t1)) * \
-               (1 - (cos(alpha) * exp(-tr_gre / t1)) ** n_gre) / \
-               (1 - cos(alpha) * exp(-tr_gre / t1))
-
-    def mz_0rf(mz0, t1, t, m0):
-        """Magnetization during the period with no pulses"""
-        return mz0 * exp(-t / t1) + m0 * (1 - exp(-t / t1))
-
-    def mz_i(mz0, eff):
-        """Magnetization after adiabatic inversion pulse"""
-        return -eff * mz0
 
     t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
         sym.symbols('T1 eff n_GRE TR_GRE M0 TA TB TC A1 A2 Mz_ss')
 
     eqn_mz_ss = sym.Eq(
         mz_ss,
-        mz_0rf(
-            mz_nrf(
-                mz_0rf(
-                    mz_nrf(
-                        mz_0rf(
-                            mz_i(mz_ss, eff),
+        _mz_0rf(
+            _mz_nrf(
+                _mz_0rf(
+                    _mz_nrf(
+                        _mz_0rf(
+                            _mz_i(mz_ss, eff),
                             t1, ta, m0),
                         t1, n_gre, tr_gre, a1, m0),
                     t1, tb, m0),
-                t1, n_gre, tr_gre, a1, m0),
+                t1, n_gre, tr_gre, a2, m0),
             t1, tc, m0))
     mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
 
@@ -119,11 +123,11 @@ def _prepare():
         - (1 - e1) * ((cos(a2) * e1) ** (-n_gre / 2) - 1) / (1 - cos(a2) * e1))
 
     # T1 map as a function of steady state signal
-    signal = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
-    signal = signal.subs(mz_ss, mz_ss_)
+    s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
+    s = s.subs(mz_ss, mz_ss_)
 
     return np.vectorize(
-        sym.lambdify((t1, eff, n_gre, tr_gre, ta, tb, tc, a1, a2), signal))
+        sym.lambdify((t1, eff, n_gre, tr_gre, ta, tb, tc, a1, a2), s))
 
 
 # ======================================================================
