@@ -54,7 +54,7 @@ import xarray as xr  # N-D labeled arrays and datasets in Python
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-# import dicom as dcm  # PyDicom (Read, modify and write DICOM files.)
+# import dicom  # PyDicom (Read, modify and write DICOM files.)
 
 # :: External Imports Submodules
 # import mayavi.mlab as mlab  # Mayavi's mlab: MATLAB-like syntax
@@ -197,7 +197,7 @@ def time_to_rate(
         for time_map, rate_map in zip(time_maps, rate_maps):
             if pmb.check_redo([time_map], [rate_map], force):
                 msg('converting `{}` to `{}`...')
-                pmio.simple_filter_1_1(time_map, rate_map, mrc.time_to_rate)
+                pmio.simple_filter_1_1(time_map, rate_map, pmc.time_to_rate)
 
 
 # ======================================================================

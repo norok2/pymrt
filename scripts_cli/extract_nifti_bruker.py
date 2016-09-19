@@ -153,12 +153,12 @@ def extract_nii(dirpath, extradir, force, verbose):
             os.makedirs(dest_dirpath)
         # extract info from protocol information files
         method_ldr_std_dict, method_ldr_user_dict, method_comments = \
-            mre.jcampdx.read(method_filepath)
+            pme.jcampdx.read(method_filepath)
         method_ldr_dict = dict(
             list(method_ldr_std_dict.items()) + \
             list(method_ldr_user_dict.items()))
         params_ldr_std_dict, params_ldr_user_dict, params_comments = \
-            mre.jcampdx.read(params_filepath)
+            pme.jcampdx.read(params_filepath)
         params_ldr_dict = dict(
             list(params_ldr_std_dict.items()) + \
             list(params_ldr_user_dict.items()))

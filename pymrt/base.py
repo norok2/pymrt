@@ -918,6 +918,70 @@ def is_number(var):
 
 
 # ======================================================================
+def guess_decimals(
+        val,
+        n_max=16,
+        base=10,
+        fp=16):
+    """
+    Guess the number of decimals in a given float number.
+
+    Args:
+        val ():
+        n_max (int): Maximum number of guessed decimals.
+        base (int): The base used for the number representation.
+        fp (int): The floating point maximum precision.
+            A number with precision is approximated by the underlying platform.
+            The default value corresponds to the limit of the IEEE-754 floating
+            point arithmetic, i.e. 53 bits of precision: log10(2 ** 53) = 16
+            approximately. This value should not be changed unless the
+            underlying platform follows a different floating point arithmetic.
+
+    Returns:
+        prec (int): the guessed number of decimals.
+
+    Examples:
+        >>> guess_decimals(10)
+        0
+        >>> guess_decimals(1)
+        0
+        >>> guess_decimals(0.1)
+        1
+        >>> guess_decimals(0.01)
+        2
+        >>> guess_decimals(0.000001)
+        6
+        >>> guess_decimals(-0.72)
+        2
+        >>> guess_decimals(0.9567)
+        4
+        >>> guess_decimals(0.12345678)
+        8
+        >>> guess_decimals(0.9999999999999)
+        13
+        >>> guess_decimals(0.1234567890123456)
+        16
+        >>> guess_decimals(0.9999999999999999)
+        16
+        >>> guess_decimals(0.1234567890123456, 6)
+        6
+        >>> guess_decimals(0.54235, 10)
+        5
+        >>> guess_decimals(0x654321 / 0x10000, 16, 16)
+        4
+    """
+    offset = 2
+    prec = 0
+    tol = 10 ** -fp
+    x = (val - int(val)) * base
+    while base - abs(x) > tol and abs(x % tol) < tol < abs(x) and prec < n_max:
+        x = (x - int(x)) * base
+        tol = 10 ** -(fp - prec - offset)
+        prec += 1
+    return prec
+
+
+# ======================================================================
 def significant_figures(val, num):
     """
     Format a number with the correct number of significant figures.
@@ -1783,13 +1847,13 @@ def cartesian2polar(real, imag):
     Calculate the real and the imaginary part of a complex number.
 
     Args:
-        real (float): The real part z' of the complex number
-        imag (float): The imaginary part z" of the complex number
+        real (float): The real part z' of the complex number.
+        imag (float): The imaginary part z" of the complex number.
 
     Returns:
         tuple[float]:
-            - modulus (float): The modulus R of the complex number
-            - argument (float): The argument phi or phase of the complex number
+            - modulus (float): The modulus R of the complex number.
+            - argument (float): The argument phi or phase of the complex number.
     """
     return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
 
@@ -1805,18 +1869,18 @@ def calc_stats(
         title=None,
         compact=False):
     """
-    Calculate array statistical information (min, max, avg, std, sum, num)
+    Calculate array statistical information (min, max, avg, std, sum, num).
 
     Args:
-        arr (np.ndarray): The array to be investigated
-        mask_nan (bool): Mask NaN values
-        mask_inf (bool): Mask Inf values
-        mask_vals (list[int|float]|None): List of values to mask
-        val_interval (tuple): The (min, max) values interval
-        save_path (str|None): The path to which the plot is to be saved
-            If None, no output
-        title (str|None): If title is not None, stats are printed to screen
-        compact (bool): Use a compact format string for displaying results
+        arr (np.ndarray): The array to be investigated.
+        mask_nan (bool): Mask NaN values.
+        mask_inf (bool): Mask Inf values.
+        mask_vals (list[int|float]|None): List of values to mask.
+        val_interval (tuple): The (min, max) values interval.
+        save_path (str|None): The path to which the plot is to be saved.
+            If None, no output.
+        title (str|None): If title is not None, stats are printed to screen.
+        compact (bool): Use a compact format string for displaying results.
 
     Returns:
         stats_dict (dict): Dictionary of statistical values.

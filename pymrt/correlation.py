@@ -482,7 +482,7 @@ def calc_mask(
         if smoothing > 0.0:
             array = sp.ndimage.gaussian_filter(array, smoothing)
         # :: masking
-        array = mrs.mask_threshold(array, threshold, comparison, mode)
+        array = pms.mask_threshold(array, threshold, comparison, mode)
         # :: postprocess
         if erosion_iter > 0:
             array = sp.ndimage.binary_erosion(array, iterations=erosion_iter)
@@ -861,7 +861,7 @@ def plot_correlation(
             hist_interval=(0.0, 1.0), bins=512, array_interval=val_interval,
             scale='log10', title=title, cmap=plt.cm.hot_r,
             labels=(x_lbl, y_lbl), bisector=':k',
-            colorbar_opts={},
+            cbar_kws={},
             save_filepath=save_filepath, close_figure=not plt.isinteractive())
 
 
@@ -984,7 +984,7 @@ def plot_sample(
         pmio.plot_sample2d(
             img_filepath, axis, index, title=plot_title,
             array_interval=val_interval,
-            colorbar_opts={},
+            cbar_kws={},
             close_figure=not plt.isinteractive(), save_filepath=save_filepath)
 
 

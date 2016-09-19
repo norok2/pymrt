@@ -763,9 +763,9 @@ def mask_threshold(
     """
 
     def _img_mask_threshold(array, *args, **kwargs):
-        return mrs.mask_threshold(array, *args, **kwargs).astype(float)
+        return pms.mask_threshold(array, *args, **kwargs).astype(float)
 
-    kw_params = pmb.set_keyword_parameters(mrs.mask_threshold, locals())
+    kw_params = pmb.set_keyword_parameters(pms.mask_threshold, locals())
     simple_filter_1_1(in_filepath, out_filepath, _img_mask_threshold,
                       **kw_params)
 
@@ -791,7 +791,7 @@ def find_objects(
     """
 
     def _find_objects(array, structure, max_label):
-        labels, masks = mrs.find_objects(array, structure, max_label, False)
+        labels, masks = pms.find_objects(array, structure, max_label, False)
         return labels
 
     simple_filter_1_1(
@@ -816,19 +816,10 @@ def calc_stats(
     Calculate statistical information (min, max, avg, std, sum).
 
     Args:
-        img_filepath (str): The image file path
-        mask_filepath (str): The mask file path
-        save_filepath (str): The path where results are saved. If None,
-        no output.
-        mask_nan (bool): Mask NaN values.
-        mask_inf (bool): Mask Inf values.
-        mask_vals (iterable): List of values to mask out
-        printing : bool or None (optional)
-            Force printing of results, even when result is saved to file.
-        title : str or None (optional)
-            Title to be printed before results.
-        compact : bool (optional)
-            Use a compact format string for displaying results.
+        img_filepath (str): The image file path.
+        mask_filepath (str): The mask file path.
+        *args (tuple): Positional arguments passed to the `calc_stats` function.
+        **kwargs (dict): Keyword arguments passed to the `calc_stats` function.
 
     Returns
         stats_dict (dict):
@@ -837,6 +828,9 @@ def calc_stats(
             - 'avg': average or mean
             - 'std': standard deviation
             - 'sum': summation
+
+    See Also:
+        pymrt.base.calc_stats
     """
     obj = nib.load(img_filepath)
     img = obj.get_data()
@@ -896,8 +890,8 @@ def plot_sample2d(
 
     Args:
         in_filepath (str): The input file path
-        *args (tuple): Positional arguments passed to the plot function
-        **kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function.
+        **kwargs (dict): Keyword arguments passed to the plot function.
 
     Returns:
         The result of `pymrt.plot.sample2d`

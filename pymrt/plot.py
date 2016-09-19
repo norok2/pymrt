@@ -64,7 +64,7 @@ from pymrt import msg, dbg
 # standard plot resolutions
 D_PLOT_DPI = 72
 # colors and linestyles
-PLOT_COLORS = ('r', 'g', 'b', 'c', 'm', 'y')
+PLOT_COLORS = mpl.rcParams['axes.prop_cycle']
 PLOT_LINESTYLES = ('-', '--', '-.', ':')
 
 
@@ -158,7 +158,7 @@ def quick_2d(array):
     if array.ndim == 2:
         # using Matplotlib
         fig = plt.subplots()
-        plt.imshow(array.astype(float), cmap=plt.cm.binary)
+        plt.imshow(array.astype(float), cmap=plt.cm.gray)
     elif array.ndim > 2:
         # todo: 2D projection
         pass
@@ -207,8 +207,8 @@ def sample2d(
         ticks_limit=None,
         orientation=None,
         cmap=None,
-        colorbar_opts=None,
-        colorbar_text=None,
+        cbar_kws=None,
+        cbar_txt=None,
         text_color=None,
         text_list=None,
         resolution=None,
@@ -264,9 +264,9 @@ def sample2d(
         array_interval = pmb.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
-            cmap = plt.cm.seismic
+            cmap = plt.cm.RdBu_r
         else:
-            cmap = plt.cm.binary
+            cmap = plt.cm.gray_r
     if not text_color:
         if array_interval[0] * array_interval[1] < 0:
             text_color = 'k'
@@ -277,26 +277,32 @@ def sample2d(
             (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
         sample = sample.transpose()
     plot = ax.imshow(sample, cmap=cmap, vmin=array_interval[0],
-                     vmax=array_interval[1])
+                     vmax=array_interval[1], interpolation='none')
     if ticks_limit is not None:
         if ticks_limit > 0:
             ax.locator_params(nbins=ticks_limit)
         else:
             ax.set_xticks([])
             ax.set_yticks([])
-    if colorbar_opts is not None:
-        cbar = ax.figure.colorbar(plot, ax=ax, **colorbar_opts)
-        if colorbar_text is not None:
-            cbar.set_label(colorbar_text)
+    if cbar_kws is not None:
+        cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+        if cbar_txt is not None:
+            # cbar.ax.text(2.0, 0.5, cbar_txt, rotation=90)
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            cbar.set_label(
+                cbar_txt,
+                labelpad=4 + -8 * max([len(str(x)) for x in cbar_kws['ticks']])
+                if only_extremes else 0)
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
         if size_info >= 0.0:
             # print resolution information
             if resolution[0] == resolution[1] == resolution[2]:
-                res_str = '{} {} iso.'.format(resolution[0], 'mm')
+                x = resolution[0]
+                res_str = '{} {} iso.'.format(str(x), 'mm')
             else:
-                res_str = 'x'.join(
-                    [str(x) for x in resolution[0:3]]) + ' ' + 'mm'
+                res_str = 'x'.join([str(x) for x in resolution[0:3]]) \
+                          + ' ' + 'mm'
             ax.text(
                 0.975, 0.975, res_str, rotation=0, color=text_color,
                 horizontalalignment='right', verticalalignment='top',
@@ -338,8 +344,8 @@ def sample2d_anim(
         ticks_limit=None,
         orientation=None,
         cmap=None,
-        colorbar_opts=None,
-        colorbar_text=None,
+        cbar_kws=None,
+        cbar_txt=None,
         text_color=None,
         text_list=None,
         resolution=None,
@@ -394,9 +400,9 @@ def sample2d_anim(
         array_interval = pmb.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
-            cmap = plt.cm.seismic
+            cmap = plt.cm.RdBu
         else:
-            cmap = plt.cm.binary
+            cmap = plt.cm.gray
     if not text_color:
         if array_interval[0] * array_interval[1] < 0:
             text_color = 'k'
@@ -451,10 +457,13 @@ def sample2d_anim(
             pmb.slice_array(array, axis, i), cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         if len(plots) <= 0:
-            if colorbar_opts is not None:
-                cbar = ax.figure.colorbar(plot, ax=ax, **colorbar_opts)
-                if colorbar_text is not None:
-                    cbar.set_label(colorbar_text)
+            if cbar_kws is not None:
+                cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+                if cbar_txt is not None:
+                    only_extremes = 'ticks' in cbar_kws and \
+                                    len(cbar_kws['ticks']) == 2
+                    cbar.set_label(
+                        cbar_txt, labelpad=-15 if only_extremes else 0)
         plots.append([plot])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
     if save_filepath is not None:
@@ -579,7 +588,7 @@ def histogram1d_list(
         title='Histogram',
         labels=('Value', 'Value Frequency'),
         legends=None,
-        legend_opts=None,
+        legend_kws=None,
         styles=None,
         text_list=None,
         use_new_figure=True,
@@ -669,8 +678,13 @@ def histogram1d_list(
         fig = plt.figure()
     # prepare style list
     if styles is None:
-        styles = [linestyle + color
-                  for linestyle in PLOT_LINESTYLES for color in PLOT_COLORS]
+        styles = []
+        for linestyle in PLOT_LINESTYLES:
+            for color in PLOT_COLORS:
+                style = {'linestyle': linestyle}
+                style.update(color)
+                styles.append(style)
+
     style_cycler = itertools.cycle(styles)
 
     # prepare histograms
@@ -694,11 +708,12 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         plot = ax.plot(
-            pmb.midval(bin_edges), hist, next(style_cycler),
+            pmb.midval(bin_edges), hist,
+            **next(style_cycler),
             label=legend)
         plots.append(plot)
     # create the legend for the first line.
-    ax.legend(**(legend_opts if legend_opts is not None else {}))
+    ax.legend(**(legend_kws if legend_kws is not None else {}))
     # fine-tune ticks
     if ticks_limit is not None:
         if ticks_limit > 0:
@@ -742,11 +757,11 @@ def histogram2d(
         title='2D Histogram',
         labels=('Array 1 Values', 'Array 2 Values'),
         text_list=None,
-        cmap=plt.cm.hot_r,
+        cmap=plt.cm.afmhot_r,
         bisector=None,
-        stats_opts=None,
-        colorbar_opts=None,
-        colorbar_text=None,
+        stats_kws=None,
+        cbar_kws=None,
+        cbar_txt=None,
         use_new_figure=True,
         close_figure=False,
         save_filepath=None,
@@ -808,9 +823,9 @@ def histogram2d(
         bisector (str|None): If not None, show the first bisector.
             The line style must be specified in the string format,
             as specified by matplotlib specifications.
-        stats_opts (None): TODO
-        colorbar_opts (None): TODO
-        colorbar_text (None): TODO
+        stats_kws (None): TODO
+        cbar_kws (None): TODO
+        cbar_txt (None): TODO
         use_new_figure (bool): Plot the histogram in a new figure.
         close_figure (bool): Close the figure after saving.
         save_filepath (str): The file path where the plot is saved to.
@@ -824,6 +839,7 @@ def histogram2d(
         y_edges (np.ndarray): The bin edges on the y-axis.
         plot (matplotlib.pyplot.Figure): The Figure object containing the plot.
     """
+
     def _ensure_all_axis(obj, n=2):
         try:
             iter(obj[0])
@@ -860,7 +876,7 @@ def histogram2d(
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
     hist_interval = tuple([[pmb.scale(val, out_interval=array_interval[i])
-             for val in hist_interval[i]] for i in range(2)])
+                            for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
     hist, x_edges, y_edges = np.histogram2d(
@@ -888,10 +904,12 @@ def histogram2d(
         vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
-    if colorbar_opts is not None:
-        cbar = ax.figure.colorbar(plot, ax=ax, **colorbar_opts)
-        if colorbar_text is not None:
-            cbar.set_label(colorbar_text)
+    if cbar_kws is not None:
+        cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+        if cbar_txt is not None:
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            cbar.set_label(
+                cbar_txt, labelpad=-15 if only_extremes else 0)
         if ticks_limit is not None:
             if ticks_limit > 0:
                 cbar.locator = mpl.ticker.MaxNLocator(nbins=ticks_limit)
@@ -903,21 +921,21 @@ def histogram2d(
         ax.autoscale(False)
         ax.plot(array_interval[0], array_interval[1], bisector,
                 label='bisector')
-    if stats_opts is not None:
+    if stats_kws is not None:
         mask = np.ones_like(array1 * array2).astype(bool)
         mask *= (array1 > array_interval[0][0]).astype(bool)
         mask *= (array1 < array_interval[0][1]).astype(bool)
         mask *= (array2 > array_interval[1][0]).astype(bool)
         mask *= (array2 < array_interval[1][1]).astype(bool)
         stats_dict = pmb.calc_stats(
-            array1[mask] - array2[mask], **stats_opts)
+            array1[mask] - array2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *pmb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
             transform=ax.transAxes)
-    calc_mutual_information=True
+    calc_mutual_information = True
     if calc_mutual_information is not None:
         try:
             g, p, dof, expected = scipy.stats.chi2_contingency(

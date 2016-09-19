@@ -120,7 +120,7 @@ def handle_arg():
         help='Force descending into subdirectories [%(default)s]')
     arg_parser.add_argument(
         '-e', '--meta_subpath', metavar='DIR',
-        default=mrc.META_EXT,
+        default=pmc.META_EXT,
         help='set extra input subdirectory [%(default)s]')
     arg_parser.add_argument(
         '-a', '--data_subpath', metavar='DIR',
@@ -161,18 +161,18 @@ def main():
 
         # use preset if available
         opts = json.loads(args.options) if args.options else {}
-        if preset_func_name in vars(mrc):
-            new_opts = vars(mrc)[preset_func_name]()
+        if preset_func_name in vars(pmc):
+            new_opts = vars(pmc)[preset_func_name]()
             new_opts.update(opts)
             opts = new_opts
         # source extraction
-        sources_func = vars(mrc)[sources_func_name] \
-            if sources_func_name in vars(mrc) else mrc.sources_generic
+        sources_func = vars(pmc)[sources_func_name] \
+            if sources_func_name in vars(pmc) else pmc.sources_generic
         sources_args = [opts, args.force, args.verbose]
         sources_kwargs = {}
         # computation
-        compute_func = vars(mrc)[compute_func_name] \
-            if compute_func_name in vars(mrc) else mrc.compute_generic
+        compute_func = vars(pmc)[compute_func_name] \
+            if compute_func_name in vars(pmc) else pmc.compute_generic
         compute_args = [opts, args.force, args.verbose]
         compute_kwargs = {}
         # inform on the actual functions
@@ -182,7 +182,7 @@ def main():
             print('II: Opts: {}'.format(json.dumps(opts)))
         # proceed with computation on selected sources
         if opts != {}:
-            mrc.compute(
+            pmc.compute(
                 sources_func, sources_args, sources_kwargs,
                 compute_func, compute_args, compute_kwargs,
                 args.input, args.output, args.recursive,

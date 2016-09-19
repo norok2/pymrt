@@ -148,69 +148,6 @@ def ndsplit(array, axis=-1):
     return arrays
 
 
-def guess_decimals(
-        val,
-        n_max=16,
-        base=10,
-        fp=16):
-    """
-    Guess the number of decimals in a given float number.
-
-    Args:
-        val ():
-        n_max (int): Maximum number of guessed decimals.
-        base (int): The base used for the number representation.
-        fp (int): The floating point maximum precision.
-            A number with precision is approximated by the underlying platform.
-            The default value corresponds to the limit of the IEEE-754 floating
-            point arithmetic, i.e. 53 bits of precision: log10(2 ** 53) = 16
-            approximately. This value should not be changed unless the
-            underlying platform follows a different floating point arithmetic.
-
-    Returns:
-        prec (int): the guessed number of decimals.
-
-    Examples:
-        >>> guess_decimals(10)
-        0
-        >>> guess_decimals(1)
-        0
-        >>> guess_decimals(0.1)
-        1
-        >>> guess_decimals(0.01)
-        2
-        >>> guess_decimals(0.000001)
-        6
-        >>> guess_decimals(-0.72)
-        2
-        >>> guess_decimals(0.9567)
-        4
-        >>> guess_decimals(0.12345678)
-        8
-        >>> guess_decimals(0.9999999999999)
-        13
-        >>> guess_decimals(0.1234567890123456)
-        16
-        >>> guess_decimals(0.9999999999999999)
-        16
-        >>> guess_decimals(0.1234567890123456, 6)
-        6
-        >>> guess_decimals(0.54235, 10)
-        5
-        >>> guess_decimals(0x654321 / 0x10000, 16, 16)
-        4
-    """
-    offset = 2
-    prec = 0
-    tol = 10 ** -fp
-    x = (val - int(val)) * base
-    while base - abs(x) > tol and abs(x % tol) < tol < abs(x) and prec < n_max:
-        x = (x - int(x)) * base
-        tol = 10 ** -(fp - prec - offset)
-        prec += 1
-    return prec
-
-
 # ======================================================================
 def sequence(
         start,
