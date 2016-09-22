@@ -54,7 +54,7 @@ import scipy.optimize  # SciPy: Optimization
 import scipy.integrate  # SciPy: Integration
 import scipy.interpolate  # SciPy: Interpolation
 import scipy.constants  # SciPy: Constants
-# import scipy.ndimage  # SciPy: Multidimensional image processing
+# import sp.ndimage  # SciPy: Multidimensional image processing
 import scipy.linalg  # SciPy: Linear Algebra
 import scipy.stats  # SciPy: Statistical functions
 import scipy.misc  # SciPy: Miscellaneous routines
@@ -73,8 +73,8 @@ import pymrt.base as pmb
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
-from pymrt.base import elapsed, print_elapsed
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
@@ -94,7 +94,7 @@ def superlorentz_integrand(x, t):
 # ======================================================================
 @np.vectorize
 def superlorentz(x):
-    # scipy.integrate.quad returns both the value and the error, here ignored
+    # sp.integrate.quad returns both the value and the error, here ignored
     return sp.integrate.quad(
         lambda t: superlorentz_integrand(x, t), 0.0, pi / 2.0)[0]
 
@@ -173,10 +173,10 @@ def _shape_normal(
 
     """
     x = np.linspace(
-        scipy.stats.norm.ppf(0.0 + truncation[0]),
-        scipy.stats.norm.ppf(1.0 - truncation[1]),
+        sp.stats.norm.ppf(0.0 + truncation[0]),
+        sp.stats.norm.ppf(1.0 - truncation[1]),
         num_steps)
-    y = scipy.stats.norm.pdf(x)
+    y = sp.stats.norm.pdf(x)
     return y
 
 
@@ -194,10 +194,10 @@ def _shape_cauchy(
 
     """
     x = np.linspace(
-        scipy.stats.cauchy.ppf(0.0 + truncation[0]),
-        scipy.stats.cauchy.ppf(1.0 - truncation[1]),
+        sp.stats.cauchy.ppf(0.0 + truncation[0]),
+        sp.stats.cauchy.ppf(1.0 - truncation[1]),
         num_steps)
-    y = scipy.stats.cauchy.pdf(x)
+    y = sp.stats.cauchy.pdf(x)
     return y
 
 
@@ -335,7 +335,7 @@ def _propagator_sum(
     for w1 in pulse_exc.w1_arr:
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
         l_op_sum += pulse_exc.dt * l_op
-    return scipy.linalg.expm(-l_op_sum)
+    return sp.linalg.expm(-l_op_sum)
 
 
 # ======================================================================
@@ -367,7 +367,7 @@ def _propagator_sum_order1(
         pmb.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
         for i in range(len(l_op_list[:-1]))]
     comm_sum = sum(comm_list)
-    return scipy.linalg.expm(-(l_op_sum + comm_sum))
+    return sp.linalg.expm(-(l_op_sum + comm_sum))
 
 
 # ======================================================================
@@ -395,10 +395,10 @@ def _propagator_sum_sep(
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
         p_op_w1_sum += (pulse_exc.dt * (l_op - l_op_free))
     # calculate propagators
-    p_op_free = scipy.linalg.expm(-l_op_free * pulse_exc.dt)
-    p_op_pow = scipy.linalg.fractional_matrix_power(
+    p_op_free = sp.linalg.expm(-l_op_free * pulse_exc.dt)
+    p_op_pow = sp.linalg.fractional_matrix_power(
         p_op_free, pulse_exc.num_steps)
-    p_op_w1 = scipy.linalg.expm(-p_op_w1_sum)
+    p_op_w1 = sp.linalg.expm(-p_op_w1_sum)
     return np.dot(p_op_pow, p_op_w1_sum)
 
 
@@ -435,7 +435,7 @@ def _propagator_poly(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
-            p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+            p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # :: prepare for polynomial fit
         x_arr = w1_approx
         y_arr = p_op_approx
@@ -483,7 +483,7 @@ def _propagator_poly(
             for w1_im in w1_im_approx:
                 l_op = dynamics_operator(
                     spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
-                p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+                p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
                 w1_approx[i] = w1_re + 1j * w1_im
                 i += 1
         # :: prepare for polynomial fit
@@ -529,7 +529,7 @@ def _propagator_interp(
         pulse_exc (PulseExc): the e.m. pulse excitation to manipulate the spins
         spin_model (SpinModel): the model for the spin system
         method (str): the method used by the interpolating function
-            'scipy.interpolate.griddata'
+            'sp.interpolate.griddata'
         num_samples (int): number of samples for the interpolation
 
     Returns:
@@ -544,13 +544,13 @@ def _propagator_interp(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
-            p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+            p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
             (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
-                p_op_arr[:, i, j] = scipy.interpolate.griddata(
+                p_op_arr[:, i, j] = sp.interpolate.griddata(
                     w1_approx, p_op_approx[i, j, :], _w1_arr,
                     method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in
@@ -580,7 +580,7 @@ def _propagator_interp(
             for w1_im in w1_im_approx:
                 l_op = dynamics_operator(
                     spin_model, pulse_exc.w_c, w1_re + 1j * w1_im)
-                p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+                p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
                 w1_approx[i, :] = (w1_re, w1_im)
                 i += 1
         # perform interpolation
@@ -588,7 +588,7 @@ def _propagator_interp(
             (pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
-                p_op_arr[:, i, j] = scipy.interpolate.griddata(
+                p_op_arr[:, i, j] = sp.interpolate.griddata(
                     w1_approx, p_op_approx[i, j, :],
                     (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
                     method=method, fill_value=0.0)
@@ -627,7 +627,7 @@ def _propagator_linear(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
-            p_op_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+            p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
             (pulse_exc.num_steps,) + spin_model.operator_shape)
@@ -660,10 +660,10 @@ def _propagator_linear(
             spin_model.operator_shape + (num_im_samples,))
         for i, w1_re in enumerate(w1_re_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_re)
-            p_op_re_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+            p_op_re_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         for i, w1_im in enumerate(w1_im_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_im)
-            p_op_re_approx[:, :, i] = scipy.linalg.expm(-pulse_exc.dt * l_op)
+            p_op_re_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros((pulse_exc.num_steps,) + spin_model.operator_shape)
         for i in range(spin_model.operator_dim):
@@ -726,7 +726,7 @@ def z_spectrum(spin_model, pulse_sequence, amplitudes, freqs):
 
 
 # ======================================================================
-class SpinModel:
+class SpinModel(object):
     """
     Model of the spin system
     """
@@ -954,7 +954,7 @@ class SpinModel:
             k_op[index[::-1]] = k
         return k_op
 
-    def __repr__(self):
+    def __str__(self):
         text = 'SpinModel: '
         names = ['m0', 'w0', 'r1', 'r2', 'k']
         for name in names:
@@ -963,7 +963,7 @@ class SpinModel:
 
 
 # ======================================================================
-class PulseExc:
+class PulseExc(object):
     """
     Pulse excitation interacting with the spin system
     """
@@ -988,7 +988,7 @@ class PulseExc:
         """
         # todo: add something to memorize shape
         # so that setting flip angle to 0 does not munge the shape
-        self.shape = 'custom'
+        self.shape = 'custom'(object)
         self.duration = duration
         self.w_c = w_c if w_c is not None else 0.0
         self.w1_arr = w1_arr if w1_arr is not None else np.array((1.0,))
@@ -1169,7 +1169,7 @@ class PulseExc:
                 p_op = pmb.mdot(*p_op_list[::-1])
         return p_op
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
             'flip_angle', round(self.flip_angle, 1),
@@ -1186,7 +1186,7 @@ class PulseExc:
 
 
 # ======================================================================
-class Spoiler:
+class Spoiler(object):
     def __init__(
             self,
             efficiency=1.0):
@@ -1232,7 +1232,7 @@ class Spoiler:
                 num_exact += 1
         return np.diag(p_op_diag)
 
-    def __repr__(self):
+    def __str__(self):
         text = 'Spoiler: '
         names = ['efficiency']
         for name in names:
@@ -1249,7 +1249,7 @@ class Delay(PulseExc):
         PulseExc.__init__(self, duration, np.zeros(1), w_c)
         self.shape = 'rect'
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         names = ['duration', 'w_c']
         for name in names:
@@ -1282,7 +1282,7 @@ class PulseSequence:
             spin_model.det, self.propagator(spin_model), spin_model.m_eq)
         return np.abs(signal)
 
-    def __repr__(self):
+    def __str__(self):
         text = '{}'.format(self.__class__.__name__)
         if hasattr(self, 'num_repetitions'):
             text += ' (num_repetitions={})'.format(self.num_repetitions)
@@ -1336,7 +1336,7 @@ class PulseTrain(PulseSequence):
             spin_model,
             *args,
             **kwargs):
-        return scipy.linalg.fractional_matrix_power(
+        return sp.linalg.fractional_matrix_power(
             self.kernel.propagator(spin_model, *args, **kwargs),
             self.num_repetitions)
 

@@ -499,68 +499,128 @@ def walk2(
 
 
 # ======================================================================
+def which(args):
+    """
+    Determine the full path of an executable, if possible.
+
+    It mimics the behavior of the POSIX command `which`.
+
+    Args:
+        args (str|list[str]): Command to execute as a list of tokens.
+            Optionally can accept a string which will be tokenized.
+
+    Returns:
+        args (list[str]): Command to execute as a list of tokens.
+            The first item of the list is the full path of the executable.
+            If the executable is not found in path, returns the first token of
+            the input.
+            Other items are identical to input, if the input was a str list.
+            Otherwise it will be the tokenized version of the passed string,
+            except for the first token.
+        is_valid (bool): True if path of executable is found, False otherwise.
+    """
+
+    def is_executable(file_path):
+        return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
+
+    # ensure args in the correct format
+    try:
+        args = shlex.split(args)
+    except AttributeError:
+        pass
+
+    cmd = args[0]
+    dirpath, filename = os.path.split(cmd)
+    if dirpath:
+        is_valid = is_executable(cmd)
+    else:
+        is_valid = False
+        for dirpath in os.environ['PATH'].split(os.pathsep):
+            dirpath = dirpath.strip('"')
+            tmp = os.path.join(dirpath, cmd)
+            is_valid = is_executable(tmp)
+            if is_valid:
+                cmd = tmp
+                break
+    return [cmd] + args[1:], is_valid
+
+
+# ======================================================================
 def execute(
-        cmd,
+        args,
         in_pipe=None,
-        get_out_pipes=True,
+        mode='call',
+        timeout=None,
+        encoding='utf-8',
         dry=False,
         verbose=D_VERB_LVL):
     """
     Execute command and retrieve/print output at the end of execution.
 
     Args:
-        cmd (str): Command to execute.
-        in_pipe (str): Input data to be used as stdin of the process.
-        get_out_pipes (bool): Get stdout and stderr streams from the process.
-            If True, the program flow is halted until the process is completed.
-            Otherwise, the process is spawn in background, continuing execution.
+        args (str|list[str]): Command to execute as a list of tokens.
+            Optionally can accept a string.
+        in_pipe (str|None): Input data to be used as stdin of the process.
+        mode (str): Set the execution mode (affects the return values).
+            Allowed modes:
+             - 'spawn': Spawn a new process. stdout and stderr will be lost.
+             - 'call': Call new process and wait for execution.
+                Once completed, obtain the return code, stdout, and stderr.
+             - 'flush': Call new process and get stdout+stderr immediately.
+                Once completed, obtain the return code.
+                Unfortunately, there is no easy
+        timeout (float): Timeout of the process in seconds.
+        encoding (str): The encoding to use.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
     Returns:
-        ret_code (int): if get_pipes, the return code of the command.
-        p_stdout (str|None): if get_pipes, the stdout of the process.
-        p_stderr (str|None): if get_pipes, the stderr of the process.
+        ret_code (int|None): if mode not `spawn`, return code of the process.
+        p_stdout (str|None): if mode not `spawn`, the stdout of the process.
+        p_stderr (str|None): if mode is `call`, the stderr of the process.
     """
     ret_code, p_stdout, p_stderr = None, None, None
-    # ensure cmd is a list of strings
-    try:
-        cmd = shlex.split(cmd)
-    except AttributeError:
-        pass
 
-    if dry:
-        msg('$$ {}'.format(' '.join(cmd)))
+    args, is_valid = which(args)
+    if is_valid:
+        msg('{} {}'.format('$$' if dry else '>>', ' '.join(args)),
+            verbose, D_VERB_LVL if dry else VERB_LVL['medium'])
     else:
-        msg('>> {}'.format(' '.join(cmd)), verbose, VERB_LVL['higher'])
+        msg('W: `{}` is not in available in $PATH.'.format(args[0]))
+
+    if not dry and is_valid:
+        if in_pipe is not None:
+            msg('< {}'.format(in_pipe),
+                verbose, VERB_LVL['highest'])
 
         proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=False, close_fds=True, universal_newlines=True)
+            args,
+            stdin=subprocess.PIPE if in_pipe and not mode == 'flush' else None,
+            stdout=subprocess.PIPE if mode != 'spawn' else None,
+            stderr=subprocess.PIPE if mode == 'call' else subprocess.STDOUT,
+            shell=False)
 
-        if in_pipe is not None:
-            msg('< {}'.format(in_pipe), verbose, VERB_LVL['higher'])
-            proc.stdin.write(in_pipe)
-            proc.stdin.detach()
-
-        if get_out_pipes:
-            # handle stdout
-            p_stdout = ''
+        # handle stdout nd stderr
+        if mode == 'flush' and not in_pipe:
+            p_stdout, p_stderr = '', ''
             while proc.poll() is None:
-                stdout_buffer = proc.stdout.readline()
-                p_stdout += stdout_buffer
-                if verbose >= VERB_LVL['highest']:
-                    print(stdout_buffer, end='')
-                    sys.stdout.flush()
-            # handle stderr
-            p_stderr = proc.stderr.read()
-            if verbose >= VERB_LVL['high']:
-                print(p_stderr)
-            # finally get the return code
-            ret_code = int(proc.returncode)
+                out_buff = proc.stdout.readline().decode(encoding)
+                p_stdout += out_buff
+                msg(out_buff, fmt='', end='')
+                sys.stdout.flush()
+        elif mode == 'call':
+            try:
+                p_stdout, p_stderr = proc.communicate(
+                    in_pipe.encode(encoding) if in_pipe else None, timeout)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                p_stdout, p_stderr = proc.communicate()
+            p_stdout = p_stdout.decode(encoding)
+            p_stderr = p_stderr.decode(encoding)
+            msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
+            msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+        else:
+            msg('E: mode `{}` and `in_pipe` not supported.'.format(mode))
 
     return ret_code, p_stdout, p_stderr
 
@@ -1246,8 +1306,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (iterable[str]): Input filepaths for computation.
-        out_filepaths (iterable[str]): Output filepaths for computation.
+        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
+        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
 
     Returns:
@@ -2104,6 +2164,60 @@ def euclid_dist(
     if unsigned:
         array = np.abs(array)
     return array
+
+
+# :: ndstack and ndsplit have been obsoleted by: numpy.stack and numpy.split
+# # ======================================================================
+# def ndstack(arrays, axis=-1):
+#     """
+#     Stack a list of arrays of the same size along a specific axis
+#
+#     Args:
+#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+#         axis (int): Direction for the concatenation of the arrays
+#
+#     Returns:
+#         array (ndarray): The concatenated N-dim array
+#     """
+#     array = arrays[0]
+#     n_dim = array.ndim + 1
+#     if axis < 0:
+#         axis += n_dim
+#     if axis < 0:
+#         axis = 0
+#     if axis > n_dim:
+#         axis = n_dim
+#     # calculate new shape
+#     shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
+#     # stack arrays together
+#     array = np.zeros(shape, dtype=array.dtype)
+#     for i, src in enumerate(arrays):
+#         index = [slice(None)] * n_dim
+#         index[axis] = i
+#         array[tuple(index)] = src
+#     return array
+#
+#
+# # ======================================================================
+# def ndsplit(array, axis=-1):
+#     """
+#     Split an array along a specific axis into a list of arrays
+#
+#     Args:
+#         array (ndarray): The N-dim array to split
+#         axis (int): Direction for the splitting of the array
+#
+#     Returns:
+#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
+#     """
+#     # split array apart
+#     arrays = []
+#     for i in range(array.shape[axis]):
+#         # determine index for slicing
+#         index = [slice(None)] * array.ndim
+#         index[axis] = i
+#         arrays.append(array[index])
+#     return arrays
 
 
 # ======================================================================

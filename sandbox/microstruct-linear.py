@@ -216,9 +216,9 @@ def get_roi_values(
         item for item in pmb.listdir(dirpath, None) if os.access(item, os.W_OK)]
     inputs = []
     for subdirpath in subdirpaths:
-        inputs += [
+        inputs.extend([
             mask for mask in pmb.listdir(subdirpath, pmb.EXT['niz'])
-            if os.path.basename(mask).startswith('mask')]
+            if os.path.basename(mask).startswith('mask')])
     out_filepath = os.path.join(dirpath, out_filename)
     if pmb.check_redo(inputs, [out_filepath], force):
         roi_values = {}
@@ -304,7 +304,7 @@ def affine_model(
             relaxant, roi = elem.split('_')
             if roi in priors['P']:
                 rois.add(roi)
-                relaxants += [relaxant]
+                relaxants.append(relaxant)
             else:
                 raise ValueError('Unknown ROI element `{}`'.format(roi))
         else:

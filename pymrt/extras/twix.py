@@ -56,7 +56,7 @@ import pymrt.base as pmb
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import msg, dbg
 
 # ======================================================================
 LIMITS = {
@@ -340,7 +340,7 @@ def _parse_vb_header(
 
 
 # ======================================================================
-class Twix:
+class Twix(object):
     """
     Manages the extraction of data from the disk.
     """

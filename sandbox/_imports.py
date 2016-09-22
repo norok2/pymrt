@@ -31,6 +31,8 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import inspect  # Inspect live objects
 import profile  # Deterministic profiling of Python programs
 import warnings  # Warning control
+import unittest  # Unit testing framework
+import doctest  # Test interactive Python examples
 import urllib  # URL handling modules
 import difflib  # Helpers for computing deltas
 import email  # An email and MIME handling package
