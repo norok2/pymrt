@@ -41,6 +41,7 @@ import getpass  # Portable password input
 import socket  # Low-level networking interface
 import smtplib  # SMTP protocol client
 import tempfile  # Generate temporary files and directories
+import re  # Regular expression operations
 
 # Configuration file parser
 try:

@@ -199,7 +199,7 @@ def quick_3d(array):
 
 # ======================================================================
 def sample2d(
-        array,
+        arr,
         axis=None,
         index=None,
         title=None,
@@ -222,7 +222,7 @@ def sample2d(
 
     Parameters
     ==========
-    array : ndarray
+    arr : ndarray
         The original 3D array.
     axis : int (optional)
         The slicing axis. If None, use the shortest one.
@@ -249,19 +249,24 @@ def sample2d(
         The figure object containing the plot.
 
     """
-    if array.ndim != 3:
-        raise IndexError('3D array required')
+    ndim = 2
     if use_new_figure:
         fig = plt.figure()
     if ax is None:
         ax = plt.gca()
     if axis is None:
-        axis = np.argmin(array.shape)
-    sample = pmb.slice_array(array, axis, index)
+        axis = np.argsort(arr.shape)[:-ndim]
+    else:
+        axis = pmb.auto_repeat(axis, 1)
+    if arr.ndim - len(axis) != 2:
+        raise IndexError(
+            'Mismatching dimensions ({ndim}) and axis ({naxes}): '
+            '{ndim} - {naxes} != 2'.format(ndim=arr.ndim, naxes=len(axis)))
+    sample = pmb.ndim_slice(arr, axis, index)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmb.minmax(array)
+        array_interval = pmb.minmax(arr)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.RdBu_r
@@ -291,7 +296,7 @@ def sample2d(
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             cbar.set_label(
                 cbar_txt,
-                labelpad=4 + -8 * max([len(str(x)) for x in cbar_kws['ticks']])
+                labelpad=3 + -6 * max([len(str(x)) for x in cbar_kws['ticks']])
                 if only_extremes else 0)
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
@@ -393,7 +398,7 @@ def sample2d_anim(
         ax = plt.gca()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = pmb.slice_array(array, axis, 0)
+    sample = pmb.ndim_slice(array, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
@@ -454,7 +459,7 @@ def sample2d_anim(
     plots = []
     for i in range(0, n_frames, step):
         plot = ax.imshow(
-            pmb.slice_array(array, axis, i), cmap=cmap,
+            pmb.ndim_slice(array, axis, i), cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         if len(plots) <= 0:
             if cbar_kws is not None:

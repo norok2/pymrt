@@ -356,7 +356,7 @@ def calc_afi(
     Fit monoexponential decay to images using the log-linear method.
     """
     y_arr = np.stack(images, -1).astype(float)
-    print(y_arr.shape)
+
     s_arr = pmb.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
@@ -365,7 +365,7 @@ def calc_afi(
     mask = s_arr[..., 0] != 0.0
     r = np.zeros_like(s_arr[..., 1])
     r[mask] = s_arr[..., 0][mask] / s_arr[..., 1][mask]
-    n = t_r[1] / t_r[0]
+    n = t_r[1] / t_r[0]  # usually: t_r[1] > t_r[0]
     fa = np.rad2deg(np.real(np.arccos((r * n - 1) / (n - r))))
 
     img_list = [fa / nominal_fa]

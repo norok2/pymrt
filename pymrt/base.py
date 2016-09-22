@@ -117,6 +117,14 @@ def auto_repeat(obj, n, force=False):
 
     Raises:
         AssertionError: If force is True and the object does not have length n.
+
+    Examples:
+        >>> auto_repeat(1, 3)
+        (1, 1, 1)
+        >>> auto_repeat([1], 3)
+        [1]
+        >>> auto_repeat([1, 3], 1)
+        [1, 3]
     """
     try:
         iter(obj)
@@ -1953,51 +1961,71 @@ def calc_stats(
 
 
 # ======================================================================
-def slice_array(
+def ndim_slice(
         arr,
-        axis=0,
-        index=None):
+        axes=0,
+        indexes=None):
     """
-    Slice a (N-1)-dim array from an N-dim array
+    Slice a M-dim sub-array from an N-dim array (with M < N).
 
     Args:
         arr (np.ndarray): The input N-dim array
-        axis (int): The slicing axis
-        index (int): The slicing index. If None, mid-value is taken.
+        axes (iterable[int]|int): The slicing axis
+        indexes (iterable[int|float|None]|None): The slicing index.
+            If None, mid-value is taken.
+            Otherwise, its length must match that of axes.
+            If an element is None, again the mid-value is taken.
+            If an element is a number between 0 and 1, it is interpreted
+            as relative to the size of the array for corresponding axis.
+            If an element is an integer, it is interpreted as absolute and must
+            be smaller than size of the array for the corresponding axis.
 
     Returns:
-        sliced (np.ndarray): The sliced (N-1)-dim array
+        sliced (np.ndarray): The sliced M-dim sub-array
 
     Raises:
         ValueError: if index is out of bounds
 
     Examples:
         >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
-        >>> slice_array(arr, 2, 1)
+        >>> ndim_slice(arr, 2, 1)
         array([[ 1,  5,  9],
                [13, 17, 21]])
-        >>> slice_array(arr, 1, 2)
+        >>> ndim_slice(arr, 1, 2)
         array([[ 8,  9, 10, 11],
                [20, 21, 22, 23]])
-        >>> slice_array(arr, 0, 0)
+        >>> ndim_slice(arr, 0, 0)
         array([[ 0,  1,  2,  3],
                [ 4,  5,  6,  7],
                [ 8,  9, 10, 11]])
-        >>> slice_array(arr, 0, 1)
+        >>> ndim_slice(arr, 0, 1)
         array([[12, 13, 14, 15],
                [16, 17, 18, 19],
                [20, 21, 22, 23]])
+        >>> ndim_slice(arr, (0, 1), None)
+        array([16, 17, 18, 19])
     """
     # initialize slice index
     slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
-    if index is None:
-        index = np.int(arr.shape[axis] / 2.0)
+    if indexes is None:
+        indexes = auto_repeat(None, len(axes))
+    axes = auto_repeat(axes, 1)
+    indexes = auto_repeat(indexes, 1)
+    indexes = list(indexes)
+    for i, (index, axis) in enumerate(zip(indexes, axes)):
+        if index is None:
+            indexes[i] = index = 0.5
+        if isinstance(index, float) and index < 1.0:
+            indexes[i] = int(arr.shape[axis] * index)
     # check index
-    if (index >= arr.shape[axis]) or (index < 0):
+    if any([(index >= arr.shape[axis]) or (index < 0)
+            for index, axis in zip(indexes, axes)]):
         raise ValueError('Invalid array index in the specified direction')
     # determine slice index
-    slab[axis] = index
+    for index, axis in zip(indexes, axes):
+        slab[axis] = index
+    # print(slab)  # debug
     # slice the array
     return arr[slab]
 

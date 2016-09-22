@@ -149,6 +149,57 @@ def ndsplit(array, axis=-1):
 
 
 # ======================================================================
+def slice_array(
+        arr,
+        axis=0,
+        index=None):
+    """
+    Slice a (N-1)-dim sub-array from an N-dim array
+
+    Args:
+        arr (np.ndarray): The input N-dim array
+        axis (int): The slicing axis
+        index (int): The slicing index.
+            If None, mid-value is taken.
+
+    Returns:
+        sliced (np.ndarray): The sliced (N-1)-dim sub-array
+
+    Raises:
+        ValueError: if index is out of bounds
+
+    Examples:
+        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
+        >>> slice_array(arr, 2, 1)
+        array([[ 1,  5,  9],
+               [13, 17, 21]])
+        >>> slice_array(arr, 1, 2)
+        array([[ 8,  9, 10, 11],
+               [20, 21, 22, 23]])
+        >>> slice_array(arr, 0, 0)
+        array([[ 0,  1,  2,  3],
+               [ 4,  5,  6,  7],
+               [ 8,  9, 10, 11]])
+        >>> slice_array(arr, 0, 1)
+        array([[12, 13, 14, 15],
+               [16, 17, 18, 19],
+               [20, 21, 22, 23]])
+    """
+    # initialize slice index
+    slab = [slice(None)] * arr.ndim
+    # ensure index is meaningful
+    if index is None:
+        index = np.int(arr.shape[axis] / 2.0)
+    # check index
+    if (index >= arr.shape[axis]) or (index < 0):
+        raise ValueError('Invalid array index in the specified direction')
+    # determine slice index
+    slab[axis] = index
+    # slice the array
+    return arr[slab]
+
+
+# ======================================================================
 def sequence(
         start,
         stop,
