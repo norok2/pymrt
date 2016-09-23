@@ -32,10 +32,9 @@ timing parameters are positive.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals  # DEBUG: sympy complains about it
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
+
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -368,6 +367,7 @@ def handle_arg():
     return arg_parser
 
 
+# ======================================================================
 def main():
     # :: handle program parameters
     arg_parser = handle_arg()
