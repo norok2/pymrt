@@ -6,7 +6,7 @@ pymrt.base: generic basic utilities.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -1445,33 +1445,53 @@ def minmax(arr):
 # ======================================================================
 def scale(
         val,
-        in_interval=(0.0, 1.0),
-        out_interval=(0.0, 1.0)):
+        out_interval=None,
+        in_interval=None):
     """
     Linear convert the value from input interval to output interval
 
     Args:
-        val (float|np.ndarray): Value(s) to convert
-        in_interval (float,float): Interval of the input value
+        val (float|np.ndarray): Value(s) to convert.
         out_interval (float,float): Interval of the output value.
+            If None, set to: (0, 1).
+        in_interval (float,float): Interval of the input value.
+            If None, and val is iterable, it is calculated as:
+            (min(val), max(val)), otherwise set to: (0, 1).
 
     Returns:
         val (float): The converted value
 
     Examples:
-        >>> scale(100, (0, 100), (0, 1000))
+        >>> scale(100, (0, 1000), (0, 100))
         1000.0
-        >>> scale(50, (-100, 100), (0, 1000))
+        >>> scale(50, (0, 1000), (-100, 100))
         750.0
-        >>> scale(50, (0, 1), (0, 10))
+        >>> scale(50, (0, 10), (0, 1))
         500.0
-        >>> scale(0.5, (0, 1), (-10, 10))
+        >>> scale(0.5, (-10, 10))
         0.0
-        >>> scale(np.pi / 3, (0, np.pi), (0, 180))
+        >>> scale(np.pi / 3, (0, 180), (0, np.pi))
         60.0
+        >>> scale(np.arange(5), (0, 1))
+        array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ])
+        >>> scale(np.arange(6), (0, 10))
+        array([  0.,   2.,   4.,   6.,   8.,  10.])
+        >>> scale(np.arange(6), (0, 10), (0, 2))
+        array([  0.,   5.,  10.,  15.,  20.,  25.])
     """
-    in_min, in_max = in_interval
-    out_min, out_max = out_interval
+    if in_interval:
+        in_min, in_max = sorted(in_interval)
+    else:
+        try:
+            iter(val)
+        except TypeError:
+            in_min, in_max = (0, 1)
+        else:
+            in_min, in_max = min(val), max(val)
+    if out_interval:
+        out_min, out_max = sorted(out_interval)
+    else:
+        out_min, out_max = (0, 1)
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
@@ -1703,10 +1723,10 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
     #     warnings.warn('Even coordinates will not be symmetric')
     if is_relative:
         if use_int:
-            origin = [int(scale(x, (0, 1), (0, dim)))
+            origin = [int(scale(x, (0, dim)))
                       for x, dim in zip(origin, shape)]
         else:
-            origin = [scale(x, (0, 1), (0, dim - 1))
+            origin = [scale(x, (0, dim - 1))
                       for x, dim in zip(origin, shape)]
     elif any([not isinstance(x, int) for x in origin]) and use_int:
         raise TypeError('Absolute origin must be integer.')
