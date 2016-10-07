@@ -1481,13 +1481,10 @@ def scale(
     """
     if in_interval:
         in_min, in_max = sorted(in_interval)
+    elif isinstance(val, np.ndarray):
+        in_min, in_max = np.min(val), np.max(val)
     else:
-        try:
-            iter(val)
-        except TypeError:
-            in_min, in_max = (0, 1)
-        else:
-            in_min, in_max = min(val), max(val)
+        in_min, in_max = (0, 1)
     if out_interval:
         out_min, out_max = sorted(out_interval)
     else:

@@ -541,7 +541,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmb.scale(val, out_interval=array_interval)
+    hist_interval = tuple([pmb.scale(val, array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -673,7 +673,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmb.scale(val, out_interval=array_interval)
+    hist_interval = tuple([pmb.scale(val, array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -878,7 +878,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[pmb.scale(val, out_interval=array_interval[i])
+    hist_interval = tuple([[pmb.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram

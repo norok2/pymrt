@@ -100,22 +100,25 @@ def save(
         out_filepath,
         arr,
         aff=None,
-        hdr=None):
+        hdr=None,
+        img_type=nib.Nifti1Image):
     """
-    Save a NiBabel-supported image
+    Save a NiBabel-supported image.
 
     Args:
-        out_filepath (str): Output file path
-        arr (np.ndarray): Data to be stored
-        aff (np.ndarray): 3D affine transformation (4x4 matrix)
+        out_filepath (str): Output file path.
+        arr (np.ndarray): Data to be stored.
+        aff (np.ndarray|None): 3D affine transformation (4x4 matrix).
+            If None, use identity.
         hdr: Header of the image (refer to NiBabel).
+        img_type: The NiBabel class to use for saving.
 
     Returns:
-        None
+        None.
     """
     if aff is None:
         aff = np.eye(4)
-    obj = nib.Nifti1Image(arr, aff, hdr)
+    obj = img_type(arr, aff, hdr)
     obj.to_filename(out_filepath)
 
 

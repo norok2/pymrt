@@ -216,8 +216,8 @@ def ssim(
     if vals_interval:
         msk1 = arr1 != 0.0
         msk2 = arr2 != 0.0
-        arr1[msk1] = scale(arr1[msk1], arr_interval, arr_interval)
-        arr2[msk2] = scale(arr2[msk2], arr_interval, arr_interval)
+        arr1[msk1] = scale(arr1[msk1], arr_interval)
+        arr2[msk2] = scale(arr2[msk2], arr_interval)
         arr_interval = vals_interval
     interval_size = np.ptp(arr_interval)
     cc = [(k * interval_size) ** 2 for k in kk]

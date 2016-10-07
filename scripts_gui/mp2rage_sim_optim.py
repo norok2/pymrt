@@ -145,7 +145,7 @@ def ui_plot(
         if use_dicom_INTERVAL:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
                 pmb.scale(
-                    ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
+                    ii, mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
 
@@ -385,7 +385,6 @@ def main():
 
     elapsed(os.path.basename(__file__))
     print_elapsed()
-
 
 
 # ======================================================================

@@ -36,7 +36,7 @@ The recommended way of installing the software is through
 
     $ pip install pymrt
 
-Alternatively, you can the clone the source repository from
+Alternatively, you can clone the source repository from
 `Bitbucket <https://bitbucket.org/norok2/pymrt>`_:
 
 .. code:: shell
