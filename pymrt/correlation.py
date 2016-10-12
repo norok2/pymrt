@@ -638,10 +638,10 @@ def calc_correlation(
             mask = np.ones_like(img1 * img2).astype(bool)
         if val_interval is None:
             val_interval = pmb.minmax(np.stack((img1, img2)))
-        mask *= (img1 > val_interval[0]).astype(bool)
-        mask *= (img1 < val_interval[1]).astype(bool)
-        mask *= (img2 > val_interval[0]).astype(bool)
-        mask *= (img2 < val_interval[1]).astype(bool)
+        mask *= (img1 > val_interval[0])
+        mask *= (img1 < val_interval[1])
+        mask *= (img2 > val_interval[0])
+        mask *= (img2 < val_interval[1])
         if not mask_val_list:
             mask_val_list = []
         # calculate stats of difference image
@@ -657,8 +657,9 @@ def calc_correlation(
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
         pcc2_val = pcc_val * pcc_val
         # calculate linear polynomial fit
-        linear_coeff, linear_offset = np.polyfit(
-            img1[mask].ravel(), img2[mask].ravel(), 1)
+        n=1
+        poly_params = \
+            np.polyfit(img1[mask].ravel(), img2[mask].ravel(), n)[::-1]
         #        # calculate Theil robust slope estimator (WARNING: too much
         #  memory!)
         #        theil_coeff, theil_offset, = sp.stats.mstats.theilslopes(
@@ -684,7 +685,7 @@ def calc_correlation(
             list(d_arr_val) + list(e_arr_val) + \
             [val_filter(val)
              for val in [pcc_val, pcc2_val, pcc_p_val,
-                         linear_coeff, linear_offset,
+                         poly_params[1], poly_params[0],
                          #                theil_coeff, theil_offset,
                          num, num_tot, num_ratio]]
         labels = \

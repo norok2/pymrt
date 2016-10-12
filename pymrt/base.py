@@ -1452,14 +1452,14 @@ def scale(
 
     Args:
         val (float|np.ndarray): Value(s) to convert.
-        out_interval (float,float): Interval of the output value.
+        out_interval (float,float): Interval of the output value(s).
             If None, set to: (0, 1).
-        in_interval (float,float): Interval of the input value.
+        in_interval (float,float): Interval of the input value(s).
             If None, and val is iterable, it is calculated as:
             (min(val), max(val)), otherwise set to: (0, 1).
 
     Returns:
-        val (float): The converted value
+        val (float|np.ndarray): The converted value(s).
 
     Examples:
         >>> scale(100, (0, 1000), (0, 100))
@@ -1845,32 +1845,32 @@ def gaussian_nd(
 
 
 # ======================================================================
-def polar2complex(modulus, argument):
+def polar2complex(modulus, phase):
     """
     Calculate complex number from the polar form:
-    z = R * exp(i * phi) = R * cos(phi) + i * R * sin(phi)
+    z = R * exp(i * phi) = R * cos(phi) + i * R * sin(phi).
 
     Args:
-        modulus (float): The modulus R of the complex number
-        argument (float): The argument phi or phase of the complex number
+        modulus (float|np.ndarray): The modulus R of the complex number.
+        phase (float|np.ndarray): The argument phi of the complex number.
 
     Returns:
-        z (complex): The complex number z = R * exp(i * phi)
+        z (complex|np.ndarray): The complex number z = R * exp(i * phi).
     """
-    return modulus * np.exp(1j * argument)
+    return modulus * np.exp(1j * phase)
 
 
 # ======================================================================
 def cartesian2complex(real, imag):
     """
-    Calculate the complex number from the cartesian form: z = z' + i * z"
+    Calculate the complex number from the cartesian form: z = z' + i * z".
 
     Args:
-        real (float): The real part z' of the complex number
-        imag (float): The imaginary part z" of the complex number
+        real (float|np.ndarray): The real part z' of the complex number.
+        imag (float|np.ndarray): The imaginary part z" of the complex number.
 
     Returns:
-        z (complex): The complex number: z = z' + i * z"
+        z (complex|np.ndarray): The complex number: z = z' + i * z".
     """
     return real + 1j * imag
 
@@ -1881,12 +1881,12 @@ def complex2cartesian(z):
     Calculate the real and the imaginary part of a complex number.
 
     Args:
-        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z".
 
     Returns:
-        tuple[float]:
-            - real (float): The real part z' of the complex number
-            - imag (float): The imaginary part z" of the complex number
+        tuple[float|np.ndarray]:
+         - real (float|np.ndarray): The real part z' of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex number.
     """
     return np.real(z), np.imag(z)
 
@@ -1894,34 +1894,34 @@ def complex2cartesian(z):
 # ======================================================================
 def complex2polar(z):
     """
-    Calculate the real and the imaginary part of a complex number
+    Calculate the real and the imaginary part of a complex number.
 
     Args:
-        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z".
 
     Returns:
         tuple[float]:
-            - modulus (float): The modulus R of the complex number
-            - argument (float): The argument phi or phase of the complex number
+         - modulus (float|np.ndarray): The modulus R of the complex number.
+         - phase (float|np.ndarray): The phase phi of the complex number.
     """
     return np.abs(z), np.angle(z)
 
 
 # ======================================================================
-def polar2cartesian(modulus, argument):
+def polar2cartesian(modulus, phase):
     """
-    Calculate the real and the imaginary part of a complex number
+    Calculate the real and the imaginary part of a complex number.
 
     Args:
-        modulus (float): The modulus R of the complex number
-        argument (float): The argument phi or phase of the complex number
+        modulus (float|np.ndarray): The modulus R of the complex number.
+        phase (float|np.ndarray): The phase phi of the complex number.
 
     Returns:
         tuple[float]:
-            - real (float): The real part z' of the complex number
-            - imag (float): The imaginary part z" of the complex number
+         - real (float|np.ndarray): The real part z' of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex number.
     """
-    return modulus * np.cos(argument), modulus * np.sin(argument)
+    return modulus * np.cos(phase), modulus * np.sin(phase)
 
 
 # ======================================================================
@@ -1935,8 +1935,8 @@ def cartesian2polar(real, imag):
 
     Returns:
         tuple[float]:
-            - modulus (float): The modulus R of the complex number.
-            - argument (float): The argument phi or phase of the complex number.
+         - modulus (float): The modulus R of the complex number.
+         - argument (float): The phase phi of the complex number.
     """
     return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
 
