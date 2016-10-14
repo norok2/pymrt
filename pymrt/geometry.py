@@ -1391,7 +1391,7 @@ def realign(
     """
     Shift and rotate the array for optimal grid alignment.
 
-    Principal axis of rotation will be parallel to cartesian axes.
+    The principal axis of rotation will be parallel to the cartesian axes.
     Weighted center will be at a given point (e.g. the middle of the support).
 
     Args:

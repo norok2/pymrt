@@ -416,10 +416,19 @@ def fix_phase_interval(arr):
 
     Returns:
         array (np.ndarray): An array scaled to (-pi,pi).
+
+    Examples:
+        >>> fix_phase_interval(np.arange(8))
+        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
+                1.34639685,  2.24399475,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
+        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
     # correct phase value range (useful for DICOM-converted images)
     if np.ptp(arr) > 2.0 * np.pi:
-        arr = pmb.scale(arr, pmb.minmax(arr), (-np.pi, np.pi))
+        arr = pmb.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 

@@ -353,7 +353,7 @@ def sample2d_anim(
         text_list=None,
         resolution=None,
         size_info=None,
-        use_new_figure=True,
+        dpi=300,
         close_figure=False,
         save_filepath=None,
         ax=None):
@@ -471,7 +471,7 @@ def sample2d_anim(
     mov = anim.ArtistAnimation(fig, plots, blit=False)
     if save_filepath is not None:
         plt.tight_layout()
-        mov.save(save_filepath, dpi=48, fps=n_frames / step / duration)
+        mov.save(save_filepath, dpi=dpi, fps=n_frames / step / duration)
     if close_figure:
         plt.close()
     return mov
