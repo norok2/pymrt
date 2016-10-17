@@ -42,6 +42,7 @@ import socket  # Low-level networking interface
 import smtplib  # SMTP protocol client
 import tempfile  # Generate temporary files and directories
 import re  # Regular expression operations
+import glob  # Unix style pathname pattern expansion
 
 # Configuration file parser
 try:
