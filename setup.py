@@ -30,7 +30,7 @@ VERSION_SOURCE_FILEPATH = 'pymrt/__init__.py'
 README_SOURCE_FILE = 'README.rst'
 
 # get the working directory for the setup script
-CWD = pmb.realpath(os.path.dirname(__file__))
+CWD = os.path.realpath(os.path.dirname(__file__))
 
 # get the long description from the README file
 with open(os.path.join(CWD, README_SOURCE_FILE),
@@ -91,7 +91,7 @@ setup(
         'Development Status :: 3 - Alpha',
 
         'Environment :: Console',
-        'Environment :: X11 Applications :: Qt',
+        'Environment :: X11 Applications',
 
         'Intended Audience :: Science/Research',
         'Intended Audience :: Healthcare Industry',
@@ -115,7 +115,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 
     keywords='quantitative MRI qMRI MT susceptibility relaxometry qMT '
@@ -155,6 +155,7 @@ setup(
             'pymrt_calc_mask=scripts_cli.calc_mask:main',
             'pymrt_geom_phantom=scripts_cli.geom_phantom:main',
             'pymrt_ernst_calc=scripts_cli.ernst_calc:main',
+            'pymrt_unwrap=scripts_cli.unwrap:main',
 
             'pymrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
         ],
