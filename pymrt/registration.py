@@ -395,7 +395,7 @@ def external_registration(
     fix_nii.to_filename(fix_filepath)
     # generate
     if tool.startswith('FSL'):
-        cmd = EXT_CMD['fsl/4.1/flirt']
+        cmd = EXT_CMD['fsl/5.0/flirt']
         pmb.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension

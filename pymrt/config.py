@@ -12,6 +12,7 @@ from __future__ import(
 
 # TODO: automagically find them?
 EXT_CMD = {
-    'fsl/4.1/flirt': 'fsl4.1-flirt',
-    'fsl/4.1/bet': 'fsl4.1-bet',
+    'fsl/5.0/flirt': 'fsl5.0-flirt',
+    'fsl/5.0/bet': 'fsl5.0-bet',
+    'fsl/5.0/prelude': 'fsl5.0-prelude'
 }

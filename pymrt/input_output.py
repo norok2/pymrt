@@ -165,13 +165,13 @@ def filter_1_1(
     If the returned header is None, it is autocalculated.
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        func (callable): Filtering function
-            (img: ndarray, aff:ndarray, hdr:header)
-            func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        func (callable): Filtering function.
+            (img: ndarray, aff:ndarray, hdr:header).
+            func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr.
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         None

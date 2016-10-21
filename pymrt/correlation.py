@@ -172,7 +172,6 @@ def _get_ref_list(
     if not ref_filepaths:
         raise RuntimeError('No reference file(s) found')
     return ref_filepaths, ref_src_filepaths
-    return ref_filepaths, ref_src_filepaths
 
 
 # ======================================================================
@@ -208,7 +207,7 @@ def _compute_affine_fsl(
     """
     if pmb.check_redo([in_filepath, ref_filepath], [aff_filepath], force):
         msg('Affine: {}'.format(os.path.basename(aff_filepath)))
-        ext_cmd = EXT_CMD['fsl/4.1/flirt']
+        ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_args = {
             'in': in_filepath,
             'ref': ref_filepath,
@@ -251,7 +250,7 @@ def _apply_affine_fsl(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
             force):
         msg('Regstr: {}'.format(os.path.basename(out_filepath)))
-        ext_cmd = EXT_CMD['fsl/4.1/flirt']
+        ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_options = {
             'in': in_filepath,
             'ref': ref_filepath,
@@ -413,10 +412,10 @@ def apply_mask(
 # ======================================================================
 def calc_mask(
         in_filepath,
-        out_filepath=None,
+        out_dirpath=None,
         threshold=0.5,
         comparison='>',
-        mode='relative',
+        mode='percentile',
         smoothing=1.0,
         erosion_iter=2,
         dilation_iter=2,
@@ -437,7 +436,7 @@ def calc_mask(
     ==========
     in_filepath : str
         Path to image from which mask is to be extracted.
-    out_filepath : str (optional)
+    out_dirpath : str (optional)
         Path to directory where to store results.
     bet_params : str (optional)
         Parameters to be used with FSL's BET brain extraction algorithm.
@@ -491,12 +490,12 @@ def calc_mask(
         return array.astype(float)
 
     # todo: move to pmio.
-    if not out_filepath:
-        out_filepath = os.path.dirname(in_filepath)
-    if os.path.isdir(out_filepath):
+    if not out_dirpath:
+        out_dirpath = os.path.dirname(in_filepath)
+    if os.path.isdir(out_dirpath):
         out_filename = os.path.basename(
             pmn.change_img_type(in_filepath, SERVICE_ID['mask']))
-        out_filepath = os.path.join(out_filepath, out_filename)
+        out_dirpath = os.path.join(out_dirpath, out_filename)
 
     in_tmp_filepath = pmn.change_img_type(in_filepath, helper_img_type) \
         if helper_img_type else in_filepath
@@ -513,8 +512,8 @@ def calc_mask(
         erosion_iter = 3
         dilation_iter = 2
         # perform BET extraction
-        ext_cmd = EXT_CMD['fsl/4.1/bet']
-        bet_tmp_filepath = pmn.change_img_type(out_filepath, 'BRAIN')
+        ext_cmd = EXT_CMD['fsl/5.0/bet']
+        bet_tmp_filepath = pmn.change_img_type(out_dirpath, 'BRAIN')
         if pmb.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
             msg('TmpMsk: {}'.format(os.path.basename(bet_tmp_filepath)))
             cmd_tokens = [
@@ -524,7 +523,7 @@ def calc_mask(
         in_tmp_filepath = bet_tmp_filepath
 
     # extract mask using a threshold
-    if pmb.check_redo([in_tmp_filepath], [out_filepath], force):
+    if pmb.check_redo([in_tmp_filepath], [out_dirpath], force):
         _calc_mask_kwargs = {
             'threshold': threshold,
             'comparison': comparison,
@@ -532,12 +531,12 @@ def calc_mask(
             'smoothing': smoothing,
             'erosion_iter': erosion_iter,
             'dilation_iter': dilation_iter}
-        msg('I: compute_mask params: ', _calc_mask_kwargs.items(),
+        msg('I: compute_mask params: '.format(_calc_mask_kwargs.items()),
             verbose, VERB_LVL['medium'])
-        msg('GetMsk: {}'.format(os.path.basename(out_filepath)))
+        msg('GetMsk: {}'.format(os.path.basename(out_dirpath)))
         pmio.simple_filter_1_1(
-            in_tmp_filepath, out_filepath, _calc_mask, **_calc_mask_kwargs)
-    return out_filepath
+            in_tmp_filepath, out_dirpath, _calc_mask, **_calc_mask_kwargs)
+    return out_dirpath
 
 
 # ======================================================================
@@ -657,7 +656,7 @@ def calc_correlation(
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
         pcc2_val = pcc_val * pcc_val
         # calculate linear polynomial fit
-        n=1
+        n = 1
         poly_params = \
             np.polyfit(img1[mask].ravel(), img2[mask].ravel(), n)[::-1]
         #        # calculate Theil robust slope estimator (WARNING: too much
@@ -665,6 +664,8 @@ def calc_correlation(
         #        theil_coeff, theil_offset, = sp.stats.mstats.theilslopes(
         #            img2[mask].ravel(),
         # img1[mask].ravel())
+        # mutual information
+        mi = pmb.mutual_information(img1[mask], img2[mask])
         # voxel counts
         num = np.sum(mask.astype(bool))
         num_tot = np.size(mask)
@@ -684,7 +685,7 @@ def calc_correlation(
              filenames] + \
             list(d_arr_val) + list(e_arr_val) + \
             [val_filter(val)
-             for val in [pcc_val, pcc2_val, pcc_p_val,
+             for val in [pcc_val, pcc2_val, pcc_p_val, mi,
                          poly_params[1], poly_params[0],
                          #                theil_coeff, theil_offset,
                          num, num_tot, num_ratio]]
@@ -693,7 +694,7 @@ def calc_correlation(
              '{: <{size}s}'.format('y_corr_file', size=lbl_len)] + \
             ['D-' + lbl for lbl in label_list] + \
             ['E-' + lbl for lbl in label_list] + \
-            ['r', 'r2', 'p-val',
+            ['r', 'r2', 'p-val', 'mi',
              'lin-cof', 'lin-off',
              #             'thl-cof', 'thl-off',
              'N_eff', 'N_tot', 'N_ratio']
@@ -1402,14 +1403,13 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filename = pmb.change_ext(
+                    mask_filepath = pmb.change_ext(
                         MASK_FILENAME, pmb.EXT['niz'])
-                    mask_filepath = pmb.realpath(mask_filename)
                 # add current directory if it was not specified
-                if not os.path.exists(mask_filepath):
+                if not os.path.isfile(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)
                 # if mask not found, create one from registration reference
-                if not os.path.exists(mask_filepath):
+                if not os.path.isfile(mask_filepath):
                     if 'calc_mask' not in reg_info:
                         reg_info['calc_mask'] = {}
                     mask_filepath = calc_mask(
@@ -1445,7 +1445,7 @@ def check_correlation(
                     force=force, verbose=verbose)
                 # make sure the mask has correct shape
                 new_mask = os.path.join(
-                    dirpath, msk_path, os.path.basename(mask_filepath))
+                    msk_path, os.path.basename(mask_filepath))
                 msg('I: newly shaped mask: {}'.format(new_mask),
                     verbose, VERB_LVL['medium'])
                 apply_mask(mask_filepath, mask_filepath, new_mask)

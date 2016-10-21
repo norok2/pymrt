@@ -127,7 +127,7 @@ def handle_arg():
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-m', '--mode', metavar='absolute|relative|percentile',
-        default='absolute',
+        default='percentile',
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-z', '--size_threshold', metavar='Z',

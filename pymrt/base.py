@@ -31,9 +31,10 @@ import scipy as sp  # SciPy (signal and image processing library)
 
 # :: External Imports Submodules
 import scipy.optimize  # SciPy: Optimization Algorithms
+import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
@@ -98,7 +99,7 @@ def _is_special(stats_mode):
 
 
 # ======================================================================
-def auto_repeat(obj, n, force=False):
+def auto_repeat(obj, n, force=False, check=False):
     """
     Automatically repeat the specified object n times.
 
@@ -108,10 +109,11 @@ def auto_repeat(obj, n, force=False):
     Args:
         obj: The object to operate with.
         n (int): The length of the output object.
-        force (bool): Ensure that the object has length n.
+        force (bool): Force the repetition, even if the object is iterable.
+        check (bool): Ensure that the object has length n.
 
     Returns:
-        val (tuple): If obj is not iterable, returns obj repeated n times.
+        val (tuple): Returns obj repeated n times.
 
     Raises:
         AssertionError: If force is True and the object does not have length n.
@@ -121,14 +123,25 @@ def auto_repeat(obj, n, force=False):
         (1, 1, 1)
         >>> auto_repeat([1], 3)
         [1]
-        >>> auto_repeat([1, 3], 1)
+        >>> auto_repeat([1, 3], 2)
         [1, 3]
+        >>> auto_repeat([1, 3], 2, True)
+        ([1, 3], [1, 3])
+        >>> auto_repeat([1, 2, 3], 2, True, True)
+        ([1, 2, 3], [1, 2, 3])
+        >>> auto_repeat([1, 2, 3], 2, False, True)
+        Traceback (most recent call last):
+            ...
+        AssertionError
     """
     try:
         iter(obj)
     except TypeError:
-        obj = (obj,) * n
-    if force:
+        force = True
+    finally:
+        if force:
+            obj = (obj,) * n
+    if check:
         assert (len(obj) == n)
     return obj
 
@@ -636,16 +649,18 @@ def grouping(items, num_elems):
         groups (list[list]): Grouped elements from the source list.
 
     Examples:
-        >>> grouping(range(10), 4)
+        >>> l = list(range(10))
+        >>> grouping(l, 4)
         [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]]
-        >>> grouping(range(10), (2, 3))
+        >>> grouping(l, (2, 3))
         [[0, 1], [2, 3, 4], [5, 6, 7, 8, 9]]
-        >>> grouping(range(10), (2, 4, 1))
+        >>> grouping(l, (2, 4, 1))
         [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
-        >>> grouping(range(10), (2, 4, 1, 20))
+        >>> grouping(l, (2, 4, 1, 20))
         [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
     """
-    num_elems = auto_repeat(num_elems, len(items) // num_elems)
+    if isinstance(num_elems, int):
+        num_elems = auto_repeat(num_elems, len(items) // num_elems)
     group, groups = [], []
     j = 0
     count = num_elems[j] if j < len(num_elems) else len(items) + 1
@@ -1606,15 +1621,9 @@ def dft(arr):
         arr (np.ndarray): Output n-dim array.
 
     Examples:
-        >>> a = np.arange(10)
+        >>> a = np.arange(2)
         >>> dft(a)
-        array([ -5. +4.44089210e-16j,  -5. -1.62459848e+00j,\
-  -5. -3.63271264e+00j,
-                -5. -6.88190960e+00j,  -5. -1.53884177e+01j,\
-  45. +0.00000000e+00j,
-                -5. +1.53884177e+01j,  -5. +6.88190960e+00j,\
-  -5. +3.63271264e+00j,
-                -5. +1.62459848e+00j])
+        array([-1.+0.j,  1.+0.j])
         >>> print(np.allclose(a, dft(idft(a))))
         True
     """
@@ -1635,15 +1644,9 @@ def idft(arr):
         arr (np.ndarray): Output n-dim array.
 
     Examples:
-        >>> a = np.arange(10)
+        >>> a = np.arange(2)
         >>> idft(a)
-        array([ 4.5 +0.00000000e+00j,  0.5 +1.53884177e+00j,\
- -0.5 -6.88190960e-01j,
-                0.5 +3.63271264e-01j, -0.5 -1.62459848e-01j,\
-  0.5 +4.44089210e-17j,
-               -0.5 +1.62459848e-01j,  0.5 -3.63271264e-01j,\
- -0.5 +6.88190960e-01j,
-                0.5 -1.53884177e+00j])
+        array([ 0.5+0.j,  0.5+0.j])
         >>> print(np.allclose(a, idft(dft(a))))
         True
     """
@@ -1740,10 +1743,78 @@ def _kk_2(shape):
     return kk_2
 
 
+def auto_pad_width(
+        pad_width,
+        shape,
+        combine=None):
+    """
+    Ensure pad_width value(s) to be consisting of integer.
+
+    Args:
+        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If iterable, a value for each dim must be specified.
+            If not iterable, all dims will have the same value.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to corresponding dim size.
+        shape (iterable[int]): The shape to associate to `pad_width`.
+        combine (callable|None): The function for combining shape values.
+            If None, uses the corresponding dim from the shape.
+
+    Returns:
+        pad_width (int|tuple[tuple[int]]): The absolute `pad_width`.
+            If input `pad_width` is not iterable, result is not iterable.
+
+    See Also:
+        np.pad
+
+    Examples:
+        >>> shape = (10, 20, 30)
+        >>> auto_pad_width(0.1, shape)
+        ((1, 1), (2, 2), (3, 3))
+        >>> auto_pad_width(0.1, shape, max)
+        ((3, 3), (3, 3), (3, 3))
+        >>> shape = (10, 20, 30)
+        >>> auto_pad_width(((0.1, 0.5),), shape)
+        ((1, 5), (2, 10), (3, 15))
+        >>> auto_pad_width(((2, 3),), shape)
+        ((2, 3), (2, 3), (2, 3))
+        >>> auto_pad_width(((2, 3), (1, 2)), shape)
+        Traceback (most recent call last):
+            ....
+        AssertionError
+        >>> auto_pad_width(((0.1, 0.2),), shape, min)
+        ((1, 2), (1, 2), (1, 2))
+        >>> auto_pad_width(((0.1, 0.2),), shape, max)
+        ((3, 6), (3, 6), (3, 6))
+    """
+
+    def float_to_int(val, scale):
+        return int(val * scale) if isinstance(val, float) else val
+
+    try:
+        iter(pad_width)
+    except TypeError:
+        pad_width = ((pad_width,) * 2,)
+    finally:
+        combined = combine(shape) if combine else None
+        pad_width = list(
+            pad_width if len(pad_width) > 1 else pad_width * len(shape))
+        assert(len(pad_width) == len(shape))
+        for i, (item, dim) in enumerate(zip(pad_width, shape)):
+            lower, upper = item
+            pad_width[i] = (
+                float_to_int(lower, dim if not combine else combined),
+                float_to_int(upper, dim if not combine else combined))
+        pad_width = tuple(pad_width)
+    return pad_width
+
+
 # ======================================================================
 def laplacian(
         arr,
-        ft_factor=(2 * np.pi)):
+        ft_factor=(2 * np.pi),
+        pad_width=0.25):
     """
     Calculate the Laplacian operator in the Fourier domain.
 
@@ -1751,18 +1822,33 @@ def laplacian(
         arr (np.ndarray): The input array.
         ft_factor (float): The Fourier factor for the gradient operator.
             Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If iterable, a value for each dim must be specified.
+            If not iterable, all dims will have the same value.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
 
     Returns:
         arr (np.ndarray): The output array.
     """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
     kk_2 = _kk_2(arr.shape)
-    return ((1j * ft_factor) ** 2) * idft(kk_2 * dft(arr))
+    arr = ((1j * ft_factor) ** 2) * idft(kk_2 * dft(arr))
+    return arr[mask]
 
 
 # ======================================================================
 def inv_laplacian(
         arr,
-        ft_factor=(2 * np.pi)):
+        ft_factor=(2 * np.pi),
+        pad_width=0.25):
     """
     Calculate the inverse Laplacian operator in the Fourier domain.
 
@@ -1770,43 +1856,163 @@ def inv_laplacian(
         arr (np.ndarray): The input array.
         ft_factor (float): The Fourier factor for the gradient operator.
             Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
 
     Returns:
         arr (np.ndarray): The output array.
     """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
     one_over_kk_2 = 1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),))
-    return ((-1j / ft_factor) ** 2) * idft(one_over_kk_2 * dft(arr))
+    arr = ((-1j / ft_factor) ** 2) * idft(one_over_kk_2 * dft(arr))
+    return arr[mask]
 
 
 # ======================================================================
-def unwrap_phase_laplacian(arr, correction=lambda x: -(x * 2.0 - 3.0 * np.pi)):
+def auto_n_bin(
+        arr,
+        method='sqrt'):
     """
-    Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
-
-    Phase unwrapping by using the following equality:
-
-    L = (d / dx)^2
-
-    L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
-
-    phi = L^-1(L(phi))
+    Determine the optimal number of bins for an array.
 
     Args:
-        arr (np.ndarray): The multi-dimensional array to unwrap.
-        correction (callable): A correction function for improved accuracy.
+        arr (np.ndarray): The input array.
+        method (str|None):
 
     Returns:
-        arr (np.ndarray): The multi-dimensional unwrapped array.
+        n_bins (int): The number of bins.
 
-    See Also:
-        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+    Examples:
+        >>> arr = np.arange(100)
+        >>> auto_n_bin(arr)
+        10
+        >>> auto_n_bin(arr, 'cbrt')
+        5
+        >>> auto_n_bin(arr, 'sturges')
+        8
+        >>> auto_n_bin(arr, 'rice')
+        10
+        >>> auto_n_bin(arr, 'scott')
+        22
+        >>> auto_n_bin(arr, 'freedman')
+        22
+        >>> auto_n_bin(arr, None)
+        100
     """
-    arr = np.real(inv_laplacian(
-        np.cos(arr) * laplacian(np.sin(arr)) -
-        np.sin(arr) * laplacian(np.cos(arr))))
-    if correction:
-        arr = correction(arr)
-    return arr
+    if method == 'sqrt':
+        n_bins = int(np.ceil(np.sqrt(arr.size)))
+    elif method == 'cbrt':
+        n_bins = int(np.ceil(arr.size ** (1 / 3)))
+    elif method == 'sturges':
+        n_bins = int(np.ceil(np.log2(arr.size)) + 1)
+    elif method == 'rice':
+        n_bins = int(np.ceil(2 * arr.size ** (1 / 3)))
+    elif method == 'scott':
+        n_bins = int(np.ceil(3.5 * np.std(arr) / arr.size ** (1 / 3)))
+    elif method == 'freedman':
+        q75, q25 = np.percentile(arr, [75, 25])
+        n_bins = int(np.ceil(2 * (q75 - q25) / arr.size ** (1 / 3)))
+    else:
+        n_bins = arr.size
+    return n_bins
+
+
+# ======================================================================
+def auto_n_bins(arrs, method='sqrt', combine=max):
+    """
+    Determine the optimal number of bins for a group of arrays.
+
+    Args:
+        arrs (iterable[np.ndarray]): The input arrays.
+        method (str|iterable[str]|None): The method to use calculating bins.
+            If a string or None, the same method is applied to both arrays.
+            Otherwise
+        combine (callable|None): Combine each bin using the combine function.
+            combine(n_bins) -> n_bin
+            n_bins is of type iterable[int]
+
+    Returns:
+        n_bins (int|tuple[int]): The number of bins.
+            If combine is None, returns a tuple of int (one for each input
+            array).
+
+    Examples:
+        >>> arr1 = np.arange(100)
+        >>> arr2 = np.arange(200)
+        >>> arr3 = np.arange(300)
+        >>> auto_n_bins((arr1, arr2))
+        15
+        >>> auto_n_bins((arr1, arr2, arr3))
+        18
+        >>> auto_n_bins((arr1, arr2), ('sqrt', 'freedman'))
+        35
+        >>> auto_n_bins((arr1, arr2), combine=None)
+        (10, 15)
+        >>> auto_n_bins((arr1, arr2), combine=min)
+        10
+        >>> auto_n_bins((arr1, arr2), combine=sum)
+        25
+        >>> auto_n_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
+        5
+    """
+    if isinstance(method, str) or method is None:
+        method = (method,) * len(arrs)
+    n_bins = []
+    for arr, method in zip(arrs, method):
+        n_bins.append(auto_n_bin(arr, method))
+    if combine:
+        return combine(n_bins)
+    else:
+        return tuple(n_bins)
+
+
+# ======================================================================
+def mutual_information(
+        arr1,
+        arr2,
+        n_bins=None):
+    """
+    Calculate the mutual information between two arrays.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+        n_bins (int|int[tuple]|None):
+
+    Returns:
+        mi (float): The mutual information score.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.arange(100)
+        >>> arr2 = np.random.rand(100)
+        >>> arr3 = np.random.rand(100)
+        >>> (mutual_information(arr1, arr1) > 2.0)
+        True
+        >>> (mutual_information(arr1, arr2) < 0.5)
+        True
+        >>> (mutual_information(arr2, arr3) < 0.5)
+        True
+    """
+    if not n_bins:
+        n_bins = auto_n_bins((arr1, arr2), 'sqrt', None)
+    hist, x_edges, y_edges = np.histogram2d(
+        arr1, arr2, bins=n_bins)
+    # from sklearn.metrics import mutual_info_score
+    # mi = mutual_info_score(None, None, contingency=hist)
+    g, p, dof, expected = scipy.stats.chi2_contingency(
+        hist + np.finfo(np.float).eps, lambda_='log-likelihood')
+    mi = g / hist.sum() / 2
+    return mi
 
 
 # ======================================================================

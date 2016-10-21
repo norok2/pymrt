@@ -17,7 +17,7 @@ from __future__ import(
 
 # ======================================================================
 # :: Version
-__version__ = '0.1.dev106+nbc2e2c7'
+__version__ = '0.1.dev138+n14b7339'
 
 # ======================================================================
 # :: Project Details
@@ -101,7 +101,7 @@ def msg(
         >>> msg(' : a b c', fmt='cyan')  # if ANSI Terminal, cyan text
          : a b c
     """
-    if verb_lvl >= verb_threshold:
+    if verb_lvl >= verb_threshold and text:
         # if blessed is not present, no coloring
         try:
             import blessed

@@ -745,8 +745,8 @@ def histogram1d_list(
 
 # ======================================================================
 def histogram2d(
-        array1,
-        array2,
+        arr1,
+        arr2,
         bin_size=1,
         bins=None,
         array_interval=None,
@@ -773,8 +773,8 @@ def histogram2d(
     Plot 2D histogram of two arrays.
 
     Args:
-        array1 (np.ndarray):
-        array2 (np.ndarray):
+        arr1 (np.ndarray):
+        arr2 (np.ndarray):
         bin_size (float|tuple[float]): The size of the bins.
             If a single number is given, the same number is used for both axes.
             Otherwise, the first number is used for the x-axis and the second
@@ -854,12 +854,12 @@ def histogram2d(
     if not array_interval:
         if use_separate_interval:
             array_interval = (
-                (np.nanmin(array1), np.nanmax(array1)),
-                (np.nanmin(array2), np.nanmax(array2)))
+                (np.nanmin(arr1), np.nanmax(arr1)),
+                (np.nanmin(arr2), np.nanmax(arr2)))
         else:
             array_interval = (
-                min(np.nanmin(array1), np.nanmin(array2)),
-                max(np.nanmax(array1), np.nanmax(array2)))
+                min(np.nanmin(arr1), np.nanmin(arr2)),
+                max(np.nanmax(arr1), np.nanmax(arr2)))
 
     array_interval = _ensure_all_axis(array_interval)
     # setup image aspect ratio
@@ -883,7 +883,7 @@ def histogram2d(
     # calculate histogram
     # prepare histogram
     hist, x_edges, y_edges = np.histogram2d(
-        array1.ravel(), array2.ravel(),
+        arr1.ravel(), arr2.ravel(),
         bins=bins, range=hist_interval, normed=(scale == 'density'))
     hist = hist.transpose()
     # adjust scale
@@ -925,29 +925,19 @@ def histogram2d(
         ax.plot(array_interval[0], array_interval[1], bisector,
                 label='bisector')
     if stats_kws is not None:
-        mask = np.ones_like(array1 * array2).astype(bool)
-        mask *= (array1 > array_interval[0][0]).astype(bool)
-        mask *= (array1 < array_interval[0][1]).astype(bool)
-        mask *= (array2 > array_interval[1][0]).astype(bool)
-        mask *= (array2 < array_interval[1][1]).astype(bool)
+        mask = np.ones_like(arr1 * arr2).astype(bool)
+        mask *= (arr1 > array_interval[0][0]).astype(bool)
+        mask *= (arr1 < array_interval[0][1]).astype(bool)
+        mask *= (arr2 > array_interval[1][0]).astype(bool)
+        mask *= (arr2 < array_interval[1][1]).astype(bool)
         stats_dict = pmb.calc_stats(
-            array1[mask] - array2[mask], **stats_kws)
+            arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *pmb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
             transform=ax.transAxes)
-    calc_mutual_information = True
-    if calc_mutual_information is not None:
-        try:
-            g, p, dof, expected = scipy.stats.chi2_contingency(
-                hist + np.finfo(np.float).eps, lambda_='log-likelihood')
-            mi = 0.5 * g / hist.sum()
-        except ValueError:
-            pass
-        else:
-            print('I: Mutual Information: {}'.format(mi))
     # setup title and labels
     ax.set_title(title.format(bins=bins, scale=scale))
     ax.set_xlabel(labels[0])
