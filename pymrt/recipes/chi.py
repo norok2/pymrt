@@ -165,7 +165,7 @@ def qsm_tkd(
         mask = np.abs(dk) < threshold
         chi_k_arr[mask] = 0.0
     chi_k_arr = pmb.subst(chi_k_arr)
-    return np.real(pmb.idft(chi_k_arr))
+    return np.real(pmb.idftn(chi_k_arr))
 
 
 '''
@@ -181,5 +181,5 @@ def qsm_tkd(
           k_x * np.sin(phi)) ** 2
     dd = 1 / (k_2 - cc)
     dd = subst(dd)
-    chi_arr = np.abs(idft(3 * k_2 * dd * dft(phs_arr)))
+    chi_arr = np.abs(idftn(3 * k_2 * dd * dftn(phs_arr)))
 '''

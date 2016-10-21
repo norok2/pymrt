@@ -33,6 +33,9 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.stats  # SciPy: Statistical functions
 
+from numpy.fft import fftshift, ifftshift
+from scipy.fftpack import fftn, ifftn
+
 # :: Local Imports
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
@@ -148,7 +151,7 @@ def auto_repeat(obj, n, force=False, check=False):
 
 def max_iter_len(items):
     """
-    Determine the maximum length of a item within a collection of items.
+    Determine the maximum length of an item within a collection of items.
 
     Args:
         items (iterable): The collection of items to inspect.
@@ -283,7 +286,7 @@ def multi_replace(text, replaces):
 
     Args:
         text (str): The input string.
-        replace_list (tuple[str,str]): The listing of the replacements.
+        replaces (tuple[str,str]): The listing of the replacements.
             Format: ((<old>, <new>), ...).
 
     Returns:
@@ -540,7 +543,7 @@ def which(args):
     except AttributeError:
         pass
 
-    cmd = args[0]
+    cmd = os.path.expanduser(args[0])
     dirpath, filename = os.path.split(cmd)
     if dirpath:
         is_valid = is_executable(cmd)
@@ -563,6 +566,7 @@ def execute(
         mode='call',
         timeout=None,
         encoding='utf-8',
+        log=None,
         dry=False,
         verbose=D_VERB_LVL):
     """
@@ -582,6 +586,8 @@ def execute(
                 Unfortunately, there is no easy
         timeout (float): Timeout of the process in seconds.
         encoding (str): The encoding to use.
+        log (str): The template filename to be used for logs.
+            If None, no logs are produced.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
@@ -613,26 +619,39 @@ def execute(
 
         # handle stdout nd stderr
         if mode == 'flush' and not in_pipe:
-            p_stdout, p_stderr = '', ''
+            p_stdout = ''
             while proc.poll() is None:
                 out_buff = proc.stdout.readline().decode(encoding)
                 p_stdout += out_buff
                 msg(out_buff, fmt='', end='')
                 sys.stdout.flush()
+            ret_code = proc.wait()
         elif mode == 'call':
-            try:
-                p_stdout, p_stderr = proc.communicate(
-                    in_pipe.encode(encoding) if in_pipe else None, timeout)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                p_stdout, p_stderr = proc.communicate()
+            # try:
+            p_stdout, p_stderr = proc.communicate(
+                in_pipe.encode(encoding) if in_pipe else None)
+            # except subprocess.TimeoutExpired:
+            #     proc.kill()
+            #     p_stdout, p_stderr = proc.communicate()
             p_stdout = p_stdout.decode(encoding)
             p_stderr = p_stderr.decode(encoding)
-            msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
-            msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+            if p_stdout:
+                msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
+            if p_stderr:
+                msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+            ret_code = proc.wait()
         else:
+            proc.kill()
             msg('E: mode `{}` and `in_pipe` not supported.'.format(mode))
 
+        if log:
+            name = os.path.basename(args[0])
+            pid = proc.pid
+            for stream, source in ((p_stdout, 'out'), (p_stderr, 'err')):
+                if stream:
+                    log_filepath = log.format(**locals())
+                    with open(log_filepath, 'wb') as fileobj:
+                        fileobj.write(stream.encode(encoding))
     return ret_code, p_stdout, p_stderr
 
 
@@ -1608,11 +1627,11 @@ def subst(
 
 
 # ======================================================================
-def dft(arr):
+def dftn(arr):
     """
     Discrete Fourier Transform.
 
-    Interface to numpy.fft.fftn combined with numpy.fft.fftshift.
+    Interface to fftn combined with fftshift.
 
     Args:
         arr (np.ndarray): Input n-dim array.
@@ -1622,20 +1641,23 @@ def dft(arr):
 
     Examples:
         >>> a = np.arange(2)
-        >>> dft(a)
+        >>> dftn(a)
         array([-1.+0.j,  1.+0.j])
-        >>> print(np.allclose(a, dft(idft(a))))
+        >>> print(np.allclose(a, dftn(idftn(a))))
         True
+
+    See Also:
+        numpy.fft, scipy.fftpack
     """
-    return np.fft.fftshift(np.fft.fftn(arr))
+    return fftshift(fftn(arr))
 
 
 # ======================================================================
-def idft(arr):
+def idftn(arr):
     """
     Inverse Discrete Fourier transform.
 
-    Interface to numpy.fft.ifftn combined with numpy.fft.ifftshift.
+    Interface to ifftn combined with ifftshift.
 
     Args:
         arr (np.ndarray): Input n-dim array.
@@ -1645,12 +1667,15 @@ def idft(arr):
 
     Examples:
         >>> a = np.arange(2)
-        >>> idft(a)
+        >>> idftn(a)
         array([ 0.5+0.j,  0.5+0.j])
-        >>> print(np.allclose(a, idft(dft(a))))
+        >>> print(np.allclose(a, idftn(dftn(a))))
         True
+
+    See Also:
+        numpy.fft, scipy.fftpack
     """
-    return np.fft.ifftn(np.fft.ifftshift(arr))
+    return ifftn(ifftshift(arr))
 
 
 # ======================================================================
@@ -1839,8 +1864,8 @@ def laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    kk_2 = _kk_2(arr.shape)
-    arr = ((1j * ft_factor) ** 2) * idft(kk_2 * dft(arr))
+    kk_2 = fftshift(_kk_2(arr.shape))
+    arr = ((1j * ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
     return arr[mask]
 
 
@@ -1872,8 +1897,8 @@ def inv_laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    one_over_kk_2 = 1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),))
-    arr = ((-1j / ft_factor) ** 2) * idft(one_over_kk_2 * dft(arr))
+    one_over_kk_2 = fftshift(1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),)))
+    arr = ((-1j / ft_factor) ** 2) * ifftn(one_over_kk_2 * fftn(arr))
     return arr[mask]
 
 

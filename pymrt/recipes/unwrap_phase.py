@@ -16,6 +16,9 @@ from __future__ import (
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 
+from numpy.fft import fftshift, ifftshift
+from scipy.fftpack import fftn, ifftn
+
 # :: Local Imports
 import pymrt.base as pmb
 
@@ -28,7 +31,7 @@ from pymrt import msg, dbg
 def unwrap_phase_laplacian(
         arr,
         correction=lambda x: x - np.median(x),
-        pad_width=0.25):
+        pad_width=0.0):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
 
@@ -38,7 +41,7 @@ def unwrap_phase_laplacian(
 
     L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
 
-    phi = L^-1(L(phi))
+    phi = IL(L(phi)) = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
 
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
@@ -61,12 +64,22 @@ def unwrap_phase_laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
+
+    # from pymrt.base import laplacian, inv_laplacian
+    # from numpy import real, sin, cos
+    # arr = real(inv_laplacian(
+    #     cos(arr) * laplacian(sin(arr)) - sin(arr) * laplacian(cos(arr))))
+
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    arr = np.real(pmb.inv_laplacian(
-        cos_arr * pmb.laplacian(sin_arr, pad_width=0) -
-        sin_arr * pmb.laplacian(cos_arr, pad_width=0), pad_width=0))
-    del cos_arr, sin_arr
+    kk_2 = fftshift(pmb._kk_2(arr.shape))
+    arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
+               sin_arr * ifftn(kk_2 * fftn(cos_arr)))
+    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
+    arr *= kk_2
+    del cos_arr, sin_arr, kk_2
+    arr = np.real(ifftn(arr))
+
     arr = arr[mask]
     if correction:
         arr = correction(arr)
