@@ -1760,8 +1760,53 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
 
 
 # ======================================================================
-def _kk_2(shape):
+def _kk_2(shape, factors=1):
+    """
+    Calculate the k^2 kernel to be used for the Laplacian operators.
+
+    Args:
+        shape (iterable[int]): The size of the array.
+        factors (iterable[int|tuple]): The size conversion factors for each dim.
+
+    Returns:
+        arr (np.ndarray): The resulting array.
+
+    Examples:
+        >>> _kk_2((3, 3, 3))
+        array([[[ 3.,  2.,  3.],
+                [ 2.,  1.,  2.],
+                [ 3.,  2.,  3.]],
+        <BLANKLINE>
+               [[ 2.,  1.,  2.],
+                [ 1.,  0.,  1.],
+                [ 2.,  1.,  2.]],
+        <BLANKLINE>
+               [[ 3.,  2.,  3.],
+                [ 2.,  1.,  2.],
+                [ 3.,  2.,  3.]]])
+        >>> _kk_2((3, 3, 3), np.sqrt(3))
+        array([[[ 1.        ,  0.66666667,  1.        ],
+                [ 0.66666667,  0.33333333,  0.66666667],
+                [ 1.        ,  0.66666667,  1.        ]],
+        <BLANKLINE>
+               [[ 0.66666667,  0.33333333,  0.66666667],
+                [ 0.33333333,  0.        ,  0.33333333],
+                [ 0.66666667,  0.33333333,  0.66666667]],
+        <BLANKLINE>
+               [[ 1.        ,  0.66666667,  1.        ],
+                [ 0.66666667,  0.33333333,  0.66666667],
+                [ 1.        ,  0.66666667,  1.        ]]])
+        >>> _kk_2((2, 2, 2), 0.6)
+        array([[[ 8.33333333,  5.55555556],
+                [ 5.55555556,  2.77777778]],
+        <BLANKLINE>
+               [[ 5.55555556,  2.77777778],
+                [ 2.77777778,  0.        ]]])
+    """
     kk = coord(shape)
+    if factors and factors != 1:
+        factors = auto_repeat(factors, len(shape), check=True)
+        kk = [k_i / factor for k_i, factor in zip(kk, factors)]
     kk_2 = np.zeros(shape)
     for k_i, dim in zip(kk, shape):
         kk_2 += k_i ** 2
@@ -1825,7 +1870,7 @@ def auto_pad_width(
         combined = combine(shape) if combine else None
         pad_width = list(
             pad_width if len(pad_width) > 1 else pad_width * len(shape))
-        assert(len(pad_width) == len(shape))
+        assert (len(pad_width) == len(shape))
         for i, (item, dim) in enumerate(zip(pad_width, shape)):
             lower, upper = item
             pad_width[i] = (
@@ -1839,7 +1884,7 @@ def auto_pad_width(
 def laplacian(
         arr,
         ft_factor=(2 * np.pi),
-        pad_width=0.25):
+        pad_width=0):
     """
     Calculate the Laplacian operator in the Fourier domain.
 
@@ -1873,7 +1918,7 @@ def laplacian(
 def inv_laplacian(
         arr,
         ft_factor=(2 * np.pi),
-        pad_width=0.25):
+        pad_width=0):
     """
     Calculate the inverse Laplacian operator in the Fourier domain.
 
@@ -1897,8 +1942,10 @@ def inv_laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    one_over_kk_2 = fftshift(1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),)))
-    arr = ((-1j / ft_factor) ** 2) * ifftn(one_over_kk_2 * fftn(arr))
+    kk_2 = fftshift(_kk_2(arr.shape))
+    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
+    arr = fftn(arr) * kk_2
+    arr = ((-1j / ft_factor) ** 2) * ifftn(arr)
     return arr[mask]
 
 

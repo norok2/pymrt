@@ -31,7 +31,7 @@ from pymrt import msg, dbg
 def unwrap_phase_laplacian(
         arr,
         correction=lambda x: x - np.median(x),
-        pad_width=0.0):
+        pad_width=0):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
 

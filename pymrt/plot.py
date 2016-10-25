@@ -6,7 +6,7 @@ PyMRT: useful basic utilities.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -288,14 +288,17 @@ def sample2d(
             ax.set_xticks([])
             ax.set_yticks([])
     if cbar_kws is not None:
-        cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = ax.figure.colorbar(plot, cax=cax, **cbar_kws)
+        # cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
         if cbar_txt is not None:
-            # cbar.ax.text(2.0, 0.5, cbar_txt, rotation=90)
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            cbar.set_label(
-                cbar_txt,
-                labelpad=3 + -6 * max([len(str(x)) for x in cbar_kws['ticks']])
-                if only_extremes else 0)
+            if only_extremes:
+                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
+            else:
+                cbar.set_label(cbar_txt)
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
         if size_info >= 0.0:
@@ -465,8 +468,11 @@ def sample2d_anim(
                 if cbar_txt is not None:
                     only_extremes = 'ticks' in cbar_kws and \
                                     len(cbar_kws['ticks']) == 2
-                    cbar.set_label(
-                        cbar_txt, labelpad=-15 if only_extremes else 0)
+                    if only_extremes:
+                        cbar.ax.text(
+                            2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
+                    else:
+                        cbar.set_label(cbar_txt)
         plots.append([plot])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
     if save_filepath is not None:
@@ -911,8 +917,10 @@ def histogram2d(
         cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            cbar.set_label(
-                cbar_txt, labelpad=-15 if only_extremes else 0)
+            if only_extremes:
+                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
+            else:
+                cbar.set_label(cbar_txt)
         if ticks_limit is not None:
             if ticks_limit > 0:
                 cbar.locator = mpl.ticker.MaxNLocator(nbins=ticks_limit)
