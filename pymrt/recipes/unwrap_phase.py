@@ -20,7 +20,7 @@ from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
@@ -59,7 +59,7 @@ def unwrap_phase_laplacian(
     """
     if pad_width:
         shape = arr.shape
-        pad_width = pmb.auto_pad_width(pad_width, shape)
+        pad_width = pmu.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
@@ -72,7 +72,7 @@ def unwrap_phase_laplacian(
 
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    kk_2 = fftshift(pmb._kk_2(arr.shape))
+    kk_2 = fftshift(pmu._kk_2(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]

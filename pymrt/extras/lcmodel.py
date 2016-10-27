@@ -46,7 +46,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
@@ -215,7 +215,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            pmb.is_number(item)
+                            pmu.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:

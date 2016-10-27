@@ -46,7 +46,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as pmb
+# import pymrt.base as pmu
 # import pymrt.naming as pmn
 import pymrt.geometry as pmg
 # import pymrt.plot as pmp

@@ -48,7 +48,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as pmb
+# import pymrt.base as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.geometry as pmg

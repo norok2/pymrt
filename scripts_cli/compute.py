@@ -51,7 +51,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 import pymrt.computation as pmc
@@ -190,9 +190,9 @@ def main():
     else:
         print('WW: Method not specified.')
 
-    pmb.elapsed('compute')
+    pmu.elapsed('compute')
     if args.verbose > VERB_LVL['none']:
-        pmb.print_elapsed()
+        pmu.print_elapsed()
 
 
 # ======================================================================

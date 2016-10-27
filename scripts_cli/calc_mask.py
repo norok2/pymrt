@@ -50,7 +50,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.computation as pmc
@@ -160,7 +160,7 @@ def main():
     begin_time = datetime.datetime.now()
 
     if args.output and args.verbose >= VERB_LVL['none']:
-        args.output = os.path.dirname(pmb.realpath(args.output))
+        args.output = os.path.dirname(pmu.realpath(args.output))
         print('OutDir: {}'.format(args.output))
     pml.calc_mask(
         args.input,

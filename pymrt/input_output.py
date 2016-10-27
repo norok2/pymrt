@@ -52,7 +52,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.geometry as pmg
 import pymrt.plot as pmp
 import pymrt.segmentation as pms
@@ -466,8 +466,8 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = pmb.change_ext(
-            os.path.basename(in_filepath), '', pmb.EXT['niz'])
+        out_basename = pmu.change_ext(
+            os.path.basename(in_filepath), '', pmu.EXT['niz'])
     out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
@@ -479,7 +479,7 @@ def split(
         i_str = str(i).zfill(len(str(len(img_list))))
         out_filepath = os.path.join(
             out_dirpath,
-            pmb.change_ext(out_basename + '-' + i_str, pmb.EXT['niz'], ''))
+            pmu.change_ext(out_basename + '-' + i_str, pmu.EXT['niz'], ''))
         save(out_filepath, image, obj.get_affine())
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -648,7 +648,7 @@ def common_sampling(
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
         for i, shape in enumerate(shape_list):
             shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = pmb.lcm if lossless else max
+        combiner = pmu.lcm if lossless else max
         new_shape = [
             combiner(*list(shape_arr[:, i]))
             for i in range(len(new_shape))]
@@ -766,7 +766,7 @@ def mask_threshold(
     def _img_mask_threshold(array, *args, **kwargs):
         return pms.mask_threshold(array, *args, **kwargs).astype(float)
 
-    kw_params = pmb.set_keyword_parameters(pms.mask_threshold, locals())
+    kw_params = pmu.set_keyword_parameters(pms.mask_threshold, locals())
     simple_filter_1_1(in_filepath, out_filepath, _img_mask_threshold,
                       **kw_params)
 
@@ -849,13 +849,13 @@ def calc_stats(
     #         else:
     #             title = os.path.basename(img_filepath)
     #     print(save_filepath)
-    #     stats_dict = pmb.calc_stats(
+    #     stats_dict = pmu.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
     # else:
-    #     stats_dict = pmb.calc_stats(
+    #     stats_dict = pmu.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
     #         compact)
-    return pmb.calc_stats(img[mask], *args, **kwargs)
+    return pmu.calc_stats(img[mask], *args, **kwargs)
 
 
 # ======================================================================

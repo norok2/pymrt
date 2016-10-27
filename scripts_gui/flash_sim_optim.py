@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as pmb
+# import pymrt.base as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.geometry as pmg

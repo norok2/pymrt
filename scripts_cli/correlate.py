@@ -43,7 +43,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.compute as pmc
@@ -174,8 +174,8 @@ def main():
     pml.check_correlation(**kwargs)
 
     if args.verbose > VERB_LVL['low']:
-        pmb.elapsed(os.path.basename(__file__))
-        pmb.print_elapsed()
+        pmu.elapsed(os.path.basename(__file__))
+        pmu.print_elapsed()
 
 
 # ======================================================================

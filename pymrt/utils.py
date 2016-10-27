@@ -1950,9 +1950,9 @@ def inv_laplacian(
 
 
 # ======================================================================
-def auto_n_bin(
+def auto_bin(
         arr,
-        method='sqrt'):
+        method='auto'):
     """
     Determine the optimal number of bins for an array.
 
@@ -1961,45 +1961,47 @@ def auto_n_bin(
         method (str|None):
 
     Returns:
-        n_bins (int): The number of bins.
+        num (int): The number of bins.
 
     Examples:
         >>> arr = np.arange(100)
-        >>> auto_n_bin(arr)
+        >>> auto_bin(arr)
+        22
+        >>> auto_bin(arr, 'sqrt')
         10
-        >>> auto_n_bin(arr, 'cbrt')
-        5
-        >>> auto_n_bin(arr, 'sturges')
+        >>> auto_bin(arr, 'auto')
+        22
+        >>> auto_bin(arr, 'sturges')
         8
-        >>> auto_n_bin(arr, 'rice')
+        >>> auto_bin(arr, 'rice')
         10
-        >>> auto_n_bin(arr, 'scott')
+        >>> auto_bin(arr, 'scott')
         22
-        >>> auto_n_bin(arr, 'freedman')
+        >>> auto_bin(arr, 'fd')
         22
-        >>> auto_n_bin(arr, None)
+        >>> auto_bin(arr, None)
         100
     """
-    if method == 'sqrt':
-        n_bins = int(np.ceil(np.sqrt(arr.size)))
-    elif method == 'cbrt':
-        n_bins = int(np.ceil(arr.size ** (1 / 3)))
+    if method == 'auto':
+        num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
+    elif method == 'sqrt':
+        num = int(np.ceil(np.sqrt(arr.size)))
     elif method == 'sturges':
-        n_bins = int(np.ceil(np.log2(arr.size)) + 1)
+        num = int(np.ceil(np.log2(arr.size)) + 1)
     elif method == 'rice':
-        n_bins = int(np.ceil(2 * arr.size ** (1 / 3)))
+        num = int(np.ceil(2 * arr.size ** (1 / 3)))
     elif method == 'scott':
-        n_bins = int(np.ceil(3.5 * np.std(arr) / arr.size ** (1 / 3)))
-    elif method == 'freedman':
+        num = int(np.ceil(3.5 * np.std(arr) / arr.size ** (1 / 3)))
+    elif method == 'fd':
         q75, q25 = np.percentile(arr, [75, 25])
-        n_bins = int(np.ceil(2 * (q75 - q25) / arr.size ** (1 / 3)))
+        num = int(np.ceil(2 * (q75 - q25) / arr.size ** (1 / 3)))
     else:
-        n_bins = arr.size
-    return n_bins
+        num = arr.size
+    return num
 
 
 # ======================================================================
-def auto_n_bins(arrs, method='sqrt', combine=max):
+def auto_bins(arrs, method='sqrt', combine=max):
     """
     Determine the optimal number of bins for a group of arrays.
 
@@ -2021,26 +2023,26 @@ def auto_n_bins(arrs, method='sqrt', combine=max):
         >>> arr1 = np.arange(100)
         >>> arr2 = np.arange(200)
         >>> arr3 = np.arange(300)
-        >>> auto_n_bins((arr1, arr2))
+        >>> auto_bins((arr1, arr2))
         15
-        >>> auto_n_bins((arr1, arr2, arr3))
+        >>> auto_bins((arr1, arr2, arr3))
         18
-        >>> auto_n_bins((arr1, arr2), ('sqrt', 'freedman'))
+        >>> auto_bins((arr1, arr2), ('sqrt', 'freedman'))
         35
-        >>> auto_n_bins((arr1, arr2), combine=None)
+        >>> auto_bins((arr1, arr2), combine=None)
         (10, 15)
-        >>> auto_n_bins((arr1, arr2), combine=min)
+        >>> auto_bins((arr1, arr2), combine=min)
         10
-        >>> auto_n_bins((arr1, arr2), combine=sum)
+        >>> auto_bins((arr1, arr2), combine=sum)
         25
-        >>> auto_n_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
+        >>> auto_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
         5
     """
     if isinstance(method, str) or method is None:
         method = (method,) * len(arrs)
     n_bins = []
     for arr, method in zip(arrs, method):
-        n_bins.append(auto_n_bin(arr, method))
+        n_bins.append(auto_bin(arr, method))
     if combine:
         return combine(n_bins)
     else:
@@ -2048,42 +2050,194 @@ def auto_n_bins(arrs, method='sqrt', combine=max):
 
 
 # ======================================================================
+def variation_information(
+        arr1,
+        arr2,
+        base=np.e,
+        bins='auto'):
+    """
+    Calculate the variation of information between two arrays.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+            Must have same shape as arr2.
+        arr2 (np.ndarray): The second input array.
+            Must have same shape as arr1.
+        base (int|float|None): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is bits.
+            If base is np.e (Euler's number), the unit is `nats`.
+        bins (int|str|None): The number of bins to use for the distribution.
+            If int, the exact number is used.
+            If str, a method accepted by `auto_bin` is expected.
+            If None, uses the maximum number of bins (not recommended).
+    Returns:
+        vi (float): The variation of information.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> variation_information(arr1, arr1)
+        0.0
+        >>> variation_information(arr2, arr2)
+        0.0
+        >>> variation_information(arr3, arr3)
+        0.0
+        >>> vi_12 = variation_information(arr1, arr2)
+        >>> vi_21 = variation_information(arr2, arr1)
+        >>> vi_31 = variation_information(arr3, arr1)
+        >>> vi_34 = variation_information(arr3, arr4)
+        >>> print(vi_12, vi_21, vi_31, vi_34)
+        >>> np.isclose(vi_12, vi_21)
+        True
+        >>> vi_34 < vi_31
+        True
+    """
+    if not isinstance(bins, int):
+        bins = auto_bins((arr1, arr2), bins)
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    # hist1 = hist1 + np.finfo(np.float).eps
+    # hist2 = hist2 + np.finfo(np.float).eps
+    hist1 += 1
+    hist2 += 1
+    vi = (scipy.stats.entropy(hist1, hist2, base) +
+          scipy.stats.entropy(hist2, hist1, base))
+    return vi
+
+
+# ======================================================================
 def mutual_information(
         arr1,
         arr2,
-        n_bins=None):
+        base=None,
+        bins='auto'):
     """
     Calculate the mutual information between two arrays.
+
+    Note that the numerical result depends on the number of bins.
 
     Args:
         arr1 (np.ndarray): The first input array.
         arr2 (np.ndarray): The second input array.
-        n_bins (int|int[tuple]|None):
+        base (int|float|None): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is bits.
+            If base is np.e (Euler's number), the unit is `nats`.
+            If base is None, the result is normalized to unity.
+        bins (int|str|None): The number of bins to use for the distribution.
+            If int, the exact number is used.
+            If str, a method accepted by `auto_bin` is expected.
+            If None, uses the maximum number of bins (not recommended).
 
     Returns:
-        mi (float): The mutual information score.
+        mi (float): The (normalized) mutual information.
+            If base is None, the normalized version is returned.
+            Otherwise returns the mutual information in the specified base.
 
     Examples:
         >>> np.random.seed(0)
-        >>> arr1 = np.arange(100)
-        >>> arr2 = np.random.rand(100)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
         >>> arr3 = np.random.rand(100)
-        >>> (mutual_information(arr1, arr1) > 2.0)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> mutual_information(arr1, arr1)
+        1.0
+        >>> mutual_information(arr2, arr2)
+        1.0
+        >>> mutual_information(arr3, arr3)
+        1.0
+        >>> mi_12 = mutual_information(arr1, arr2)
+        >>> mi_21 = mutual_information(arr2, arr1)
+        >>> mi_31 = mutual_information(arr3, arr1)
+        >>> mi_34 = mutual_information(arr3, arr4)
+        >>> # print(mi_12, mi_21, mi_31, mi_34)
+        >>> np.isclose(mi_12, mi_21)
         True
-        >>> (mutual_information(arr1, arr2) < 0.5)
+        >>> mi_34 > mi_31
         True
-        >>> (mutual_information(arr2, arr3) < 0.5)
+        >>> mi_n10bn = mutual_information(arr1, arr2, None, 10)
+        >>> mi_n20bn = mutual_information(arr1, arr2, None, 20)
+        >>> mi_n100bn = mutual_information(arr1, arr2, None, 100)
+        >>> # print(mi_n10bn, mi_n20bn, mi_n100bn)
+        >>> all([0.0 <= x <= 1.0 for x in (mi_n100bn, mi_n20bn, mi_n10bn)])
         True
+        >>> mi_n10 = mutual_information(arr1, arr2, np.e, 10)
+        >>> mi_n20 = mutual_information(arr1, arr2, np.e, 20)
+        >>> mi_n100 = mutual_information(arr1, arr2, np.e, 100)
+        >>> # print(mi_n10, mi_n20, mi_n100)
+        >>> all([np.isclose(x, 0) for x in (mi_n10, mi_n20, mi_n100)])
+        True
+        >>> mi_be = mutual_information(arr1, arr2, np.e)
+        >>> mi_b2 = mutual_information(arr1, arr2, 2)
+        >>> mi_b10 = mutual_information(arr1, arr2, 10)
+        >>> # print(mi_be, mi_b2, mi_b10)
+        >>> mi_b10 < mi_be < mi_b2
+        True
+
+    See Also:
+        - Cahill, Nathan D. “Normalized Measures of Mutual Information with
+          General Definitions of Entropy for Multimodal Image Registration.” In
+          International Workshop on Biomedical Image Registration, 258–268.
+          Springer, 2010.
+          http://link.springer.com/chapter/10.1007/978-3-642-14366-3_23.
     """
-    if not n_bins:
-        n_bins = auto_n_bins((arr1, arr2), 'sqrt', None)
-    hist, x_edges, y_edges = np.histogram2d(
-        arr1, arr2, bins=n_bins)
-    # from sklearn.metrics import mutual_info_score
-    # mi = mutual_info_score(None, None, contingency=hist)
-    g, p, dof, expected = scipy.stats.chi2_contingency(
-        hist + np.finfo(np.float).eps, lambda_='log-likelihood')
-    mi = g / hist.sum() / 2
+    # todo: check implementation speed and consistency
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), bins)
+    if base is None:
+        # scikit.learn implementation
+        # from sklearn.metrics import normalized_mutual_info_score
+        # mi = normalized_mutual_info_score(hist1, hist2)
+
+        # direct implementation
+        base = np.e
+        mi = mutual_information(arr1, arr2, base, bins)
+        vi = variation_information(arr1, arr2, base, bins)
+        mi = ((2 * mi - vi) / (mi + vi) + 1) / 3.0
+
+        # # entropy-based implementation
+        # hist1, bin_edges1 = np.histogram(arr1, bins)
+        # hist2, bin_edges2 = np.histogram(arr2, bins)
+        # hist1 += 1
+        # hist2 += 1
+        # h1 = scipy.stats.entropy(hist1)
+        # h2 = scipy.stats.entropy(hist2)
+        # h12 = scipy.stats.entropy(hist1, hist2)
+        # h21 = scipy.stats.entropy(hist2, hist1)
+        # mi = (h1 + h2) / (h1 + h2 + h12 + h21)
+    else:
+        # # scikit.learn implementation
+        # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+        # from sklearn.metrics import mutual_info_score
+        # mi = mutual_info_score(None, None, contingency=hist)
+
+        # direct implementation
+        hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+        hist += 1
+        g, p, dof, expected = scipy.stats.chi2_contingency(
+            hist, lambda_='log-likelihood')
+        mi = g / hist.sum() / 2
+
+        # # entropy-based implementation
+        # hist1, bin_edges1 = np.histogram(arr1, bins)
+        # hist2, bin_edges2 = np.histogram(arr2, bins)
+        # hist1 += 1
+        # hist2 += 1
+        # h1 = scipy.stats.entropy(hist1)
+        # h2 = scipy.stats.entropy(hist2)
+        # h12 = scipy.stats.entropy(hist1, hist2)
+        # h21 = scipy.stats.entropy(hist2, hist1)
+        # mi = (h1 + h2 - h12 - h21) / 2
+
+        # base correction, assumes natural (Euler's number) base
+        if base > 0 and base != np.e:
+            mi /= np.log(base)
     return mi
 
 

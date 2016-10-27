@@ -77,7 +77,7 @@ import scipy.misc  # SciPy: Miscellaneous routines
 # import sympy.mpmath  # SymPy: Function approximation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.naming as pmn
 import pymrt.geometry as pmg
 import pymrt.plot as pmp

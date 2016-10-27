@@ -240,8 +240,8 @@ def test_z_spectrum(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        freqs=np.round(pmb.sgnlogspace(50, 50000, 16)),
-        amplitudes=np.round(pmb.sgnlogspace(50, 5000, 16)),
+        freqs=np.round(pmu.sgnlogspace(50, 50000, 16)),
+        amplitudes=np.round(pmu.sgnlogspace(50, 5000, 16)),
         plot_data=True,
         save_file=None):
     """
@@ -366,7 +366,7 @@ def test_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    freqs = pmb.sgnlogspace(100.0, 300.0e3, 32)
+    freqs = pmu.sgnlogspace(100.0, 300.0e3, 32)
     flip_angles = np.linspace(1.0, 1100.0, 32)
 
     x_data = np.array(tuple(itertools.product(freqs, flip_angles)))
@@ -397,7 +397,7 @@ def test_fit_spin_model(
     # fitted = mt_signal(x_data, *p0).reshape(measured.shape)
 
     if plot_data:
-        X, Y = np.meshgrid(flip_angles, pmb.sgnlog(freqs, 10.0))
+        X, Y = np.meshgrid(flip_angles, pmu.sgnlog(freqs, 10.0))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -418,13 +418,13 @@ def test_fit_spin_model(
 if __name__ == '__main__':
     msg(__doc__.strip())
     # test_dynamics_operator_symbolic()
-    # pmb.elapsed'test_symbolic')
+    # pmu.elapsed'test_symbolic')
     # test_dynamics_operator()
-    # pmb.elapsed'test_dynamics_operator')
+    # pmu.elapsed'test_dynamics_operator')
     # test_mt_sequence()
-    # pmb.elapsed'test_mt_sequence')
+    # pmu.elapsed'test_mt_sequence')
     # test_approx_propagator()
-    # pmb.elapsed'test_approx_propagator')
+    # pmu.elapsed'test_approx_propagator')
     # test_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA * B0,) * 4,
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
@@ -433,7 +433,7 @@ if __name__ == '__main__':
     test_z_spectrum()
     elapsed('test_z_spectrum')
     # test_fit_spin_model()
-    # pmb.elapsed('test_fit_spin_model')
+    # pmu.elapsed('test_fit_spin_model')
 
     print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)

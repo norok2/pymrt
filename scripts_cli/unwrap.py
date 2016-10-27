@@ -32,7 +32,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.input_output as pmio
 
 from pymrt import INFO
@@ -57,7 +57,7 @@ def unwrap(
     msg('Input:  {}'.format(in_filepath))
     msg('Output: {}'.format(out_filepath))
     msg('Method: {}'.format(method))
-    if pmb.check_redo([in_filepath], [out_filepath], force):
+    if pmu.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
             if options is not None:
                 options = json.loads(options)
@@ -84,7 +84,7 @@ def unwrap(
                 [ext_cmd] +
                 ['-{} {}'.format(k, v) for k, v in cmd_args.items()] +
                 [options])
-            pmb.execute(cmd, verbose=verbose)
+            pmu.execute(cmd, verbose=verbose)
 
 
 # ======================================================================

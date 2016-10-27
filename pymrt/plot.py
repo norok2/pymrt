@@ -51,7 +51,7 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
@@ -255,16 +255,16 @@ def sample2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-ndim]
     else:
-        axis = pmb.auto_repeat(axis, 1)
+        axis = pmu.auto_repeat(axis, 1)
     if arr.ndim - len(axis) != 2:
         raise IndexError(
             'Mismatching dimensions ({ndim}) and axis ({naxes}): '
             '{ndim} - {naxes} != 2'.format(ndim=arr.ndim, naxes=len(axis)))
-    sample = pmb.ndim_slice(arr, axis, index)
+    sample = pmu.ndim_slice(arr, axis, index)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmb.minmax(arr)
+        array_interval = pmu.minmax(arr)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.RdBu_r
@@ -399,11 +399,11 @@ def sample2d_anim(
         ax = plt.gca()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = pmb.ndim_slice(array, axis, 0)
+    sample = pmu.ndim_slice(array, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmb.minmax(array)
+        array_interval = pmu.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
             cmap = plt.cm.RdBu
@@ -460,7 +460,7 @@ def sample2d_anim(
     plots = []
     for i in range(0, n_frames, step):
         plot = ax.imshow(
-            pmb.ndim_slice(array, axis, i), cmap=cmap,
+            pmu.ndim_slice(array, axis, i), cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         if len(plots) <= 0:
             if cbar_kws is not None:
@@ -547,7 +547,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmb.scale(val, array_interval)
+    hist_interval = tuple([pmu.scale(val, array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -565,7 +565,7 @@ def histogram1d(
     # plot figure
     if ax is None:
         ax = plt.gca()
-    plot = ax.plot(pmb.midval(bin_edges), hist, style)
+    plot = ax.plot(pmu.midval(bin_edges), hist, style)
     # setup title and labels
     if title:
         ax.set_title(title)
@@ -679,7 +679,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmb.scale(val, array_interval)
+    hist_interval = tuple([pmu.scale(val, array_interval)
                            for val in hist_interval])
     # calculate histogram
     # prepare figure
@@ -717,7 +717,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         plot = ax.plot(
-            pmb.midval(bin_edges), hist,
+            pmu.midval(bin_edges), hist,
             **next(style_cycler),
             label=legend)
         plots.append(plot)
@@ -884,7 +884,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[pmb.scale(val, array_interval[i])
+    hist_interval = tuple([[pmu.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
@@ -938,10 +938,10 @@ def histogram2d(
         mask *= (arr1 < array_interval[0][1]).astype(bool)
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
-        stats_dict = pmb.calc_stats(
+        stats_dict = pmu.calc_stats(
             arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *pmb.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
+            *pmu.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
