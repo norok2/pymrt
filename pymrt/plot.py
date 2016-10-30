@@ -760,7 +760,7 @@ def histogram2d(
         array_interval=None,
         hist_interval=((0.0, 1.0), (0.0, 1.0)),
         use_separate_interval=False,
-        subplot_aspect=None,
+        aspect=None,
         scale='linear',
         hist_val_interval=None,
         ticks_limit=None,
@@ -814,7 +814,7 @@ def histogram2d(
             ((min(array1), max(array1)), (min(array2), max(array2)).
             Otherwise, uses information for both arrays to determine a common
             identical interval for both axis.
-        subplot_aspect (float): subplot_aspect ratio of the histogram.
+        aspect (float): aspect ratio of the histogram.
             If None, it is calculated to result in squared proportions.
         scale (str): The histogram frequency value transformation method.
             - 'linear': no transformation is performed;
@@ -871,14 +871,14 @@ def histogram2d(
                 max(np.nanmax(arr1), np.nanmax(arr2)))
 
     array_interval = _ensure_all_axis(array_interval)
-    # setup image subplot_aspect ratio
-    if not subplot_aspect:
+    # setup image aspect ratio
+    if not aspect:
         x_axis_size = np.ptp(array_interval[0])
         y_axis_size = np.ptp(array_interval[1])
         if x_axis_size != y_axis_size:
-            subplot_aspect = x_axis_size / y_axis_size
+            aspect = x_axis_size / y_axis_size
         else:
-            subplot_aspect = 1.0
+            aspect = 1.0
     # setup bins
     if not bins:
         bins = tuple([int(np.ptp(val) / bin_size + 1)
@@ -912,7 +912,7 @@ def histogram2d(
     # plot figure
     plot = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
-        subplot_aspect=subplot_aspect,
+        aspect=aspect,
         vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
