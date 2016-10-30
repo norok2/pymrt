@@ -54,7 +54,7 @@ import scipy.stats  # SciPy: Statistical functions
 import pymrt.utils as pmu
 
 # from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 
 # ======================================================================
@@ -540,6 +540,8 @@ def histogram1d(
         The figure object containing the plot.
 
     """
+    # todo: implement optimal bin size
+
     # setup array range
     if not array_interval:
         array_interval = (np.nanmin(array), np.nanmax(array))
@@ -758,7 +760,7 @@ def histogram2d(
         array_interval=None,
         hist_interval=((0.0, 1.0), (0.0, 1.0)),
         use_separate_interval=False,
-        aspect=None,
+        subplot_aspect=None,
         scale='linear',
         hist_val_interval=None,
         ticks_limit=None,
@@ -774,6 +776,7 @@ def histogram2d(
         use_new_figure=True,
         close_figure=False,
         save_filepath=None,
+        save_kws=None,
         ax=None):
     """
     Plot 2D histogram of two arrays.
@@ -811,7 +814,7 @@ def histogram2d(
             ((min(array1), max(array1)), (min(array2), max(array2)).
             Otherwise, uses information for both arrays to determine a common
             identical interval for both axis.
-        aspect (float): Aspect ratio of the histogram.
+        subplot_aspect (float): subplot_aspect ratio of the histogram.
             If None, it is calculated to result in squared proportions.
         scale (str): The histogram frequency value transformation method.
             - 'linear': no transformation is performed;
@@ -868,14 +871,14 @@ def histogram2d(
                 max(np.nanmax(arr1), np.nanmax(arr2)))
 
     array_interval = _ensure_all_axis(array_interval)
-    # setup image aspect ratio
-    if not aspect:
+    # setup image subplot_aspect ratio
+    if not subplot_aspect:
         x_axis_size = np.ptp(array_interval[0])
         y_axis_size = np.ptp(array_interval[1])
         if x_axis_size != y_axis_size:
-            aspect = x_axis_size / y_axis_size
+            subplot_aspect = x_axis_size / y_axis_size
         else:
-            aspect = 1.0
+            subplot_aspect = 1.0
     # setup bins
     if not bins:
         bins = tuple([int(np.ptp(val) / bin_size + 1)
@@ -909,7 +912,7 @@ def histogram2d(
     # plot figure
     plot = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
-        aspect=aspect,
+        subplot_aspect=subplot_aspect,
         vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
@@ -964,9 +967,145 @@ def histogram2d(
     # save figure to file
     if save_filepath is not None:
         plt.tight_layout()
-        plt.savefig(save_filepath, dpi=D_PLOT_DPI)
+        plt.savefig(save_filepath, **save_kws)
     # closing figure
     if close_figure:
         plt.close()
     plt.figure()
     return hist, x_edges, y_edges, plot
+
+
+# ======================================================================
+def subplots(
+        plots,
+        rows=None,
+        cols=None,
+        num_row=None,
+        num_col=None,
+        aspect_ratio=None,
+        width_height=None,
+        swap_filling=False,
+        title=None,
+        row_labels=None,
+        col_labels=None,
+        row_label_width=0.030,
+        col_label_width=0.030,
+        border_top=0.010,
+        border_left=0.010,
+        pad=1.0,
+        w_pad=2.0,
+        h_pad=2.0,
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    """
+    
+    Args:
+        plots (): 
+        rows (): 
+        cols (): 
+        num_row (): 
+        num_col (): 
+        aspect_ratio ():
+        width_height ():
+        swap_filling (): 
+        title (): 
+        row_labels (): 
+        col_labels (): 
+        row_label_width (): 
+        col_label_width (): 
+        border_top (): 
+        border_left (): 
+        pad (): 
+        w_pad (): 
+        h_pad (): 
+        save_filepath ():
+        save_kws ():
+        force (): 
+        verbose (): 
+
+    Returns:
+
+    """
+    num_plots = len(plots)
+
+    # determine rows and cols if not specified
+    if rows is None and cols is None:
+        if num_row is None and num_col is None:
+            if isinstance(aspect_ratio, float):
+                num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
+            elif 'exact' in aspect_ratio:
+                num_col, num_row = pmu.optimal_ratio(num_plots)
+                if 'portrait' in aspect_ratio:
+                    num_row, num_col = num_col, num_row
+            else:
+                if aspect_ratio == 'portrait':
+                    num_row = np.ceil(np.sqrt(num_plots))
+                else:  # plot_aspect == 'landscape'
+                    num_row = np.floor(np.sqrt(num_plots))
+        if num_row is None and num_col > 0:
+            num_row = np.ceil(num_plots / num_col)
+        if num_row > 0 and num_col is None:
+            num_row = np.ceil(num_plots / num_row)
+
+        if width_height is None:
+            width, height = 1, 1
+        else:
+            width, height = width_height
+        rows = (width,) * num_row
+        cols = (height,) * num_col
+    else:
+        num_row = len(rows)
+        num_col = len(cols)
+    assert (num_row * num_col >= num_plots)
+
+    if row_labels is None:
+        row_labels = pmu.auto_repeat(None, num_row)
+        row_label_width = 0.0
+        border_left = 0.0
+
+    if col_labels is None:
+        col_labels = pmu.auto_repeat(None, num_col)
+        col_label_width = 0.0
+        border_top = 0.0
+
+    # generate plot
+    fig, axs = plt.subplots(
+        num_row, num_col, figsize=(sum(cols), sum(rows)))
+
+    assert (num_row == len(row_labels))
+    assert (num_col == len(col_labels))
+
+    for i, row_label in enumerate(row_labels):
+        for j, col_label in enumerate(col_labels):
+            if swap_filling:
+                n = i * num_row + j
+            else:
+                n = j * num_col + i
+            axs[i, j] = plots[n]
+
+            fig.text(
+                pmu.scale((j * 2 + 1) / (num_col * 2),
+                          out_interval=(
+                              row_label_width + border_left, 1.0)),
+                1.0 - border_top,
+                col_label, rotation=0,
+                fontweight='bold', fontsize='x-large',
+                horizontalalignment='center', verticalalignment='top')
+
+        fig.text(
+            border_left,
+            pmu.scale(1.0 - (i * 2 + 1) / (num_row * 2),
+                      out_interval=(
+                          border_top, 1 - col_label_width - border_top)),
+            row_label, rotation=0,
+            fontweight='bold', fontsize='x-large',
+            horizontalalignment='left', verticalalignment='center')
+
+    fig.tight_layout(
+        rect=[0.0 + row_label_width, 0.0, 1.0, 1.0 - col_label_width],
+        pad=pad, w_pad=w_pad, h_pad=h_pad)
+    fig.savefig(save_filepath, **save_kws)
+    msg('Plot: {}'.format(save_filepath), verbose, D_VERB_LVL['medium'])
+    plt.close(fig)
