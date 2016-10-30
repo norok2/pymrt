@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pymrt.base: generic basic utilities.
@@ -102,7 +102,11 @@ def _is_special(stats_mode):
 
 
 # ======================================================================
-def auto_repeat(obj, n, force=False, check=False):
+def auto_repeat(
+        obj,
+        n,
+        force=False,
+        check=False):
     """
     Automatically repeat the specified object n times.
 
@@ -171,12 +175,215 @@ def max_iter_len(items):
 
 
 # ======================================================================
-def gcd(*numbers):
+def is_prime(num):
+    """
+    Determine if num is a prime number.
+
+    A prime number is only divisible by 1 and itself.
+    0 and 1 are considered special cases; in this implementations they are
+    considered primes.
+
+    It is implemented by directly testing for possible factors.
+
+    Args:
+        num (int): The number to check for primality.
+            Only works for numbers larger than 1.
+
+    Returns:
+        is_divisible (bool): The result of the primality.
+
+    Examples:
+        >>> is_prime(100)
+        False
+        >>> is_prime(101)
+        True
+        >>> is_prime(-100)
+        False
+        >>> is_prime(-101)
+        True
+        >>> is_prime(2 ** 17)
+        False
+        >>> is_prime(17 * 19)
+        False
+        >>> is_prime(2 ** 17 - 1)
+        True
+        >>> is_prime(0)
+        True
+        >>> is_prime(1)
+        True
+    """
+    num = abs(num)
+    if num % 2 == 0 and num > 2:
+        return False
+    for i in range(3, int(num ** 0.5) + 1, 2):
+        if num % i == 0:
+            return False
+    return True
+
+    # # alternate implementation
+    # is_divisible = num == 1 or num != 2 and num % 2 == 0
+    # i = 3
+    # while not is_divisible and i * i < num:
+    #     is_divisible = num % i == 0
+    #     # only odd factors needs to be tested
+    #     i += 2
+    # return not is_divisible
+
+
+# ======================================================================
+def primes_in_range(
+        stop,
+        start=2):
+    """
+    Calculate the prime numbers in the range.
+
+    Args:
+        stop (int): The final value of the range.
+            This value is excluded.
+            If stop < start the values are switched.
+        start (int): The initial value of the range.
+            This value is included.
+            If start > stop the values are switched.
+
+    Yields:
+        num (int): The next prime number.
+
+    Examples:
+        >>> list(primes_in_range(50))
+        [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+        >>> list(primes_in_range(101, 150))
+        [101, 103, 107, 109, 113, 127, 131, 137, 139, 149]
+        >>> list(primes_in_range(1000, 1050))
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049]
+        >>> list(primes_in_range(1050, 1000))
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049]
+    """
+    if start > stop:
+        start, stop = stop, start
+    if start % 2 == 0:
+        if start == 2:
+            yield start
+        start += 1
+    for num in range(start, stop, 2):
+        if is_prime(num):
+            yield num
+
+
+# ======================================================================
+def get_primes(num=2):
+    """
+    Calculate prime numbers.
+
+    Args:
+        num (int): The initial value
+
+    Yields:
+        num (int): The next prime number.
+
+    Examples:
+        >>> n = 15
+        >>> primes = get_primes()
+        >>> [next(primes) for i in range(n)]  # first n prime numbers
+        [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+        >>> n = 10
+        >>> primes = get_primes(101)
+        >>> [next(primes) for i in range(n)]  # first n primes larger than 1000
+        [101, 103, 107, 109, 113, 127, 131, 137, 139, 149]
+        >>> n = 10
+        >>> primes = get_primes(1000)
+        >>> [next(primes) for i in range(n)]  # first n primes larger than 1000
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061]
+    """
+    while num <= 2:
+        if is_prime(num):
+            yield num
+        num += 1
+    if num % 2 == 0:
+        num += 1
+    while True:
+        if is_prime(num):
+            yield num
+        num += 2
+
+
+# ======================================================================
+def factorize(num):
+    """
+    Find all factors of a number.
+
+    Args:
+        num (int): The number to factorize.
+
+    Returns:
+        numbers (list[int]): The factors of number.
+
+    Example:
+        >>> n = 100
+        >>> f = factorize(n)
+        >>> print(f)
+        [2, 2, 5, 5]
+        >>> n == np.prod(f)
+        True
+        >>> n= 1234567890
+        >>> f = factorize(n)
+        >>> print(f)
+        [2, 3, 3, 5, 3607, 3803]
+    """
+    factors = []
+    primes = get_primes()
+    prime = next(primes)
+    while prime * prime <= num:
+        while num % prime == 0:
+            num //= prime
+            factors.append(prime)
+        prime = next(primes)
+    if num > 1:
+        factors.append(num)
+    return factors
+
+
+# =====================================================================
+def optimal_ratio(
+        num,
+        condition=None):
+    """
+    Find the optimal ratio for arranging elements into a matrix.
+
+    Args:
+        num (int): The number of elements to arrange.
+        condition (callable): The optimality condition to use.
+            This is passed as the `key` argument of `sorted`.
+
+    Returns:
+        num1 (int): The first number (num1 > num2).
+        num2 (int): The second number (num2 < num1).
+
+    Examples:
+        >>> n1, n2 = 40, 48
+        >>> [optimal_ratio(i) for i in range(n1, n2)]
+        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
+        >>> [optimal_ratio(i, max) for i in range(n1, n2)]
+        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
+        >>> [optimal_ratio(i, min) for i in range(n1, n2)]
+        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2), (47, 1)]
+    """
+    ratios = []
+    if is_prime(num):
+        return num, 1
+    else:
+        for i in range(2, int(num ** 0.5) + 1):
+            if num % i == 0:
+                ratios.append((num // i, i))
+    return sorted(ratios, key=condition)[0]
+
+
+# =====================================================================
+def gcd(*nums):
     """
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *numbers (tuple[int]): The input numbers.
+        *nums (tuple[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
@@ -191,14 +398,14 @@ def gcd(*numbers):
         >>> gcd(12, 24, 18, 3)
         3
     """
-    gcd_val = numbers[0]
-    for num in numbers[1:]:
+    gcd_val = nums[0]
+    for num in nums[1:]:
         gcd_val = math.gcd(gcd_val, num)
     return gcd_val
 
 
 # ======================================================================
-def lcm(*numbers):
+def lcm(*nums):
     """
     Find the least common multiple (LCM) of a list of numbers.
 
@@ -216,8 +423,8 @@ def lcm(*numbers):
         >>> lcm(12, 23, 34, 45, 56)
         985320
     """
-    lcm_val = numbers[0]
-    for num in numbers[1:]:
+    lcm_val = nums[0]
+    for num in nums[1:]:
         lcm_val = lcm_val * num // fractions.gcd(lcm_val, num)
     return lcm_val
 
@@ -251,7 +458,9 @@ def merge_dicts(*dicts):
 
 
 # ======================================================================
-def accumulate(items, func=lambda x, y: x + y):
+def accumulate(
+        items,
+        func=lambda x, y: x + y):
     """
     Cumulatively apply the specified function to the elements of the list.
 
@@ -280,7 +489,9 @@ def accumulate(items, func=lambda x, y: x + y):
 
 
 # ======================================================================
-def multi_replace(text, replaces):
+def multi_replace(
+        text,
+        replaces):
     """
     Perform multiple replacements in a string.
 
@@ -301,49 +512,6 @@ def multi_replace(text, replaces):
         'x.test'
     """
     return functools.reduce(lambda s, r: s.replace(*r), replaces, text)
-
-
-# # ======================================================================
-# def cartesian(*arrays):
-#     """
-#     Generate a cartesian product of input arrays.
-#
-#     Args:
-#         *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
-#
-#     Returns:
-#         out (ndarray): 2-D array of shape (M, len(arrays)) containing
-#             cartesian products formed of input arrays.
-#
-#     Examples:
-#         >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
-#         array([[1, 4, 6],
-#                [1, 4, 7],
-#                [1, 5, 6],
-#                [1, 5, 7],
-#                [2, 4, 6],
-#                [2, 4, 7],
-#                [2, 5, 6],
-#                [2, 5, 7],
-#                [3, 4, 6],
-#                [3, 4, 7],
-#                [3, 5, 6],
-#                [3, 5, 7]])
-#     """
-#
-#     arrays = [np.asarray(x) for x in arrays]
-#     dtype = arrays[0].dtype
-#
-#     n = np.prod([x.size for x in arrays])
-#     out = np.zeros([n, len(arrays)], dtype=dtype)
-#
-#     m = n / arrays[0].size
-#     out[:, 0] = np.repeat(arrays[0], m)
-#     if arrays[1:]:
-#         out[0:m, 1:] = cartesian(arrays[1:])
-#         for j in range(1, arrays[0].size):
-#             out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
-#     return out
 
 
 # ======================================================================
@@ -399,7 +567,10 @@ def mdot(*arrs):
 
 
 # ======================================================================
-def ndot(arr, dim=-1, step=1):
+def ndot(
+        arr,
+        dim=-1,
+        step=1):
     """
     Cumulative application of `numpy.dot` operation over a given axis.
 
@@ -656,7 +827,9 @@ def execute(
 
 
 # ======================================================================
-def grouping(items, num_elems):
+def grouping(
+        items,
+        num_elems):
     """
     Generate a list of lists from a source list and grouping specifications
 
@@ -901,7 +1074,10 @@ def compact_num_str(
 
 
 # ======================================================================
-def has_decorator(text, pre_decor='"', post_decor='"'):
+def has_decorator(
+        text,
+        pre_decor='"',
+        post_decor='"'):
     """
     Determine if a string is delimited by some characters (decorators).
 
@@ -925,7 +1101,10 @@ def has_decorator(text, pre_decor='"', post_decor='"'):
 
 
 # ======================================================================
-def strip_decorator(text, pre_decor='"', post_decor='"'):
+def strip_decorator(
+        text,
+        pre_decor='"',
+        post_decor='"'):
     """
     Strip initial and final character sequences (decorators) from a string.
 
@@ -951,7 +1130,10 @@ def strip_decorator(text, pre_decor='"', post_decor='"'):
 
 
 # ======================================================================
-def auto_convert(text, pre_decor=None, post_decor=None):
+def auto_convert(
+        text,
+        pre_decor=None,
+        post_decor=None):
     """
     Convert value to numeric if possible, or strip delimiters from string.
 
@@ -1082,7 +1264,9 @@ def guess_decimals(
 
 
 # ======================================================================
-def significant_figures(val, num):
+def significant_figures(
+        val,
+        num):
     """
     Format a number with the correct number of significant figures.
 
@@ -1380,7 +1564,9 @@ def check_redo(
 
 
 # ======================================================================
-def sgnlog(x, base=np.e):
+def sgnlog(
+        x,
+        base=np.e):
     """
     Signed logarithm of x: log(abs(x) * sign(x)
 
@@ -1583,7 +1769,7 @@ def midval(arr):
 # ======================================================================
 def subst(
         arr,
-        subst=((np.inf, 0.0), (-np.inf, 0.0), (np.nan, 0.0))):
+        pairs=((np.inf, 0.0), (-np.inf, 0.0), (np.nan, 0.0))):
     """
     Substitute all occurrences of a value in an array.
 
@@ -1618,7 +1804,7 @@ def subst(
         >>> subst(a, ((np.inf, 0.0), (np.nan, 0.0), (0.0, np.inf)))
         array([ inf,   1.,  inf,   2.,  inf])
     """
-    for k, v in subst:
+    for k, v in pairs:
         if k is np.nan:
             arr[np.isnan(arr)] = v
         else:
@@ -1679,7 +1865,12 @@ def idftn(arr):
 
 
 # ======================================================================
-def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
+def coord(
+        shape,
+        origin=0.5,
+        is_relative=True,
+        dense=False,
+        use_int=True):
     """
     Calculate the generic x_i coordinates for N-dim operations.
 
@@ -1689,7 +1880,7 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
             Values are in the [0, 1] interval.
         is_relative (bool): Interpret origin as relative.
         dense (bool): Determine the shape of the mesh-grid arrays.
-        use_ints (bool):
+        use_int (bool):
 
     Returns:
         coord (list[np.ndarray]): mesh-grid ndarrays.
@@ -1743,9 +1934,7 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
         [array([[ 0.],
                [ 1.]]), array([[ 0.,  1.,  2.]])]
     """
-    origin = auto_repeat(origin, len(shape), force=True)
-    # if any([dim % 2 for dim in shape]):
-    #     warnings.warn('Even coordinates will not be symmetric')
+    origin = auto_repeat(origin, len(shape), check=True)
     if is_relative:
         if use_int:
             origin = [int(scale(x, (0, dim)))
@@ -1760,7 +1949,9 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
 
 
 # ======================================================================
-def _kk_2(shape, factors=1):
+def _kk_2(
+        shape,
+        factors=1):
     """
     Calculate the k^2 kernel to be used for the Laplacian operators.
 
@@ -2001,7 +2192,10 @@ def auto_bin(
 
 
 # ======================================================================
-def auto_bins(arrs, method='sqrt', combine=max):
+def auto_bins(
+        arrs,
+        method='auto',
+        combine=max):
     """
     Determine the optimal number of bins for a group of arrays.
 
@@ -2024,19 +2218,19 @@ def auto_bins(arrs, method='sqrt', combine=max):
         >>> arr2 = np.arange(200)
         >>> arr3 = np.arange(300)
         >>> auto_bins((arr1, arr2))
-        15
-        >>> auto_bins((arr1, arr2, arr3))
-        18
-        >>> auto_bins((arr1, arr2), ('sqrt', 'freedman'))
         35
-        >>> auto_bins((arr1, arr2), combine=None)
-        (10, 15)
-        >>> auto_bins((arr1, arr2), combine=min)
+        >>> auto_bins((arr1, arr2, arr3))
+        45
+        >>> auto_bins((arr1, arr2), ('sqrt', 'sturges'))
         10
+        >>> auto_bins((arr1, arr2), combine=None)
+        (22, 35)
+        >>> auto_bins((arr1, arr2), combine=min)
+        22
         >>> auto_bins((arr1, arr2), combine=sum)
-        25
+        57
         >>> auto_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
-        5
+        13
     """
     if isinstance(method, str) or method is None:
         method = (method,) * len(arrs)
@@ -2047,6 +2241,71 @@ def auto_bins(arrs, method='sqrt', combine=max):
         return combine(n_bins)
     else:
         return tuple(n_bins)
+
+
+# ======================================================================
+def entropy(
+        hist,
+        base=np.e):
+    """
+    Calculate the simple or joint Shannon entropy H.
+
+    H = -sum(p(x) * log(p(x)))
+
+    p(x) is the probability of x, where x can be N-Dim.
+
+    Args:
+        hist (np.ndarray): The probability density function p(x).
+            If hist is 1-dim, the Shannon entropy is computed.
+            If hist is N-dim, the joint Shannon entropy is computed.
+            Zeros are handled correctly.
+            The probability density function does not need to be normalized.
+        base (int|float): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is `bits`.
+            If base is np.e (Euler's number), the unit is `nats`.
+
+    Returns:
+        h (float): The Shannon entropy H = -sum(p(x) * log(p(x)))
+
+    Examples:
+        >>>
+    """
+    # normalize histogram to unity
+    hist = hist / np.sum(hist)
+    # skip zero values
+    mask = hist != 0.0
+    log_hist = np.zeros_like(hist)
+    log_hist[mask] = np.log(hist[mask]) / np.log(base)
+    h = -np.sum(hist * log_hist)
+    return h
+
+
+# ======================================================================
+def conditional_entropy(
+        hist2,
+        hist,
+        base=np.e):
+    """
+    Calculate the conditional probability: H(X|Y)
+
+    Args:
+        hist2 (np.ndarray): The joint probability density function.
+            Must be the 2D histrogram of X and Y
+        hist (np.ndarray): The given probability density function.
+            Must be the 1D histogram of Y.
+        base (int|float): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is `bits`.
+            If base is np.e (Euler's number), the unit is `nats`.
+
+    Returns:
+        hc (float): The conditional entropy H(X|Y)
+
+    Examples:
+        >>>
+    """
+    return entropy(hist2, base) - entropy(hist, base)
 
 
 # ======================================================================
@@ -2063,9 +2322,9 @@ def variation_information(
             Must have same shape as arr2.
         arr2 (np.ndarray): The second input array.
             Must have same shape as arr1.
-        base (int|float|None): The base units to express the result.
+        base (int|float): The base units to express the result.
             Should be a number larger than 0.
-            If base is 2, the unit is bits.
+            If base is 2, the unit is `bits`.
             If base is np.e (Euler's number), the unit is `nats`.
         bins (int|str|None): The number of bins to use for the distribution.
             If int, the exact number is used.
@@ -2090,30 +2349,36 @@ def variation_information(
         >>> vi_21 = variation_information(arr2, arr1)
         >>> vi_31 = variation_information(arr3, arr1)
         >>> vi_34 = variation_information(arr3, arr4)
-        >>> print(vi_12, vi_21, vi_31, vi_34)
+        >>> # print(vi_12, vi_21, vi_31, vi_34)
         >>> np.isclose(vi_12, vi_21)
         True
         >>> vi_34 < vi_31
         True
     """
     if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
         bins = auto_bins((arr1, arr2), bins)
-    hist1, bin_edges1 = np.histogram(arr1, bins)
-    hist2, bin_edges2 = np.histogram(arr2, bins)
-    # hist1 = hist1 + np.finfo(np.float).eps
-    # hist2 = hist2 + np.finfo(np.float).eps
-    hist1 += 1
-    hist2 += 1
-    vi = (scipy.stats.entropy(hist1, hist2, base) +
-          scipy.stats.entropy(hist2, hist1, base))
-    return vi
+
+    if not np.array_equal(arr1, arr2):
+        hist1, bin_edges1 = np.histogram(arr1, bins)
+        hist2, bin_edges2 = np.histogram(arr2, bins)
+        hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        vi = 2 * h12 - h1 - h2
+    else:
+        vi = 0.0
+    # absolute value to fix rounding errors
+    return abs(vi)
 
 
 # ======================================================================
 def mutual_information(
         arr1,
         arr2,
-        base=None,
+        base=np.e,
         bins='auto'):
     """
     Calculate the mutual information between two arrays.
@@ -2144,36 +2409,33 @@ def mutual_information(
         >>> arr2 = np.arange(100)
         >>> arr3 = np.random.rand(100)
         >>> arr4 = arr3 + np.random.rand(100) / 100
-        >>> mutual_information(arr1, arr1)
-        1.0
-        >>> mutual_information(arr2, arr2)
-        1.0
-        >>> mutual_information(arr3, arr3)
-        1.0
+        >>> mi_11 = mutual_information(arr1, arr1)
+        >>> mi_22 = mutual_information(arr2, arr2)
+        >>> mi_33 = mutual_information(arr3, arr3)
+        >>> mi_44 = mutual_information(arr4, arr4)
+        >>> # print(mi_11, mi_22, mi_33, mi_44)
+        >>> mi_22 > mi_33 > mi_11
+        True
         >>> mi_12 = mutual_information(arr1, arr2)
         >>> mi_21 = mutual_information(arr2, arr1)
-        >>> mi_31 = mutual_information(arr3, arr1)
+        >>> mi_32 = mutual_information(arr3, arr2)
         >>> mi_34 = mutual_information(arr3, arr4)
-        >>> # print(mi_12, mi_21, mi_31, mi_34)
+        >>> # print(mi_12, mi_21, mi_32, mi_34)
+        >>> mi_44 > mi_34 and mi_33 > mi_34
+        True
         >>> np.isclose(mi_12, mi_21)
         True
-        >>> mi_34 > mi_31
+        >>> mi_34 > mi_32
         True
-        >>> mi_n10bn = mutual_information(arr1, arr2, None, 10)
-        >>> mi_n20bn = mutual_information(arr1, arr2, None, 20)
-        >>> mi_n100bn = mutual_information(arr1, arr2, None, 100)
-        >>> # print(mi_n10bn, mi_n20bn, mi_n100bn)
-        >>> all([0.0 <= x <= 1.0 for x in (mi_n100bn, mi_n20bn, mi_n10bn)])
-        True
-        >>> mi_n10 = mutual_information(arr1, arr2, np.e, 10)
-        >>> mi_n20 = mutual_information(arr1, arr2, np.e, 20)
-        >>> mi_n100 = mutual_information(arr1, arr2, np.e, 100)
+        >>> mi_n10 = mutual_information(arr3, arr2, np.e, 10)
+        >>> mi_n20 = mutual_information(arr3, arr2, np.e, 20)
+        >>> mi_n100 = mutual_information(arr3, arr2, np.e, 100)
         >>> # print(mi_n10, mi_n20, mi_n100)
-        >>> all([np.isclose(x, 0) for x in (mi_n10, mi_n20, mi_n100)])
+        >>> mi_n10 < mi_n20 < mi_n100
         True
-        >>> mi_be = mutual_information(arr1, arr2, np.e)
-        >>> mi_b2 = mutual_information(arr1, arr2, 2)
-        >>> mi_b10 = mutual_information(arr1, arr2, 10)
+        >>> mi_be = mutual_information(arr3, arr4, np.e)
+        >>> mi_b2 = mutual_information(arr3, arr4, 2)
+        >>> mi_b10 = mutual_information(arr3, arr4, 10)
         >>> # print(mi_be, mi_b2, mi_b10)
         >>> mi_b10 < mi_be < mi_b2
         True
@@ -2190,55 +2452,96 @@ def mutual_information(
         if bins is not None and not isinstance(bins, str):
             raise ValueError('Invalid value for `bins`')
         bins = auto_bins((arr1, arr2), bins)
-    if base is None:
-        # scikit.learn implementation
-        # from sklearn.metrics import normalized_mutual_info_score
-        # mi = normalized_mutual_info_score(hist1, hist2)
 
-        # direct implementation
-        base = np.e
-        mi = mutual_information(arr1, arr2, base, bins)
-        vi = variation_information(arr1, arr2, base, bins)
-        mi = ((2 * mi - vi) / (mi + vi) + 1) / 3.0
+    # # scikit.learn implementation
+    # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    # from sklearn.metrics import mutual_info_score
+    # mi = mutual_info_score(None, None, contingency=hist)
+    # if base > 0 and base != np.e:
+    #     mi /= np.log(base)
 
-        # # entropy-based implementation
-        # hist1, bin_edges1 = np.histogram(arr1, bins)
-        # hist2, bin_edges2 = np.histogram(arr2, bins)
-        # hist1 += 1
-        # hist2 += 1
-        # h1 = scipy.stats.entropy(hist1)
-        # h2 = scipy.stats.entropy(hist2)
-        # h12 = scipy.stats.entropy(hist1, hist2)
-        # h21 = scipy.stats.entropy(hist2, hist1)
-        # mi = (h1 + h2) / (h1 + h2 + h12 + h21)
+    # # alternate implementation
+    # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    # g, p, dof, expected = scipy.stats.chi2_contingency(
+    #     hist + np.finfo(float).eps, lambda_='log-likelihood')
+    # mi = g / hist.sum() / 2
+
+    # entropy-based implementation
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    h12 = entropy(hist12, base)
+    h1 = entropy(hist1, base)
+    h2 = entropy(hist2, base)
+    mi = h1 + h2 - h12
+
+    # absolute value to fix rounding errors
+    return abs(mi)
+
+
+def norm_mutual_information(
+        arr1,
+        arr2,
+        bins='auto'):
+    """
+
+    Args:
+        arr1 ():
+        arr2 ():
+        bins ():
+
+    Returns:
+
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> mi_11 = norm_mutual_information(arr1, arr1)
+        >>> mi_22 = norm_mutual_information(arr2, arr2)
+        >>> mi_33 = norm_mutual_information(arr3, arr3)
+        >>> mi_44 = norm_mutual_information(arr4, arr4)
+        >>> # print(mi_11, mi_22, mi_33, mi_44)
+        >>> 1.0 == mi_11 == mi_22 == mi_33 == mi_44
+        True
+        >>> mi_12 = norm_mutual_information(arr1, arr2)
+        >>> mi_21 = norm_mutual_information(arr2, arr1)
+        >>> mi_32 = norm_mutual_information(arr3, arr2)
+        >>> mi_34 = norm_mutual_information(arr3, arr4)
+        >>> # print(mi_12, mi_21, mi_32, mi_34)
+        >>> mi_44 > mi_34 and mi_33 > mi_34
+        True
+        >>> np.isclose(mi_12, mi_21)
+        True
+        >>> mi_34 > mi_32
+        True
+        >>> mi_n10 = norm_mutual_information(arr3, arr2, 10)
+        >>> mi_n20 = norm_mutual_information(arr3, arr2, 20)
+        >>> mi_n100 = norm_mutual_information(arr3, arr2, 100)
+        >>> # print(mi_n10, mi_n20, mi_n100)
+        >>> mi_n10 < mi_n20 < mi_n100
+        True
+    """
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), bins)
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    if not np.array_equal(arr1, arr2):
+        base = np.e  # results should be independent of the base
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        nmi = 1 - (2 * h12 - h1 - h2) / h12
     else:
-        # # scikit.learn implementation
-        # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
-        # from sklearn.metrics import mutual_info_score
-        # mi = mutual_info_score(None, None, contingency=hist)
+        nmi = 1.0
 
-        # direct implementation
-        hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
-        hist += 1
-        g, p, dof, expected = scipy.stats.chi2_contingency(
-            hist, lambda_='log-likelihood')
-        mi = g / hist.sum() / 2
-
-        # # entropy-based implementation
-        # hist1, bin_edges1 = np.histogram(arr1, bins)
-        # hist2, bin_edges2 = np.histogram(arr2, bins)
-        # hist1 += 1
-        # hist2 += 1
-        # h1 = scipy.stats.entropy(hist1)
-        # h2 = scipy.stats.entropy(hist2)
-        # h12 = scipy.stats.entropy(hist1, hist2)
-        # h21 = scipy.stats.entropy(hist2, hist1)
-        # mi = (h1 + h2 - h12 - h21) / 2
-
-        # base correction, assumes natural (Euler's number) base
-        if base > 0 and base != np.e:
-            mi /= np.log(base)
-    return mi
+    # absolute value to fix rounding errors
+    return abs(nmi)
 
 
 # ======================================================================

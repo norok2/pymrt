@@ -665,7 +665,7 @@ def calc_correlation(
         #            img2[mask].ravel(),
         # img1[mask].ravel())
         # mutual information
-        mi = pmu.mutual_information(img1[mask], img2[mask])
+        mi = pmu.norm_mutual_information(img1[mask], img2[mask])
         # voxel counts
         num = np.sum(mask.astype(bool))
         num_tot = np.size(mask)
@@ -694,7 +694,7 @@ def calc_correlation(
              '{: <{size}s}'.format('y_corr_file', size=lbl_len)] + \
             ['D-' + lbl for lbl in label_list] + \
             ['E-' + lbl for lbl in label_list] + \
-            ['r', 'r2', 'p-val', 'mi',
+            ['r', 'r2', 'p-val', 'nmi',
              'lin-cof', 'lin-off',
              #             'thl-cof', 'thl-off',
              'N_eff', 'N_tot', 'N_ratio']
