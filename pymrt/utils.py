@@ -515,6 +515,92 @@ def multi_replace(
 
 
 # ======================================================================
+def common_substr_2(
+        seq1,
+        seq2,
+        sorting=None):
+    """
+    Find the longest common consecutive subsequence(s).
+    This version works for 2 iterables.
+
+    This is known as the `longest common substring` problem, or LCS for short.
+
+    Args:
+        seq1 (iterable): The first input sequence.
+            Must be of the same type as seq2.
+        seq2 (iterable): The second input sequence.
+            Must be of the same type as seq1.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+
+    Returns:
+        commons (list[iterable]): The longest common subsequence(s)
+
+    Examples:
+        >>> common_substr_2('academy', 'abracadabra')
+        ['acad']
+        >>> common_substr_2('los angeles', 'lossless')
+        ['los', 'les']
+        >>> common_substr_2('los angeles', 'lossless', lambda x: x)
+        ['les', 'los']
+        >>> common_substr_2((1, 2, 3, 4, 5), (0, 1, 2))
+        [(1, 2)]
+    """
+    # note: [[0] * (len(seq2) + 1)] * (len(seq1) + 1) will not work!
+    counter = [[0 for j in range(len(seq2) + 1)] for i in range(len(seq1) + 1)]
+    longest = 0
+    commons = []
+    for i, item in enumerate(seq1):
+        for j, jtem in enumerate(seq2):
+            if item == jtem:
+                tmp = counter[i][j] + 1
+                counter[i + 1][j + 1] = tmp
+                if tmp > longest:
+                    commons = []
+                    longest = tmp
+                    commons.append(seq1[i - tmp + 1:i + 1])
+                elif tmp == longest:
+                    commons.append(seq1[i - tmp + 1:i + 1])
+    if sorting is None:
+        return commons
+    else:
+        return sorted(commons, key=sorting)
+
+
+# ======================================================================
+def common_substr(
+        seqs,
+        sorting=None):
+    """
+    Find the longest common consecutive subsequences.
+    This version works for an iterable of iterables.
+
+    This is known as the `longest common substring` problem, or LCS for short.
+
+    Args:
+        seqs (iterable[iterable]): The input sequences.
+            All the items must be of the same type.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+
+    Returns:
+        commons (list[iterable]): The longest common subsequence(s)
+
+    Examples:
+        >>> common_substr(['academy', 'abracadabra', 'cadet'])
+        ['cad']
+        >>> common_substr(['los angeles', 'lossless', 'les alos'])
+        ['los', 'les']
+        >>> common_substr([(1, 2, 3, 4, 5), (1, 2, 3), (0, 1, 2)])
+        [(1, 2)]
+    """
+    common = seqs[0]
+    commons = ()
+    for text in seqs[1:]:
+        commons = common_substr_2(common, text, sorting)
+        common = functools.reduce(lambda x, y: x + y, commons)
+    return commons
+
+
+# ======================================================================
 def set_keyword_parameters(
         func,
         values):
@@ -1435,8 +1521,8 @@ def dict2str(
             If None, whitespaces are stripped. Empty string for no stripping.
         strip_val_str (str): Chars to be stripped from both ends of the value.
             If None, whitespaces are stripped. Empty string for no stripping.
-        sorting (callable): Function used as 'key' argument of 'sorted'
-            for sorting the dictionary keys.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+            Used for sorting the dictionary keys.
 
     Returns:
         out_str (str): The output string generated from the dictionary.
