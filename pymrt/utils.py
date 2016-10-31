@@ -521,7 +521,7 @@ def common_substr_2(
         sorting=None):
     """
     Find the longest common consecutive subsequence(s).
-    This version works for 2 iterables.
+    This version works for two iterables.
 
     This is known as the `longest common substring` problem, or LCS for short.
 
@@ -533,7 +533,7 @@ def common_substr_2(
         sorting (callable): Sorting function passed to 'sorted' via `key` arg.
 
     Returns:
-        commons (list[iterable]): The longest common subsequence(s)
+        commons (list[iterable]): The longest common subsequence(s).
 
     Examples:
         >>> common_substr_2('academy', 'abracadabra')
@@ -571,7 +571,7 @@ def common_substr(
         seqs,
         sorting=None):
     """
-    Find the longest common consecutive subsequences.
+    Find the longest common consecutive subsequence(s).
     This version works for an iterable of iterables.
 
     This is known as the `longest common substring` problem, or LCS for short.
@@ -582,7 +582,7 @@ def common_substr(
         sorting (callable): Sorting function passed to 'sorted' via `key` arg.
 
     Returns:
-        commons (list[iterable]): The longest common subsequence(s)
+        commons (list[iterable]): The longest common subsequence(s).
 
     Examples:
         >>> common_substr(['academy', 'abracadabra', 'cadet'])
