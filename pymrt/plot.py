@@ -42,6 +42,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+import matplotlib.gridspec
 import matplotlib.animation as anim  # Matplotlib's animations
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.optimize  # SciPy: Optimization Algorithms
@@ -971,7 +972,6 @@ def histogram2d(
     # closing figure
     if close_figure:
         plt.close()
-    plt.figure()
     return hist, x_edges, y_edges, plot
 
 
@@ -984,6 +984,7 @@ def subplots(
         num_col=None,
         aspect_ratio=None,
         width_height=None,
+        figsize_factors=(1, 1),
         swap_filling=False,
         title=None,
         row_labels=None,
@@ -1021,7 +1022,8 @@ def subplots(
         w_pad (): 
         h_pad (): 
         save_filepath ():
-        save_kws ():
+        savefig_args ():
+        savefig_kwargs ():
         force (): 
         verbose (): 
 
@@ -1035,29 +1037,31 @@ def subplots(
         if num_row is None and num_col is None:
             if isinstance(aspect_ratio, float):
                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
-            elif 'exact' in aspect_ratio:
-                num_col, num_row = pmu.optimal_ratio(num_plots)
-                if 'portrait' in aspect_ratio:
-                    num_row, num_col = num_col, num_row
-            else:
+            elif isinstance(aspect_ratio, str):
+                if 'exact' in aspect_ratio:
+                    num_col, num_row = pmu.optimal_ratio(num_plots)
+                    if 'portrait' in aspect_ratio:
+                        num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
                     num_row = np.ceil(np.sqrt(num_plots))
-                else:  # plot_aspect == 'landscape'
-                    num_row = np.floor(np.sqrt(num_plots))
+            else:  # plot_aspect == 'landscape'
+                num_row = int(np.floor(np.sqrt(num_plots)))
+
         if num_row is None and num_col > 0:
-            num_row = np.ceil(num_plots / num_col)
+            num_row = int(np.ceil(num_plots / num_col))
         if num_row > 0 and num_col is None:
-            num_row = np.ceil(num_plots / num_row)
+            num_col = int(np.ceil(num_plots / num_row))
 
         if width_height is None:
             width, height = 1, 1
         else:
             width, height = width_height
-        rows = (width,) * num_row
-        cols = (height,) * num_col
+        rows = (height,) * num_row
+        cols = (width,) * num_col
     else:
         num_row = len(rows)
         num_col = len(cols)
+
     assert (num_row * num_col >= num_plots)
 
     if row_labels is None:
@@ -1071,41 +1075,63 @@ def subplots(
         border_top = 0.0
 
     # generate plot
-    fig, axs = plt.subplots(
-        num_row, num_col, figsize=(sum(cols), sum(rows)))
+    fig = plt.figure(
+        figsize=(
+            figsize_factors[0] * sum(cols),
+            figsize_factors[1] * sum(rows)))
+
+    gs = mpl.gridspec.GridSpec(
+        num_row, num_col, width_ratios=cols, height_ratios=rows)
+
+    axs = [plt.subplot(gs[n]) for n in range(num_row * num_col)]
 
     assert (num_row == len(row_labels))
     assert (num_col == len(col_labels))
 
+    # for n, (plot_func, plot_args, plot_kwargs) in enumerate(plots):
+    #     plot_kwargs['ax'] = axs[n]
+    #     plot_func(*plot_args, **plot_kwargs)
+
     for i, row_label in enumerate(row_labels):
         for j, col_label in enumerate(col_labels):
-            if swap_filling:
-                n = i * num_row + j
+            if not swap_filling:
+                n_plot = n_axs = i * num_col + j
             else:
-                n = j * num_col + i
-            axs[i, j] = plots[n]
+                n_plot = i * num_col + j
+                n_axs = j * num_row + i
 
+            k, plot_func, plot_args, plot_kwargs = plots[n_plot]
+            plot_kwargs['ax'] = axs[n_axs]
+            plot_func(*plot_args, **plot_kwargs)
+
+            if col_label:
+                fig.text(
+                    pmu.scale((j * 2 + 1) / (num_col * 2),
+                              out_interval=(
+                                  row_label_width + border_left, 1.0)),
+                    1.0 - border_top,
+                    col_label, rotation=0,
+                    fontweight='bold', fontsize='x-large',
+                    horizontalalignment='center', verticalalignment='top')
+
+        if row_label:
             fig.text(
-                pmu.scale((j * 2 + 1) / (num_col * 2),
+                border_left,
+                pmu.scale(1.0 - (i * 2 + 1) / (num_row * 2),
                           out_interval=(
-                              row_label_width + border_left, 1.0)),
-                1.0 - border_top,
-                col_label, rotation=0,
+                              border_top, 1 - col_label_width - border_top)),
+                row_label, rotation=0,
                 fontweight='bold', fontsize='x-large',
-                horizontalalignment='center', verticalalignment='top')
-
-        fig.text(
-            border_left,
-            pmu.scale(1.0 - (i * 2 + 1) / (num_row * 2),
-                      out_interval=(
-                          border_top, 1 - col_label_width - border_top)),
-            row_label, rotation=0,
-            fontweight='bold', fontsize='x-large',
-            horizontalalignment='left', verticalalignment='center')
+                horizontalalignment='left', verticalalignment='center')
 
     fig.tight_layout(
         rect=[0.0 + row_label_width, 0.0, 1.0, 1.0 - col_label_width],
         pad=pad, w_pad=w_pad, h_pad=h_pad)
-    fig.savefig(save_filepath, **save_kws)
-    msg('Plot: {}'.format(save_filepath), verbose, D_VERB_LVL['medium'])
-    plt.close(fig)
+
+    if save_filepath:
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **save_kws)
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return fig
