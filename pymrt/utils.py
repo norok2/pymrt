@@ -589,14 +589,21 @@ def common_substr(
         ['cad']
         >>> common_substr(['los angeles', 'lossless', 'les alos'])
         ['los', 'les']
+        >>> common_substr(['los angeles', 'lossless', 'les alos', 'losles'])
+        ['los', 'les']
+        >>> common_substr(['los angeles', 'lossless', 'dolos'])
+        ['los']
         >>> common_substr([(1, 2, 3, 4, 5), (1, 2, 3), (0, 1, 2)])
         [(1, 2)]
     """
-    common = seqs[0]
-    commons = ()
+    commons = [seqs[0]]
     for text in seqs[1:]:
-        commons = common_substr_2(common, text, sorting)
-        common = functools.reduce(lambda x, y: x + y, commons)
+        tmps = []
+        for common in commons:
+            tmp = common_substr_2(common, text, sorting)
+            if len(tmps) == 0 or len(tmp[0]) == len(tmps[0]):
+                tmps.extend(common_substr_2(common, text, sorting))
+        commons = tmps
     return commons
 
 
