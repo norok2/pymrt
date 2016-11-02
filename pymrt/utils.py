@@ -913,7 +913,7 @@ def execute(
             pid = proc.pid
             for stream, source in ((p_stdout, 'out'), (p_stderr, 'err')):
                 if stream:
-                    log_filepath = log.format(**locals())
+                    log_filepath = log.format_map(locals())
                     with open(log_filepath, 'wb') as fileobj:
                         fileobj.write(stream.encode(encoding))
     return ret_code, p_stdout, p_stderr

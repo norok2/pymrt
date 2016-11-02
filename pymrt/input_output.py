@@ -60,7 +60,7 @@ import pymrt.segmentation as pms
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -906,8 +906,8 @@ def plot_sample2d(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    sample, plot = pmp.sample2d(img, *args, **kwargs)
-    return sample, plot
+    result = pmp.sample2d(img, *args, **kwargs)
+    return result
 
 
 # ======================================================================
@@ -1008,8 +1008,8 @@ def plot_histogram1d_list(
         obj = nib.load(in_filepath)
         img = obj.get_data()
         img_list.append(img[mask])
-    hist, bin_edges, plot = pmp.histogram1d_list(img_list, *args, **kwargs)
-    return hist, bin_edges, plot
+    result = pmp.histogram1d_list(img_list, *args, **kwargs)
+    return result
 
 
 # ======================================================================
@@ -1053,10 +1053,10 @@ def plot_histogram2d(
         mask2 = obj2_mask.get_data().astype(bool)
     else:
         mask2 = slice(None)
-    hist2d, x_edges, y_edges, plot = \
+    result = \
         pmp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
 
-    return hist2d, x_edges, y_edges, plot
+    return result
 
 
 # ======================================================================

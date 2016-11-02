@@ -139,6 +139,7 @@ setup(
 
     extras_require={
         'blessed': 'blessed',
+        'roman': 'roman',
     },
 
     package_data={

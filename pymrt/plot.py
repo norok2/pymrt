@@ -28,17 +28,23 @@ import itertools  # Functions creating iterators for efficient looping
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
+import string  # Common string operations
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
+
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+try:
+    import roman as roman_numbers  # Integer to Roman numerals converter
+except ImportError:
+    roman_numbers = None
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -209,13 +215,14 @@ def sample2d(
         cbar_kws=None,
         cbar_txt=None,
         text_color=None,
-        text_list=None,
         resolution=None,
         size_info=None,
-        use_new_figure=True,
-        close_figure=False,
+        more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
-        ax=None):
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
     """
     Plot a 2D sample image of a 3D array.
 
@@ -242,17 +249,18 @@ def sample2d(
 
     Returns
     =======
-    sample : ndarray
+    data : ndarray
         The sliced (N-1)D-array.
     plot : matplotlib.pyplot.Figure
         The figure object containing the plot.
 
     """
     ndim = 2
-    if use_new_figure:
-        fig = plt.figure()
     if ax is None:
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
     if axis is None:
         axis = np.argsort(arr.shape)[:-ndim]
     else:
@@ -261,26 +269,26 @@ def sample2d(
         raise IndexError(
             'Mismatching dimensions ({ndim}) and axis ({naxes}): '
             '{ndim} - {naxes} != 2'.format(ndim=arr.ndim, naxes=len(axis)))
-    sample = pmu.ndim_slice(arr, axis, index)
+    data = pmu.ndim_slice(arr, axis, index)
     if title:
         ax.set_title(title)
     if array_interval is None:
         array_interval = pmu.minmax(arr)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
-            cmap = plt.cm.RdBu_r
+            cmap = mpl.cm.RdBu_r
         else:
-            cmap = plt.cm.gray_r
+            cmap = mpl.cm.gray_r
     if not text_color:
         if array_interval[0] * array_interval[1] < 0:
             text_color = 'k'
         else:
             text_color = 'k'
     ax.set_aspect('equal')
-    if (orientation == 'portrait' and sample.shape[0] < sample.shape[1]) or \
-            (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
-        sample = sample.transpose()
-    plot = ax.imshow(sample, cmap=cmap, vmin=array_interval[0],
+    if (orientation == 'portrait' and data.shape[0] < data.shape[1]) or \
+            (orientation == 'landscape' and data.shape[0] > data.shape[1]):
+        data = data.transpose()
+    plot = ax.imshow(data, cmap=cmap, vmin=array_interval[0],
                      vmax=array_interval[1], interpolation='none')
     if ticks_limit is not None:
         if ticks_limit > 0:
@@ -292,8 +300,8 @@ def sample2d(
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(plot, cax=cax, **cbar_kws)
-        # cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
@@ -316,7 +324,7 @@ def sample2d(
                 transform=ax.transAxes)
         if size_info != 0.0:
             res = resolution[1]
-            size_info_size = round(abs(size_info) * (sample.shape[1] * res), -1)
+            size_info_size = round(abs(size_info) * (data.shape[1] * res), -1)
             size_info_str = '{} {}'.format(size_info_size, 'mm')
             size_info_px = size_info_size / res
             ax.text(
@@ -324,20 +332,22 @@ def sample2d(
                 horizontalalignment='left', verticalalignment='bottom',
                 transform=ax.transAxes)
             ax.plot(
-                (sample.shape[1] * 0.025,
-                 sample.shape[1] * 0.025 + size_info_px),
-                (sample.shape[0] * 0.965, sample.shape[0] * 0.965),
+                (data.shape[1] * 0.025,
+                 data.shape[1] * 0.025 + size_info_px),
+                (data.shape[0] * 0.965, data.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
     # include additional text
-    if text_list is not None:
-        for text_kwarg in text_list:
-            ax.text(**text_kwarg)
-    if save_filepath is not None:
-        plt.tight_layout()
-        plt.savefig(save_filepath, dpi=D_PLOT_DPI)
-    if close_figure:
-        plt.close()
-    return sample, plot
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return data, fig
 
 
 # ======================================================================
@@ -357,10 +367,12 @@ def sample2d_anim(
         text_list=None,
         resolution=None,
         size_info=None,
-        dpi=300,
-        close_figure=False,
+        more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
-        ax=None):
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
     """
     Plot a 2D sample image of a 3D array.
 
@@ -395,9 +407,11 @@ def sample2d_anim(
     """
     if array.ndim != 3:
         raise IndexError('3D array required')
-    fig = plt.figure()
     if ax is None:
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
     if axis is None:
         axis = np.argmin(array.shape)
     sample = pmu.ndim_slice(array, axis, 0)
@@ -407,9 +421,9 @@ def sample2d_anim(
         array_interval = pmu.minmax(array)
     if not cmap:
         if array_interval[0] * array_interval[1] < 0:
-            cmap = plt.cm.RdBu
+            cmap = mpl.cm.RdBu
         else:
-            cmap = plt.cm.gray
+            cmap = mpl.cm.gray
     if not text_color:
         if array_interval[0] * array_interval[1] < 0:
             text_color = 'k'
@@ -455,17 +469,24 @@ def sample2d_anim(
                 color=text_color, linewidth=2.5)
     # include additional text
     if text_list is not None:
-        for text_kwarg in text_list:
-            ax.text(**text_kwarg)
+        for text_kws in text_list:
+            ax.text(**dict(text_kws))
     n_frames = array.shape[axis]
     plots = []
+    data = []
     for i in range(0, n_frames, step):
+        sample = pmu.ndim_slice(array, axis, i)
         plot = ax.imshow(
-            pmu.ndim_slice(array, axis, i), cmap=cmap,
+            sample, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
+        # include additional text
+        if more_texts is not None:
+            for text_kws in more_texts:
+                ax.text(**dict(text_kws))
+        data.append(sample)
         if len(plots) <= 0:
             if cbar_kws is not None:
-                cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+                cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
                 if cbar_txt is not None:
                     only_extremes = 'ticks' in cbar_kws and \
                                     len(cbar_kws['ticks']) == 2
@@ -476,12 +497,16 @@ def sample2d_anim(
                         cbar.set_label(cbar_txt)
         plots.append([plot])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath is not None:
-        plt.tight_layout()
-        mov.save(save_filepath, dpi=dpi, fps=n_frames / step / duration)
-    if close_figure:
-        plt.close()
-    return mov
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout()
+        save_kwargs = {'fps': n_frames / step / duration}
+        if save_kws is None:
+            save_kws = {}
+        save_kwargs.update(save_kws)
+        mov.save(save_filepath, **dict(save_kws))
+        msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return data, fig
 
 
 # ======================================================================
@@ -496,11 +521,12 @@ def histogram1d(
         title='Histogram',
         labels=('Value', 'Value Frequency'),
         style='-k',
-        text_list=None,
-        use_new_figure=True,
-        close_figure=False,
+        more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
-        ax=None):
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
     """
     Plot 1D histogram of array with MatPlotLib.
 
@@ -517,7 +543,7 @@ def histogram1d(
     array_interval : float 2-tuple (optional)
         Theoretical range of values for the array. If unset, uses min and max.
     scale : ['linear'|'log'|'log10'|'density'] string (optional)
-        The frequency value scaling.
+        The value count scaling.
     title : str (optional)
         The title of the plot.
     labels : str 2-tuple (optional)
@@ -552,40 +578,46 @@ def histogram1d(
     # setup histogram reange
     hist_interval = tuple([pmu.scale(val, array_interval)
                            for val in hist_interval])
-    # calculate histogram
-    # prepare figure
-    if use_new_figure:
-        fig = plt.figure()
+
     # create histogram
     hist, bin_edges = np.histogram(
         array, bins=bins, range=hist_interval, density=(scale == 'density'))
     # adjust scale
     hist = hist.astype(float)
-    if scale == 'log':
-        hist[hist > 0.0] = np.log(hist[hist > 0.0])
-    elif scale == 'log10':
-        hist[hist > 0.0] = np.log10(hist[hist > 0.0])
+    if scale in ('linear', 'density'):
+        pass
+    elif scale in ('log', 'log10', 'log2'):
+        hist[hist > 0.0] = getattr(np, scale)(hist[hist > 0.0])
+    elif scale:
+        hist[hist > 0.0] = scale(hist[hist > 0.0])
+        scale = 'custom'
     # plot figure
     if ax is None:
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
     plot = ax.plot(pmu.midval(bin_edges), hist, style)
     # setup title and labels
     if title:
-        ax.set_title(title)
+        ax.set_title(title.format_map(locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0])
+        ax.set_xlabel(labels[0].format_map(locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1] + ' ({})'.format(scale))
-    else:
-        plt.ylabel('{}'.format(scale))
+        ax.set_ylabel(labels[1].format_map(locals()))
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath is not None:
-        plt.tight_layout()
-        plt.savefig(save_filepath, dpi=D_PLOT_DPI)
-    # closing figure
-    if close_figure:
-        plt.close()
-    return hist, bin_edges, plot
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return (hist, bin_edges), fig
 
 
 # ======================================================================
@@ -598,15 +630,16 @@ def histogram1d_list(
         ticks_limit=None,
         scale='linear',
         title='Histogram',
-        labels=('Value', 'Value Frequency'),
+        labels=('Value', 'Value Count ({scale})'),
         legends=None,
         legend_kws=None,
         styles=None,
-        text_list=None,
-        use_new_figure=True,
-        close_figure=False,
+        more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
-        ax=None):
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
     """
 
     Args:
@@ -684,10 +717,7 @@ def histogram1d_list(
     # setup histogram reange
     hist_interval = tuple([pmu.scale(val, array_interval)
                            for val in hist_interval])
-    # calculate histogram
-    # prepare figure
-    if use_new_figure:
-        fig = plt.figure()
+
     # prepare style list
     if styles is None:
         styles = []
@@ -701,18 +731,24 @@ def histogram1d_list(
 
     # prepare histograms
     if ax is None:
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
     ax.set_aspect('auto')
-    plots = []
+    data = []
     for i, array in enumerate(arrays):
         hist, bin_edges = np.histogram(
             array, bins=bins, range=hist_interval, density=(scale == 'density'))
         # adjust scale
         hist = hist.astype(float)
-        if scale == 'log':
-            hist[hist > 0.0] = np.log(hist[hist > 0.0])
-        elif scale == 'log10':
-            hist[hist > 0.0] = np.log10(hist[hist > 0.0])
+        if scale in ('linear', 'density'):
+            pass
+        elif scale in ('log', 'log10', 'log2'):
+            hist[hist > 0.0] = getattr(np, scale)(hist[hist > 0.0])
+        elif scale:
+            hist[hist > 0.0] = scale(hist[hist > 0.0])
+            scale = 'custom'
         # prepare legend
         if legends is not None and i < len(legends):
             legend = legends[i]
@@ -723,7 +759,7 @@ def histogram1d_list(
             pmu.midval(bin_edges), hist,
             **next(style_cycler),
             label=legend)
-        plots.append(plot)
+        data.append((hist, bin_edges))
     # create the legend for the first line.
     ax.legend(**(legend_kws if legend_kws is not None else {}))
     # fine-tune ticks
@@ -735,21 +771,24 @@ def histogram1d_list(
             ax.set_yticks([])
     # setup title and labels
     if title:
-        ax.set_title(title.format(bins=bins, scale=scale))
+        ax.set_title(title.format_map(locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0])
+        ax.set_xlabel(labels[0].format_map(locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1] + ' ({})'.format(scale))
-    else:
-        plt.ylabel('{}'.format(scale))
+        ax.set_ylabel(labels[1].format_map(locals()))
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath is not None:
-        plt.tight_layout()
-        plt.savefig(save_filepath, dpi=D_PLOT_DPI)
-    # closing figure
-    if close_figure:
-        plt.close()
-    return hist, bin_edges, plots
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return data, fig
 
 
 # ======================================================================
@@ -766,19 +805,19 @@ def histogram2d(
         hist_val_interval=None,
         ticks_limit=None,
         interpolation='bicubic',
-        title='2D Histogram',
+        title='2D Histogram ({bins} bins, {scale})',
         labels=('Array 1 Values', 'Array 2 Values'),
-        text_list=None,
-        cmap=plt.cm.afmhot_r,
+        cmap=mpl.cm.afmhot_r,
         bisector=None,
         stats_kws=None,
         cbar_kws=None,
         cbar_txt=None,
-        use_new_figure=True,
-        close_figure=False,
+        more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
         save_kws=None,
-        ax=None):
+        force=False,
+        verbose=D_VERB_LVL):
     """
     Plot 2D histogram of two arrays.
 
@@ -817,18 +856,21 @@ def histogram2d(
             identical interval for both axis.
         aspect (float): aspect ratio of the histogram.
             If None, it is calculated to result in squared proportions.
-        scale (str): The histogram frequency value transformation method.
-            - 'linear': no transformation is performed;
-            - 'log': the natual logarithm of the histogram frequency is used;
-            - 'log10': the base-10 logarithm of the histogram frequency is used;
-            - 'density': calculate the histogram setting the 'density' keyword
-              parameter to True.
+        scale (str|callable): The frequency value transformation method.
+            - 'linear': no transformation is performed.
+            - 'log': uses the natural logarithm of the histogram frequency.
+            - 'log2': uses the base-2 logarithm of the histogram frequency.
+            - 'log10': uses the base-10 logarithm of the histogram frequency.
+            - 'density': uses the normalized histogram frequency,
+              obtained by setting `np.histogram()` parameter `density=True`.
+            - callable (func(float)->float): apply the function to the values.
+              The corresponding scale name is then set to `custom`.
         hist_val_interval (tuple[float]|None): The interval of histogram values.
             If None, it is calculated automatically as the (min, max) of the
             histogram values rounded to the most comprehensive integer interval.
         ticks_limit (None): TODO
         interpolation (str): Image display interpolation method.
-            See matplotlib.imshow for more details.
+            See `matplotlib.imshow()` for more details.
         title (str): The title of the plot.
         labels (tuple[str]): The x- and y- labels.
         text_list (tuple[dict]): The keyword arguments defining texts.
@@ -850,7 +892,7 @@ def histogram2d(
         hist2d (np.ndarray): The calculated 2D histogram.
         x_edges (np.ndarray): The bin edges on the x-axis.
         y_edges (np.ndarray): The bin edges on the y-axis.
-        plot (matplotlib.pyplot.Figure): The Figure object containing the plot.
+        fig (matplotlib.pyplot.Figure): The Figure object containing the plot.
     """
 
     def _ensure_all_axis(obj, n=2):
@@ -898,18 +940,22 @@ def histogram2d(
     hist = hist.transpose()
     # adjust scale
     hist = hist.astype(float)
-    if scale == 'log':
-        hist[hist > 0.0] = np.log(hist[hist > 0.0])
-    elif scale == 'log10':
-        hist[hist > 0.0] = np.log10(hist[hist > 0.0])
+    if scale in ('linear', 'density'):
+        pass
+    elif scale in ('log', 'log10', 'log2'):
+        hist[hist > 0.0] = getattr(np, scale)(hist[hist > 0.0])
+    elif scale:
+        hist[hist > 0.0] = scale(hist[hist > 0.0])
+        scale = 'custom'
     # adjust histogram intensity range
     if hist_val_interval is None:
         hist_val_interval = (np.floor(np.min(hist)), np.ceil(np.max(hist)))
-    # prepare figure
-    if use_new_figure:
-        fig = plt.figure()
+    # create a new figure
     if ax is None:
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+    else:
+        fig = plt.gcf()
     # plot figure
     plot = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
@@ -918,7 +964,7 @@ def histogram2d(
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
     if cbar_kws is not None:
-        cbar = ax.figure.colorbar(plot, ax=ax, **cbar_kws)
+        cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
@@ -943,7 +989,7 @@ def histogram2d(
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
         stats_dict = pmu.calc_stats(
-            arr1[mask] - arr2[mask], **stats_kws)
+            arr1[mask] - arr2[mask], **dict(stats_kws))
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *pmu.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
@@ -951,9 +997,12 @@ def histogram2d(
             horizontalalignment='center', verticalalignment='top',
             transform=ax.transAxes)
     # setup title and labels
-    ax.set_title(title.format(bins=bins, scale=scale))
-    ax.set_xlabel(labels[0])
-    ax.set_ylabel(labels[1])
+    if title:
+        ax.set_title(title.format_map(locals()))
+    if labels[0]:
+        ax.set_xlabel(labels[0].format_map(locals()))
+    if labels[1]:
+        ax.set_ylabel(labels[1].format_map(locals()))
     # fine-tune ticks
     if ticks_limit is not None:
         if ticks_limit > 0:
@@ -962,17 +1011,18 @@ def histogram2d(
             ax.set_xticks([])
             ax.set_yticks([])
     # include additional text
-    if text_list is not None:
-        for text_kwarg in text_list:
-            ax.text(**text_kwarg)
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath is not None:
-        plt.tight_layout()
-        plt.savefig(save_filepath, **save_kws)
-    # closing figure
-    if close_figure:
-        plt.close()
-    return hist, x_edges, y_edges, plot
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return (hist, x_edges, y_edges), fig
 
 
 # ======================================================================
@@ -984,18 +1034,15 @@ def subplots(
         num_col=None,
         aspect_ratio=None,
         width_height=None,
-        figsize_factors=(1, 1),
+        figsize_factors=3,
+        pads=2.0,
         swap_filling=False,
         title=None,
+        subplot_title_fmt='({letter}) {t}',
         row_labels=None,
         col_labels=None,
-        row_label_width=0.030,
-        col_label_width=0.030,
-        border_top=0.010,
-        border_left=0.010,
-        pad=1.0,
-        w_pad=2.0,
-        h_pad=2.0,
+        label_pads=0.3,
+        more_texts=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -1018,9 +1065,7 @@ def subplots(
         col_label_width (): 
         border_top (): 
         border_left (): 
-        pad (): 
-        w_pad (): 
-        h_pad (): 
+        tight_layout_kws ():
         save_filepath ():
         savefig_args ():
         savefig_kwargs ():
@@ -1061,77 +1106,271 @@ def subplots(
     else:
         num_row = len(rows)
         num_col = len(cols)
-
     assert (num_row * num_col >= num_plots)
 
+    pads = list(pmu.auto_repeat(pads, 2, False, True))
+    label_pads = list(pmu.auto_repeat(label_pads, 2, False, True))
+    figsize_factors = list(pmu.auto_repeat(figsize_factors, 2, False, True))
+
+    # fix row/col labels
     if row_labels is None:
         row_labels = pmu.auto_repeat(None, num_row)
-        row_label_width = 0.0
-        border_left = 0.0
-
+        label_pads[0] = 0.0
     if col_labels is None:
         col_labels = pmu.auto_repeat(None, num_col)
-        col_label_width = 0.0
-        border_top = 0.0
+        label_pads[1] = 0.0
+    assert (num_row == len(row_labels))
+    assert (num_col == len(col_labels))
 
     # generate plot
-    fig = plt.figure(
-        figsize=(
-            figsize_factors[0] * sum(cols),
-            figsize_factors[1] * sum(rows)))
+    figsizes = [
+        factor * sum(items)
+        for factor, items, pad in zip(figsize_factors, (rows, cols), pads)]
+    fig = plt.figure(figsize=figsizes[::-1])
+    label_pads = [
+        label_pad / figsize
+        for label_pad, figsize in zip(label_pads, figsizes)]
 
     gs = mpl.gridspec.GridSpec(
         num_row, num_col, width_ratios=cols, height_ratios=rows)
 
     axs = [plt.subplot(gs[n]) for n in range(num_row * num_col)]
-
-    assert (num_row == len(row_labels))
-    assert (num_col == len(col_labels))
-
-    # for n, (plot_func, plot_args, plot_kwargs) in enumerate(plots):
-    #     plot_kwargs['ax'] = axs[n]
-    #     plot_func(*plot_args, **plot_kwargs)
+    axs = np.array(axs).reshape((num_row, num_col))
 
     for i, row_label in enumerate(row_labels):
         for j, col_label in enumerate(col_labels):
             if not swap_filling:
-                n_plot = n_axs = i * num_col + j
-            else:
                 n_plot = i * num_col + j
-                n_axs = j * num_row + i
+            else:
+                n_plot = j * num_row + i
 
-            k, plot_func, plot_args, plot_kwargs = plots[n_plot]
-            plot_kwargs['ax'] = axs[n_axs]
-            plot_func(*plot_args, **plot_kwargs)
+            plot_func, plot_args, plot_kwargs = plots[n_plot]
+            plot_kwargs['ax'] = axs[i, j]
+            if subplot_title_fmt:
+                t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
+                number = n_plot + 1
+                if roman_numbers:  # todo: switch to numerals?
+                    roman_lowercase = roman_numbers.toRoman(number)
+                    roman_uppercase = roman_numbers.toRoman(number)
+                    roman = roman_uppercase
+                letter_lowercase = string.ascii_lowercase[n_plot]
+                letter_uppercase = string.ascii_uppercase[n_plot]
+                letter = letter_lowercase
+                plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
+            plot_func(*tuple(plot_args), **(plot_kwargs))
 
             if col_label:
                 fig.text(
-                    pmu.scale((j * 2 + 1) / (num_col * 2),
-                              out_interval=(
-                                  row_label_width + border_left, 1.0)),
-                    1.0 - border_top,
+                    pmu.scale(
+                        (j * 2 + 1) / (num_col * 2),
+                        out_interval=(label_pads[0], 1.0 - label_pads[0] / 5)),
+                    1.0 - label_pads[1] / 2,
                     col_label, rotation=0,
-                    fontweight='bold', fontsize='x-large',
+                    fontweight='bold', fontsize='large',
                     horizontalalignment='center', verticalalignment='top')
 
         if row_label:
             fig.text(
-                border_left,
-                pmu.scale(1.0 - (i * 2 + 1) / (num_row * 2),
-                          out_interval=(
-                              border_top, 1 - col_label_width - border_top)),
-                row_label, rotation=0,
-                fontweight='bold', fontsize='x-large',
+                label_pads[0] / 2,
+                pmu.scale(
+                    1.0 - (i * 2 + 1) / (num_row * 2),
+                    out_interval=(label_pads[1] / 5, 1.0 - label_pads[1])),
+                row_label, rotation=90,
+                fontweight='bold', fontsize='large',
                 horizontalalignment='left', verticalalignment='center')
 
-    fig.tight_layout(
-        rect=[0.0 + row_label_width, 0.0, 1.0, 1.0 - col_label_width],
-        pad=pad, w_pad=w_pad, h_pad=h_pad)
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            fig.text(**dict(text_kws))
 
-    if save_filepath:
+    # save figure to file
+    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+        fig.tight_layout(
+            rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
+            pad=1.0, h_pad=pads[0], w_pad=pads[1])
         if save_kws is None:
             save_kws = {}
-        fig.savefig(save_filepath, **save_kws)
+        fig.savefig(save_filepath, **dict(save_kws))
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
     return fig
+
+
+# # ======================================================================
+# def subplots(
+#         plots,
+#         rows=None,
+#         cols=None,
+#         num_row=None,
+#         num_col=None,
+#         aspect_ratio=None,
+#         width_height=None,
+#         figsize_factors=3,
+#         pads=2.0,
+#         swap_filling=False,
+#         title=None,
+#         subplot_title_fmt='({letter}) {t}',
+#         row_labels=None,
+#         col_labels=None,
+#         label_pos=(0, 0),
+#         more_texts=None,
+#         save_filepath=None,
+#         save_kws=None,
+#         force=False,
+#         verbose=D_VERB_LVL):
+#     """
+#
+#     Args:
+#         plots ():
+#         rows ():
+#         cols ():
+#         num_row ():
+#         num_col ():
+#         aspect_ratio ():
+#         width_height ():
+#         swap_filling ():
+#         title ():
+#         row_labels ():
+#         col_labels ():
+#         row_label_width ():
+#         col_label_width ():
+#         border_top ():
+#         border_left ():
+#         tight_layout_kws ():
+#         save_filepath ():
+#         savefig_args ():
+#         savefig_kwargs ():
+#         force ():
+#         verbose ():
+#
+#     Returns:
+#
+#     """
+#     num_plots = len(plots)
+#
+#     # determine rows and cols if not specified
+#     if rows is None and cols is None:
+#         if num_row is None and num_col is None:
+#             if isinstance(aspect_ratio, float):
+#                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
+#             elif isinstance(aspect_ratio, str):
+#                 if 'exact' in aspect_ratio:
+#                     num_col, num_row = pmu.optimal_ratio(num_plots)
+#                     if 'portrait' in aspect_ratio:
+#                         num_row, num_col = num_col, num_row
+#                 if aspect_ratio == 'portrait':
+#                     num_row = np.ceil(np.sqrt(num_plots))
+#             else:  # plot_aspect == 'landscape'
+#                 num_row = int(np.floor(np.sqrt(num_plots)))
+#
+#         if num_row is None and num_col > 0:
+#             num_row = int(np.ceil(num_plots / num_col))
+#         if num_row > 0 and num_col is None:
+#             num_col = int(np.ceil(num_plots / num_row))
+#
+#         if width_height is None:
+#             width, height = 1, 1
+#         else:
+#             width, height = width_height
+#         rows = [height,] * num_row
+#         cols = [width,] * num_col
+#     else:
+#         rows = [pad_labels[0]] + list(rows)
+#         cols = [pad_labels[1]] + list(cols)
+#         num_row = len(rows)
+#         num_col = len(cols)
+#     assert (num_row * num_col >= num_plots)
+#
+#     pads = pmu.auto_repeat(pads, 2, False, True)
+#     figsize_factors = pmu.auto_repeat(figsize_factors, 2, False, True)
+#
+#     # fix row/col labels
+#     row_labels = pmu.auto_repeat(None, num_row) \
+#         if row_labels is None else [None] + list(row_labels)
+#     col_labels = pmu.auto_repeat(None, num_col) \
+#         if col_labels is None else [None] + list(row_labels)
+#     assert (num_row + 1 == len(row_labels))
+#     assert (num_col + 1 == len(col_labels))
+#
+#     # generate plot
+#     figsizes = [
+#         factor * sum(items)
+#         for factor, items, pad in zip(figsize_factors, (rows, cols), pads)]
+#     fig = plt.figure(figsize=figsizes[::-1])
+#
+#     gs = mpl.gridspec.GridSpec(
+#         num_row, num_col + 1, width_ratios=cols, height_ratios=rows)
+#
+#     axs = [plt.subplot(gs[n]) for n in range((num_row) * (num_col))]
+#     axs = np.array(axs).reshape((num_row, num_col))
+#
+#     def is_label(row, col, shape, pos):
+#         if pos in ('nw', 'tl', 'northwest', 'topleft'):
+#             return row == 0 or col == 0
+#         elif pos in ('ne', 'tr', 'northeast', 'topright'):
+#             return row == 0 or col == shape[1]
+#         elif pos in ('se', 'br', 'southwest', 'bottomleft'):
+#             return row == shape[0] or col == 0
+#         elif pos in ('se', 'br', 'northeast', 'bottomright'):
+#             return row == shape[0] or col == shape[1]
+#
+#
+#     for i, row_label in enumerate(row_labels):
+#         for j, col_label in enumerate(col_labels):
+#             if not swap_filling:
+#                 n_plot = i * num_col + j
+#             else:
+#                 n_plot = j * num_row + i
+#
+#             plot_func, plot_args, plot_kwargs = plots[n_plot]
+#             plot_kwargs['ax'] = axs[i, j]
+#             if subplot_title_fmt:
+#                 t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
+#                 number = n_plot + 1
+#                 if roman_numbers:  # todo: switch to numerals?
+#                     roman_lowercase = roman_numbers.toRoman(number)
+#                     roman_uppercase = roman_numbers.toRoman(number)
+#                     roman = roman_uppercase
+#                 letter_lowercase = string.ascii_lowercase[n_plot]
+#                 letter_uppercase = string.ascii_uppercase[n_plot]
+#                 letter = letter_lowercase
+#                 plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
+#             plot_func(*tuple(plot_args), **(plot_kwargs))
+#
+#             if col_label and is_label(i, j, axs.shape, label_pos):
+#                 fig.text(
+#                     pmu.scale(
+#                         (j * 2 + 1) / (num_col * 2),
+#                         out_interval=(label_pads[0], 1.0)),
+#                     1.0 - label_pads[1] / 2,
+#                     col_label, rotation=0,
+#                     fontweight='bold', fontsize='large',
+#                     horizontalalignment='center', verticalalignment='top')
+#
+#         if row_label:
+#             fig.text(
+#                 label_pads[0] / 2,
+#                 pmu.scale(
+#                     1.0 - (i * 2 + 1) / (num_row * 2),
+#                     out_interval=(0, 1.0 - label_pads[1])),
+#                 row_label, rotation=90,
+#                 fontweight='bold', fontsize='large',
+#                 horizontalalignment='left', verticalalignment='center')
+#
+#     # include additional text
+#     if more_texts is not None:
+#         for text_kws in more_texts:
+#             fig.text(**dict(text_kws))
+#
+#     # save figure to file
+#     if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+#         fig.tight_layout(
+#             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
+#             pad=1.0, h_pad=pads[0], w_pad=pads[1])
+#         if save_kws is None:
+#             save_kws = {}
+#         fig.savefig(save_filepath, **dict(save_kws))
+#         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+#         plt.close(fig)
+#     return fig
