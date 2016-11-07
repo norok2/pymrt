@@ -864,7 +864,7 @@ def plot_correlation(
             scale='log10', title=title,
             labels=(x_lbl, y_lbl), bisector=':k',
             cbar_kws={},
-            save_filepath=save_filepath, ax=None)
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================
@@ -924,8 +924,8 @@ def plot_histogram(
         pmio.plot_histogram1d(
             img_filepath, mask_filepath, hist_interval=(0.0, 1.0), bins=1024,
             array_interval=val_interval, title=plot_title,
-            labels=(val_units, None), save_filepath=save_filepath,
-            ax=None)
+            labels=(val_units, None),
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================
@@ -987,7 +987,7 @@ def plot_sample(
             img_filepath, axis, index, title=plot_title,
             array_interval=val_interval,
             cbar_kws={},
-            save_filepath=save_filepath, ax=None)
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================

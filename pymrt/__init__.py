@@ -76,7 +76,7 @@ def msg(
     Display a feedback message to the standard output.
 
     Args:
-        text (str): Message to display.
+        text (str|Any): Message to display or object with `__repr__`.
         verb_lvl (int): Current level of verbosity.
         verb_threshold (int): Threshold level of verbosity.
         fmt (str): Format of the message (if `blessed` supported).
@@ -107,6 +107,8 @@ def msg(
             import blessed
         except ImportError:
             blessed = None
+
+        text = str(text)
 
         if blessed:
             t = blessed.Terminal()

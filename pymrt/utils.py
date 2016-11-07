@@ -1610,49 +1610,57 @@ def string_between(
 def check_redo(
         in_filepaths,
         out_filepaths,
-        force=False):
+        force=False,
+        make_out_dirpaths=False,
+        no_empty_input=False):
     """
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
-        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
+        in_filepaths (iterable[str]|None): Input filepaths for computation.
+        out_filepaths (iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
+        make_out_dirpaths (bool): Create output dirpaths if not existing.
+        no_empty_input (bool): Check if the input filepath list is empty.
 
     Returns:
         force (bool): True if the computation is to be re-done.
 
     Raises:
         IndexError: If the input filepath list is empty.
+            Only if `no_empty_input` is True.
         IOError: If any of the input files do not exist.
     """
-    # todo: include output_dir autocreation
-    # check if input is not empty
-    if not in_filepaths:
-        raise IndexError('List of input files is empty.')
-
-    # check if input exists
-    for in_filepath in in_filepaths:
-        if not os.path.exists(in_filepath):
-            raise IOError('Input file does not exists.')
-
     # check if output exists
     if not force:
         for out_filepath in out_filepaths:
-            if out_filepath:
-                if not os.path.exists(out_filepath):
-                    force = True
-                    break
+            if out_filepath and not os.path.exists(out_filepath):
+                force = True
+                break
+
+    # create output directories
+    if force and make_out_dirpaths:
+        for out_filepath in out_filepaths:
+            out_dirpath = os.path.dirname(out_filepath)
+            if not os.path.isdir(out_dirpath):
+                os.makedirs(out_dirpath)
 
     # check if input is older than output
     if not force:
-        for in_filepath, out_filepath in \
-                itertools.product(in_filepaths, out_filepaths):
-            if in_filepath and out_filepath:
-                if os.path.getmtime(in_filepath) \
-                        > os.path.getmtime(out_filepath):
-                    force = True
-                    break
+        # check if input is not empty
+        if in_filepaths:
+            # check if input exists
+            for in_filepath in in_filepaths:
+                if not os.path.exists(in_filepath):
+                    raise IOError('Input file does not exists.')
+
+            for in_filepath, out_filepath in \
+                    itertools.product(in_filepaths, out_filepaths):
+                if os.path.getmtime(in_filepath) > os.path.getmtime(out_filepath):
+                        force = True
+                        break
+        elif no_empty_input:
+            raise IOError('Input file list is empty.')
     return force
 
 

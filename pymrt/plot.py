@@ -340,7 +340,7 @@ def sample2d(
     if more_texts is not None:
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -497,7 +497,7 @@ def sample2d_anim(
                         cbar.set_label(cbar_txt)
         plots.append([plot])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kwargs = {'fps': n_frames / step / duration}
         if save_kws is None:
@@ -610,7 +610,7 @@ def histogram1d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -781,7 +781,7 @@ def histogram1d_list(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1015,7 +1015,7 @@ def histogram2d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1185,7 +1185,7 @@ def subplots(
             fig.text(**dict(text_kws))
 
     # save figure to file
-    if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout(
             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
             pad=1.0, h_pad=pads[0], w_pad=pads[1])
@@ -1364,7 +1364,7 @@ def subplots(
 #             fig.text(**dict(text_kws))
 #
 #     # save figure to file
-#     if save_filepath and pmu.check_redo([__file__], [save_filepath], force):
+#     if save_filepath and pmu.check_redo(None, [save_filepath], force):
 #         fig.tight_layout(
 #             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
 #             pad=1.0, h_pad=pads[0], w_pad=pads[1])
