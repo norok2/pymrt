@@ -203,6 +203,46 @@ def quick_3d(array):
 
 
 # ======================================================================
+def simple(
+        x_datas, y_datas,
+        title=None,
+        labels=(None, None),
+        styles=None,
+        more_texts=None,
+        save_filepath=None,
+        save_kws=None,
+        ax=None):
+    # plot figure
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+    for x_data, y_data in zip(x_datas, y_datas):
+        plot = ax.plot(x_data, y_data)
+    # setup title and labels
+    if title:
+        ax.set_title(title.format_map(locals()))
+    if labels[0]:
+        ax.set_xlabel(labels[0].format_map(locals()))
+    if labels[1]:
+        ax.set_ylabel(labels[1].format_map(locals()))
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+    # save figure to file
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+    return (x_datas, y_datas), fig
+
+
+# ======================================================================
 def sample2d(
         arr,
         axis=None,
@@ -520,7 +560,7 @@ def histogram1d(
         scale='linear',
         title='Histogram',
         labels=('Value', 'Value Frequency'),
-        style='-k',
+        style=(('linestyle', 'solid'), ('color', 'black')),
         more_texts=None,
         ax=plt.gca(),
         save_filepath=None,
@@ -597,7 +637,7 @@ def histogram1d(
         ax = fig.gca()
     else:
         fig = plt.gcf()
-    plot = ax.plot(pmu.midval(bin_edges), hist, style)
+    plot = ax.plot(pmu.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format_map(locals()))
