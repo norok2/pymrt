@@ -99,9 +99,9 @@ def superlorentz(x):
 
 # ======================================================================
 # todo: check that the sampling rate is appropriate: 1024 is usually enough
-# _SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 1024)
-# _SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-# pmu.elapsed('Superlorentz Approx.')
+_SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 1024)
+_SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
+pmu.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -986,7 +986,7 @@ class PulseExc(object):
         """
         # todo: add something to memorize shape
         # so that setting flip angle to 0 does not munge the shape
-        self.shape = 'custom'(object)
+        self.shape = 'custom'
         self.duration = duration
         self.w_c = w_c if w_c is not None else 0.0
         self.w1_arr = w1_arr if w1_arr is not None else np.array((1.0,))

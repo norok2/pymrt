@@ -1,9 +1,32 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+PyMRT: quick tests for matrix algebra
+"""
 
-# todo: fix me
+import itertools
+import datetime
+
+import numpy as np
+import sympy as sym
+import matplotlib as mpl
+import seaborn as sns
+
+import matplotlib.pyplot as plt
+
+import pymrt.utils as pmu
+
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import msg, dbg
+from pymrt import elapsed, print_elapsed
+
+from pymrt.sequences.matrix_algebra import \
+    dynamics_operator, SpinModel, PulseList, PulseExc, PulseTrain, Delay, \
+    Spoiler, MtFlash, B0, GAMMA, GAMMA_BAR
+
 
 # ======================================================================
-def test_dynamics_operator_symbolic():
+def check_dynamics_operator_symbolic():
     """
     Notes: import pi, sin and cos from sympy
 
@@ -64,14 +87,14 @@ def test_dynamics_operator_symbolic():
 
 
 # ======================================================================
-def test_dynamics_operator():
+def check_dynamics_operator():
     """
     Notes: import pi, sin and cos from numpy
 
     Returns:
 
     """
-    w_c = GAMMA * B0
+    w_c = GAMMA['1H'] * B0
     w1 = 1.0
 
     # 2-pool model
@@ -122,11 +145,11 @@ def test_dynamics_operator():
 
 
 # ======================================================================
-def test_mt_sequence():
+def check_mt_sequence():
     """
     Test for the MT sequence.
     """
-    w_c = GAMMA * B0
+    w_c = GAMMA['1H'] * B0
 
     spin_model = SpinModel(
         s0=100,
@@ -159,11 +182,11 @@ def test_mt_sequence():
 
 
 # ======================================================================
-def test_approx_propagator(
+def check_approx_propagator(
         spin_model=SpinModel(
             s0=100,
             mc=(0.8681, 0.1319),
-            w0=((GAMMA * B0,) * 2),
+            w0=((GAMMA['1H'] * B0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
@@ -176,7 +199,7 @@ def test_approx_propagator(
         spin_model (SpinModel):
         flip_angles (float):
     """
-    w_c = GAMMA * B0
+    w_c = GAMMA['1H'] * B0
 
     modes = ['exact']
     modes.extend(['linear', 'reduced'])
@@ -223,7 +246,8 @@ def test_approx_propagator(
                     mode, kwargs)
                 begin_time = datetime.datetime.now()
                 p_op = pulse.propagator(spin_model)
-                elapsed = datetime.timedelta(0, time.time() - begin_time)
+                elapsed = datetime.timedelta(
+                    datetime.datetime.now() - begin_time)
                 rel_error = np.sum(np.abs(exact_p_ops[shape] - p_op)) / \
                             np.sum(np.abs(exact_p_ops[shape]))
                 print('{:>8s}, {:>8s}, {:>48s},\t{:.3e}, {}'.format(
@@ -231,17 +255,17 @@ def test_approx_propagator(
 
 
 # ======================================================================
-def test_z_spectrum(
+def check_z_spectrum(
         spin_model=SpinModel(
-            s0=100,
+            s0=1e4,
             mc=(0.8681, 0.1319),
-            w0=((GAMMA * B0,) * 2),
+            w0=((GAMMA['1H'] * B0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        freqs=np.round(pmu.sgnlogspace(50, 50000, 16)),
-        amplitudes=np.round(pmu.sgnlogspace(50, 5000, 16)),
+        freqs=np.round(pmu.sgnlogspace(50, 50000, 64)),
+        amplitudes=np.round(pmu.sgnlogspace(50, 5000, 64)),
         plot_data=True,
         save_file=None):
     """
@@ -284,11 +308,15 @@ def test_z_spectrum(
 
     # plot results
     if plot_data:
+        sns.set_style('whitegrid')
         X, Y = np.meshgrid(amplitudes, np.log10(freqs))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
+        ax.set_ylabel('Frequency offset / Hz (log10 scale)')
+        ax.set_zlabel('Signal Intensity / arb.units')
         ax.plot_surface(
-            X, Y, data, cmap=plt.cm.hot,
+            X, Y, data * 1e4, cmap=mpl.cm.plasma,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
     if save_file:
         np.savez(save_file, freqs, amplitudes, data)
@@ -296,7 +324,7 @@ def test_z_spectrum(
 
 
 # ======================================================================
-def test_fit_spin_model(
+def check_fit_spin_model(
         snr_level=20,
         plot_data=True):
     """
@@ -309,7 +337,7 @@ def test_fit_spin_model(
     Returns:
         None
     """
-    w_c = GAMMA * B0
+    w_c = GAMMA['1H'] * B0
 
     # mt_flash = MtFlash(
     #     PulseList([
@@ -417,24 +445,24 @@ def test_fit_spin_model(
 # ======================================================================
 if __name__ == '__main__':
     msg(__doc__.strip())
-    # test_dynamics_operator_symbolic()
-    # pmu.elapsed'test_symbolic')
-    # test_dynamics_operator()
-    # pmu.elapsed'test_dynamics_operator')
-    # test_mt_sequence()
-    # pmu.elapsed'test_mt_sequence')
-    # test_approx_propagator()
-    # pmu.elapsed'test_approx_propagator')
-    # test_z_spectrum(
-    #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA * B0,) * 4,
+    # check_dynamics_operator_symbolic()
+    # pmu.elapsed'check_symbolic')
+    # check_dynamics_operator()
+    # pmu.elapsed'check_dynamics_operator')
+    # check_mt_sequence()
+    # pmu.elapsed'check_mt_sequence')
+    # check_approx_propagator()
+    # pmu.elapsed'check_approx_propagator')
+    # check_z_spectrum(
+    #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA['1H'] * B0,) * 4,
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
     #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
-    test_z_spectrum()
-    elapsed('test_z_spectrum')
-    # test_fit_spin_model()
-    # pmu.elapsed('test_fit_spin_model')
+    check_z_spectrum()
+    elapsed('check_z_spectrum')
+    # check_fit_spin_model()
+    # pmu.elapsed('check_fit_spin_model')
 
     print_elapsed()
-    # profile.run('test_z_spectrum()', sort=1)
+    # profile.run('check_z_spectrum()', sort=1)
     plt.show()

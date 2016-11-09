@@ -208,18 +208,26 @@ def simple(
         title=None,
         labels=(None, None),
         styles=None,
+        legends=None,
+        legend_kws=None,
         more_texts=None,
+        ax=plt.gca(),
         save_filepath=None,
         save_kws=None,
-        ax=None):
+        force=False,
+        verbose=D_VERB_LVL):
     # plot figure
     if ax is None:
         fig = plt.figure()
         ax = fig.gca()
     else:
         fig = plt.gcf()
-    for x_data, y_data in zip(x_datas, y_datas):
-        plot = ax.plot(x_data, y_data)
+    if isinstance(x_datas, np.ndarray):
+        x_datas = pmu.auto_repeat(x_datas, len(y_datas), True, True)
+    if legends is None:
+        legends = pmu.auto_repeat(None, len(y_datas), check=True)
+    for x_data, y_data, legend in zip(x_datas, y_datas, legends):
+        plot = ax.plot(x_data, y_data, label=legend)
     # setup title and labels
     if title:
         ax.set_title(title.format_map(locals()))
@@ -227,6 +235,8 @@ def simple(
         ax.set_xlabel(labels[0].format_map(locals()))
     if labels[1]:
         ax.set_ylabel(labels[1].format_map(locals()))
+    if any([legend for legend in legends]):
+        ax.legend(**(legend_kws if legend_kws is not None else {}))
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
@@ -1166,6 +1176,12 @@ def subplots(
     figsizes = [
         factor * sum(items)
         for factor, items, pad in zip(figsize_factors, (rows, cols), pads)]
+
+    # fig, axs = plt.subplots(
+    #     nrows=num_row, ncols=num_col,
+    #     gridspec_kw={'width_ratios': cols, 'height_ratios': rows},
+    #     figsize=figsizes[::-1])
+
     fig = plt.figure(figsize=figsizes[::-1])
     label_pads = [
         label_pad / figsize
@@ -1177,6 +1193,7 @@ def subplots(
     axs = [plt.subplot(gs[n]) for n in range(num_row * num_col)]
     axs = np.array(axs).reshape((num_row, num_col))
 
+
     for i, row_label in enumerate(row_labels):
         for j, col_label in enumerate(col_labels):
             if not swap_filling:
@@ -1184,20 +1201,23 @@ def subplots(
             else:
                 n_plot = j * num_row + i
 
-            plot_func, plot_args, plot_kwargs = plots[n_plot]
-            plot_kwargs['ax'] = axs[i, j]
-            if subplot_title_fmt:
-                t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
-                number = n_plot + 1
-                if roman_numbers:  # todo: switch to numerals?
-                    roman_lowercase = roman_numbers.toRoman(number)
-                    roman_uppercase = roman_numbers.toRoman(number)
-                    roman = roman_uppercase
-                letter_lowercase = string.ascii_lowercase[n_plot]
-                letter_uppercase = string.ascii_uppercase[n_plot]
-                letter = letter_lowercase
-                plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
-            plot_func(*tuple(plot_args), **(plot_kwargs))
+            if n_plot < num_plots:
+                plot_func, plot_args, plot_kwargs = plots[n_plot]
+                plot_kwargs['ax'] = axs[i, j]
+                if subplot_title_fmt:
+                    t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
+                    number = n_plot + 1
+                    if roman_numbers:  # todo: switch to numerals?
+                        roman_lowercase = roman_numbers.toRoman(number)
+                        roman_uppercase = roman_numbers.toRoman(number)
+                        roman = roman_uppercase
+                    letter_lowercase = \
+                        string.ascii_lowercase[n_plot % len(string.ascii_lowercase)]
+                    letter_uppercase = \
+                        string.ascii_uppercase[n_plot % len(string.ascii_uppercase)]
+                    letter = letter_lowercase
+                    plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
+                plot_func(*tuple(plot_args), **(plot_kwargs))
 
             if col_label:
                 fig.text(
