@@ -8,10 +8,8 @@ The module is NumPy-aware.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -50,7 +48,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as pmb
+# import pymrt.base as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.geometry as pmg

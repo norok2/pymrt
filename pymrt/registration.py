@@ -51,7 +51,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 # import pymrt.input_output as pmio
 import pymrt.geometry as pmg
 # from pymrt import INFO
@@ -250,7 +250,7 @@ def minimize_discrete(
                 interp_order=interp_order))
     if cost_func is None:
         cost_func = \
-            pmb.set_keyword_parameters(_min_func_affine, {})['cost_func']
+            pmu.set_keyword_parameters(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
@@ -343,7 +343,7 @@ def affine_registration(
             method = 'BFGS'
         if cost_func is None:
             kwargs__min_func_affine = \
-                pmb.set_keyword_parameters(_min_func_affine, {})
+                pmu.set_keyword_parameters(_min_func_affine, {})
             cost_func = kwargs__min_func_affine['cost_func']
         args__min_func_affine = (
             moving.ravel(), fixed.ravel(), moving.shape,
@@ -395,8 +395,8 @@ def external_registration(
     fix_nii.to_filename(fix_filepath)
     # generate
     if tool.startswith('FSL'):
-        cmd = EXT_CMD['fsl/4.1/flirt']
-        pmb.execute(cmd)
+        cmd = EXT_CMD['fsl/5.0/flirt']
+        pmu.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension
     return affine
@@ -470,4 +470,4 @@ if __name__ == '__main__':
 
     end_time = datetime.datetime.now()
     print('ExecTime: {}'.format(end_time - begin_time))
-    pmb.print_elapsed()
+    pmu.print_elapsed()

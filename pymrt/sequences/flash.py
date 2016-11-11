@@ -9,10 +9,8 @@ other quantities related to the FLASH pu
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -54,11 +52,11 @@ import scipy.constants  # SciPy: Constants
 
 
 # :: Local Imports
-# import pymrt.modules.base as pmb
+# import pymrt.modules.base as pmu
 # import pymrt.modules.plot as pmp
 # from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -171,12 +169,18 @@ def ernst_calc(
     Calculate optimal T1, TR or FA (given the other two) for FLASH sequence.
 
     Args:
-        t1 (float|None): Longitudinal relaxation time T1 in ms
-        tr (float|None): Repetition time TE in ms
-        fa (float|None): flip angle FA in deg
+        t1 (float|None): Longitudinal relaxation time T1 in ms.
+        tr (float|None): Repetition time TE in ms.
+        fa (float|None): flip angle FA in deg.
 
     Returns:
-        val (float): Either T1, TR or FA fulfilling Ernst condition
+        val (float): The value of T1, TR or FA fulfilling Ernst condition.
+            This correspond to the input argument left to None.
+            If the input is invalid, this is set to None.
+        name (str): The label of the result.
+            If the input is invalid, this is set to None.
+        units (str): The units of measurement for the result.
+            If the input is invalid, this is set to None.
 
     Examples:
         >>> ernst_calc(100.0, 30.0)

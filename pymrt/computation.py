@@ -54,7 +54,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.naming as pmn
 import pymrt.input_output as pmio
 
@@ -70,7 +70,7 @@ META_EXT = 'info'  # ID['info']
 
 D_OPTS = {
     # sources
-    'data_ext': pmb.EXT['niz'],
+    'data_ext': pmu.EXT['niz'],
     'meta_ext': META_EXT,
     'multi_acq': False,
     'use_meta': True,
@@ -317,7 +317,7 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    pmb.execute(str(' '.join(cmd)))
+    pmu.execute(str(' '.join(cmd)))
     # import temp output
     img_list, aff_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
@@ -356,8 +356,8 @@ def calc_afi(
     Fit monoexponential decay to images using the log-linear method.
     """
     y_arr = np.stack(images, -1).astype(float)
-    print(y_arr.shape)
-    s_arr = pmb.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
+
+    s_arr = pmu.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
     nominal_fa = params[fa_label]
@@ -365,7 +365,7 @@ def calc_afi(
     mask = s_arr[..., 0] != 0.0
     r = np.zeros_like(s_arr[..., 1])
     r[mask] = s_arr[..., 0][mask] / s_arr[..., 1][mask]
-    n = t_r[1] / t_r[0]
+    n = t_r[1] / t_r[0]  # usually: t_r[1] > t_r[0]
     fa = np.rad2deg(np.real(np.arccos((r * n - 1) / (n - r))))
 
     img_list = [fa / nominal_fa]
@@ -416,10 +416,19 @@ def fix_phase_interval(arr):
 
     Returns:
         array (np.ndarray): An array scaled to (-pi,pi).
+
+    Examples:
+        >>> fix_phase_interval(np.arange(8))
+        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
+                1.34639685,  2.24399475,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
+        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
     # correct phase value range (useful for DICOM-converted images)
     if np.ptp(arr) > 2.0 * np.pi:
-        arr = pmb.scale(arr, pmb.minmax(arr), (-np.pi, np.pi))
+        arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -638,7 +647,7 @@ def voxel_curve_fit(
             for y_i_arr in np.split(y_arr, support_size, 0)]
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         for i, (par_opt, par_cov) in \
-                enumerate(pool.imap(pmb.curve_fit, iter_param_list)):
+                enumerate(pool.imap(pmu.curve_fit, iter_param_list)):
             p_arr[i] = par_opt
 
     elif method == 'poly':
@@ -725,19 +734,19 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = pmb.merge_dicts(D_OPTS, opts)
+    opts = pmu.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = pmb.listdir(
+        data_filepath_list = pmu.listdir(
             data_dirpath, opts['data_ext'], pattern)
         for data_filepath in data_filepath_list:
             info = pmn.parse_filename(
-                pmb.change_ext(pmb.os.path.basename(data_filepath), '',
-                               pmb.EXT['niz']))
+                pmu.change_ext(pmu.os.path.basename(data_filepath), '',
+                               pmu.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
@@ -749,7 +758,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      pmb.add_extsep(opts['meta_ext']))
+                                      pmu.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -790,7 +799,7 @@ def sources_generic(
             for sources, params in zip(sources_list, params_list):
                 grouping = list(opts['groups']) * \
                            int((len(sources) / sum(opts['groups'])) + 1)
-                seps = pmb.accumulate(grouping) if grouping else []
+                seps = pmu.accumulate(grouping) if grouping else []
                 for i, source in enumerate(sources):
                     grouped_sources.append(source)
                     grouped_params.append(params)
@@ -803,7 +812,7 @@ def sources_generic(
 
         if verbose >= VERB_LVL['debug']:
             for sources, params in zip(sources_list, params_list):
-                print(pmb.tty_colorify('DEBUG', 'r'))
+                print(pmu.tty_colorify('DEBUG', 'r'))
                 print(sources, params)
     elif verbose >= VERB_LVL['medium']:
         print("WW: no data directory '{}'. Skipping.".format(data_dirpath))
@@ -855,7 +864,7 @@ def compute_generic(
     """
     # TODO: implement affine_func, affine_args, affine_kwargs?
     # get the num, name and seq from first source file
-    opts = pmb.merge_dicts(D_OPTS, opts)
+    opts = pmu.merge_dicts(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -871,7 +880,7 @@ def compute_generic(
         targets.append(os.path.join(out_dirpath, pmn.to_filename(info)))
 
     # perform the calculation
-    if pmb.check_redo(sources, targets, force):
+    if pmu.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -1006,9 +1015,9 @@ def compute(
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kwargs)
-            pmb.elapsed('Time: ')
+            pmu.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                pmb.print_elapsed(only_last=True)
+                pmu.print_elapsed(only_last=True)
     else:
         recursive = True
 
@@ -1031,4 +1040,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-pmb.elapsed('pymrt.computation')
+pmu.elapsed('pymrt.computation')

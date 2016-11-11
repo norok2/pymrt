@@ -28,10 +28,8 @@ Running this file directly will run some tests.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -48,7 +46,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.plot as pmp
 
 from pymrt import elapsed, print_elapsed
@@ -84,7 +82,7 @@ def pos_rel2abs(shape, rel_position=0.5):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
         (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    rel_position = pmb.auto_repeat(rel_position, len(shape), force=True)
+    rel_position = pmu.auto_repeat(rel_position, len(shape), force=True)
     return tuple((s - 1.0) * p for p, s in zip(rel_position, shape))
 
 
@@ -116,7 +114,7 @@ def pos_abs2rel(shape, abs_position=0):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0, 25, 50, 75, 100)))
         (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    abs_position = pmb.auto_repeat(abs_position, len(shape), force=True)
+    abs_position = pmu.auto_repeat(abs_position, len(shape), force=True)
     return tuple(p / (s - 1.0) for p, s in zip(abs_position, shape))
 
 
@@ -610,8 +608,8 @@ def cylinder(
                 [False, False, False, False]]], dtype=bool)
     """
     n_dim = 3
-    shape = pmb.auto_repeat(shape, n_dim)
-    position = pmb.auto_repeat(position, n_dim)
+    shape = pmu.auto_repeat(shape, n_dim)
+    position = pmu.auto_repeat(position, n_dim)
     # generate base
     base_shape = tuple(
         dim for i, dim in enumerate(shape) if axis % n_dim != i)
@@ -644,12 +642,12 @@ def nd_cuboid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = pmb.max_iter_len((shape, position, semisides))
+        n_dim = pmu.max_iter_len((shape, position, semisides))
     # check compatibility of given parameters
-    shape = pmb.auto_repeat(shape, n_dim, True)
-    position = pmb.auto_repeat(position, n_dim, True)
-    semisides = pmb.auto_repeat(semisides, n_dim, True)
-    xx = pmb.coord(shape, position, use_int=False)
+    shape = pmu.auto_repeat(shape, n_dim, True)
+    position = pmu.auto_repeat(position, n_dim, True)
+    semisides = pmu.auto_repeat(semisides, n_dim, True)
+    xx = pmu.coord(shape, position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
     for x_i, semiside in zip(xx, semisides):
@@ -681,13 +679,13 @@ def nd_superellipsoid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = pmb.max_iter_len((shape, position, semiaxes, indexes))
+        n_dim = pmu.max_iter_len((shape, position, semiaxes, indexes))
     # check compatibility of given parameters
-    shape = pmb.auto_repeat(shape, n_dim, True)
-    position = pmb.auto_repeat(position, n_dim, True)
-    semiaxes = pmb.auto_repeat(semiaxes, n_dim, True)
-    indexes = pmb.auto_repeat(indexes, n_dim, True)
-    xx = pmb.coord(shape, position, use_int=False)
+    shape = pmu.auto_repeat(shape, n_dim, True)
+    position = pmu.auto_repeat(position, n_dim, True)
+    semiaxes = pmu.auto_repeat(semiaxes, n_dim, True)
+    indexes = pmu.auto_repeat(indexes, n_dim, True)
+    xx = pmu.coord(shape, position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
     for x_i, semiaxis, index in zip(xx, semiaxes, indexes):
@@ -722,7 +720,7 @@ def nd_prism(
     if axis > n_dim:
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
-    x_0 = pmb.coord((extra_shape,), (position,), use_int=False)[0]
+    x_0 = pmu.coord((extra_shape,), (position,), use_int=False)[0]
     # create the extra mask (height)
     extra_mask = np.abs(x_0) <= (height / 2.0)
     # calculate mask shape
@@ -762,7 +760,7 @@ def frame(
     See Also:
         reframe
     """
-    borders = pmb.auto_repeat(borders, arr.ndim)
+    borders = pmu.auto_repeat(borders, arr.ndim)
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
     if use_longest:
@@ -838,7 +836,7 @@ def zoom_prepare(
         zoom (tuple[float]): The zoom factors for each directions.
         shape (int|tuple[int]): The shape of the array to operate with.
     """
-    zoom = list(pmb.auto_repeat(zoom, len(shape)))
+    zoom = list(pmu.auto_repeat(zoom, len(shape)))
     if extra_dim:
         shape = list(shape) + [1.0] * (len(zoom) - len(shape))
     else:
@@ -902,7 +900,7 @@ def apply_to_complex(
     """
     real = func(np.real(arr), *args, **kwargs)
     imag = func(np.imag(arr), *args, **kwargs)
-    arr = pmb.cartesian2complex(real, imag)
+    arr = pmu.cartesian2complex(real, imag)
     return arr
 
 
@@ -1393,7 +1391,7 @@ def realign(
     """
     Shift and rotate the array for optimal grid alignment.
 
-    Principal axis of rotation will be parallel to cartesian axes.
+    The principal axis of rotation will be parallel to the cartesian axes.
     Weighted center will be at a given point (e.g. the middle of the support).
 
     Args:

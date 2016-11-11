@@ -32,10 +32,9 @@ timing parameters are positive.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals  # DEBUG: sympy complains about it
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
+
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -51,7 +50,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.optimize
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.sequences.mp2rage as mp2rage
 
 from pymrt import INFO
@@ -145,8 +144,8 @@ def ui_plot(
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
         if use_dicom_INTERVAL:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
-                pmb.scale(
-                    ii, mp2rage.STD_INTERVAL, mp2rage.DICOM_INTERVAL)
+                pmu.scale(
+                    ii, mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
 
@@ -368,6 +367,7 @@ def handle_arg():
     return arg_parser
 
 
+# ======================================================================
 def main():
     # :: handle program parameters
     arg_parser = handle_arg()
@@ -385,7 +385,6 @@ def main():
 
     elapsed(os.path.basename(__file__))
     print_elapsed()
-
 
 
 # ======================================================================

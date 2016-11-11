@@ -6,7 +6,7 @@ pymrt.recipes.chi: generic basic utilities.
 
 import numpy as np
 
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.geometry as pmg
 
 
@@ -55,7 +55,7 @@ def dipole_kernel(
     phi = np.deg2rad(phi)
     # generate the dipole kernel
     assert (len(shape) == 3)
-    kk_x, kk_y, kk_z = pmb.coord(shape, origin)
+    kk_x, kk_y, kk_z = pmu.coord(shape, origin)
     dk_arr = (1.0 / 3.0 - (
         kk_z * np.cos(theta) * np.cos(phi) - kk_y * np.sin(theta) * np.cos(phi)
         + kk_x * np.sin(phi)) ** 2 / (kk_x ** 2 + kk_y ** 2 + kk_z ** 2))
@@ -166,8 +166,8 @@ def qsm_tkd(
     if threshold:
         mask = np.abs(dk) < threshold
         chi_k_arr[mask] = 0.0
-    chi_k_arr = pmb.subst(chi_k_arr)
-    return np.real(pmb.idft(chi_k_arr))
+    chi_k_arr = pmu.subst(chi_k_arr)
+    return np.real(pmu.idftn(chi_k_arr))
 
 
 '''
@@ -183,5 +183,5 @@ def qsm_tkd(
           k_x * np.sin(phi)) ** 2
     dd = 1 / (k_2 - cc)
     dd = subst(dd)
-    chi_arr = np.abs(idft(3 * k_2 * dd * dft(phs_arr)))
+    chi_arr = np.abs(idftn(3 * k_2 * dd * dftn(phs_arr)))
 '''

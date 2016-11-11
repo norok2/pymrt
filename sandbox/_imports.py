@@ -4,10 +4,8 @@
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -43,6 +41,8 @@ import getpass  # Portable password input
 import socket  # Low-level networking interface
 import smtplib  # SMTP protocol client
 import tempfile  # Generate temporary files and directories
+import re  # Regular expression operations
+import glob  # Unix style pathname pattern expansion
 
 # Configuration file parser
 try:
@@ -77,7 +77,7 @@ import scipy.misc  # SciPy: Miscellaneous routines
 # import sympy.mpmath  # SymPy: Function approximation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.naming as pmn
 import pymrt.geometry as pmg
 import pymrt.plot as pmp

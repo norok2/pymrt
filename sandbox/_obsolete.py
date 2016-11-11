@@ -6,10 +6,8 @@ PyMRT: code that is now deprecated but can still be useful for legacy scripts.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -25,7 +23,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.signal  # SciPy: Signal Processing
 
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 
 # ======================================================================
@@ -148,67 +146,55 @@ def ndsplit(array, axis=-1):
     return arrays
 
 
-def guess_decimals(
-        val,
-        n_max=16,
-        base=10,
-        fp=16):
+# ======================================================================
+def slice_array(
+        arr,
+        axis=0,
+        index=None):
     """
-    Guess the number of decimals in a given float number.
+    Slice a (N-1)-dim sub-array from an N-dim array
 
     Args:
-        val ():
-        n_max (int): Maximum number of guessed decimals.
-        base (int): The base used for the number representation.
-        fp (int): The floating point maximum precision.
-            A number with precision is approximated by the underlying platform.
-            The default value corresponds to the limit of the IEEE-754 floating
-            point arithmetic, i.e. 53 bits of precision: log10(2 ** 53) = 16
-            approximately. This value should not be changed unless the
-            underlying platform follows a different floating point arithmetic.
+        arr (np.ndarray): The input N-dim array
+        axis (int): The slicing axis
+        index (int): The slicing index.
+            If None, mid-value is taken.
 
     Returns:
-        prec (int): the guessed number of decimals.
+        sliced (np.ndarray): The sliced (N-1)-dim sub-array
+
+    Raises:
+        ValueError: if index is out of bounds
 
     Examples:
-        >>> guess_decimals(10)
-        0
-        >>> guess_decimals(1)
-        0
-        >>> guess_decimals(0.1)
-        1
-        >>> guess_decimals(0.01)
-        2
-        >>> guess_decimals(0.000001)
-        6
-        >>> guess_decimals(-0.72)
-        2
-        >>> guess_decimals(0.9567)
-        4
-        >>> guess_decimals(0.12345678)
-        8
-        >>> guess_decimals(0.9999999999999)
-        13
-        >>> guess_decimals(0.1234567890123456)
-        16
-        >>> guess_decimals(0.9999999999999999)
-        16
-        >>> guess_decimals(0.1234567890123456, 6)
-        6
-        >>> guess_decimals(0.54235, 10)
-        5
-        >>> guess_decimals(0x654321 / 0x10000, 16, 16)
-        4
+        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
+        >>> slice_array(arr, 2, 1)
+        array([[ 1,  5,  9],
+               [13, 17, 21]])
+        >>> slice_array(arr, 1, 2)
+        array([[ 8,  9, 10, 11],
+               [20, 21, 22, 23]])
+        >>> slice_array(arr, 0, 0)
+        array([[ 0,  1,  2,  3],
+               [ 4,  5,  6,  7],
+               [ 8,  9, 10, 11]])
+        >>> slice_array(arr, 0, 1)
+        array([[12, 13, 14, 15],
+               [16, 17, 18, 19],
+               [20, 21, 22, 23]])
     """
-    offset = 2
-    prec = 0
-    tol = 10 ** -fp
-    x = (val - int(val)) * base
-    while base - abs(x) > tol and abs(x % tol) < tol < abs(x) and prec < n_max:
-        x = (x - int(x)) * base
-        tol = 10 ** -(fp - prec - offset)
-        prec += 1
-    return prec
+    # initialize slice index
+    slab = [slice(None)] * arr.ndim
+    # ensure index is meaningful
+    if index is None:
+        index = np.int(arr.shape[axis] / 2.0)
+    # check index
+    if (index >= arr.shape[axis]) or (index < 0):
+        raise ValueError('Invalid array index in the specified direction')
+    # determine slice index
+    slab[axis] = index
+    # slice the array
+    return arr[slab]
 
 
 # ======================================================================
@@ -380,7 +366,7 @@ def ssim_map(
             min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
     interval_size = np.ptp(arr_interval)
     ndim = arr1.ndim
-    arr_filter = pmb.gaussian_nd(filter_sizes, sigmas, 0.5, ndim, True)
+    arr_filter = pmu.gaussian_nd(filter_sizes, sigmas, 0.5, ndim, True)
     convolve = scipy.signal.fftconvolve
     mu1 = convolve(arr1, arr_filter, 'same')
     mu2 = convolve(arr2, arr_filter, 'same')
@@ -460,7 +446,7 @@ def calc_averages(
    out_phs_filepath = change_img_type(out_tmp_filepath, TYPE_ID['phs'])
    out_filepath_list = [out_tmp_filepath, out_mag_filepath, out_phs_filepath]
    # perform calculation
-  if pmb.check_redo(filepath_list, out_filepath_list, force) and sum_avg > 1:
+  if pmu.check_redo(filepath_list, out_filepath_list, force) and sum_avg > 1:
        # stack multiple images together
        # assume every other file is a phase image, starting with magnitude
        img_tuple_list = []
@@ -484,7 +470,7 @@ def calc_averages(
 #            os.path.join(
 #            tmp_dirpath,
 #            pmio.del_ext(os.path.basename(img_tuple[0])) +
-#            pmb.add_extsep(pmb.EXT['txt']))
+#            pmu.add_extsep(pmu.EXT['txt']))
 #            for img_tuple in img_tuple_list]
 #        iter_param_list = [
 #            (img_tuple[0], img_tuple_list[0][0], regmat)
@@ -532,7 +518,7 @@ def calc_averages(
                rel_power = np.abs(avg_power - np.sum(img_mag)) / avg_power
            if (not avg_power or rel_power < threshold) \
                    and shape == img_mag.shape:
-               img_list.append(pmb.polar2complex(img_mag, img_phs))
+               img_list.append(pmu.polar2complex(img_mag, img_phs))
                num += 1
                avg_power = (avg_power * (num - 1) + np.sum(img_mag)) / num
        out_mag_filepath = change_param_val(
@@ -549,39 +535,39 @@ def calc_averages(
            img = np.fft.ifftn(np.fft.ifftshift(ft_img * np.exp(1j * dephs)))
            img_list[idx] = img
 
-       img = pmb.ndstack(img_list, -1)
+       img = pmu.ndstack(img_list, -1)
        img = np.mean(img, -1)
        pmio.save(out_mag_filepath, np.abs(img), affine_nii)
 #        pmio.save(out_phs_filepath, np.angle(img), affine_nii)
 
 #        fixed = np.abs(img_list[0])
 #        for idx, img in enumerate(img_list):
-#            affine = pmb.affine_registration(np.abs(img), fixed, 'rigid')
-#            img_list[idx] = pmb.apply_affine(img_list[idx], affine)
+#            affine = pmu.affine_registration(np.abs(img), fixed, 'rigid')
+#            img_list[idx] = pmu.apply_affine(img_list[idx], affine)
 #        pmio.save(out_filepath, np.abs(img), affine_nii)
 #        print(img.shape, img.nbytes / 1024 / 1024)  # DEBUG
 #        # calculate the Fourier transform
 #        for img in img_list:
 #            fft_list.append(np.fft.fftshift(np.fft.fftn(img)))
 #        fixed = np.abs(img[:, :, :, 0])
-#        pmb.sample2d(fixed, -1)
+#        pmu.sample2d(fixed, -1)
 #        tmp = tmp * np.exp(1j*0.5)
 #        moving = sp.ndimage.shift(fixed, [1.0, 5.0, 0.0])
-#        pmb.sample2d(moving, -1)
+#        pmu.sample2d(moving, -1)
 
 #        print(linear, shift)
 #        moved = sp.ndimage.affine_transform(moving, linear, offset=-shift)
-#        pmb.sample2d(moved, -1)
+#        pmu.sample2d(moved, -1)
 #        pmio.save(out_filepath, moving, affine)
 #        pmio.save(mag_filepath, fixed, affine)
 #        pmio.save(phs_filepath, moved-fixed, affine)
 #        for idx in range(len(img_list)):
 #            tmp_img = img[:, :, :, idx]
 #            tmp_fft = fft[:, :, :, idx]
-#            pmb.sample2d(np.real(tmp_fft), -1)
-#            pmb.sample2d(np.imag(tmp_fft), -1)
-#            pmb.sample2d(np.abs(img[:, :, :, idx]), -1)
-#            pmb.sample2d(np.angle(img[:, :, :, idx]), -1)
+#            pmu.sample2d(np.real(tmp_fft), -1)
+#            pmu.sample2d(np.imag(tmp_fft), -1)
+#            pmu.sample2d(np.abs(img[:, :, :, idx]), -1)
+#            pmu.sample2d(np.angle(img[:, :, :, idx]), -1)
 
        # calculate output
        if verbose > VERB_LVL['none']:

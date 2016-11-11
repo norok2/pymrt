@@ -10,10 +10,8 @@ TODO:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -54,7 +52,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.geometry as pmg
 import pymrt.plot as pmp
 import pymrt.segmentation as pms
@@ -62,7 +60,7 @@ import pymrt.segmentation as pms
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Custom defined constants
@@ -102,22 +100,25 @@ def save(
         out_filepath,
         arr,
         aff=None,
-        hdr=None):
+        hdr=None,
+        img_type=nib.Nifti1Image):
     """
-    Save a NiBabel-supported image
+    Save a NiBabel-supported image.
 
     Args:
-        out_filepath (str): Output file path
-        arr (np.ndarray): Data to be stored
-        aff (np.ndarray): 3D affine transformation (4x4 matrix)
+        out_filepath (str): Output file path.
+        arr (np.ndarray): Data to be stored.
+        aff (np.ndarray|None): 3D affine transformation (4x4 matrix).
+            If None, use identity.
         hdr: Header of the image (refer to NiBabel).
+        img_type: The NiBabel class to use for saving.
 
     Returns:
-        None
+        None.
     """
     if aff is None:
         aff = np.eye(4)
-    obj = nib.Nifti1Image(arr, aff, hdr)
+    obj = img_type(arr, aff, hdr)
     obj.to_filename(out_filepath)
 
 
@@ -164,13 +165,13 @@ def filter_1_1(
     If the returned header is None, it is autocalculated.
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        func (callable): Filtering function
-            (img: ndarray, aff:ndarray, hdr:header)
-            func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        func (callable): Filtering function.
+            (img: ndarray, aff:ndarray, hdr:header).
+            func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr.
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         None
@@ -465,8 +466,8 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = pmb.change_ext(
-            os.path.basename(in_filepath), '', pmb.EXT['niz'])
+        out_basename = pmu.change_ext(
+            os.path.basename(in_filepath), '', pmu.EXT['niz'])
     out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
@@ -478,7 +479,7 @@ def split(
         i_str = str(i).zfill(len(str(len(img_list))))
         out_filepath = os.path.join(
             out_dirpath,
-            pmb.change_ext(out_basename + '-' + i_str, pmb.EXT['niz'], ''))
+            pmu.change_ext(out_basename + '-' + i_str, pmu.EXT['niz'], ''))
         save(out_filepath, image, obj.get_affine())
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -647,7 +648,7 @@ def common_sampling(
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
         for i, shape in enumerate(shape_list):
             shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = pmb.lcm if lossless else max
+        combiner = pmu.lcm if lossless else max
         new_shape = [
             combiner(*list(shape_arr[:, i]))
             for i in range(len(new_shape))]
@@ -763,9 +764,9 @@ def mask_threshold(
     """
 
     def _img_mask_threshold(array, *args, **kwargs):
-        return mrs.mask_threshold(array, *args, **kwargs).astype(float)
+        return pms.mask_threshold(array, *args, **kwargs).astype(float)
 
-    kw_params = pmb.set_keyword_parameters(mrs.mask_threshold, locals())
+    kw_params = pmu.set_keyword_parameters(pms.mask_threshold, locals())
     simple_filter_1_1(in_filepath, out_filepath, _img_mask_threshold,
                       **kw_params)
 
@@ -791,7 +792,7 @@ def find_objects(
     """
 
     def _find_objects(array, structure, max_label):
-        labels, masks = mrs.find_objects(array, structure, max_label, False)
+        labels, masks = pms.find_objects(array, structure, max_label, False)
         return labels
 
     simple_filter_1_1(
@@ -816,19 +817,10 @@ def calc_stats(
     Calculate statistical information (min, max, avg, std, sum).
 
     Args:
-        img_filepath (str): The image file path
-        mask_filepath (str): The mask file path
-        save_filepath (str): The path where results are saved. If None,
-        no output.
-        mask_nan (bool): Mask NaN values.
-        mask_inf (bool): Mask Inf values.
-        mask_vals (iterable): List of values to mask out
-        printing : bool or None (optional)
-            Force printing of results, even when result is saved to file.
-        title : str or None (optional)
-            Title to be printed before results.
-        compact : bool (optional)
-            Use a compact format string for displaying results.
+        img_filepath (str): The image file path.
+        mask_filepath (str): The mask file path.
+        *args (tuple): Positional arguments passed to the `calc_stats` function.
+        **kwargs (dict): Keyword arguments passed to the `calc_stats` function.
 
     Returns
         stats_dict (dict):
@@ -837,6 +829,9 @@ def calc_stats(
             - 'avg': average or mean
             - 'std': standard deviation
             - 'sum': summation
+
+    See Also:
+        pymrt.base.calc_stats
     """
     obj = nib.load(img_filepath)
     img = obj.get_data()
@@ -854,13 +849,13 @@ def calc_stats(
     #         else:
     #             title = os.path.basename(img_filepath)
     #     print(save_filepath)
-    #     stats_dict = pmb.calc_stats(
+    #     stats_dict = pmu.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
     # else:
-    #     stats_dict = pmb.calc_stats(
+    #     stats_dict = pmu.calc_stats(
     #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
     #         compact)
-    return pmb.calc_stats(img[mask], *args, **kwargs)
+    return pmu.calc_stats(img[mask], *args, **kwargs)
 
 
 # ======================================================================
@@ -896,8 +891,8 @@ def plot_sample2d(
 
     Args:
         in_filepath (str): The input file path
-        *args (tuple): Positional arguments passed to the plot function
-        **kwargs (dict): Keyword arguments passed to the plot function
+        *args (tuple): Positional arguments passed to the plot function.
+        **kwargs (dict): Keyword arguments passed to the plot function.
 
     Returns:
         The result of `pymrt.plot.sample2d`
@@ -911,8 +906,8 @@ def plot_sample2d(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    sample, plot = pmp.sample2d(img, *args, **kwargs)
-    return sample, plot
+    result = pmp.sample2d(img, *args, **kwargs)
+    return result
 
 
 # ======================================================================
@@ -1013,8 +1008,8 @@ def plot_histogram1d_list(
         obj = nib.load(in_filepath)
         img = obj.get_data()
         img_list.append(img[mask])
-    hist, bin_edges, plot = pmp.histogram1d_list(img_list, *args, **kwargs)
-    return hist, bin_edges, plot
+    result = pmp.histogram1d_list(img_list, *args, **kwargs)
+    return result
 
 
 # ======================================================================
@@ -1058,10 +1053,10 @@ def plot_histogram2d(
         mask2 = obj2_mask.get_data().astype(bool)
     else:
         mask2 = slice(None)
-    hist2d, x_edges, y_edges, plot = \
+    result = \
         pmp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
 
-    return hist2d, x_edges, y_edges, plot
+    return result
 
 
 # ======================================================================

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pymrt.base: generic basic utilities.
@@ -6,10 +6,8 @@ pymrt.base: generic basic utilities.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -33,9 +31,13 @@ import scipy as sp  # SciPy (signal and image processing library)
 
 # :: External Imports Submodules
 import scipy.optimize  # SciPy: Optimization Algorithms
+import scipy.stats  # SciPy: Statistical functions
+
+from numpy.fft import fftshift, ifftshift
+from scipy.fftpack import fftn, ifftn
 
 # :: Local Imports
-from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
@@ -100,7 +102,11 @@ def _is_special(stats_mode):
 
 
 # ======================================================================
-def auto_repeat(obj, n, force=False):
+def auto_repeat(
+        obj,
+        n,
+        force=False,
+        check=False):
     """
     Automatically repeat the specified object n times.
 
@@ -110,26 +116,46 @@ def auto_repeat(obj, n, force=False):
     Args:
         obj: The object to operate with.
         n (int): The length of the output object.
-        force (bool): Ensure that the object has length n.
+        force (bool): Force the repetition, even if the object is iterable.
+        check (bool): Ensure that the object has length n.
 
     Returns:
-        val (tuple): If obj is not iterable, returns obj repeated n times.
+        val (tuple): Returns obj repeated n times.
 
     Raises:
         AssertionError: If force is True and the object does not have length n.
+
+    Examples:
+        >>> auto_repeat(1, 3)
+        (1, 1, 1)
+        >>> auto_repeat([1], 3)
+        [1]
+        >>> auto_repeat([1, 3], 2)
+        [1, 3]
+        >>> auto_repeat([1, 3], 2, True)
+        ([1, 3], [1, 3])
+        >>> auto_repeat([1, 2, 3], 2, True, True)
+        ([1, 2, 3], [1, 2, 3])
+        >>> auto_repeat([1, 2, 3], 2, False, True)
+        Traceback (most recent call last):
+            ...
+        AssertionError
     """
     try:
         iter(obj)
     except TypeError:
-        obj = (obj,) * n
-    if force:
+        force = True
+    finally:
+        if force:
+            obj = (obj,) * n
+    if check:
         assert (len(obj) == n)
     return obj
 
 
 def max_iter_len(items):
     """
-    Determine the maximum length of a item within a collection of items.
+    Determine the maximum length of an item within a collection of items.
 
     Args:
         items (iterable): The collection of items to inspect.
@@ -149,12 +175,215 @@ def max_iter_len(items):
 
 
 # ======================================================================
-def gcd(*numbers):
+def is_prime(num):
+    """
+    Determine if num is a prime number.
+
+    A prime number is only divisible by 1 and itself.
+    0 and 1 are considered special cases; in this implementations they are
+    considered primes.
+
+    It is implemented by directly testing for possible factors.
+
+    Args:
+        num (int): The number to check for primality.
+            Only works for numbers larger than 1.
+
+    Returns:
+        is_divisible (bool): The result of the primality.
+
+    Examples:
+        >>> is_prime(100)
+        False
+        >>> is_prime(101)
+        True
+        >>> is_prime(-100)
+        False
+        >>> is_prime(-101)
+        True
+        >>> is_prime(2 ** 17)
+        False
+        >>> is_prime(17 * 19)
+        False
+        >>> is_prime(2 ** 17 - 1)
+        True
+        >>> is_prime(0)
+        True
+        >>> is_prime(1)
+        True
+    """
+    num = abs(num)
+    if num % 2 == 0 and num > 2:
+        return False
+    for i in range(3, int(num ** 0.5) + 1, 2):
+        if num % i == 0:
+            return False
+    return True
+
+    # # alternate implementation
+    # is_divisible = num == 1 or num != 2 and num % 2 == 0
+    # i = 3
+    # while not is_divisible and i * i < num:
+    #     is_divisible = num % i == 0
+    #     # only odd factors needs to be tested
+    #     i += 2
+    # return not is_divisible
+
+
+# ======================================================================
+def primes_in_range(
+        stop,
+        start=2):
+    """
+    Calculate the prime numbers in the range.
+
+    Args:
+        stop (int): The final value of the range.
+            This value is excluded.
+            If stop < start the values are switched.
+        start (int): The initial value of the range.
+            This value is included.
+            If start > stop the values are switched.
+
+    Yields:
+        num (int): The next prime number.
+
+    Examples:
+        >>> list(primes_in_range(50))
+        [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+        >>> list(primes_in_range(101, 150))
+        [101, 103, 107, 109, 113, 127, 131, 137, 139, 149]
+        >>> list(primes_in_range(1000, 1050))
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049]
+        >>> list(primes_in_range(1050, 1000))
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049]
+    """
+    if start > stop:
+        start, stop = stop, start
+    if start % 2 == 0:
+        if start == 2:
+            yield start
+        start += 1
+    for num in range(start, stop, 2):
+        if is_prime(num):
+            yield num
+
+
+# ======================================================================
+def get_primes(num=2):
+    """
+    Calculate prime numbers.
+
+    Args:
+        num (int): The initial value
+
+    Yields:
+        num (int): The next prime number.
+
+    Examples:
+        >>> n = 15
+        >>> primes = get_primes()
+        >>> [next(primes) for i in range(n)]  # first n prime numbers
+        [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+        >>> n = 10
+        >>> primes = get_primes(101)
+        >>> [next(primes) for i in range(n)]  # first n primes larger than 1000
+        [101, 103, 107, 109, 113, 127, 131, 137, 139, 149]
+        >>> n = 10
+        >>> primes = get_primes(1000)
+        >>> [next(primes) for i in range(n)]  # first n primes larger than 1000
+        [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061]
+    """
+    while num <= 2:
+        if is_prime(num):
+            yield num
+        num += 1
+    if num % 2 == 0:
+        num += 1
+    while True:
+        if is_prime(num):
+            yield num
+        num += 2
+
+
+# ======================================================================
+def factorize(num):
+    """
+    Find all factors of a number.
+
+    Args:
+        num (int): The number to factorize.
+
+    Returns:
+        numbers (list[int]): The factors of number.
+
+    Example:
+        >>> n = 100
+        >>> f = factorize(n)
+        >>> print(f)
+        [2, 2, 5, 5]
+        >>> n == np.prod(f)
+        True
+        >>> n= 1234567890
+        >>> f = factorize(n)
+        >>> print(f)
+        [2, 3, 3, 5, 3607, 3803]
+    """
+    factors = []
+    primes = get_primes()
+    prime = next(primes)
+    while prime * prime <= num:
+        while num % prime == 0:
+            num //= prime
+            factors.append(prime)
+        prime = next(primes)
+    if num > 1:
+        factors.append(num)
+    return factors
+
+
+# =====================================================================
+def optimal_ratio(
+        num,
+        condition=None):
+    """
+    Find the optimal ratio for arranging elements into a matrix.
+
+    Args:
+        num (int): The number of elements to arrange.
+        condition (callable): The optimality condition to use.
+            This is passed as the `key` argument of `sorted`.
+
+    Returns:
+        num1 (int): The first number (num1 > num2).
+        num2 (int): The second number (num2 < num1).
+
+    Examples:
+        >>> n1, n2 = 40, 48
+        >>> [optimal_ratio(i) for i in range(n1, n2)]
+        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
+        >>> [optimal_ratio(i, max) for i in range(n1, n2)]
+        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
+        >>> [optimal_ratio(i, min) for i in range(n1, n2)]
+        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2), (47, 1)]
+    """
+    ratios = []
+    if is_prime(num):
+        return num, 1
+    else:
+        for i in range(2, int(num ** 0.5) + 1):
+            if num % i == 0:
+                ratios.append((num // i, i))
+    return sorted(ratios, key=condition)[0]
+
+
+# =====================================================================
+def gcd(*nums):
     """
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *numbers (tuple[int]): The input numbers.
+        *nums (tuple[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
@@ -169,14 +398,14 @@ def gcd(*numbers):
         >>> gcd(12, 24, 18, 3)
         3
     """
-    gcd_val = numbers[0]
-    for num in numbers[1:]:
+    gcd_val = nums[0]
+    for num in nums[1:]:
         gcd_val = math.gcd(gcd_val, num)
     return gcd_val
 
 
 # ======================================================================
-def lcm(*numbers):
+def lcm(*nums):
     """
     Find the least common multiple (LCM) of a list of numbers.
 
@@ -194,8 +423,8 @@ def lcm(*numbers):
         >>> lcm(12, 23, 34, 45, 56)
         985320
     """
-    lcm_val = numbers[0]
-    for num in numbers[1:]:
+    lcm_val = nums[0]
+    for num in nums[1:]:
         lcm_val = lcm_val * num // fractions.gcd(lcm_val, num)
     return lcm_val
 
@@ -229,7 +458,9 @@ def merge_dicts(*dicts):
 
 
 # ======================================================================
-def accumulate(items, func=lambda x, y: x + y):
+def accumulate(
+        items,
+        func=lambda x, y: x + y):
     """
     Cumulatively apply the specified function to the elements of the list.
 
@@ -258,13 +489,15 @@ def accumulate(items, func=lambda x, y: x + y):
 
 
 # ======================================================================
-def multi_replace(text, replaces):
+def multi_replace(
+        text,
+        replaces):
     """
     Perform multiple replacements in a string.
 
     Args:
         text (str): The input string.
-        replace_list (tuple[str,str]): The listing of the replacements.
+        replaces (tuple[str,str]): The listing of the replacements.
             Format: ((<old>, <new>), ...).
 
     Returns:
@@ -281,47 +514,97 @@ def multi_replace(text, replaces):
     return functools.reduce(lambda s, r: s.replace(*r), replaces, text)
 
 
-# # ======================================================================
-# def cartesian(*arrays):
-#     """
-#     Generate a cartesian product of input arrays.
-#
-#     Args:
-#         *arrays (tuple[ndarray]): 1-D arrays to form the cartesian product of
-#
-#     Returns:
-#         out (ndarray): 2-D array of shape (M, len(arrays)) containing
-#             cartesian products formed of input arrays.
-#
-#     Examples:
-#         >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
-#         array([[1, 4, 6],
-#                [1, 4, 7],
-#                [1, 5, 6],
-#                [1, 5, 7],
-#                [2, 4, 6],
-#                [2, 4, 7],
-#                [2, 5, 6],
-#                [2, 5, 7],
-#                [3, 4, 6],
-#                [3, 4, 7],
-#                [3, 5, 6],
-#                [3, 5, 7]])
-#     """
-#
-#     arrays = [np.asarray(x) for x in arrays]
-#     dtype = arrays[0].dtype
-#
-#     n = np.prod([x.size for x in arrays])
-#     out = np.zeros([n, len(arrays)], dtype=dtype)
-#
-#     m = n / arrays[0].size
-#     out[:, 0] = np.repeat(arrays[0], m)
-#     if arrays[1:]:
-#         out[0:m, 1:] = cartesian(arrays[1:])
-#         for j in range(1, arrays[0].size):
-#             out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
-#     return out
+# ======================================================================
+def common_substr_2(
+        seq1,
+        seq2,
+        sorting=None):
+    """
+    Find the longest common consecutive subsequence(s).
+    This version works for two iterables.
+
+    This is known as the `longest common substring` problem, or LCS for short.
+
+    Args:
+        seq1 (iterable): The first input sequence.
+            Must be of the same type as seq2.
+        seq2 (iterable): The second input sequence.
+            Must be of the same type as seq1.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+
+    Returns:
+        commons (list[iterable]): The longest common subsequence(s).
+
+    Examples:
+        >>> common_substr_2('academy', 'abracadabra')
+        ['acad']
+        >>> common_substr_2('los angeles', 'lossless')
+        ['los', 'les']
+        >>> common_substr_2('los angeles', 'lossless', lambda x: x)
+        ['les', 'los']
+        >>> common_substr_2((1, 2, 3, 4, 5), (0, 1, 2))
+        [(1, 2)]
+    """
+    # note: [[0] * (len(seq2) + 1)] * (len(seq1) + 1) will not work!
+    counter = [[0 for j in range(len(seq2) + 1)] for i in range(len(seq1) + 1)]
+    longest = 0
+    commons = []
+    for i, item in enumerate(seq1):
+        for j, jtem in enumerate(seq2):
+            if item == jtem:
+                tmp = counter[i][j] + 1
+                counter[i + 1][j + 1] = tmp
+                if tmp > longest:
+                    commons = []
+                    longest = tmp
+                    commons.append(seq1[i - tmp + 1:i + 1])
+                elif tmp == longest:
+                    commons.append(seq1[i - tmp + 1:i + 1])
+    if sorting is None:
+        return commons
+    else:
+        return sorted(commons, key=sorting)
+
+
+# ======================================================================
+def common_substr(
+        seqs,
+        sorting=None):
+    """
+    Find the longest common consecutive subsequence(s).
+    This version works for an iterable of iterables.
+
+    This is known as the `longest common substring` problem, or LCS for short.
+
+    Args:
+        seqs (iterable[iterable]): The input sequences.
+            All the items must be of the same type.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+
+    Returns:
+        commons (list[iterable]): The longest common subsequence(s).
+
+    Examples:
+        >>> common_substr(['academy', 'abracadabra', 'cadet'])
+        ['cad']
+        >>> common_substr(['los angeles', 'lossless', 'les alos'])
+        ['los', 'les']
+        >>> common_substr(['los angeles', 'lossless', 'les alos', 'losles'])
+        ['los', 'les']
+        >>> common_substr(['los angeles', 'lossless', 'dolos'])
+        ['los']
+        >>> common_substr([(1, 2, 3, 4, 5), (1, 2, 3), (0, 1, 2)])
+        [(1, 2)]
+    """
+    commons = [seqs[0]]
+    for text in seqs[1:]:
+        tmps = []
+        for common in commons:
+            tmp = common_substr_2(common, text, sorting)
+            if len(tmps) == 0 or len(tmp[0]) == len(tmps[0]):
+                tmps.extend(common_substr_2(common, text, sorting))
+        commons = tmps
+    return commons
 
 
 # ======================================================================
@@ -377,7 +660,10 @@ def mdot(*arrs):
 
 
 # ======================================================================
-def ndot(arr, dim=-1, step=1):
+def ndot(
+        arr,
+        dim=-1,
+        step=1):
     """
     Cumulative application of `numpy.dot` operation over a given axis.
 
@@ -521,7 +807,7 @@ def which(args):
     except AttributeError:
         pass
 
-    cmd = args[0]
+    cmd = os.path.expanduser(args[0])
     dirpath, filename = os.path.split(cmd)
     if dirpath:
         is_valid = is_executable(cmd)
@@ -544,6 +830,7 @@ def execute(
         mode='call',
         timeout=None,
         encoding='utf-8',
+        log=None,
         dry=False,
         verbose=D_VERB_LVL):
     """
@@ -563,6 +850,8 @@ def execute(
                 Unfortunately, there is no easy
         timeout (float): Timeout of the process in seconds.
         encoding (str): The encoding to use.
+        log (str): The template filename to be used for logs.
+            If None, no logs are produced.
         dry (bool): Print rather than execute the command (dry run).
         verbose (int): Set level of verbosity.
 
@@ -594,31 +883,46 @@ def execute(
 
         # handle stdout nd stderr
         if mode == 'flush' and not in_pipe:
-            p_stdout, p_stderr = '', ''
+            p_stdout = ''
             while proc.poll() is None:
                 out_buff = proc.stdout.readline().decode(encoding)
                 p_stdout += out_buff
                 msg(out_buff, fmt='', end='')
                 sys.stdout.flush()
+            ret_code = proc.wait()
         elif mode == 'call':
-            try:
-                p_stdout, p_stderr = proc.communicate(
-                    in_pipe.encode(encoding) if in_pipe else None, timeout)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                p_stdout, p_stderr = proc.communicate()
+            # try:
+            p_stdout, p_stderr = proc.communicate(
+                in_pipe.encode(encoding) if in_pipe else None)
+            # except subprocess.TimeoutExpired:
+            #     proc.kill()
+            #     p_stdout, p_stderr = proc.communicate()
             p_stdout = p_stdout.decode(encoding)
             p_stderr = p_stderr.decode(encoding)
-            msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
-            msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+            if p_stdout:
+                msg(p_stdout, verbose, VERB_LVL['high'], fmt='')
+            if p_stderr:
+                msg(p_stderr, verbose, VERB_LVL['high'], fmt='')
+            ret_code = proc.wait()
         else:
+            proc.kill()
             msg('E: mode `{}` and `in_pipe` not supported.'.format(mode))
 
+        if log:
+            name = os.path.basename(args[0])
+            pid = proc.pid
+            for stream, source in ((p_stdout, 'out'), (p_stderr, 'err')):
+                if stream:
+                    log_filepath = log.format_map(locals())
+                    with open(log_filepath, 'wb') as fileobj:
+                        fileobj.write(stream.encode(encoding))
     return ret_code, p_stdout, p_stderr
 
 
 # ======================================================================
-def grouping(items, num_elems):
+def grouping(
+        items,
+        num_elems):
     """
     Generate a list of lists from a source list and grouping specifications
 
@@ -630,16 +934,18 @@ def grouping(items, num_elems):
         groups (list[list]): Grouped elements from the source list.
 
     Examples:
-        >>> grouping(range(10), 4)
+        >>> l = list(range(10))
+        >>> grouping(l, 4)
         [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]]
-        >>> grouping(range(10), (2, 3))
+        >>> grouping(l, (2, 3))
         [[0, 1], [2, 3, 4], [5, 6, 7, 8, 9]]
-        >>> grouping(range(10), (2, 4, 1))
+        >>> grouping(l, (2, 4, 1))
         [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
-        >>> grouping(range(10), (2, 4, 1, 20))
+        >>> grouping(l, (2, 4, 1, 20))
         [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
     """
-    num_elems = auto_repeat(num_elems, len(items) // num_elems)
+    if isinstance(num_elems, int):
+        num_elems = auto_repeat(num_elems, len(items) // num_elems)
     group, groups = [], []
     j = 0
     count = num_elems[j] if j < len(num_elems) else len(items) + 1
@@ -861,7 +1167,10 @@ def compact_num_str(
 
 
 # ======================================================================
-def has_decorator(text, pre_decor='"', post_decor='"'):
+def has_decorator(
+        text,
+        pre_decor='"',
+        post_decor='"'):
     """
     Determine if a string is delimited by some characters (decorators).
 
@@ -885,7 +1194,10 @@ def has_decorator(text, pre_decor='"', post_decor='"'):
 
 
 # ======================================================================
-def strip_decorator(text, pre_decor='"', post_decor='"'):
+def strip_decorator(
+        text,
+        pre_decor='"',
+        post_decor='"'):
     """
     Strip initial and final character sequences (decorators) from a string.
 
@@ -911,7 +1223,10 @@ def strip_decorator(text, pre_decor='"', post_decor='"'):
 
 
 # ======================================================================
-def auto_convert(text, pre_decor=None, post_decor=None):
+def auto_convert(
+        text,
+        pre_decor=None,
+        post_decor=None):
     """
     Convert value to numeric if possible, or strip delimiters from string.
 
@@ -978,7 +1293,73 @@ def is_number(var):
 
 
 # ======================================================================
-def significant_figures(val, num):
+def guess_decimals(
+        val,
+        n_max=16,
+        base=10,
+        fp=16):
+    """
+    Guess the number of decimals in a given float number.
+
+    Args:
+        val ():
+        n_max (int): Maximum number of guessed decimals.
+        base (int): The base used for the number representation.
+        fp (int): The floating point maximum precision.
+            A number with precision is approximated by the underlying platform.
+            The default value corresponds to the limit of the IEEE-754 floating
+            point arithmetic, i.e. 53 bits of precision: log10(2 ** 53) = 16
+            approximately. This value should not be changed unless the
+            underlying platform follows a different floating point arithmetic.
+
+    Returns:
+        prec (int): the guessed number of decimals.
+
+    Examples:
+        >>> guess_decimals(10)
+        0
+        >>> guess_decimals(1)
+        0
+        >>> guess_decimals(0.1)
+        1
+        >>> guess_decimals(0.01)
+        2
+        >>> guess_decimals(0.000001)
+        6
+        >>> guess_decimals(-0.72)
+        2
+        >>> guess_decimals(0.9567)
+        4
+        >>> guess_decimals(0.12345678)
+        8
+        >>> guess_decimals(0.9999999999999)
+        13
+        >>> guess_decimals(0.1234567890123456)
+        16
+        >>> guess_decimals(0.9999999999999999)
+        16
+        >>> guess_decimals(0.1234567890123456, 6)
+        6
+        >>> guess_decimals(0.54235, 10)
+        5
+        >>> guess_decimals(0x654321 / 0x10000, 16, 16)
+        4
+    """
+    offset = 2
+    prec = 0
+    tol = 10 ** -fp
+    x = (val - int(val)) * base
+    while base - abs(x) > tol and abs(x % tol) < tol < abs(x) and prec < n_max:
+        x = (x - int(x)) * base
+        tol = 10 ** -(fp - prec - offset)
+        prec += 1
+    return prec
+
+
+# ======================================================================
+def significant_figures(
+        val,
+        num):
     """
     Format a number with the correct number of significant figures.
 
@@ -1147,8 +1528,8 @@ def dict2str(
             If None, whitespaces are stripped. Empty string for no stripping.
         strip_val_str (str): Chars to be stripped from both ends of the value.
             If None, whitespaces are stripped. Empty string for no stripping.
-        sorting (callable): Function used as 'key' argument of 'sorted'
-            for sorting the dictionary keys.
+        sorting (callable): Sorting function passed to 'sorted' via `key` arg.
+            Used for sorting the dictionary keys.
 
     Returns:
         out_str (str): The output string generated from the dictionary.
@@ -1229,54 +1610,64 @@ def string_between(
 def check_redo(
         in_filepaths,
         out_filepaths,
-        force=False):
+        force=False,
+        make_out_dirpaths=False,
+        no_empty_input=False):
     """
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (iterable[str|unicode]): Input filepaths for computation.
-        out_filepaths (iterable[str|unicode]): Output filepaths for computation.
+        in_filepaths (iterable[str]|None): Input filepaths for computation.
+        out_filepaths (iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
+        make_out_dirpaths (bool): Create output dirpaths if not existing.
+        no_empty_input (bool): Check if the input filepath list is empty.
 
     Returns:
         force (bool): True if the computation is to be re-done.
 
     Raises:
         IndexError: If the input filepath list is empty.
+            Only if `no_empty_input` is True.
         IOError: If any of the input files do not exist.
     """
-    # todo: include output_dir autocreation
-    # check if input is not empty
-    if not in_filepaths:
-        raise IndexError('List of input files is empty.')
-
-    # check if input exists
-    for in_filepath in in_filepaths:
-        if not os.path.exists(in_filepath):
-            raise IOError('Input file does not exists.')
-
     # check if output exists
     if not force:
         for out_filepath in out_filepaths:
-            if out_filepath:
-                if not os.path.exists(out_filepath):
-                    force = True
-                    break
+            if out_filepath and not os.path.exists(out_filepath):
+                force = True
+                break
+
+    # create output directories
+    if force and make_out_dirpaths:
+        for out_filepath in out_filepaths:
+            out_dirpath = os.path.dirname(out_filepath)
+            if not os.path.isdir(out_dirpath):
+                os.makedirs(out_dirpath)
 
     # check if input is older than output
     if not force:
-        for in_filepath, out_filepath in \
-                itertools.product(in_filepaths, out_filepaths):
-            if in_filepath and out_filepath:
-                if os.path.getmtime(in_filepath) \
-                        > os.path.getmtime(out_filepath):
-                    force = True
-                    break
+        # check if input is not empty
+        if in_filepaths:
+            # check if input exists
+            for in_filepath in in_filepaths:
+                if not os.path.exists(in_filepath):
+                    raise IOError('Input file does not exists.')
+
+            for in_filepath, out_filepath in \
+                    itertools.product(in_filepaths, out_filepaths):
+                if os.path.getmtime(in_filepath) > os.path.getmtime(out_filepath):
+                        force = True
+                        break
+        elif no_empty_input:
+            raise IOError('Input file list is empty.')
     return force
 
 
 # ======================================================================
-def sgnlog(x, base=np.e):
+def sgnlog(
+        x,
+        base=np.e):
     """
     Signed logarithm of x: log(abs(x) * sign(x)
 
@@ -1375,33 +1766,50 @@ def minmax(arr):
 # ======================================================================
 def scale(
         val,
-        in_interval=(0.0, 1.0),
-        out_interval=(0.0, 1.0)):
+        out_interval=None,
+        in_interval=None):
     """
     Linear convert the value from input interval to output interval
 
     Args:
-        val (float|np.ndarray): Value(s) to convert
-        in_interval (float,float): Interval of the input value
-        out_interval (float,float): Interval of the output value.
+        val (float|np.ndarray): Value(s) to convert.
+        out_interval (float,float): Interval of the output value(s).
+            If None, set to: (0, 1).
+        in_interval (float,float): Interval of the input value(s).
+            If None, and val is iterable, it is calculated as:
+            (min(val), max(val)), otherwise set to: (0, 1).
 
     Returns:
-        val (float): The converted value
+        val (float|np.ndarray): The converted value(s).
 
     Examples:
-        >>> scale(100, (0, 100), (0, 1000))
+        >>> scale(100, (0, 1000), (0, 100))
         1000.0
-        >>> scale(50, (-100, 100), (0, 1000))
+        >>> scale(50, (0, 1000), (-100, 100))
         750.0
-        >>> scale(50, (0, 1), (0, 10))
+        >>> scale(50, (0, 10), (0, 1))
         500.0
-        >>> scale(0.5, (0, 1), (-10, 10))
+        >>> scale(0.5, (-10, 10))
         0.0
-        >>> scale(np.pi / 3, (0, np.pi), (0, 180))
+        >>> scale(np.pi / 3, (0, 180), (0, np.pi))
         60.0
+        >>> scale(np.arange(5), (0, 1))
+        array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ])
+        >>> scale(np.arange(6), (0, 10))
+        array([  0.,   2.,   4.,   6.,   8.,  10.])
+        >>> scale(np.arange(6), (0, 10), (0, 2))
+        array([  0.,   5.,  10.,  15.,  20.,  25.])
     """
-    in_min, in_max = in_interval
-    out_min, out_max = out_interval
+    if in_interval:
+        in_min, in_max = sorted(in_interval)
+    elif isinstance(val, np.ndarray):
+        in_min, in_max = minmax(val)
+    else:
+        in_min, in_max = (0, 1)
+    if out_interval:
+        out_min, out_max = sorted(out_interval)
+    else:
+        out_min, out_max = (0, 1)
     return (val - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
@@ -1462,7 +1870,7 @@ def midval(arr):
 # ======================================================================
 def subst(
         arr,
-        subst=((np.inf, 0.0), (-np.inf, 0.0), (np.nan, 0.0))):
+        pairs=((np.inf, 0.0), (-np.inf, 0.0), (np.nan, 0.0))):
     """
     Substitute all occurrences of a value in an array.
 
@@ -1497,7 +1905,7 @@ def subst(
         >>> subst(a, ((np.inf, 0.0), (np.nan, 0.0), (0.0, np.inf)))
         array([ inf,   1.,  inf,   2.,  inf])
     """
-    for k, v in subst:
+    for k, v in pairs:
         if k is np.nan:
             arr[np.isnan(arr)] = v
         else:
@@ -1506,11 +1914,11 @@ def subst(
 
 
 # ======================================================================
-def dft(arr):
+def dftn(arr):
     """
     Discrete Fourier Transform.
 
-    Interface to numpy.fft.fftn combined with numpy.fft.fftshift.
+    Interface to fftn combined with fftshift.
 
     Args:
         arr (np.ndarray): Input n-dim array.
@@ -1519,27 +1927,24 @@ def dft(arr):
         arr (np.ndarray): Output n-dim array.
 
     Examples:
-        >>> a = np.arange(10)
-        >>> dft(a)
-        array([ -5. +4.44089210e-16j,  -5. -1.62459848e+00j,\
-  -5. -3.63271264e+00j,
-                -5. -6.88190960e+00j,  -5. -1.53884177e+01j,\
-  45. +0.00000000e+00j,
-                -5. +1.53884177e+01j,  -5. +6.88190960e+00j,\
-  -5. +3.63271264e+00j,
-                -5. +1.62459848e+00j])
-        >>> print(np.allclose(a, dft(idft(a))))
+        >>> a = np.arange(2)
+        >>> dftn(a)
+        array([-1.+0.j,  1.+0.j])
+        >>> print(np.allclose(a, dftn(idftn(a))))
         True
+
+    See Also:
+        numpy.fft, scipy.fftpack
     """
-    return np.fft.fftshift(np.fft.fftn(arr))
+    return fftshift(fftn(arr))
 
 
 # ======================================================================
-def idft(arr):
+def idftn(arr):
     """
     Inverse Discrete Fourier transform.
 
-    Interface to numpy.fft.ifftn combined with numpy.fft.ifftshift.
+    Interface to ifftn combined with ifftshift.
 
     Args:
         arr (np.ndarray): Input n-dim array.
@@ -1548,23 +1953,25 @@ def idft(arr):
         arr (np.ndarray): Output n-dim array.
 
     Examples:
-        >>> a = np.arange(10)
-        >>> idft(a)
-        array([ 4.5 +0.00000000e+00j,  0.5 +1.53884177e+00j,\
- -0.5 -6.88190960e-01j,
-                0.5 +3.63271264e-01j, -0.5 -1.62459848e-01j,\
-  0.5 +4.44089210e-17j,
-               -0.5 +1.62459848e-01j,  0.5 -3.63271264e-01j,\
- -0.5 +6.88190960e-01j,
-                0.5 -1.53884177e+00j])
-        >>> print(np.allclose(a, idft(dft(a))))
+        >>> a = np.arange(2)
+        >>> idftn(a)
+        array([ 0.5+0.j,  0.5+0.j])
+        >>> print(np.allclose(a, idftn(dftn(a))))
         True
+
+    See Also:
+        numpy.fft, scipy.fftpack
     """
-    return np.fft.ifftn(np.fft.ifftshift(arr))
+    return ifftn(ifftshift(arr))
 
 
 # ======================================================================
-def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
+def coord(
+        shape,
+        origin=0.5,
+        is_relative=True,
+        dense=False,
+        use_int=True):
     """
     Calculate the generic x_i coordinates for N-dim operations.
 
@@ -1574,7 +1981,7 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
             Values are in the [0, 1] interval.
         is_relative (bool): Interpret origin as relative.
         dense (bool): Determine the shape of the mesh-grid arrays.
-        use_ints (bool):
+        use_int (bool):
 
     Returns:
         coord (list[np.ndarray]): mesh-grid ndarrays.
@@ -1628,15 +2035,13 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
         [array([[ 0.],
                [ 1.]]), array([[ 0.,  1.,  2.]])]
     """
-    origin = auto_repeat(origin, len(shape), force=True)
-    # if any([dim % 2 for dim in shape]):
-    #     warnings.warn('Even coordinates will not be symmetric')
+    origin = auto_repeat(origin, len(shape), check=True)
     if is_relative:
         if use_int:
-            origin = [int(scale(x, (0, 1), (0, dim)))
+            origin = [int(scale(x, (0, dim)))
                       for x, dim in zip(origin, shape)]
         else:
-            origin = [scale(x, (0, 1), (0, dim - 1))
+            origin = [scale(x, (0, dim - 1))
                       for x, dim in zip(origin, shape)]
     elif any([not isinstance(x, int) for x in origin]) and use_int:
         raise TypeError('Absolute origin must be integer.')
@@ -1645,18 +2050,133 @@ def coord(shape, origin=0.5, is_relative=True, dense=False, use_int=True):
 
 
 # ======================================================================
-def _kk_2(shape):
+def _kk_2(
+        shape,
+        factors=1):
+    """
+    Calculate the k^2 kernel to be used for the Laplacian operators.
+
+    Args:
+        shape (iterable[int]): The size of the array.
+        factors (iterable[int|tuple]): The size conversion factors for each dim.
+
+    Returns:
+        arr (np.ndarray): The resulting array.
+
+    Examples:
+        >>> _kk_2((3, 3, 3))
+        array([[[ 3.,  2.,  3.],
+                [ 2.,  1.,  2.],
+                [ 3.,  2.,  3.]],
+        <BLANKLINE>
+               [[ 2.,  1.,  2.],
+                [ 1.,  0.,  1.],
+                [ 2.,  1.,  2.]],
+        <BLANKLINE>
+               [[ 3.,  2.,  3.],
+                [ 2.,  1.,  2.],
+                [ 3.,  2.,  3.]]])
+        >>> _kk_2((3, 3, 3), np.sqrt(3))
+        array([[[ 1.        ,  0.66666667,  1.        ],
+                [ 0.66666667,  0.33333333,  0.66666667],
+                [ 1.        ,  0.66666667,  1.        ]],
+        <BLANKLINE>
+               [[ 0.66666667,  0.33333333,  0.66666667],
+                [ 0.33333333,  0.        ,  0.33333333],
+                [ 0.66666667,  0.33333333,  0.66666667]],
+        <BLANKLINE>
+               [[ 1.        ,  0.66666667,  1.        ],
+                [ 0.66666667,  0.33333333,  0.66666667],
+                [ 1.        ,  0.66666667,  1.        ]]])
+        >>> _kk_2((2, 2, 2), 0.6)
+        array([[[ 8.33333333,  5.55555556],
+                [ 5.55555556,  2.77777778]],
+        <BLANKLINE>
+               [[ 5.55555556,  2.77777778],
+                [ 2.77777778,  0.        ]]])
+    """
     kk = coord(shape)
+    if factors and factors != 1:
+        factors = auto_repeat(factors, len(shape), check=True)
+        kk = [k_i / factor for k_i, factor in zip(kk, factors)]
     kk_2 = np.zeros(shape)
     for k_i, dim in zip(kk, shape):
         kk_2 += k_i ** 2
     return kk_2
 
 
+def auto_pad_width(
+        pad_width,
+        shape,
+        combine=None):
+    """
+    Ensure pad_width value(s) to be consisting of integer.
+
+    Args:
+        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If iterable, a value for each dim must be specified.
+            If not iterable, all dims will have the same value.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to corresponding dim size.
+        shape (iterable[int]): The shape to associate to `pad_width`.
+        combine (callable|None): The function for combining shape values.
+            If None, uses the corresponding dim from the shape.
+
+    Returns:
+        pad_width (int|tuple[tuple[int]]): The absolute `pad_width`.
+            If input `pad_width` is not iterable, result is not iterable.
+
+    See Also:
+        np.pad
+
+    Examples:
+        >>> shape = (10, 20, 30)
+        >>> auto_pad_width(0.1, shape)
+        ((1, 1), (2, 2), (3, 3))
+        >>> auto_pad_width(0.1, shape, max)
+        ((3, 3), (3, 3), (3, 3))
+        >>> shape = (10, 20, 30)
+        >>> auto_pad_width(((0.1, 0.5),), shape)
+        ((1, 5), (2, 10), (3, 15))
+        >>> auto_pad_width(((2, 3),), shape)
+        ((2, 3), (2, 3), (2, 3))
+        >>> auto_pad_width(((2, 3), (1, 2)), shape)
+        Traceback (most recent call last):
+            ....
+        AssertionError
+        >>> auto_pad_width(((0.1, 0.2),), shape, min)
+        ((1, 2), (1, 2), (1, 2))
+        >>> auto_pad_width(((0.1, 0.2),), shape, max)
+        ((3, 6), (3, 6), (3, 6))
+    """
+
+    def float_to_int(val, scale):
+        return int(val * scale) if isinstance(val, float) else val
+
+    try:
+        iter(pad_width)
+    except TypeError:
+        pad_width = ((pad_width,) * 2,)
+    finally:
+        combined = combine(shape) if combine else None
+        pad_width = list(
+            pad_width if len(pad_width) > 1 else pad_width * len(shape))
+        assert (len(pad_width) == len(shape))
+        for i, (item, dim) in enumerate(zip(pad_width, shape)):
+            lower, upper = item
+            pad_width[i] = (
+                float_to_int(lower, dim if not combine else combined),
+                float_to_int(upper, dim if not combine else combined))
+        pad_width = tuple(pad_width)
+    return pad_width
+
+
 # ======================================================================
 def laplacian(
         arr,
-        ft_factor=(2 * np.pi)):
+        ft_factor=(2 * np.pi),
+        pad_width=0):
     """
     Calculate the Laplacian operator in the Fourier domain.
 
@@ -1664,18 +2184,33 @@ def laplacian(
         arr (np.ndarray): The input array.
         ft_factor (float): The Fourier factor for the gradient operator.
             Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If iterable, a value for each dim must be specified.
+            If not iterable, all dims will have the same value.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
 
     Returns:
         arr (np.ndarray): The output array.
     """
-    kk_2 = _kk_2(arr.shape)
-    return ((1j * ft_factor) ** 2) * idft(kk_2 * dft(arr))
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    kk_2 = fftshift(_kk_2(arr.shape))
+    arr = ((1j * ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
+    return arr[mask]
 
 
 # ======================================================================
 def inv_laplacian(
         arr,
-        ft_factor=(2 * np.pi)):
+        ft_factor=(2 * np.pi),
+        pad_width=0):
     """
     Calculate the inverse Laplacian operator in the Fourier domain.
 
@@ -1683,43 +2218,431 @@ def inv_laplacian(
         arr (np.ndarray): The input array.
         ft_factor (float): The Fourier factor for the gradient operator.
             Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
 
     Returns:
         arr (np.ndarray): The output array.
     """
-    one_over_kk_2 = 1.0 / subst(_kk_2(arr.shape), ((0.0, np.inf),))
-    return ((-1j / ft_factor) ** 2) * idft(one_over_kk_2 * dft(arr))
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    kk_2 = fftshift(_kk_2(arr.shape))
+    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
+    arr = fftn(arr) * kk_2
+    arr = ((-1j / ft_factor) ** 2) * ifftn(arr)
+    return arr[mask]
 
 
 # ======================================================================
-def unwrap_phase_laplacian(arr, correction=lambda x: -(x * 2.0 - 3.0 * np.pi)):
+def auto_bin(
+        arr,
+        method='auto'):
     """
-    Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
-
-    Phase unwrapping by using the following equality:
-
-    L = (d / dx)^2
-
-    L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
-
-    phi = L^-1(L(phi))
+    Determine the optimal number of bins for an array.
 
     Args:
-        arr (np.ndarray): The multi-dimensional array to unwrap.
-        correction (callable): A correction function for improved accuracy.
+        arr (np.ndarray): The input array.
+        method (str|None):
 
     Returns:
-        arr (np.ndarray): The multi-dimensional unwrapped array.
+        num (int): The number of bins.
+
+    Examples:
+        >>> arr = np.arange(100)
+        >>> auto_bin(arr)
+        22
+        >>> auto_bin(arr, 'sqrt')
+        10
+        >>> auto_bin(arr, 'auto')
+        22
+        >>> auto_bin(arr, 'sturges')
+        8
+        >>> auto_bin(arr, 'rice')
+        10
+        >>> auto_bin(arr, 'scott')
+        22
+        >>> auto_bin(arr, 'fd')
+        22
+        >>> auto_bin(arr, None)
+        100
+    """
+    if method == 'auto':
+        num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
+    elif method == 'sqrt':
+        num = int(np.ceil(np.sqrt(arr.size)))
+    elif method == 'sturges':
+        num = int(np.ceil(np.log2(arr.size)) + 1)
+    elif method == 'rice':
+        num = int(np.ceil(2 * arr.size ** (1 / 3)))
+    elif method == 'scott':
+        num = int(np.ceil(3.5 * np.std(arr) / arr.size ** (1 / 3)))
+    elif method == 'fd':
+        q75, q25 = np.percentile(arr, [75, 25])
+        num = int(np.ceil(2 * (q75 - q25) / arr.size ** (1 / 3)))
+    else:
+        num = arr.size
+    return num
+
+
+# ======================================================================
+def auto_bins(
+        arrs,
+        method='auto',
+        combine=max):
+    """
+    Determine the optimal number of bins for a group of arrays.
+
+    Args:
+        arrs (iterable[np.ndarray]): The input arrays.
+        method (str|iterable[str]|None): The method to use calculating bins.
+            If a string or None, the same method is applied to both arrays.
+            Otherwise
+        combine (callable|None): Combine each bin using the combine function.
+            combine(n_bins) -> n_bin
+            n_bins is of type iterable[int]
+
+    Returns:
+        n_bins (int|tuple[int]): The number of bins.
+            If combine is None, returns a tuple of int (one for each input
+            array).
+
+    Examples:
+        >>> arr1 = np.arange(100)
+        >>> arr2 = np.arange(200)
+        >>> arr3 = np.arange(300)
+        >>> auto_bins((arr1, arr2))
+        35
+        >>> auto_bins((arr1, arr2, arr3))
+        45
+        >>> auto_bins((arr1, arr2), ('sqrt', 'sturges'))
+        10
+        >>> auto_bins((arr1, arr2), combine=None)
+        (22, 35)
+        >>> auto_bins((arr1, arr2), combine=min)
+        22
+        >>> auto_bins((arr1, arr2), combine=sum)
+        57
+        >>> auto_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
+        13
+    """
+    if isinstance(method, str) or method is None:
+        method = (method,) * len(arrs)
+    n_bins = []
+    for arr, method in zip(arrs, method):
+        n_bins.append(auto_bin(arr, method))
+    if combine:
+        return combine(n_bins)
+    else:
+        return tuple(n_bins)
+
+
+# ======================================================================
+def entropy(
+        hist,
+        base=np.e):
+    """
+    Calculate the simple or joint Shannon entropy H.
+
+    H = -sum(p(x) * log(p(x)))
+
+    p(x) is the probability of x, where x can be N-Dim.
+
+    Args:
+        hist (np.ndarray): The probability density function p(x).
+            If hist is 1-dim, the Shannon entropy is computed.
+            If hist is N-dim, the joint Shannon entropy is computed.
+            Zeros are handled correctly.
+            The probability density function does not need to be normalized.
+        base (int|float): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is `bits`.
+            If base is np.e (Euler's number), the unit is `nats`.
+
+    Returns:
+        h (float): The Shannon entropy H = -sum(p(x) * log(p(x)))
+
+    Examples:
+        >>>
+    """
+    # normalize histogram to unity
+    hist = hist / np.sum(hist)
+    # skip zero values
+    mask = hist != 0.0
+    log_hist = np.zeros_like(hist)
+    log_hist[mask] = np.log(hist[mask]) / np.log(base)
+    h = -np.sum(hist * log_hist)
+    return h
+
+
+# ======================================================================
+def conditional_entropy(
+        hist2,
+        hist,
+        base=np.e):
+    """
+    Calculate the conditional probability: H(X|Y)
+
+    Args:
+        hist2 (np.ndarray): The joint probability density function.
+            Must be the 2D histrogram of X and Y
+        hist (np.ndarray): The given probability density function.
+            Must be the 1D histogram of Y.
+        base (int|float): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is `bits`.
+            If base is np.e (Euler's number), the unit is `nats`.
+
+    Returns:
+        hc (float): The conditional entropy H(X|Y)
+
+    Examples:
+        >>>
+    """
+    return entropy(hist2, base) - entropy(hist, base)
+
+
+# ======================================================================
+def variation_information(
+        arr1,
+        arr2,
+        base=np.e,
+        bins='auto'):
+    """
+    Calculate the variation of information between two arrays.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+            Must have same shape as arr2.
+        arr2 (np.ndarray): The second input array.
+            Must have same shape as arr1.
+        base (int|float): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is `bits`.
+            If base is np.e (Euler's number), the unit is `nats`.
+        bins (int|str|None): The number of bins to use for the distribution.
+            If int, the exact number is used.
+            If str, a method accepted by `auto_bin` is expected.
+            If None, uses the maximum number of bins (not recommended).
+    Returns:
+        vi (float): The variation of information.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> variation_information(arr1, arr1)
+        0.0
+        >>> variation_information(arr2, arr2)
+        0.0
+        >>> variation_information(arr3, arr3)
+        0.0
+        >>> vi_12 = variation_information(arr1, arr2)
+        >>> vi_21 = variation_information(arr2, arr1)
+        >>> vi_31 = variation_information(arr3, arr1)
+        >>> vi_34 = variation_information(arr3, arr4)
+        >>> # print(vi_12, vi_21, vi_31, vi_34)
+        >>> np.isclose(vi_12, vi_21)
+        True
+        >>> vi_34 < vi_31
+        True
+    """
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), bins)
+
+    if not np.array_equal(arr1, arr2):
+        hist1, bin_edges1 = np.histogram(arr1, bins)
+        hist2, bin_edges2 = np.histogram(arr2, bins)
+        hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        vi = 2 * h12 - h1 - h2
+    else:
+        vi = 0.0
+    # absolute value to fix rounding errors
+    return abs(vi)
+
+
+# ======================================================================
+def mutual_information(
+        arr1,
+        arr2,
+        base=np.e,
+        bins='auto'):
+    """
+    Calculate the mutual information between two arrays.
+
+    Note that the numerical result depends on the number of bins.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+        base (int|float|None): The base units to express the result.
+            Should be a number larger than 0.
+            If base is 2, the unit is bits.
+            If base is np.e (Euler's number), the unit is `nats`.
+            If base is None, the result is normalized to unity.
+        bins (int|str|None): The number of bins to use for the distribution.
+            If int, the exact number is used.
+            If str, a method accepted by `auto_bin` is expected.
+            If None, uses the maximum number of bins (not recommended).
+
+    Returns:
+        mi (float): The (normalized) mutual information.
+            If base is None, the normalized version is returned.
+            Otherwise returns the mutual information in the specified base.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> mi_11 = mutual_information(arr1, arr1)
+        >>> mi_22 = mutual_information(arr2, arr2)
+        >>> mi_33 = mutual_information(arr3, arr3)
+        >>> mi_44 = mutual_information(arr4, arr4)
+        >>> # print(mi_11, mi_22, mi_33, mi_44)
+        >>> mi_22 > mi_33 > mi_11
+        True
+        >>> mi_12 = mutual_information(arr1, arr2)
+        >>> mi_21 = mutual_information(arr2, arr1)
+        >>> mi_32 = mutual_information(arr3, arr2)
+        >>> mi_34 = mutual_information(arr3, arr4)
+        >>> # print(mi_12, mi_21, mi_32, mi_34)
+        >>> mi_44 > mi_34 and mi_33 > mi_34
+        True
+        >>> np.isclose(mi_12, mi_21)
+        True
+        >>> mi_34 > mi_32
+        True
+        >>> mi_n10 = mutual_information(arr3, arr2, np.e, 10)
+        >>> mi_n20 = mutual_information(arr3, arr2, np.e, 20)
+        >>> mi_n100 = mutual_information(arr3, arr2, np.e, 100)
+        >>> # print(mi_n10, mi_n20, mi_n100)
+        >>> mi_n10 < mi_n20 < mi_n100
+        True
+        >>> mi_be = mutual_information(arr3, arr4, np.e)
+        >>> mi_b2 = mutual_information(arr3, arr4, 2)
+        >>> mi_b10 = mutual_information(arr3, arr4, 10)
+        >>> # print(mi_be, mi_b2, mi_b10)
+        >>> mi_b10 < mi_be < mi_b2
+        True
 
     See Also:
-        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+        - Cahill, Nathan D. “Normalized Measures of Mutual Information with
+          General Definitions of Entropy for Multimodal Image Registration.” In
+          International Workshop on Biomedical Image Registration, 258–268.
+          Springer, 2010.
+          http://link.springer.com/chapter/10.1007/978-3-642-14366-3_23.
     """
-    arr = np.real(inv_laplacian(
-        np.cos(arr) * laplacian(np.sin(arr)) -
-        np.sin(arr) * laplacian(np.cos(arr))))
-    if correction:
-        arr = correction(arr)
-    return arr
+    # todo: check implementation speed and consistency
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), bins)
+
+    # # scikit.learn implementation
+    # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    # from sklearn.metrics import mutual_info_score
+    # mi = mutual_info_score(None, None, contingency=hist)
+    # if base > 0 and base != np.e:
+    #     mi /= np.log(base)
+
+    # # alternate implementation
+    # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    # g, p, dof, expected = scipy.stats.chi2_contingency(
+    #     hist + np.finfo(float).eps, lambda_='log-likelihood')
+    # mi = g / hist.sum() / 2
+
+    # entropy-based implementation
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    h12 = entropy(hist12, base)
+    h1 = entropy(hist1, base)
+    h2 = entropy(hist2, base)
+    mi = h1 + h2 - h12
+
+    # absolute value to fix rounding errors
+    return abs(mi)
+
+
+def norm_mutual_information(
+        arr1,
+        arr2,
+        bins='auto'):
+    """
+
+    Args:
+        arr1 ():
+        arr2 ():
+        bins ():
+
+    Returns:
+
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> mi_11 = norm_mutual_information(arr1, arr1)
+        >>> mi_22 = norm_mutual_information(arr2, arr2)
+        >>> mi_33 = norm_mutual_information(arr3, arr3)
+        >>> mi_44 = norm_mutual_information(arr4, arr4)
+        >>> # print(mi_11, mi_22, mi_33, mi_44)
+        >>> 1.0 == mi_11 == mi_22 == mi_33 == mi_44
+        True
+        >>> mi_12 = norm_mutual_information(arr1, arr2)
+        >>> mi_21 = norm_mutual_information(arr2, arr1)
+        >>> mi_32 = norm_mutual_information(arr3, arr2)
+        >>> mi_34 = norm_mutual_information(arr3, arr4)
+        >>> # print(mi_12, mi_21, mi_32, mi_34)
+        >>> mi_44 > mi_34 and mi_33 > mi_34
+        True
+        >>> np.isclose(mi_12, mi_21)
+        True
+        >>> mi_34 > mi_32
+        True
+        >>> mi_n10 = norm_mutual_information(arr3, arr2, 10)
+        >>> mi_n20 = norm_mutual_information(arr3, arr2, 20)
+        >>> mi_n100 = norm_mutual_information(arr3, arr2, 100)
+        >>> # print(mi_n10, mi_n20, mi_n100)
+        >>> mi_n10 < mi_n20 < mi_n100
+        True
+    """
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), bins)
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    if not np.array_equal(arr1, arr2):
+        base = np.e  # results should be independent of the base
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        nmi = 1 - (2 * h12 - h1 - h2) / h12
+    else:
+        nmi = 1.0
+
+    # absolute value to fix rounding errors
+    return abs(nmi)
 
 
 # ======================================================================
@@ -1758,32 +2681,32 @@ def gaussian_nd(
 
 
 # ======================================================================
-def polar2complex(modulus, argument):
+def polar2complex(modulus, phase):
     """
     Calculate complex number from the polar form:
-    z = R * exp(i * phi) = R * cos(phi) + i * R * sin(phi)
+    z = R * exp(i * phi) = R * cos(phi) + i * R * sin(phi).
 
     Args:
-        modulus (float): The modulus R of the complex number
-        argument (float): The argument phi or phase of the complex number
+        modulus (float|np.ndarray): The modulus R of the complex number.
+        phase (float|np.ndarray): The argument phi of the complex number.
 
     Returns:
-        z (complex): The complex number z = R * exp(i * phi)
+        z (complex|np.ndarray): The complex number z = R * exp(i * phi).
     """
-    return modulus * np.exp(1j * argument)
+    return modulus * np.exp(1j * phase)
 
 
 # ======================================================================
 def cartesian2complex(real, imag):
     """
-    Calculate the complex number from the cartesian form: z = z' + i * z"
+    Calculate the complex number from the cartesian form: z = z' + i * z".
 
     Args:
-        real (float): The real part z' of the complex number
-        imag (float): The imaginary part z" of the complex number
+        real (float|np.ndarray): The real part z' of the complex number.
+        imag (float|np.ndarray): The imaginary part z" of the complex number.
 
     Returns:
-        z (complex): The complex number: z = z' + i * z"
+        z (complex|np.ndarray): The complex number: z = z' + i * z".
     """
     return real + 1j * imag
 
@@ -1794,12 +2717,12 @@ def complex2cartesian(z):
     Calculate the real and the imaginary part of a complex number.
 
     Args:
-        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z".
 
     Returns:
-        tuple[float]:
-            - real (float): The real part z' of the complex number
-            - imag (float): The imaginary part z" of the complex number
+        tuple[float|np.ndarray]:
+         - real (float|np.ndarray): The real part z' of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex number.
     """
     return np.real(z), np.imag(z)
 
@@ -1807,34 +2730,34 @@ def complex2cartesian(z):
 # ======================================================================
 def complex2polar(z):
     """
-    Calculate the real and the imaginary part of a complex number
+    Calculate the real and the imaginary part of a complex number.
 
     Args:
-        z (complex|np.ndarray): The complex number or array: z = z' + i * z"
+        z (complex|np.ndarray): The complex number or array: z = z' + i * z".
 
     Returns:
         tuple[float]:
-            - modulus (float): The modulus R of the complex number
-            - argument (float): The argument phi or phase of the complex number
+         - modulus (float|np.ndarray): The modulus R of the complex number.
+         - phase (float|np.ndarray): The phase phi of the complex number.
     """
     return np.abs(z), np.angle(z)
 
 
 # ======================================================================
-def polar2cartesian(modulus, argument):
+def polar2cartesian(modulus, phase):
     """
-    Calculate the real and the imaginary part of a complex number
+    Calculate the real and the imaginary part of a complex number.
 
     Args:
-        modulus (float): The modulus R of the complex number
-        argument (float): The argument phi or phase of the complex number
+        modulus (float|np.ndarray): The modulus R of the complex number.
+        phase (float|np.ndarray): The phase phi of the complex number.
 
     Returns:
         tuple[float]:
-            - real (float): The real part z' of the complex number
-            - imag (float): The imaginary part z" of the complex number
+         - real (float|np.ndarray): The real part z' of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex number.
     """
-    return modulus * np.cos(argument), modulus * np.sin(argument)
+    return modulus * np.cos(phase), modulus * np.sin(phase)
 
 
 # ======================================================================
@@ -1843,13 +2766,13 @@ def cartesian2polar(real, imag):
     Calculate the real and the imaginary part of a complex number.
 
     Args:
-        real (float): The real part z' of the complex number
-        imag (float): The imaginary part z" of the complex number
+        real (float): The real part z' of the complex number.
+        imag (float): The imaginary part z" of the complex number.
 
     Returns:
         tuple[float]:
-            - modulus (float): The modulus R of the complex number
-            - argument (float): The argument phi or phase of the complex number
+         - modulus (float): The modulus R of the complex number.
+         - argument (float): The phase phi of the complex number.
     """
     return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
 
@@ -1865,18 +2788,18 @@ def calc_stats(
         title=None,
         compact=False):
     """
-    Calculate array statistical information (min, max, avg, std, sum, num)
+    Calculate array statistical information (min, max, avg, std, sum, num).
 
     Args:
-        arr (np.ndarray): The array to be investigated
-        mask_nan (bool): Mask NaN values
-        mask_inf (bool): Mask Inf values
-        mask_vals (list[int|float]|None): List of values to mask
-        val_interval (tuple): The (min, max) values interval
-        save_path (str|None): The path to which the plot is to be saved
-            If None, no output
-        title (str|None): If title is not None, stats are printed to screen
-        compact (bool): Use a compact format string for displaying results
+        arr (np.ndarray): The array to be investigated.
+        mask_nan (bool): Mask NaN values.
+        mask_inf (bool): Mask Inf values.
+        mask_vals (list[int|float]|None): List of values to mask.
+        val_interval (tuple): The (min, max) values interval.
+        save_path (str|None): The path to which the plot is to be saved.
+            If None, no output.
+        title (str|None): If title is not None, stats are printed to screen.
+        compact (bool): Use a compact format string for displaying results.
 
     Returns:
         stats_dict (dict): Dictionary of statistical values.
@@ -1949,51 +2872,71 @@ def calc_stats(
 
 
 # ======================================================================
-def slice_array(
+def ndim_slice(
         arr,
-        axis=0,
-        index=None):
+        axes=0,
+        indexes=None):
     """
-    Slice a (N-1)-dim array from an N-dim array
+    Slice a M-dim sub-array from an N-dim array (with M < N).
 
     Args:
         arr (np.ndarray): The input N-dim array
-        axis (int): The slicing axis
-        index (int): The slicing index. If None, mid-value is taken.
+        axes (iterable[int]|int): The slicing axis
+        indexes (iterable[int|float|None]|None): The slicing index.
+            If None, mid-value is taken.
+            Otherwise, its length must match that of axes.
+            If an element is None, again the mid-value is taken.
+            If an element is a number between 0 and 1, it is interpreted
+            as relative to the size of the array for corresponding axis.
+            If an element is an integer, it is interpreted as absolute and must
+            be smaller than size of the array for the corresponding axis.
 
     Returns:
-        sliced (np.ndarray): The sliced (N-1)-dim array
+        sliced (np.ndarray): The sliced M-dim sub-array
 
     Raises:
         ValueError: if index is out of bounds
 
     Examples:
         >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
-        >>> slice_array(arr, 2, 1)
+        >>> ndim_slice(arr, 2, 1)
         array([[ 1,  5,  9],
                [13, 17, 21]])
-        >>> slice_array(arr, 1, 2)
+        >>> ndim_slice(arr, 1, 2)
         array([[ 8,  9, 10, 11],
                [20, 21, 22, 23]])
-        >>> slice_array(arr, 0, 0)
+        >>> ndim_slice(arr, 0, 0)
         array([[ 0,  1,  2,  3],
                [ 4,  5,  6,  7],
                [ 8,  9, 10, 11]])
-        >>> slice_array(arr, 0, 1)
+        >>> ndim_slice(arr, 0, 1)
         array([[12, 13, 14, 15],
                [16, 17, 18, 19],
                [20, 21, 22, 23]])
+        >>> ndim_slice(arr, (0, 1), None)
+        array([16, 17, 18, 19])
     """
     # initialize slice index
     slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
-    if index is None:
-        index = np.int(arr.shape[axis] / 2.0)
+    if indexes is None:
+        indexes = auto_repeat(None, len(axes))
+    axes = auto_repeat(axes, 1)
+    indexes = auto_repeat(indexes, 1)
+    indexes = list(indexes)
+    for i, (index, axis) in enumerate(zip(indexes, axes)):
+        if index is None:
+            indexes[i] = index = 0.5
+        if isinstance(index, float) and index < 1.0:
+            indexes[i] = int(arr.shape[axis] * index)
     # check index
-    if (index >= arr.shape[axis]) or (index < 0):
+    if any([(index >= arr.shape[axis]) or (index < 0)
+            for index, axis in zip(indexes, axes)]):
         raise ValueError('Invalid array index in the specified direction')
     # determine slice index
-    slab[axis] = index
+    for index, axis in zip(indexes, axes):
+        slab[axis] = index
+    # print(slab)  # debug
     # slice the array
     return arr[slab]
 
@@ -2072,60 +3015,6 @@ def euclid_dist(
     if unsigned:
         array = np.abs(array)
     return array
-
-
-# :: ndstack and ndsplit have been obsoleted by: numpy.stack and numpy.split
-# # ======================================================================
-# def ndstack(arrays, axis=-1):
-#     """
-#     Stack a list of arrays of the same size along a specific axis
-#
-#     Args:
-#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-#         axis (int): Direction for the concatenation of the arrays
-#
-#     Returns:
-#         array (ndarray): The concatenated N-dim array
-#     """
-#     array = arrays[0]
-#     n_dim = array.ndim + 1
-#     if axis < 0:
-#         axis += n_dim
-#     if axis < 0:
-#         axis = 0
-#     if axis > n_dim:
-#         axis = n_dim
-#     # calculate new shape
-#     shape = array.shape[:axis] + tuple([len(arrays)]) + array.shape[axis:]
-#     # stack arrays together
-#     array = np.zeros(shape, dtype=array.dtype)
-#     for i, src in enumerate(arrays):
-#         index = [slice(None)] * n_dim
-#         index[axis] = i
-#         array[tuple(index)] = src
-#     return array
-#
-#
-# # ======================================================================
-# def ndsplit(array, axis=-1):
-#     """
-#     Split an array along a specific axis into a list of arrays
-#
-#     Args:
-#         array (ndarray): The N-dim array to split
-#         axis (int): Direction for the splitting of the array
-#
-#     Returns:
-#         arrays (list[ndarray]): A list of (N-1)-dim arrays of the same size
-#     """
-#     # split array apart
-#     arrays = []
-#     for i in range(array.shape[axis]):
-#         # determine index for slicing
-#         index = [slice(None)] * array.ndim
-#         index[axis] = i
-#         arrays.append(array[index])
-#     return arrays
 
 
 # ======================================================================

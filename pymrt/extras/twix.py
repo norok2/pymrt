@@ -6,10 +6,8 @@ pymrt/twix: manage Siemens's TWIX (raw) data from MRI scanners.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -52,7 +50,7 @@ import pyparsing as pp  # A Python Parsing Module
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
@@ -235,9 +233,9 @@ def _read_protocol(text):
                     val = prot[key]
                 else:
                     val = []
-                val.append((indexes, pmb.auto_convert(value, '""', '""')))
+                val.append((indexes, pmu.auto_convert(value, '""', '""')))
             else:
-                val = pmb.auto_convert(value, '""', '""')
+                val = pmu.auto_convert(value, '""', '""')
             if key:
                 prot[key] = val
     return prot
@@ -306,7 +304,7 @@ def _guess_version(file_stream):
 def _guess_header_type(text):
     if text.startswith('<XProtocol'):
         header_type = 'x_prot'
-    elif pmb.has_decorator(text, *PROT['prot_decor']):
+    elif pmu.has_decorator(text, *PROT['prot_decor']):
         header_type = 'prot'
     else:
         header_type = None

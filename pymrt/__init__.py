@@ -8,10 +8,8 @@ PyMRT: data analysis for quantitative MRI
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -19,7 +17,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Version
-__version__ = '0.1.dev106+nbc2e2c7'
+__version__ = '0.1.dev138+n14b7339'
 
 # ======================================================================
 # :: Project Details
@@ -78,7 +76,7 @@ def msg(
     Display a feedback message to the standard output.
 
     Args:
-        text (str): Message to display.
+        text (str|Any): Message to display or object with `__repr__`.
         verb_lvl (int): Current level of verbosity.
         verb_threshold (int): Threshold level of verbosity.
         fmt (str): Format of the message (if `blessed` supported).
@@ -103,12 +101,14 @@ def msg(
         >>> msg(' : a b c', fmt='cyan')  # if ANSI Terminal, cyan text
          : a b c
     """
-    if verb_lvl >= verb_threshold:
+    if verb_lvl >= verb_threshold and text:
         # if blessed is not present, no coloring
         try:
             import blessed
         except ImportError:
             blessed = None
+
+        text = str(text)
 
         if blessed:
             t = blessed.Terminal()
@@ -138,7 +138,7 @@ def msg(
                     'e1': e + (t.bold if e == t.white else ''),
                     'e2': e + (t.bold if e != t.white else ''),
                     't0': txt0, 't1': txt1, 't2': txt2, 'n': t.normal}
-                text = '{t0}{e1}{t1}{n}{e2}{t2}{n}'.format(**txt_kwargs)
+                text = '{t0}{e1}{t1}{n}{e2}{t2}{n}'.format_map(txt_kwargs)
             else:
                 if 't.' not in fmt:
                     fmt = '{{t.{}}}'.format(fmt)

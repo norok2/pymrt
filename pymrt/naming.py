@@ -6,10 +6,8 @@ pymrt.naming: naming for datasets with limited support to metadata information.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -22,7 +20,7 @@ import doctest  # Test interactive Python examples
 # :: External Imports Submodules
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 # from dcmpi.lib.common import D_NUM_DIGITS
 D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
@@ -92,7 +90,7 @@ def str_to_key_val(
     else:
         key, val = None, None
     if val:
-        val = pmb.auto_convert(val)
+        val = pmu.auto_convert(val)
     return key, val
 
 
@@ -167,7 +165,7 @@ def str_to_info(
     """
     tokens = text.split(sep)
     info = {
-        '#': pmb.auto_convert(tokens[0][len(SERIES_NUM_ID):])
+        '#': pmu.auto_convert(tokens[0][len(SERIES_NUM_ID):])
         if SERIES_NUM_ID.lower() in tokens[0].lower() else None}
     for token in tokens[1:]:
         key, val = str_to_key_val(token, kv_sep)
@@ -202,7 +200,7 @@ def info_to_str(
 # ======================================================================
 def filepath_to_info(
         filepath,
-        file_ext=pmb.EXT['niz'],
+        file_ext=pmu.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=KEY_VAL_SEP):
     """
@@ -216,7 +214,7 @@ def filepath_to_info(
     Returns:
         info (dict): Information extracted from the
     """
-    filename = pmb.change_ext(os.path.basename(filepath), '', file_ext)
+    filename = pmu.change_ext(os.path.basename(filepath), '', file_ext)
     return str_to_info(filename)
 
 
@@ -224,12 +222,12 @@ def filepath_to_info(
 def info_to_filepath(
         info,
         dirpath='.',
-        file_ext=pmb.EXT['niz'],
+        file_ext=pmu.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
-    filename = pmb.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')
+    filename = pmu.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')
     return os.path.join(
-        dirpath, + pmb.add_extsep(file_ext))
+        dirpath, + pmu.add_extsep(file_ext))
 
 
 # ======================================================================
@@ -362,7 +360,7 @@ def parse_filename(
 
     """
     filename = os.path.basename(filepath)
-    filename_noext = pmb.change_ext(filename, '', pmb.EXT['niz'])
+    filename_noext = pmu.change_ext(filename, '', pmu.EXT['niz'])
     if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
         tokens = filename_noext.split(i_sep)
         info = {}
@@ -370,14 +368,14 @@ def parse_filename(
         idx_begin_name = 0
         idx_end_name = len(tokens)
         # check if contains scan ID
-        info['num'] = pmb.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID))
+        info['num'] = pmu.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID))
         idx_begin_name += (1 if info['num'] is not None else 0)
         # check if contains Sequential Number
         info['seq'] = None
         if len(tokens) > 1:
             for token in tokens[-1:-3:-1]:
-                if pmb.is_number(token):
-                    info['seq'] = pmb.auto_convert(token)
+                if pmu.is_number(token):
+                    info['seq'] = pmu.auto_convert(token)
                     break
         idx_end_name -= (1 if info['seq'] is not None else 0)
         # check if contains Image type
@@ -394,7 +392,7 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
-        ext=pmb.EXT['niz']):
+        ext=pmu.EXT['niz']):
     """
     Reconstruct file name/path with SIEMENS-like structure.
     Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
@@ -433,7 +431,7 @@ def to_filename(
     if 'type' in info and info['type'] is not None:
         tokens.append(info['type'])
     filepath = INFO_SEP.join(tokens)
-    filepath += (pmb.add_extsep(ext) if ext else '')
+    filepath += (pmu.add_extsep(ext) if ext else '')
     filepath = os.path.join(dirpath, filepath) if dirpath else filepath
     return filepath
 
@@ -487,7 +485,7 @@ def parse_series_name(
         else:
             param_id = re.findall('^[a-zA-Z\-]*', token)[0]
             param_val = get_param_val(token, param_id)
-        params[param_id] = pmb.auto_convert(param_val) if param_val else None
+        params[param_id] = pmu.auto_convert(param_val) if param_val else None
     return base, params
 
 
@@ -641,7 +639,7 @@ def combine_filename(
     filename = prefix
     for name in filenames:
         filename += 2 * INFO_SEP + \
-                    pmb.change_ext(os.path.basename(name), '', pmb.EXT['niz'])
+                    pmu.change_ext(os.path.basename(name), '', pmu.EXT['niz'])
     return filename
 
 
@@ -670,7 +668,7 @@ def filename2label(
         The extracted label.
 
     """
-    filename = pmb.change_ext(os.path.basename(filepath), '', ext)
+    filename = pmu.change_ext(os.path.basename(filepath), '', ext)
     tokens = filename.split(INFO_SEP)
     # remove unwanted information
     if excludes is None:

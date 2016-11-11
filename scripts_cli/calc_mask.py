@@ -13,10 +13,8 @@ Workflow is:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -52,7 +50,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 # import pymrt.naming as pmn
 # import pymrt.input_output as pmio
 # import pymrt.computation as pmc
@@ -129,7 +127,7 @@ def handle_arg():
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-m', '--mode', metavar='absolute|relative|percentile',
-        default='absolute',
+        default='percentile',
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-z', '--size_threshold', metavar='Z',
@@ -162,7 +160,7 @@ def main():
     begin_time = datetime.datetime.now()
 
     if args.output and args.verbose >= VERB_LVL['none']:
-        args.output = os.path.dirname(pmb.realpath(args.output))
+        args.output = os.path.dirname(pmu.realpath(args.output))
         print('OutDir: {}'.format(args.output))
     pml.calc_mask(
         args.input,

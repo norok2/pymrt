@@ -6,10 +6,8 @@ PyMRT: generate output for LaTeX.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import(
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -48,7 +46,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 
 
 # from pymrt import INFO
@@ -105,7 +103,7 @@ def tabular(labels, rows, label_filters, row_filters, format_dict):
     # separator
     output_str += '\hline\n'
     # write data
-    seps = pmb.accumulate(grouping) if grouping else []
+    seps = pmu.accumulate(grouping) if grouping else []
     for i, row in enumerate(rows):
         for j, col in enumerate(row):
             if row_filters:

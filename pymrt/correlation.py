@@ -48,7 +48,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.base as pmb
+import pymrt.utils as pmu
 import pymrt.naming as pmn
 import pymrt.geometry as pmg
 import pymrt.registration as pmr
@@ -152,7 +152,7 @@ def _get_ref_list(
         ref_filepaths (list[str]): List of paths to reference files
         ref_src_filepaths (list[str]): List of paths to reference source files
     """
-    ref_src_filepaths = pmb.listdir(dirpath, ref_ext)
+    ref_src_filepaths = pmu.listdir(dirpath, ref_ext)
     if ref_src_filepaths:
         ref_filepaths = []
         for ref_src in ref_src_filepaths:
@@ -161,17 +161,16 @@ def _get_ref_list(
             if subdir:
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
-            ref_filename = pmb.change_ext(
-                os.path.basename(ref_src), pmb.EXT['niz'], ref_ext)
+            ref_filename = pmu.change_ext(
+                os.path.basename(ref_src), pmu.EXT['niz'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepaths.append(ref_filepath)
     elif target_list:
         ref_filepaths = target_list
     else:
-        ref_filepaths = pmb.listdir(dirpath, pmb.EXT['niz'])
+        ref_filepaths = pmu.listdir(dirpath, pmu.EXT['niz'])
     if not ref_filepaths:
         raise RuntimeError('No reference file(s) found')
-    return ref_filepaths, ref_src_filepaths
     return ref_filepaths, ref_src_filepaths
 
 
@@ -206,9 +205,9 @@ def _compute_affine_fsl(
     Returns:
         None.
     """
-    if pmb.check_redo([in_filepath, ref_filepath], [aff_filepath], force):
+    if pmu.check_redo([in_filepath, ref_filepath], [aff_filepath], force):
         msg('Affine: {}'.format(os.path.basename(aff_filepath)))
-        ext_cmd = EXT_CMD['fsl/4.1/flirt']
+        ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_args = {
             'in': in_filepath,
             'ref': ref_filepath,
@@ -222,7 +221,7 @@ def _compute_affine_fsl(
                 cmd_args[str(key)] = eval(val)
         cmd = ' '.join(
             [ext_cmd] + ['-{} {}'.format(k, v) for k, v in cmd_args.items()])
-        pmb.execute(cmd, verbose=verbose)
+        pmu.execute(cmd, verbose=verbose)
 
 
 # ======================================================================
@@ -247,11 +246,11 @@ def _apply_affine_fsl(
     Returns:
         None.
     """
-    if pmb.check_redo(
+    if pmu.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
             force):
         msg('Regstr: {}'.format(os.path.basename(out_filepath)))
-        ext_cmd = EXT_CMD['fsl/4.1/flirt']
+        ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_options = {
             'in': in_filepath,
             'ref': ref_filepath,
@@ -262,7 +261,7 @@ def _apply_affine_fsl(
         cmd = ' '.join(
             [ext_cmd] +
             ['-{} {}'.format(k, v) for k, v in cmd_options.items()])
-        pmb.execute(cmd, verbose=verbose)
+        pmu.execute(cmd, verbose=verbose)
 
 
 # ======================================================================
@@ -314,7 +313,7 @@ def register_fsl(
     xfm_filepath = os.path.join(
         os.path.dirname(out_filepath),
         pmn.combine_filename(affine_prefix, (ref_filepath, in_filepath)) +
-        pmb.add_extsep(pmb.EXT['text']))
+        pmu.add_extsep(pmu.EXT['text']))
     _compute_affine_fsl(
         in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
         ref_mask_filepath, flirt_kwargs, flirt__kwargs,
@@ -363,7 +362,7 @@ def register(
         img = pmg.affine_transform(img, linear, shift)
         return img
 
-    if pmb.check_redo([in_filepath, ref_filepath], [out_filepath], force):
+    if pmu.check_redo([in_filepath, ref_filepath], [out_filepath], force):
         pmio.simple_filter_n_1(
             [in_filepath, ref_filepath], out_filepath, _quick_reg,
             transform='rigid', interp_order=1, init_guess=('none', 'none'))
@@ -403,7 +402,7 @@ def apply_mask(
         img = pmg.frame(img, 0.1, 0.0)
         return img
 
-    if pmb.check_redo([in_filepath, mask_filepath], [out_filepath], force):
+    if pmu.check_redo([in_filepath, mask_filepath], [out_filepath], force):
         msg('RunMsk: {}'.format(os.path.basename(out_filepath)))
         pmio.simple_filter_n_1(
             [in_filepath, mask_filepath], out_filepath,
@@ -413,10 +412,10 @@ def apply_mask(
 # ======================================================================
 def calc_mask(
         in_filepath,
-        out_filepath=None,
+        out_dirpath=None,
         threshold=0.5,
         comparison='>',
-        mode='relative',
+        mode='percentile',
         smoothing=1.0,
         erosion_iter=2,
         dilation_iter=2,
@@ -437,7 +436,7 @@ def calc_mask(
     ==========
     in_filepath : str
         Path to image from which mask is to be extracted.
-    out_filepath : str (optional)
+    out_dirpath : str (optional)
         Path to directory where to store results.
     bet_params : str (optional)
         Parameters to be used with FSL's BET brain extraction algorithm.
@@ -482,7 +481,7 @@ def calc_mask(
         if smoothing > 0.0:
             array = sp.ndimage.gaussian_filter(array, smoothing)
         # :: masking
-        array = mrs.mask_threshold(array, threshold, comparison, mode)
+        array = pms.mask_threshold(array, threshold, comparison, mode)
         # :: postprocess
         if erosion_iter > 0:
             array = sp.ndimage.binary_erosion(array, iterations=erosion_iter)
@@ -491,12 +490,12 @@ def calc_mask(
         return array.astype(float)
 
     # todo: move to pmio.
-    if not out_filepath:
-        out_filepath = os.path.dirname(in_filepath)
-    if os.path.isdir(out_filepath):
+    if not out_dirpath:
+        out_dirpath = os.path.dirname(in_filepath)
+    if os.path.isdir(out_dirpath):
         out_filename = os.path.basename(
             pmn.change_img_type(in_filepath, SERVICE_ID['mask']))
-        out_filepath = os.path.join(out_filepath, out_filename)
+        out_dirpath = os.path.join(out_dirpath, out_filename)
 
     in_tmp_filepath = pmn.change_img_type(in_filepath, helper_img_type) \
         if helper_img_type else in_filepath
@@ -513,18 +512,18 @@ def calc_mask(
         erosion_iter = 3
         dilation_iter = 2
         # perform BET extraction
-        ext_cmd = EXT_CMD['fsl/4.1/bet']
-        bet_tmp_filepath = pmn.change_img_type(out_filepath, 'BRAIN')
-        if pmb.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
+        ext_cmd = EXT_CMD['fsl/5.0/bet']
+        bet_tmp_filepath = pmn.change_img_type(out_dirpath, 'BRAIN')
+        if pmu.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
             msg('TmpMsk: {}'.format(os.path.basename(bet_tmp_filepath)))
             cmd_tokens = [
                 ext_cmd, in_tmp_filepath, bet_tmp_filepath, bet_params]
             cmd = ' '.join(cmd_tokens)
-            ret_code, p_stdout, p_stderr = pmb.execute(cmd, verbose=verbose)
+            ret_code, p_stdout, p_stderr = pmu.execute(cmd, verbose=verbose)
         in_tmp_filepath = bet_tmp_filepath
 
     # extract mask using a threshold
-    if pmb.check_redo([in_tmp_filepath], [out_filepath], force):
+    if pmu.check_redo([in_tmp_filepath], [out_dirpath], force):
         _calc_mask_kwargs = {
             'threshold': threshold,
             'comparison': comparison,
@@ -532,12 +531,12 @@ def calc_mask(
             'smoothing': smoothing,
             'erosion_iter': erosion_iter,
             'dilation_iter': dilation_iter}
-        msg('I: compute_mask params: ', _calc_mask_kwargs.items(),
+        msg('I: compute_mask params: '.format(_calc_mask_kwargs.items()),
             verbose, VERB_LVL['medium'])
-        msg('GetMsk: {}'.format(os.path.basename(out_filepath)))
+        msg('GetMsk: {}'.format(os.path.basename(out_dirpath)))
         pmio.simple_filter_1_1(
-            in_tmp_filepath, out_filepath, _calc_mask, **_calc_mask_kwargs)
-    return out_filepath
+            in_tmp_filepath, out_dirpath, _calc_mask, **_calc_mask_kwargs)
+    return out_dirpath
 
 
 # ======================================================================
@@ -561,7 +560,7 @@ def calc_difference(
         None
 
     """
-    if pmb.check_redo([in1_filepath, in2_filepath], [out_filepath], force):
+    if pmu.check_redo([in1_filepath, in2_filepath], [out_filepath], force):
         msg('DifImg: {}'.format(os.path.basename(out_filepath)))
         pmio.simple_filter_n_1(
             [in1_filepath, in2_filepath], out_filepath,
@@ -623,7 +622,7 @@ def calc_correlation(
         in_filepath_list = [in1_filepath, in2_filepath, mask_filepath]
     else:
         in_filepath_list = [in1_filepath, in2_filepath]
-    if pmb.check_redo(in_filepath_list, [out_filepath], force):
+    if pmu.check_redo(in_filepath_list, [out_filepath], force):
         msg('Correl: {}'.format(os.path.basename(out_filepath)))
         img1_nii = nib.load(in1_filepath)
         img2_nii = nib.load(in2_filepath)
@@ -637,44 +636,47 @@ def calc_correlation(
         else:
             mask = np.ones_like(img1 * img2).astype(bool)
         if val_interval is None:
-            val_interval = pmb.minmax(np.stack((img1, img2)))
-        mask *= (img1 > val_interval[0]).astype(bool)
-        mask *= (img1 < val_interval[1]).astype(bool)
-        mask *= (img2 > val_interval[0]).astype(bool)
-        mask *= (img2 < val_interval[1]).astype(bool)
+            val_interval = pmu.minmax(np.stack((img1, img2)))
+        mask *= (img1 > val_interval[0])
+        mask *= (img1 < val_interval[1])
+        mask *= (img2 > val_interval[0])
+        mask *= (img2 < val_interval[1])
         if not mask_val_list:
             mask_val_list = []
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
-        d_dict = pmb.calc_stats(
+        d_dict = pmu.calc_stats(
             d_arr, mask_nan, mask_inf, mask_val_list)
         # calculate stats of the absolute difference image
         e_arr = np.abs(d_arr)
-        e_dict = pmb.calc_stats(
+        e_dict = pmu.calc_stats(
             e_arr, mask_nan, mask_inf, mask_val_list)
         # calculate Pearson's Correlation Coefficient
         pcc_val, pcc_p_val = \
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
         pcc2_val = pcc_val * pcc_val
         # calculate linear polynomial fit
-        linear_coeff, linear_offset = np.polyfit(
-            img1[mask].ravel(), img2[mask].ravel(), 1)
+        n = 1
+        poly_params = \
+            np.polyfit(img1[mask].ravel(), img2[mask].ravel(), n)[::-1]
         #        # calculate Theil robust slope estimator (WARNING: too much
         #  memory!)
         #        theil_coeff, theil_offset, = sp.stats.mstats.theilslopes(
         #            img2[mask].ravel(),
         # img1[mask].ravel())
+        # mutual information
+        mi = pmu.norm_mutual_information(img1[mask], img2[mask])
         # voxel counts
         num = np.sum(mask.astype(bool))
         num_tot = np.size(mask)
         num_ratio = num / num_tot
         # save results to csv
         filenames = [
-            pmb.change_ext(os.path.basename(path), '', pmb.EXT['niz'])
+            pmu.change_ext(os.path.basename(path), '', pmu.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
-        val_filter = (lambda x: pmb.compact_num_str(x, trunc)) \
+        val_filter = (lambda x: pmu.compact_num_str(x, trunc)) \
             if trunc else (lambda x: x)
         d_arr_val = [val_filter(d_dict[key]) for key in label_list]
         e_arr_val = [val_filter(e_dict[key]) for key in label_list]
@@ -683,8 +685,8 @@ def calc_correlation(
              filenames] + \
             list(d_arr_val) + list(e_arr_val) + \
             [val_filter(val)
-             for val in [pcc_val, pcc2_val, pcc_p_val,
-                         linear_coeff, linear_offset,
+             for val in [pcc_val, pcc2_val, pcc_p_val, mi,
+                         poly_params[1], poly_params[0],
                          #                theil_coeff, theil_offset,
                          num, num_tot, num_ratio]]
         labels = \
@@ -692,14 +694,14 @@ def calc_correlation(
              '{: <{size}s}'.format('y_corr_file', size=lbl_len)] + \
             ['D-' + lbl for lbl in label_list] + \
             ['E-' + lbl for lbl in label_list] + \
-            ['r', 'r2', 'p-val',
+            ['r', 'r2', 'p-val', 'nmi',
              'lin-cof', 'lin-off',
              #             'thl-cof', 'thl-off',
              'N_eff', 'N_tot', 'N_ratio']
         with open(out_filepath, 'w') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=str(pmb.CSV_DELIMITER))
-            csvwriter.writerow([pmb.COMMENT_TOKEN + in2_filepath])
-            csvwriter.writerow([pmb.COMMENT_TOKEN + in1_filepath])
+            csvwriter = csv.writer(csvfile, delimiter=str(pmu.CSV_DELIMITER))
+            csvwriter.writerow([pmu.COMMENT_TOKEN + in2_filepath])
+            csvwriter.writerow([pmu.COMMENT_TOKEN + in1_filepath])
             csvwriter.writerow(labels)
             csvwriter.writerow(values)
 
@@ -746,9 +748,9 @@ def combine_correlation(
     base_dir = ''
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=str(pmb.CSV_DELIMITER))
+            csvreader = csv.reader(csvfile, delimiter=str(pmu.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(pmb.COMMENT_TOKEN):
+                if row[0].startswith(pmu.COMMENT_TOKEN):
                     base_dir = os.path.dirname(os.path.commonprefix(
                         (base_dir, row[0]))) + os.path.sep \
                         if base_dir else row[0]
@@ -756,9 +758,9 @@ def combine_correlation(
     labels, rows, max_cols = [], [], []
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=str(pmb.CSV_DELIMITER))
+            csvreader = csv.reader(csvfile, delimiter=str(pmu.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(pmb.COMMENT_TOKEN):
+                if row[0].startswith(pmu.COMMENT_TOKEN):
                     sub_dir = os.path.dirname(row[0][len(base_dir):])
                 elif not labels:
                     labels = ['subdir'] + row if sub_dir else row
@@ -781,10 +783,10 @@ def combine_correlation(
             rows[j][i] = '{: <{size}s}'.format(col, size=max_cols[i])
     # :: write grouped correlation to new file
     out_filepath = os.path.join(
-        out_dirpath, out_filename + pmb.add_extsep(pmb.EXT['tab']))
-    if pmb.check_redo(filepath_list, [out_filepath], force):
+        out_dirpath, out_filename + pmu.add_extsep(pmu.EXT['tab']))
+    if pmu.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'w') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=str(pmb.CSV_DELIMITER))
+            csvwriter = csv.writer(csvfile, delimiter=str(pmu.CSV_DELIMITER))
             if not selected_cols:
                 selected_cols = range(len(labels))
             csvwriter.writerow([base_dir])
@@ -840,16 +842,16 @@ def plot_correlation(
     filename = pmn.combine_filename(
         corr_prefix, (img1_filepath, img2_filepath))
     save_filepath = os.path.join(
-        out_dirpath, filename + pmb.add_extsep(pmb.EXT['plot']))
+        out_dirpath, filename + pmu.add_extsep(pmu.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if pmb.check_redo(in_filepath_list, [save_filepath], force):
+    if pmu.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltCor: {}'.format(os.path.basename(save_filepath)))
         img1_label = pmn.filename2label(
-            img1_filepath, ext=pmb.EXT['niz'], max_length=32)
+            img1_filepath, ext=pmu.EXT['niz'], max_length=32)
         img2_label = pmn.filename2label(
-            img2_filepath, ext=pmb.EXT['niz'], max_length=32)
+            img2_filepath, ext=pmu.EXT['niz'], max_length=32)
         title = 'Voxel-by-Voxel Correlation'
         if not val_type:
             val_type = 'Image'
@@ -859,10 +861,10 @@ def plot_correlation(
         pmio.plot_histogram2d(
             img1_filepath, img2_filepath, mask_filepath, mask_filepath,
             hist_interval=(0.0, 1.0), bins=512, array_interval=val_interval,
-            scale='log10', title=title, cmap=plt.cm.hot_r,
+            scale='log10', title=title,
             labels=(x_lbl, y_lbl), bisector=':k',
-            colorbar_opts={},
-            save_filepath=save_filepath, close_figure=not plt.isinteractive())
+            cbar_kws={},
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================
@@ -908,12 +910,12 @@ def plot_histogram(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        pmb.change_ext(os.path.basename(img_filepath), pmb.EXT['plot'],
-                       pmb.EXT['niz']))
+        pmu.change_ext(os.path.basename(img_filepath), pmu.EXT['plot'],
+                       pmu.EXT['niz']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if pmb.check_redo(in_filepath_list, [save_filepath], force):
+    if pmu.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltHst: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = ''
@@ -922,8 +924,8 @@ def plot_histogram(
         pmio.plot_histogram1d(
             img_filepath, mask_filepath, hist_interval=(0.0, 1.0), bins=1024,
             array_interval=val_interval, title=plot_title,
-            labels=(val_units, None), save_filepath=save_filepath,
-            close_figure=not plt.isinteractive())
+            labels=(val_units, None),
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================
@@ -972,9 +974,9 @@ def plot_sample(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        pmb.change_ext(os.path.basename(img_filepath), pmb.EXT['plot'],
-                       pmb.EXT['niz']))
-    if pmb.check_redo([img_filepath], [save_filepath], force):
+        pmu.change_ext(os.path.basename(img_filepath), pmu.EXT['plot'],
+                       pmu.EXT['niz']))
+    if pmu.check_redo([img_filepath], [save_filepath], force):
         msg('PltFig: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = 'Image'
@@ -984,8 +986,8 @@ def plot_sample(
         pmio.plot_sample2d(
             img_filepath, axis, index, title=plot_title,
             array_interval=val_interval,
-            colorbar_opts={},
-            close_figure=not plt.isinteractive(), save_filepath=save_filepath)
+            cbar_kws={},
+            save_filepath=save_filepath, ax=None, force=force, verbose=verbose)
 
 
 # ======================================================================
@@ -1033,7 +1035,7 @@ def registering(
         ref_filepath = in_filepath_list[0]
     # log the name of the reference image
     log_filepath = os.path.join(out_dirpath, log_filename)
-    if pmb.check_redo(
+    if pmu.check_redo(
                     in_filepath_list + [ref_filepath], [log_filepath], force):
         with open(log_filepath, 'w') as log_file:
             log_file.write(ref_filepath)
@@ -1070,7 +1072,7 @@ def registering(
                 # serial
                 register_func(*register_args, **register_kwargs)
         else:
-            if pmb.check_redo([in_filepath], [out_filepath], force):
+            if pmu.check_redo([in_filepath], [out_filepath], force):
                 msg('Regstr: {}'.format(os.path.basename(out_filepath)))
                 msg('I: copying without registering.')
                 shutil.copy(in_filepath, out_filepath)
@@ -1191,11 +1193,11 @@ def prepare_comparison(
         diff_filepath = os.path.join(
             out_dirpath,
             pmn.combine_filename(diff_prefix, (ref_filepath, in_filepath)) +
-            pmb.add_extsep(pmb.EXT['niz']))
+            pmu.add_extsep(pmu.EXT['niz']))
         corr_filepath = os.path.join(
             out_dirpath,
             pmn.combine_filename(corr_prefix, (ref_filepath, in_filepath)) +
-            pmb.add_extsep(pmb.EXT['tab']))
+            pmu.add_extsep(pmu.EXT['tab']))
         cmp_list.append(
             (in_filepath, ref_filepath, diff_filepath, corr_filepath))
     return cmp_list
@@ -1362,8 +1364,8 @@ def check_correlation(
     # :: populate a list of images to analyze
     targets, corrs = [], []
     if os.path.exists(dirpath):
-        filepath_list = pmb.listdir(dirpath, pmb.EXT['niz'])
-        sources = [pmb.realpath(filepath) for filepath in filepath_list
+        filepath_list = pmu.listdir(dirpath, pmu.EXT['niz'])
+        sources = [pmu.realpath(filepath) for filepath in filepath_list
                    if not val_type or
                    pmn.parse_filename(filepath)['type'] == val_type]
         if len(sources) > 0:
@@ -1401,20 +1403,19 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filename = pmb.change_ext(
-                        MASK_FILENAME, pmb.EXT['niz'])
-                    mask_filepath = pmb.realpath(mask_filename)
+                    mask_filepath = pmu.change_ext(
+                        MASK_FILENAME, pmu.EXT['niz'])
                 # add current directory if it was not specified
-                if not os.path.exists(mask_filepath):
+                if not os.path.isfile(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)
                 # if mask not found, create one from registration reference
-                if not os.path.exists(mask_filepath):
+                if not os.path.isfile(mask_filepath):
                     if 'calc_mask' not in reg_info:
                         reg_info['calc_mask'] = {}
                     mask_filepath = calc_mask(
                         ref, tmp_path, verbose=verbose, force=force,
                         **reg_info['calc_mask'])
-                mask_filepath = pmb.realpath(mask_filepath)
+                mask_filepath = pmu.realpath(mask_filepath)
             else:
                 mask_filepath = None
             msg('I: {}'.format(mask_filepath), verbose, VERB_LVL['high'])
@@ -1444,7 +1445,7 @@ def check_correlation(
                     force=force, verbose=verbose)
                 # make sure the mask has correct shape
                 new_mask = os.path.join(
-                    dirpath, msk_path, os.path.basename(mask_filepath))
+                    msk_path, os.path.basename(mask_filepath))
                 msg('I: newly shaped mask: {}'.format(new_mask),
                     verbose, VERB_LVL['medium'])
                 apply_mask(mask_filepath, mask_filepath, new_mask)
@@ -1475,7 +1476,7 @@ def check_correlation(
                 if val_interval is None:
                     stats_dict = pmio.calc_stats(target)
                     val_interval = (stats_dict['min'], stats_dict['max'])
-                diff_interval = pmb.combine_interval(
+                diff_interval = pmu.combine_interval(
                     val_interval, val_interval, '-')
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
@@ -1496,7 +1497,7 @@ def check_correlation(
         else:
             msg('W: no input file found.', verbose, VERB_LVL['medium'])
             msg('I: descending into subdirectories.', verbose, VERB_LVL['high'])
-            sub_dirpath_list = pmb.listdir(dirpath, None)
+            sub_dirpath_list = pmu.listdir(dirpath, None)
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,
