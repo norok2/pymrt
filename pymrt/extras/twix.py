@@ -281,12 +281,12 @@ def _read_x_protocol(text):
     )
 
     # print(x_prot)
-    x_prot = exp.parseString(text)
-    with open('/media/Data/tmp/parsed.json', 'w') as f:
-        json.dump(
-            (x_prot.asDict(), x_prot.asList()), f, sort_keys=True, indent=4)
-
-    quit()
+    # x_prot = exp.parseString(text)
+    # with open('/media/Data/tmp/parsed.json', 'w') as f:
+    #     json.dump(
+    #         (x_prot.asDict(), x_prot.asList()), f, sort_keys=True, indent=4)
+    #
+    # quit()
     return x_prot
 
 

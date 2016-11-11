@@ -65,6 +65,7 @@ def dipole_kernel(
     return dk_arr
 
 
+# ======================================================================
 def phase_to_db0(
         phs_arr,
         b0=3.0,
@@ -138,6 +139,7 @@ def qsm_sharp(
     # pfilt = (fftshift(real(ifftn(fftn(conv_fm).*(quotient))))).*mask;
 
 
+# ======================================================================
 def qsm_tkd(
         db0_arr,
         mask,
