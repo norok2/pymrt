@@ -8,10 +8,8 @@ See: https://packaging.python.org/en/latest/distributing.html
 
 # ======================================================================
 # :: Future Imports (for Python 2)
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-# from __future__ import unicode_literals
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
