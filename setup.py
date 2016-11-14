@@ -8,10 +8,8 @@ See: https://packaging.python.org/en/latest/distributing.html
 
 # ======================================================================
 # :: Future Imports (for Python 2)
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-# from __future__ import unicode_literals
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -26,22 +24,21 @@ from setuptools import find_packages
 
 # ======================================================================
 # project specific variables
-VERSION_SOURCE_FILEPATH = 'pymrt/__init__.py'
-README_SOURCE_FILE = 'README.rst'
+VERSION_FILEPATH = 'pymrt/__init__.py'
+README_FILEPATH = 'README.rst'
 
 # get the working directory for the setup script
 CWD = os.path.realpath(os.path.dirname(__file__))
 
 # get the long description from the README file
-with open(os.path.join(CWD, README_SOURCE_FILE),
-          encoding='utf-8') as readme_file:
+with open(os.path.join(CWD, README_FILEPATH), encoding='utf-8') as readme_file:
     LONG_DESCRIPTION_TEXT = readme_file.read()
 
 
 # ======================================================================
 def fix_version(
         version=None,
-        source_filepath=VERSION_SOURCE_FILEPATH):
+        source_filepath=VERSION_FILEPATH):
     """
     Fix version in source code.
 
@@ -57,14 +54,14 @@ def fix_version(
 
         version = setuptools_scm.get_version()
     with open(source_filepath, 'r') as src_file:
-        src_str = src_file.read()
+        src_str = src_file.read().decode('utf-8')
         src_str = re.sub(
             r"__version__ = '.*'",
             "__version__ = '{}'".format(version),
-            src_str)
+            src_str, flags=re.UNICODE)
 
     with open(source_filepath, 'w') as src_file:
-        src_file.write(src_str)
+        src_file.write(src_str.encode('utf-8'))
 
     return version
 
@@ -118,8 +115,9 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
 
-    keywords='quantitative MRI qMRI MT susceptibility relaxometry qMT '
-             'neurophysics neurology physics imaging data analysis',
+    keywords=('quantitative', 'MRI', 'qMRI', 'MT', 'susceptibility',
+              'relaxometry', 'qMT', 'neurophysics', 'neurology', 'physics',
+              'imaging', 'data', 'analysis'),
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
@@ -130,6 +128,7 @@ setup(
         'nibabel',
         'matplotlib',
         'pyparsing',
+        'numeral',
     ],
 
     setup_requires=[
@@ -139,7 +138,6 @@ setup(
 
     extras_require={
         'blessed': 'blessed',
-        'roman': 'roman',
     },
 
     package_data={
