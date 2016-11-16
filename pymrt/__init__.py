@@ -8,7 +8,7 @@ PyMRT: data analysis for quantitative MRI
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -106,11 +106,13 @@ def msg(
         try:
             import blessed
         except ImportError:
-            blessed = None
-
-        text = str(text)
+            try:
+                import blessings as blessed
+            except ImportError:
+                blessed = None
 
         if blessed:
+            text = str(text)
             t = blessed.Terminal()
             if not fmt:
                 if VERB_LVL['low'] < verb_threshold <= VERB_LVL['medium']:
