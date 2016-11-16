@@ -34,17 +34,13 @@ import string  # Common string operations
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
 # import SimpleITK as sitk  # Image ToolKit Wrapper
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-try:
-    import roman as roman_numbers  # Integer to Roman numerals converter
-except ImportError:
-    roman_numbers = None
+import numeral  # Support for various integer-to-numeral (and back) conversion
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -1193,7 +1189,6 @@ def subplots(
     axs = [plt.subplot(gs[n]) for n in range(num_row * num_col)]
     axs = np.array(axs).reshape((num_row, num_col))
 
-
     for i, row_label in enumerate(row_labels):
         for j, col_label in enumerate(col_labels):
             if not swap_filling:
@@ -1207,16 +1202,14 @@ def subplots(
                 if subplot_title_fmt:
                     t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
                     number = n_plot + 1
-                    if roman_numbers:  # todo: switch to numerals?
-                        roman_lowercase = roman_numbers.toRoman(number)
-                        roman_uppercase = roman_numbers.toRoman(number)
-                        roman = roman_uppercase
-                    letter_lowercase = \
-                        string.ascii_lowercase[n_plot % len(string.ascii_lowercase)]
-                    letter_uppercase = \
-                        string.ascii_uppercase[n_plot % len(string.ascii_uppercase)]
-                    letter = letter_lowercase
-                    plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
+                    roman = numeral.int2roman(number)
+                    roman_uppercase = roman.upper()
+                    roman_lowercase = roman.lower()
+                    letter = numeral.int2letter(number)
+                    letter_uppercase = letter.upper()
+                    letter_lowercase = letter.lower()
+                    plot_kwargs['title'] = subplot_title_fmt.format_map(
+                        locals())
                 plot_func(*tuple(plot_args), **(plot_kwargs))
 
             if col_label:
@@ -1255,7 +1248,6 @@ def subplots(
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
     return fig
-
 
 # # ======================================================================
 # def subplots(
