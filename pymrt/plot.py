@@ -903,6 +903,7 @@ def histogram2d(
         aspect (float): aspect ratio of the histogram.
             If None, it is calculated to result in squared proportions.
         scale (str|callable): The frequency value transformation method.
+
             - 'linear': no transformation is performed.
             - 'log': uses the natural logarithm of the histogram frequency.
             - 'log2': uses the base-2 logarithm of the histogram frequency.
@@ -1201,11 +1202,10 @@ def subplots(
                 plot_kwargs['ax'] = axs[i, j]
                 if subplot_title_fmt:
                     t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
-                    number = n_plot + 1
-                    roman = numeral.int2roman(number)
+                    roman = numeral.int2roman(n_plot + 1, only_ascii=True)
                     roman_uppercase = roman.upper()
                     roman_lowercase = roman.lower()
-                    letter = numeral.int2letter(number)
+                    letter = numeral.int2letter(n_plot)
                     letter_uppercase = letter.upper()
                     letter_lowercase = letter.lower()
                     plot_kwargs['title'] = subplot_title_fmt.format_map(
