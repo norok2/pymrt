@@ -94,7 +94,7 @@ setup(
 
     version=fix_version(),
 
-    url='https://bitbucket.org/norok2/pymrt',
+    url='https://bitbucket.org/norok2/' + NAME.lower(),
 
     author='Riccardo Metere',
     author_email='rick@metere.it',
@@ -123,8 +123,8 @@ setup(
         'Operating System :: POSIX',
         'Natural Language :: English',
 
-        'License :: OSI Approved :: GNU General Public License v3 or later'
-        ' (GPLv3+)',
+        'License :: OSI Approved :: '
+        'GNU General Public License v3 or later (GPLv3+)',
 
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
