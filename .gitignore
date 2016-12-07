@@ -104,3 +104,4 @@ target/
 # IPython
 *.pynb_checkpoints*
 *.ipynb_checkpoints*
+*.ipynb
