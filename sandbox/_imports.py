@@ -73,6 +73,7 @@ import scipy.ndimage  # SciPy: Multidimensional image processing
 import scipy.linalg  # SciPy: Linear Algebra
 import scipy.stats  # SciPy: Statistical functions
 import scipy.misc  # SciPy: Miscellaneous routines
+import scipy.signal  # SciPy: Signal Processing
 
 # import sympy.mpmath  # SymPy: Function approximation
 

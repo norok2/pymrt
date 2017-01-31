@@ -32,6 +32,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # :: External Imports Submodules
 import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.stats  # SciPy: Statistical functions
+import scipy.signal  # SciPy: Signal Processing
 
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
@@ -1656,12 +1657,74 @@ def check_redo(
 
             for in_filepath, out_filepath in \
                     itertools.product(in_filepaths, out_filepaths):
-                if os.path.getmtime(in_filepath) > os.path.getmtime(out_filepath):
-                        force = True
-                        break
+                if os.path.getmtime(in_filepath) > os.path.getmtime(
+                        out_filepath):
+                    force = True
+                    break
         elif no_empty_input:
             raise IOError('Input file list is empty.')
     return force
+
+
+# ======================================================================
+def bijective_part(arr, invert=False):
+    """
+    Determine the largest bijective part of an array.
+
+    Args:
+        arr (np.ndarray): The input 1D-array.
+        invert (bool): Invert the selection order for equally large parts.
+            The behavior of `numpy.argmax` is the default.
+
+    Returns:
+        slice (slice): The largest bijective portion of arr.
+            If two equivalent parts are found, uses the `numpy.argmax` default.
+
+    Examples:
+        >>> x = np.linspace(-1 / np.pi, 1 / np.pi, 5000)
+        >>> arr = np.sin(1 / x)
+        >>> bijective_part(x)
+        slice(None, None, None)
+        >>> bijective_part(arr)
+        slice(None, 833, None)
+        >>> bijective_part(arr, True)
+        slice(4166, None, None)
+    """
+    local_mins = sp.signal.argrelmin(arr.ravel())[0]
+    local_maxs = sp.signal.argrelmax(arr.ravel())[0]
+    # boundaries are considered pseudo-local maxima and minima
+    # but are not included in local_mins / local_maxs
+    # therefore they are added manually
+    extrema = np.zeros((len(local_mins) + len(local_maxs)) + 2, dtype=np.int)
+    extrema[-1] = len(arr) - 1
+    if len(local_mins) > 0 and len(local_maxs) > 0:
+        # start with smallest maxima or minima
+        if np.min(local_mins) < np.min(local_maxs):
+            extrema[1:-1:2] = local_mins
+            extrema[2:-1:2] = local_maxs
+        else:
+            extrema[1:-1:2] = local_maxs
+            extrema[2:-1:2] = local_mins
+    elif len(local_mins) == 1 and len(local_maxs) == 0:
+        extrema[1] = local_mins
+    elif len(local_mins) == 0 and len(local_maxs) == 1:
+        extrema[1] = local_maxs
+    elif len(local_maxs) == len(local_mins) == 0:
+        pass
+    else:
+        raise ValueError('Failed to determine maxima and/or minima.')
+
+    part_sizes = np.diff(extrema)
+    if any(part_sizes) < 0:
+        raise ValueError('Failed to determine orders of maxima and minima.')
+    if not invert:
+        largest = np.argmax(part_sizes)
+    else:
+        largest = len(part_sizes) - np.argmax(part_sizes[::-1]) - 1
+    min_cut, max_cut = extrema[largest:largest + 2]
+    return slice(
+        min_cut if min_cut > 0 else None,
+        max_cut if max_cut < len(arr) - 1 else None)
 
 
 # ======================================================================
@@ -1720,7 +1783,7 @@ def sgnlogspace(
         >>> sgnlogspace(2, 10, 4)
         array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
-    if start * stop < 0.0:
+    if is_same_sign((start, stop)):
         bounds = (
             (start, -(np.exp(-np.log(np.abs(start))))),
             ((np.exp(-np.log(np.abs(stop)))), stop))
@@ -1761,6 +1824,23 @@ def minmax(arr):
         (0, 9)
     """
     return np.min(arr), np.max(arr)
+
+
+# ======================================================================
+def is_same_sign(items):
+    """
+    Determine if all items in an iterable have the same sign.
+
+    Args:
+        items (iterable): The items to check.
+            The comparison operators '>=' and '<' must be defined.
+
+    Returns:
+        same_sign (bool): The result of the comparison.
+            True if they are all positive or all negative.
+            False otherwise, i.e. they have mixed signs.
+    """
+    return all(item >= 0 for item in items) or all(item < 0 for item in items)
 
 
 # ======================================================================

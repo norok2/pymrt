@@ -185,7 +185,7 @@ def quick_3d(array):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
         # zz, xx, yy = array.nonzero()
-        # ax.scatter(xx, yy, zz, cmap=plt.cm.hot)
+        # ax.scatter(xx, yy, zz, cmap=plt.cm.afmhot_r)
 
         verts, faces = measure.marching_cubes(array, 0.5, (2,) * 3)
         ax.plot_trisurf(
@@ -321,12 +321,13 @@ def sample2d(
     if array_interval is None:
         array_interval = pmu.minmax(arr)
     if not cmap:
-        if array_interval[0] * array_interval[1] < 0:
+        print(array_interval, type(array_interval[0]), pmu.is_same_sign(array_interval))
+        if not pmu.is_same_sign(array_interval):
             cmap = mpl.cm.RdBu_r
         else:
             cmap = mpl.cm.gray_r
     if not text_color:
-        if array_interval[0] * array_interval[1] < 0:
+        if not pmu.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -466,12 +467,12 @@ def sample2d_anim(
     if array_interval is None:
         array_interval = pmu.minmax(array)
     if not cmap:
-        if array_interval[0] * array_interval[1] < 0:
-            cmap = mpl.cm.RdBu
+        if not pmu.is_same_sign(array_interval):
+            cmap = mpl.cm.RdBu_r
         else:
-            cmap = mpl.cm.gray
+            cmap = mpl.cm.gray_r
     if not text_color:
-        if array_interval[0] * array_interval[1] < 0:
+        if not pmu.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -1208,8 +1209,8 @@ def subplots(
                     letter = numeral.int2letter(n_plot)
                     letter_uppercase = letter.upper()
                     letter_lowercase = letter.lower()
-                    plot_kwargs['title'] = subplot_title_fmt.format_map(
-                        locals())
+                    plot_kwargs['title'] = \
+                        subplot_title_fmt.format_map(locals())
                 plot_func(*tuple(plot_args), **(plot_kwargs))
 
             if col_label:
