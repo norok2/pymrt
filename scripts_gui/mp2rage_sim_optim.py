@@ -104,7 +104,7 @@ OPTIM_A1_INTERVAL = (1.5, 90.0 / 5)
 # ======================================================================
 # :: Create the GUI plot
 def ui_plot(
-        t1_linspace, is_direct, use_dicom_INTERVAL, optim_a1,
+        t1_linspace, is_direct, use_dicom_interval, optim_a1,
         optim_t1_INTERVAL):
     """
     User-interface and plot.
@@ -142,7 +142,7 @@ def ui_plot(
         ii_m_val = mp2rage_ii(t1_val, *(par[:-2] + par_m))
         ii_p2_val = mp2rage_ii(t1_val, *(par[:-2] + par_p2))
         ii_m2_val = mp2rage_ii(t1_val, *(par[:-2] + par_m2))
-        if use_dicom_INTERVAL:
+        if use_dicom_interval:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
                 pmu.scale(
                     ii, mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL)
@@ -256,7 +256,7 @@ def ui_plot(
     ax_main.set_ylabel('T1 (ms)')
     # set xy-ranges
     plt.ylim(T1_INTERVAL)
-    if use_dicom_INTERVAL:
+    if use_dicom_interval:
         plt.xlim(mp2rage.DICOM_INTERVAL)
     else:
         plt.xlim(mp2rage.STD_INTERVAL)
@@ -352,7 +352,7 @@ def handle_arg():
         action='store_true',
         help='use TA, TB, TC direct parameters instead of TI1, TI2, TR_tot')
     arg_parser.add_argument(
-        '--dicom_INTERVAL',
+        '--dicom_interval',
         action='store_true',
         help='use {} intensity interval instead of {}.'. \
             format(mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL))
@@ -380,7 +380,7 @@ def main():
         arg_parser.print_help()
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
-    ui_plot(args.t1, args.direct, args.dicom_INTERVAL, args.no_optim_a1,
+    ui_plot(args.t1, args.direct, args.dicom_interval, args.no_optim_a1,
             args.ot1)
 
     elapsed(os.path.basename(__file__))

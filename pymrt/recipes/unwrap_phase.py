@@ -21,6 +21,7 @@ from scipy.fftpack import fftn, ifftn
 
 # :: Local Imports
 import pymrt.utils as pmu
+import pymrt.computation as pmc
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
@@ -89,7 +90,12 @@ def unwrap_phase_laplacian(
 # ======================================================================
 def unwrap_phase_sorting_path(
         arr,
-        correction=lambda x: x - np.median(x[x != 0.0]),
+        preprocess=pmc.fix_phase_interval,
+        preprocess_args=None,
+        preprocess_kws=None,
+        postprocess=lambda x: x - np.median(x[x != 0.0]),
+        postprocess_args=None,
+        postprocess_kws=None,
         wrap_around=False,
         seed=0):
     """
@@ -98,7 +104,7 @@ def unwrap_phase_sorting_path(
     This is a wrapper around the function skimage.restoration.unwrap_phase
 
     Args:
-        arr (np.ndarray): The multi-dimensional array to unwrap.
+        arr (np.ndarray): The multi-dimensional array to unwrap.`
         correction (callable): A correction function for improved accuracy.
         wrap_around (bool|iterable[bool]|None): Circular unwrapping.
             See also: skimage.restoration.unwrap_phase.
@@ -113,7 +119,17 @@ def unwrap_phase_sorting_path(
         Herraez, M. A. et al. (2002). Journal Applied Optics 41(35): 7437.
     """
     from skimage.restoration import unwrap_phase
+    if preprocess:
+        if not preprocess_args:
+            preprocess_args = ()
+        if not preprocess_kws:
+            preprocess_kws = {}
+        arr = preprocess(arr, *preprocess_args, **preprocess_kws)
     arr = unwrap_phase(arr, wrap_around, seed)
-    if correction:
-        arr = correction(arr)
+    if postprocess:
+        if not postprocess_args:
+            postprocess_args = ()
+        if not postprocess_kws:
+            postprocess_kws = {}
+        arr = postprocess(arr, *postprocess_args, **postprocess_kws)
     return arr

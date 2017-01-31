@@ -64,7 +64,6 @@ import pymrt.input_output as pmio
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 
-
 # ======================================================================
 META_EXT = 'info'  # ID['info']
 
@@ -340,7 +339,6 @@ def qsm_sdi(
         affines,
         params,
         img_types):
-
     pass
 
 
@@ -469,6 +467,123 @@ def func_flash(m0, fa, tr, t1, te, t2s):
     """
     return m0 * np.sin(fa) * np.exp(-te / t2s) * \
            (1.0 - np.exp(-tr / t1)) / (1.0 - np.cos(fa) * np.exp(-tr / t1))
+
+
+# ======================================================================
+def uniform_mp2rage(
+        inv1m_arr,
+        inv1p_arr,
+        inv2m_arr,
+        inv2p_arr,
+        regularization=np.spacing(1),
+        values_interval=None):
+    """
+    Calculate the uniform image from an MP2RAGE acquisition.
+
+    Args:
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the signal expression
+            for normalization purposes, therefore should be much smaller than
+            the average of the magnitude images.
+            Larger values of this parameter will have the side effect of
+            denoising the background.
+        values_interval (tuple[float|int]): The output values interval.
+            The standard values are linearly converted to this range.
+            If None, the natural [-0.5, 0.5] interval will be used.
+
+    Returns:
+        rho_arr (float|np.ndarray): The calculated uniform image from MP2RAGE.
+    """
+    if not regularization:
+        regularization = 0
+    inv1m_arr = inv1m_arr.astype(float)
+    inv2m_arr = inv2m_arr.astype(float)
+    inv1p_arr = fix_phase_interval(inv1p_arr)
+    inv2p_arr = fix_phase_interval(inv2p_arr)
+    inv1_arr = pmu.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = pmu.polar2complex(inv2m_arr, inv2p_arr)
+    rho_arr = np.real(inv1_arr.conj() * inv2_arr /
+                      (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
+    if values_interval:
+        rho_arr = pmu.scale(rho_arr, values_interval, (-0.5, 0.5))
+    return rho_arr
+
+
+# ======================================================================
+def t1_mp2rage(
+        inv1m_arr,
+        inv1p_arr,
+        inv2m_arr,
+        inv2p_arr,
+        regularization=np.spacing(1),
+        eff_arr=None,
+        t1_value_range=(100, 5000),
+        t1_num=512,
+        eff_num=32,
+        **acq_param_kws):
+    """
+    Calculate the T1 map from an MP2RAGE acquisition.
+
+    Args:
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the signal expression
+            for normalization purposes, therefore should be much smaller than
+            the average of the magnitude images.
+            Larger values of this parameter will have the side effect of
+            denoising the background.
+        eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+            This is equivalent to the normalized B1T field.
+            Note that this must have the same spatial dimensions as the images
+            acquired with MP2RAGE.
+            If None, no correction for the RF efficiency is performed.
+        t1_value_range (tuple[float]): The T1 value range to consider.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        t1_num (int): The base number of sampling points of T1.
+            The actual number of sampling points is usually smaller, because of
+            the removal of non-bijective branches.
+            This affects the precision of the MP2RAGE estimation.
+        eff_num (int): The base number of sampling points for the RF efficiency.
+            This affects the precision of the RF efficiency correction.
+        **acq_param_kws (dict): The acquisition parameters.
+            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+
+    Returns:
+        t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
+    """
+    from pymrt.sequences import mp2rage
+    if eff_arr:
+        # todo: implement B1T correction
+        raise NotImplementedError('B1T correction is not yet implemented')
+    else:
+        # determine the signal expression
+        t1 = np.linspace(t1_value_range[0], t1_value_range[1], t1_num)
+        rho = mp2rage.signal(
+            t1, **mp2rage.acq_to_seq_params(**acq_param_kws)[0])
+        # remove non-bijective branches
+        bijective_slice = pmu.bijective_part(rho)
+        t1 = t1[bijective_slice]
+        rho = rho[bijective_slice]
+        if rho[0] > rho[-1]:
+            rho = rho[::-1]
+            t1 = t1[::-1]
+        # check that rho values are strictly increasing
+        if not np.all(np.diff(rho) > 0):
+            raise ValueError('MP2RAGE look-up table was not properly prepared.')
+
+        rho_arr = uniform_mp2rage(
+            inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
+            values_interval=None)
+        t1_arr = np.interp(rho_arr, rho, t1)
+    return t1_arr
 
 
 # ======================================================================
