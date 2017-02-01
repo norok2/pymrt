@@ -65,6 +65,7 @@ import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
 
+import scipy.io  # SciPy: Input and output
 import scipy.optimize  # SciPy: Optimization
 import scipy.integrate  # SciPy: Integration
 import scipy.interpolate  # SciPy: Interpolation
