@@ -1837,10 +1837,35 @@ def is_same_sign(items):
 
     Returns:
         same_sign (bool): The result of the comparison.
-            True if they are all positive or all negative.
+            True if the items are all positive or all negative.
             False otherwise, i.e. they have mixed signs.
     """
     return all(item >= 0 for item in items) or all(item < 0 for item in items)
+
+
+# ======================================================================
+def is_in_range(
+        arr,
+        interval,
+        include_extrema=True):
+    """
+    Determine if the values of an array are within the specified interval.
+
+    Args:
+        arr (np.ndarray): The input array.
+        interval (tuple[int|float]): The range of values to check.
+            A 2-tuple with format (min, max) is expected.
+
+    Returns:
+        in_range (bool): The result of the comparison.
+            True if all values of the array are within the interval.
+            False otherwise.
+    """
+    if include_extrema:
+        in_range = np.min(arr) >= interval[0] and np.max(arr) <= interval[1]
+    else:
+        in_range = np.min(arr) > interval[0] and np.max(arr) < interval[1]
+    return in_range
 
 
 # ======================================================================

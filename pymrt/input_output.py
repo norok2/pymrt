@@ -305,8 +305,8 @@ def simple_filter_1_1(
             The affine matrix is taken from the input.
             The header is calculated automatically.
         out_filepath (str): Output file path
-        func (callable): Filtering function (img: ndarray)
-            func(img, *args, *kwargs) -> img
+        func (callable): Filtering function (arr: np.ndarray)
+            func(arr, *args, *kwargs) -> arr
         *args (tuple): Positional arguments passed to the filtering function
         **kwargs (dict): Keyword arguments passed to the filtering function
 
@@ -314,9 +314,10 @@ def simple_filter_1_1(
         None
     """
     obj = nib.load(in_filepath)
-    img = func(obj.get_data(), *args, **kwargs)
+    arr = obj.get_data()
     aff = obj.get_affine()
-    save(out_filepath, img, aff)
+    arr = func(arr, *args, **kwargs)
+    save(out_filepath, arr, aff)
 
 
 # ======================================================================

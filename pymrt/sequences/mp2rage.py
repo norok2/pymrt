@@ -58,7 +58,7 @@ D_SEQ_PARAMS = dict(
 )
 
 # signal ranges
-RHO_INTERVAL = (-0.5, 0.5)
+UNIFORM_INTERVAL = (-0.5, 0.5)
 DICOM_INTERVAL = (0, 4095)
 
 
