@@ -321,7 +321,6 @@ def sample2d(
     if array_interval is None:
         array_interval = pmu.minmax(arr)
     if not cmap:
-        print(array_interval, type(array_interval[0]), pmu.is_same_sign(array_interval))
         if not pmu.is_same_sign(array_interval):
             cmap = mpl.cm.RdBu_r
         else:
