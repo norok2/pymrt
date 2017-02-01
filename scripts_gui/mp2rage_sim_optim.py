@@ -145,7 +145,7 @@ def ui_plot(
         if use_dicom_interval:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
                 pmu.scale(
-                    ii, mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL)
+                    ii, mp2rage.DICOM_INTERVAL, mp2rage.RHO_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
 
@@ -259,7 +259,7 @@ def ui_plot(
     if use_dicom_interval:
         plt.xlim(mp2rage.DICOM_INTERVAL)
     else:
-        plt.xlim(mp2rage.STD_INTERVAL)
+        plt.xlim(mp2rage.RHO_INTERVAL)
     # adjust subplot to include sliders
     ui_plt_main_b = 0.125
     ui_sld_params_h = 0.25
@@ -355,7 +355,7 @@ def handle_arg():
         '--dicom_interval',
         action='store_true',
         help='use {} intensity interval instead of {}.'. \
-            format(mp2rage.DICOM_INTERVAL, mp2rage.STD_INTERVAL))
+            format(mp2rage.DICOM_INTERVAL, mp2rage.RHO_INTERVAL))
     arg_parser.add_argument(
         '--no_optim_a1',
         action='store_false',

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-PyMRT: read_output files with a JCAMP-DX-like structure.
+PyMRT: read/write files with a JCAMP-DX-like structure.
 
 The module is NumPy-aware.
 """
@@ -53,7 +53,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import pymrt.input_output as pmio
 # import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
-
+from pymrt import msg, dbg
 
 # ======================================================================
 def _strip_comments(data, comment_start_str='$$'):
