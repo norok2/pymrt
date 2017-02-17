@@ -136,11 +136,11 @@ def msg(
                 txt0 = text[:n]
                 # rest
                 txt2 = text[n + len(txt1):]
-                txt_kwargs = {
-                    'e1': e + (t.bold if e == t.white else ''),
-                    'e2': e + (t.bold if e != t.white else ''),
-                    't0': txt0, 't1': txt1, 't2': txt2, 'n': t.normal}
-                text = '{t0}{e1}{t1}{n}{e2}{t2}{n}'.format_map(txt_kwargs)
+                txt_kws = dict(
+                    e1=e + (t.bold if e == t.white else ''),
+                    e2=e + (t.bold if e != t.white else ''),
+                    t0=txt0, t1=txt1, t2=txt2, n=t.normal)
+                text = '{t0}{e1}{t1}{n}{e2}{t2}{n}'.format_map(txt_kws)
             else:
                 if 't.' not in fmt:
                     fmt = '{{t.{}}}'.format(fmt)

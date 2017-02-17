@@ -10,7 +10,7 @@ TODO:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -57,10 +57,10 @@ import pymrt.geometry as pmg
 import pymrt.plot as pmp
 import pymrt.segmentation as pms
 
-
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
+
 
 # ======================================================================
 # :: Custom defined constants
@@ -72,53 +72,61 @@ from pymrt import msg, dbg
 # ======================================================================
 def load(
         in_filepath,
-        full=False):
+        meta=False):
     """
     Load a NiBabel-supported image.
 
     Args:
         in_filepath (str): The input file path.
-        full (bool): Return the image data, the affine and the header.
+        meta (bool): Include metadata.
 
     Returns:
-        ndarray|[ndarray,ndarray,header]: Returns the image data, and,
-            if `full` is set to True, also the affine transformation matrix
-            and the data header.
+        arr (np.ndarray): The array data.
+        meta (dict): The metadata information.
+            This is only produced if `meta` is True.
 
     See Also:
         nibabel.load, nibabel.get_data, nibabel.get_affine, nibabel.get_header
     """
     obj = nib.load(in_filepath)
-    if full:
-        return obj.get_data(), obj.get_affine(), obj.get_header()
+    arr = obj.get_data()
+    if meta:
+        meta = dict(
+            affine=obj.get_affine(),
+            header=obj.get_header())
+        return arr, meta
     else:
-        return obj.get_data()
+        return arr
 
 
 # ======================================================================
 def save(
         out_filepath,
         arr,
-        aff=None,
-        hdr=None,
-        img_type=nib.Nifti1Image):
+        img_type=nib.Nifti1Image,
+        *args,
+        **kwargs):
     """
     Save a NiBabel-supported image.
 
     Args:
         out_filepath (str): Output file path.
         arr (np.ndarray): Data to be stored.
-        aff (np.ndarray|None): 3D affine transformation (4x4 matrix).
-            If None, use identity.
-        hdr: Header of the image (refer to NiBabel).
         img_type: The NiBabel class to use for saving.
 
     Returns:
         None.
     """
-    if aff is None:
-        aff = np.eye(4)
-    obj = img_type(arr, aff, hdr)
+    if not args:
+        args = ()
+    if not kwargs:
+        kwargs = {}
+    if img_type == nib.Nifti1Image:
+        if arr.dtype == bool:
+            arr = arr.astype(int)
+        if 'affine' not in kwargs:
+            kwargs['affine'] = np.eye(4)
+    obj = img_type(arr, *args, **kwargs)
     obj.to_filename(out_filepath)
 
 
@@ -132,21 +140,18 @@ def masking(
     Apply a mask to a given file path.
 
     Args:
-        in_filepath (str): Input file path
-        mask_filepath (str): Mask file path
-        out_filepath (str): Output file path
-        mask_val: (int|float|complex): Value of masked out voxels
+        in_filepath (str): Input file path.
+        mask_filepath (str): Mask file path.
+        out_filepath (str): Output file path.
+        mask_val: (int|float|complex): Value of masked out voxels.
 
     Returns:
-        None
+        None.
     """
-    obj = nib.load(in_filepath)
-    obj_mask = nib.load(mask_filepath)
-    img = obj.get_data()
-    mask = obj_mask.get_data()
-    mask = mask.astype(bool)
-    img[~mask] = mask_val
-    save(out_filepath, img, obj.get_affine())
+    arr, meta = load(in_filepath, meta=True)
+    mask = load(mask_filepath).astype(bool)
+    arr[~mask] = mask_val
+    save(out_filepath, arr, affine=meta['affine'])
 
 
 # ======================================================================
@@ -168,8 +173,8 @@ def filter_1_1(
         in_filepath (str): Input file path.
         out_filepath (str): Output file path.
         func (callable): Filtering function.
-            (img: ndarray, aff:ndarray, hdr:header).
-            func(img, aff, hdr, *args, *kwargs) -> img, aff, hdr.
+            (arr: ndarray, aff:ndarray, hdr:header).
+            func(arr, aff, hdr, *args, *kwargs) -> arr, aff, hdr.
         *args (tuple): Positional arguments passed to the filtering function.
         **kwargs (dict): Keyword arguments passed to the filtering function.
 
@@ -177,10 +182,10 @@ def filter_1_1(
         None
     """
     obj = nib.load(in_filepath)
-    img, aff, hdr = func(
+    arr, meta = func(
         obj.get_data(), obj.get_affine(), obj.get_header(), *args,
         **kwargs)
-    save(out_filepath, img, aff, hdr)
+    save(out_filepath, arr, affine=meta['affine'])
 
 
 # ======================================================================
@@ -202,8 +207,8 @@ def filter_n_1(
         in_filepaths (list[str]): List of input file paths.
         out_filepath (str): Output file path
         func (callable): Filtering function
-            (img: ndarray, aff:ndarray, hdr:header)
-            func(list[img, aff, hdr], *args, *kwargs)) -> img, aff, hdr
+            (arr: ndarray, aff:ndarray, hdr:header)
+            func(list[arr, aff, hdr], *args, *kwargs)) -> arr, aff, hdr
         *args (tuple): Positional arguments passed to the filtering function.
         **kwargs (dict): Keyword arguments passed to the filtering function.
 
@@ -214,8 +219,8 @@ def filter_n_1(
     for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
-    img, aff, hdr = func(input_list, *args, **kwargs)
-    save(out_filepath, img, aff, hdr)
+    arr, meta = func(input_list, *args, **kwargs)
+    save(out_filepath, arr, affine=meta['affine'])
 
 
 # ======================================================================
@@ -239,8 +244,8 @@ def filter_n_m(
             The affine matrix is taken from the last item
         out_filepaths (list[str]): List of output file paths
         func (callable): Filtering function
-            (img: ndarray, aff:ndarray, hdr:header)
-            func(list[img, aff, hdr], *args, *kwargs)) -> list[img, aff, hdr]
+            (arr: ndarray, aff:ndarray, hdr:header)
+            func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
         *args (tuple): Positional arguments passed to the filtering function
         **kwargs (dict): Keyword arguments passed to the filtering function
 
@@ -252,8 +257,8 @@ def filter_n_m(
         obj = nib.load(in_filepath)
         input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
     output_list = func(input_list, *args, **kwargs)
-    for (img, aff, hdr), out_filepath in zip(output_list, out_filepaths):
-        save(out_filepath, img, aff, hdr)
+    for (arr, aff, hdr), out_filepath in zip(output_list, out_filepaths):
+        save(out_filepath, arr, aff, hdr)
 
 
 # ======================================================================
@@ -278,8 +283,8 @@ def filter_n_x(
             The affine matrix is taken from the last item
         out_filepath_template (str): Output file path template
         func (callable): Filtering function
-            (img: ndarray, aff:ndarray, hdr:header)
-            func(list[img, aff, hdr], *args, *kwargs)) -> list[img, aff, hdr]
+            (arr: ndarray, aff:ndarray, hdr:header)
+            func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
         *args (tuple): Positional arguments passed to the filtering function
         **kwargs (dict): Keyword arguments passed to the filtering function
 
@@ -317,7 +322,7 @@ def simple_filter_1_1(
     arr = obj.get_data()
     aff = obj.get_affine()
     arr = func(arr, *args, **kwargs)
-    save(out_filepath, arr, aff)
+    save(out_filepath, arr, affine=aff)
 
 
 # ======================================================================
@@ -336,23 +341,95 @@ def simple_filter_n_1(
             The affine matrix is taken from the last item.
             The header is calculated automatically.
         out_filepath (str): Output file path.
-        func (callable): Filtering function (img: ndarray)
-            func(list[img], *args, *kwargs)) -> img
+        func (callable): Filtering function (arr: ndarray)
+            func(list[arr], *args, *kwargs)) -> arr
         *args (tuple): Positional arguments passed to the filtering function.
         **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
         None.
     """
-    img_list = []
+    arr_list = []
     aff_list = []
     for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
-        img_list.append(obj.get_data())
+        arr_list.append(obj.get_data())
         aff_list.append(obj.get_affine())
-    img = func(img_list, *args, **kwargs)
+    arr = func(arr_list, *args, **kwargs)
     aff = aff_list[-1]  # the affine of the first image
-    save(out_filepath, img, aff)
+    save(out_filepath, arr, affine=aff)
+
+
+# ======================================================================
+def simple_filter_nn_1(
+        in_filepaths,
+        out_filepath,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-1 filter.
+
+    Supports a different signature for `func` compared to `_n_1`.
+    Specifically, the input arrays are listed as arguments.
+    This is useful when the number of input arrays must be forced.
+
+    filter(in_filepaths) -> out_filepath
+
+    Args:
+        in_filepaths (list[str]): List of input file paths.
+            The affine matrix is taken from the last item.
+            The header is calculated automatically.
+        out_filepath (str): Output file path.
+        func (callable): Filtering function (arr: ndarray)
+            func(*args, *kwargs)) -> arr
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
+
+    Returns:
+        None.
+    """
+    arr_list = []
+    aff_list = []
+    for in_filepath in in_filepaths:
+        obj = nib.load(in_filepath)
+        arr_list.append(obj.get_data())
+        aff_list.append(obj.get_affine())
+    arr = func(*(arr_list + list(args)), **kwargs)
+    aff = aff_list[-1]  # the affine of the last image
+    save(out_filepath, arr, affine=aff)
+
+
+# ======================================================================
+def simple_filter_1_m(
+        in_filepath,
+        out_filepaths,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-m filter.
+    filter(in_filepaths) -> out_filepaths
+
+    Args:
+        in_filepath (str): Input file path
+            The affine matrix is taken from the input.
+            The header is calculated automatically.
+        out_filepaths (list[str]): List of output file paths.
+        func (callable): Filtering function (arr: ndarray)
+            func(list[arr], *args, *kwargs) -> list[ndarray]
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
+
+    Returns:
+        None.
+    """
+    obj = nib.load(in_filepath)
+    arr = obj.get_data()
+    aff = obj.get_affine()
+    o_arr_list = func(arr, *args, **kwargs)
+    for arr, out_filepath in zip(o_arr_list, out_filepaths):
+        save(out_filepath, arr, affine=aff)
 
 
 # ======================================================================
@@ -372,24 +449,61 @@ def simple_filter_n_m(
             The affine matrix is taken from the last item.
             The header is calculated automatically.
         out_filepaths (list[str]): List of output file paths.
-        func (callable): Filtering function (img: ndarray)
-            func(list[img], *args, *kwargs) -> list[ndarray]
+        func (callable): Filtering function (arr: ndarray)
+            func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
         **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
         None.
     """
-    i_img_list = []
+    i_arr_list = []
     aff_list = []
     for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
-        i_img_list.append(obj.get_data())
+        i_arr_list.append(obj.get_data())
         aff_list.append(obj.get_affine())
-    o_img_list = func(i_img_list, *args, **kwargs)
+    o_arr_list = func(i_arr_list, *args, **kwargs)
     aff = aff_list[0]  # the affine of the first image
-    for img, out_filepath in zip(o_img_list, out_filepaths):
-        save(out_filepath, img, aff)
+    for arr, out_filepath in zip(o_arr_list, out_filepaths):
+        save(out_filepath, arr, affine=aff)
+
+
+# ======================================================================
+def simple_filter_nn_m(
+        in_filepaths,
+        out_filepaths,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-m filter.
+    filter(in_filepaths) -> out_filepaths
+
+    Args:
+        in_filepaths (list[str]): List of input file paths.
+            The shape of each array must be identical.
+            The affine matrix is taken from the last item.
+            The header is calculated automatically.
+        out_filepaths (list[str]): List of output file paths.
+        func (callable): Filtering function (arr: ndarray)
+            func(list[arr], *args, *kwargs) -> list[ndarray]
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
+
+    Returns:
+        None.
+    """
+    i_arr_list = []
+    aff_list = []
+    for in_filepath in in_filepaths:
+        obj = nib.load(in_filepath)
+        i_arr_list.append(obj.get_data())
+        aff_list.append(obj.get_affine())
+    o_arr_list = func(i_arr_list, *args, **kwargs)
+    aff = aff_list[0]  # the affine of the first image
+    for arr, out_filepath in zip(o_arr_list, out_filepaths):
+        save(out_filepath, arr, affine=aff)
 
 
 # ======================================================================
@@ -410,8 +524,37 @@ def simple_filter_n_x(
             The shape of each array must be identical.
             The affine matrix is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
-        func (callable): Filtering function (img: ndarray).
-            func(list[img], *args, *kwargs) -> list[ndarray]
+        func (callable): Filtering function (arr: ndarray).
+            func(list[arr], *args, *kwargs) -> list[ndarray]
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
+
+    Returns:
+        None.
+    """
+    pass
+
+
+# ======================================================================
+def simple_filter_nn_x(
+        in_filepaths,
+        out_filepath_template,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-x filter.
+    filter(in_filepaths) -> out_filepaths
+
+    Note that the number of output image is not known in advance.
+
+    Args:
+        in_filepaths (list[str]): List of input file paths.
+            The shape of each array must be identical.
+            The affine matrix is taken from the last item.
+        out_filepaths (list[str]): List of output file paths.
+        func (callable): Filtering function (arr: ndarray).
+            func(*args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function.
         **kwargs (dict): Keyword arguments passed to the filtering function.
 
@@ -463,7 +606,7 @@ def split(
     Returns:
         out_filepaths (list[str]): List of output file paths.
     """
-    # todo: refactor to use simple_filter_n_x
+    # todo: refactor to use simple_filter_n_y
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
@@ -472,12 +615,12 @@ def split(
     out_filepaths = []
     # load source image
     obj = nib.load(in_filepath)
-    img = obj.get_data()
+    arr = obj.get_data()
     # split data
-    img_list = np.split(img, img.shape[axis], axis)
+    arr_list = np.split(arr, arr.shape[axis], axis)
     # save data to output
-    for i, image in enumerate(img_list):
-        i_str = str(i).zfill(len(str(len(img_list))))
+    for i, image in enumerate(arr_list):
+        i_str = str(i).zfill(len(str(len(arr_list))))
         out_filepath = os.path.join(
             out_dirpath,
             pmu.change_ext(out_basename + '-' + i_str, pmu.EXT['niz'], ''))
@@ -764,11 +907,11 @@ def mask_threshold(
         pymrt.segmentation.mask_threshold
     """
 
-    def _img_mask_threshold(array, *args, **kwargs):
+    def _arr_mask_threshold(array, *args, **kwargs):
         return pms.mask_threshold(array, *args, **kwargs).astype(float)
 
     kw_params = pmu.set_keyword_parameters(pms.mask_threshold, locals())
-    simple_filter_1_1(in_filepath, out_filepath, _img_mask_threshold,
+    simple_filter_1_1(in_filepath, out_filepath, _arr_mask_threshold,
                       **kw_params)
 
 
@@ -803,7 +946,7 @@ def find_objects(
 
 # ======================================================================
 def calc_stats(
-        img_filepath,
+        arr_filepath,
         mask_filepath=None,
         *args,
         **kwargs):
@@ -818,7 +961,7 @@ def calc_stats(
     Calculate statistical information (min, max, avg, std, sum).
 
     Args:
-        img_filepath (str): The image file path.
+        arr_filepath (str): The image file path.
         mask_filepath (str): The mask file path.
         *args (tuple): Positional arguments passed to the `calc_stats` function.
         **kwargs (dict): Keyword arguments passed to the `calc_stats` function.
@@ -834,8 +977,8 @@ def calc_stats(
     See Also:
         pymrt.base.calc_stats
     """
-    obj = nib.load(img_filepath)
-    img = obj.get_data()
+    obj = nib.load(arr_filepath)
+    arr = obj.get_data()
     if mask_filepath:
         obj_mask = nib.load(mask_filepath)
         mask = obj_mask.get_data().astype(bool)
@@ -848,15 +991,15 @@ def calc_stats(
     #         if save_filepath:
     #             title = os.path.basename(save_filepath)
     #         else:
-    #             title = os.path.basename(img_filepath)
+    #             title = os.path.basename(arr_filepath)
     #     print(save_filepath)
     #     stats_dict = pmu.calc_stats(
-    #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
+    #         arr[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
     # else:
     #     stats_dict = pmu.calc_stats(
-    #         img[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
+    #         arr[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
     #         compact)
-    return pmu.calc_stats(img[mask], *args, **kwargs)
+    return pmu.calc_stats(arr[mask], *args, **kwargs)
 
 
 # ======================================================================
@@ -876,8 +1019,8 @@ def change_data_type(
         None
     """
     obj = nib.load(in_filepath)
-    img = obj.get_data()
-    save(out_filepath, img.astype(data_type), obj.get_affine())
+    arr = obj.get_data()
+    save(out_filepath, arr.astype(data_type), obj.get_affine())
 
 
 # ======================================================================
@@ -902,12 +1045,12 @@ def plot_sample2d(
         pymrt.plot
     """
     obj = nib.load(in_filepath)
-    img = obj.get_data()
+    arr = obj.get_data()
     if 'resolution' not in kwargs:
         resolution = np.array(
-            [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
+            [round(x, 3) for x in obj.get_header()['pixdim'][1:arr.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    result = pmp.sample2d(img, *args, **kwargs)
+    result = pmp.sample2d(arr, *args, **kwargs)
     return result
 
 
@@ -933,12 +1076,12 @@ def plot_sample2d_anim(
         pymrt.plot
     """
     obj = nib.load(in_filepath)
-    img = obj.get_data()
+    arr = obj.get_data()
     if 'resolution' not in kwargs:
         resolution = np.array(
-            [round(x, 3) for x in obj.get_header()['pixdim'][1:img.ndim + 1]])
+            [round(x, 3) for x in obj.get_header()['pixdim'][1:arr.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    mov = pmp.sample2d_anim(img, *args, **kwargs)
+    mov = pmp.sample2d_anim(arr, *args, **kwargs)
     return mov
 
 
@@ -966,13 +1109,13 @@ def plot_histogram1d(
         pymrt.plot
     """
     obj = nib.load(in_filepath)
-    img = obj.get_data().astype(np.double)
+    arr = obj.get_data().astype(np.double)
     if mask_filepath:
         obj_mask = nib.load(mask_filepath)
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    result = pmp.histogram1d(img[mask], *args, **kwargs)
+    result = pmp.histogram1d(arr[mask], *args, **kwargs)
     return result
 
 
@@ -1004,12 +1147,12 @@ def plot_histogram1d_list(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    img_list = []
+    arr_list = []
     for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
-        img = obj.get_data()
-        img_list.append(img[mask])
-    result = pmp.histogram1d_list(img_list, *args, **kwargs)
+        arr = obj.get_data()
+        arr_list.append(arr[mask])
+    result = pmp.histogram1d_list(arr_list, *args, **kwargs)
     return result
 
 
@@ -1042,8 +1185,8 @@ def plot_histogram2d(
     """
     obj1 = nib.load(in1_filepath)
     obj2 = nib.load(in2_filepath)
-    img1 = obj1.get_data().astype(np.double)
-    img2 = obj2.get_data().astype(np.double)
+    arr1 = obj1.get_data().astype(np.double)
+    arr2 = obj2.get_data().astype(np.double)
     if mask1_filepath:
         obj1_mask = nib.load(mask1_filepath)
         mask1 = obj1_mask.get_data().astype(bool)
@@ -1055,7 +1198,7 @@ def plot_histogram2d(
     else:
         mask2 = slice(None)
     result = \
-        pmp.histogram2d(img1[mask1], img2[mask2], *args, **kwargs)
+        pmp.histogram2d(arr1[mask1], arr2[mask2], *args, **kwargs)
 
     return result
 

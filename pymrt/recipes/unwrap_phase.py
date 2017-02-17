@@ -11,7 +11,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-
+import itertools  # Functions creating iterators for efficient looping
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -31,7 +31,12 @@ from pymrt import msg, dbg
 # ======================================================================
 def unwrap_phase_laplacian(
         arr,
-        correction=lambda x: x - np.median(x),
+        preprocess=pmc.fix_phase_interval,
+        preprocess_args=None,
+        preprocess_kws=None,
+        postprocess=lambda x: x - np.median(x[x != 0.0]),
+        postprocess_args=None,
+        postprocess_kws=None,
         pad_width=0):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
@@ -58,6 +63,13 @@ def unwrap_phase_laplacian(
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
+    if preprocess:
+        if not preprocess_args:
+            preprocess_args = ()
+        if not preprocess_kws:
+            preprocess_kws = {}
+        arr = preprocess(arr, *preprocess_args, **preprocess_kws)
+
     if pad_width:
         shape = arr.shape
         pad_width = pmu.auto_pad_width(pad_width, shape)
@@ -82,8 +94,12 @@ def unwrap_phase_laplacian(
     arr = np.real(ifftn(arr))
 
     arr = arr[mask]
-    if correction:
-        arr = correction(arr)
+    if postprocess:
+        if not postprocess_args:
+            postprocess_args = ()
+        if not postprocess_kws:
+            postprocess_kws = {}
+        arr = postprocess(arr, *postprocess_args, **postprocess_kws)
     return arr
 
 
@@ -96,6 +112,7 @@ def unwrap_phase_sorting_path(
         postprocess=lambda x: x - np.median(x[x != 0.0]),
         postprocess_args=None,
         postprocess_kws=None,
+        unwrap_axes=(0, 1, 2),
         wrap_around=False,
         seed=0):
     """
@@ -125,7 +142,13 @@ def unwrap_phase_sorting_path(
         if not preprocess_kws:
             preprocess_kws = {}
         arr = preprocess(arr, *preprocess_args, **preprocess_kws)
-    arr = unwrap_phase(arr, wrap_around, seed)
+    if unwrap_axes:
+        loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
+            for j, dim in enumerate(arr.shape)]
+    else:
+        loop_gen = [slice(None)] * arr.ndim
+    for indexes in itertools.product(*loop_gen):
+        arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
     if postprocess:
         if not postprocess_args:
             postprocess_args = ()

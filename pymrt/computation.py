@@ -318,11 +318,11 @@ def ext_qsm_as_legacy(
         '--units', 'ppb']
     pmu.execute(str(' '.join(cmd)))
     # import temp output
-    img_list, aff_list = [], []
+    arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
-        img, aff, hdr = pmio.load(tmp_filepath, full=True)
-        img_list.append(img)
-        aff_list.append(aff)
+        img, meta = pmio.load(tmp_filepath, meta=True)
+        arr_list.append(img)
+        meta_list.append(meta)
     # clean up tmp files
     if os.path.isdir(tmp_dirpath):
         shutil.rmtree(tmp_dirpath)
@@ -330,7 +330,7 @@ def ext_qsm_as_legacy(
     type_list = ('qsm', 'mask')
     params_list = ({'te': params[te_label][selected]}, {})
     img_type_list = tuple(img_types[key] for key in type_list)
-    return img_list, aff_list, img_type_list, params_list
+    return arr_list, meta_list, img_type_list, params_list
 
 
 # ======================================================================
@@ -424,8 +424,7 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    # correct phase value range (useful for DICOM-converted images)
-    if np.ptp(arr) > 2.0 * np.pi:
+    if not pmu.is_in_range(arr, (-np.pi, np.pi)):
         arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
@@ -470,7 +469,7 @@ def func_flash(m0, fa, tr, t1, te, t2s):
 
 
 # ======================================================================
-def uniform_mp2rage(
+def rho_mp2rage(
         inv1m_arr,
         inv1p_arr,
         inv2m_arr,
@@ -478,7 +477,7 @@ def uniform_mp2rage(
         regularization=np.spacing(1),
         values_interval=None):
     """
-    Calculate the uniform image from an MP2RAGE acquisition.
+    Calculate the rho image from an MP2RAGE acquisition.
 
     Args:
         inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
@@ -486,7 +485,7 @@ def uniform_mp2rage(
         inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
         inv2p_arr (float|np.ndarray): Phase of the second inversion image.
         regularization (float|int): Parameter for the regularization.
-            This parameter is added to the denominator of the signal expression
+            This parameter is added to the denominator of the rho expression
             for normalization purposes, therefore should be much smaller than
             the average of the magnitude images.
             Larger values of this parameter will have the side effect of
@@ -496,7 +495,7 @@ def uniform_mp2rage(
             If None, the natural [-0.5, 0.5] interval will be used.
 
     Returns:
-        uniform_arr (float|np.ndarray): The calculated uniform image from
+        rho_arr (float|np.ndarray): The calculated rho image from
         MP2RAGE.
     """
     if not regularization:
@@ -507,16 +506,16 @@ def uniform_mp2rage(
     inv2p_arr = fix_phase_interval(inv2p_arr)
     inv1_arr = pmu.polar2complex(inv1m_arr, inv1p_arr)
     inv2_arr = pmu.polar2complex(inv2m_arr, inv2p_arr)
-    uniform_arr = np.real(inv1_arr.conj() * inv2_arr /
+    rho_arr = np.real(inv1_arr.conj() * inv2_arr /
                           (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
-        uniform_arr = pmu.scale(uniform_arr, values_interval, (-0.5, 0.5))
-    return uniform_arr
+        rho_arr = pmu.scale(rho_arr, values_interval, (-0.5, 0.5))
+    return rho_arr
 
 
 # ======================================================================
-def uniform_to_t1_mp2rage(
-        uniform_arr,
+def rho_to_t1_mp2rage(
+        rho_arr,
         eff_arr=None,
         t1_values_range=(100, 5000),
         t1_num=512,
@@ -526,7 +525,7 @@ def uniform_to_t1_mp2rage(
     Calculate the T1 map from an MP2RAGE acquisition.
 
     Args:
-        uniform_arr (float|np.ndarray): Magnitude of the first inversion image.
+        rho_arr (float|np.ndarray): Magnitude of the first inversion image.
         eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
             This is equivalent to the normalized B1T field.
             Note that this must have the same spatial dimensions as the images
@@ -552,9 +551,9 @@ def uniform_to_t1_mp2rage(
         # todo: implement B1T correction
         raise NotImplementedError('B1T correction is not yet implemented')
     else:
-        # determine the signal expression
+        # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage.signal(
+        rho = mp2rage.rho(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
         bijective_slice = pmu.bijective_part(rho)
@@ -567,11 +566,11 @@ def uniform_to_t1_mp2rage(
         if not np.all(np.diff(rho) > 0):
             raise ValueError('MP2RAGE look-up table was not properly prepared.')
 
-        # fix values range for uniform
-        if not pmu.is_in_range(uniform_arr, mp2rage.UNIFORM_INTERVAL):
-            uniform_arr = pmu.scale(uniform_arr, mp2rage.UNIFORM_INTERVAL)
+        # fix values range for rho
+        if not pmu.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+            rho_arr = pmu.scale(rho_arr, mp2rage.RHO_INTERVAL)
 
-        t1_arr = np.interp(uniform_arr, rho, t1)
+        t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr
 
 
@@ -596,7 +595,7 @@ def t1_mp2rage(
         inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
         inv2p_arr (float|np.ndarray): Phase of the second inversion image.
         regularization (float|int): Parameter for the regularization.
-            This parameter is added to the denominator of the signal expression
+            This parameter is added to the denominator of the rho expression
             for normalization purposes, therefore should be much smaller than
             the average of the magnitude images.
             Larger values of this parameter will have the side effect of
@@ -621,11 +620,11 @@ def t1_mp2rage(
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
     """
-    uniform_arr = uniform_mp2rage(
+    rho_arr = rho_mp2rage(
         inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
         values_interval=None)
-    t1_arr = uniform_to_t1_mp2rage(
-        uniform_arr, eff_arr, t1_values_range, t1_num, eff_num, **acq_param_kws)
+    t1_arr = rho_to_t1_mp2rage(
+        rho_arr, eff_arr, t1_values_range, t1_num, eff_num, **acq_param_kws)
     return t1_arr
 
 
@@ -652,6 +651,7 @@ def fit_monoexp_decay_leasq(
     img_type_list = tuple(img_types[key] for key in type_list)
     aff_list = _simple_affines(affines)
     params_list = ({},) * len(img_list)
+    np.mean()
     return img_list, aff_list, img_type_list, params_list
 
 
@@ -800,9 +800,10 @@ def voxel_curve_fit(
         y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
 
     if method == 'curve_fit':
+        print(y_arr.shape, support_size)
         iter_param_list = [
             (fit_func, x_arr, y_i_arr, fit_params)
-            for y_i_arr in np.split(y_arr, support_size, 0)]
+            for y_i_arr in np.split(y_arr, support_size, support_axis)]
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         for i, (par_opt, par_cov) in \
                 enumerate(pool.imap(pmu.curve_fit, iter_param_list)):
@@ -876,7 +877,7 @@ def sources_generic(
                 - pattern (tuple[int]): Slicing applied to data list
                 - groups (list[int]|None): Split results into groups
                   (cyclically)
-        force (bool): Force calculation of output
+        force (bool): Force calculation of output.
         verbose (int): Set level of verbosity.
 
     Returns:
@@ -1052,7 +1053,7 @@ def compute_generic(
                 print('Source:\t{}'.format(os.path.basename(source)))
             if verbose > VERB_LVL['none']:
                 print('Params:\t{}'.format(params))
-            image, affine, header = pmio.load(source, full=True)
+            image, affine, header = pmio.load(source, meta=True)
             # fix mask if shapes are different
             if opts['adapt_mask']:
                 mask = [
@@ -1086,7 +1087,7 @@ def compute_generic(
                             target = pmn.change_param_val(target, key, val)
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
-                    pmio.save(target, img, aff)
+                    pmio.save(target, img, affine=aff)
                     break
     return targets
 
