@@ -6,7 +6,7 @@ pymrt.segmentation: generic simple segmentation
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -95,12 +95,13 @@ def mask_threshold(
         elif mode == 'absolute':
             pass
         else:  # if mode not in modes:
-            raise ValueError('mode not known: {}'.format(mode))
+            raise ValueError(
+                'valid modes are: {} (given: {})'.format(modes, mode))
         mask = eval('arr {} threshold'.format(comparison))
     else:
         raise ValueError(
-            'valid comparison modes are: [{}]'.format(
-                ', '.join(comparisons)))
+            'valid comparisons are: {} (given: {})'.format(
+                comparisons, comparison))
     return mask
 
 

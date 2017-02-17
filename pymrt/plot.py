@@ -257,6 +257,8 @@ def sample2d(
         array_interval=None,
         ticks_limit=None,
         orientation=None,
+        flip_ud=False,
+        flip_lr=False,
         cmap=None,
         cbar_kws=None,
         cbar_txt=None,
@@ -311,11 +313,14 @@ def sample2d(
         axis = np.argsort(arr.shape)[:-ndim]
     else:
         axis = pmu.auto_repeat(axis, 1)
-    if arr.ndim - len(axis) != 2:
+    if arr.ndim - len(axis) == 2:
+        data = pmu.ndim_slice(arr, axis, index)
+    elif arr.ndim == 2:
+        data = arr
+    else:
         raise IndexError(
             'Mismatching dimensions ({ndim}) and axis ({naxes}): '
             '{ndim} - {naxes} != 2'.format(ndim=arr.ndim, naxes=len(axis)))
-    data = pmu.ndim_slice(arr, axis, index)
     if title:
         ax.set_title(title)
     if array_interval is None:
@@ -334,6 +339,10 @@ def sample2d(
     if (orientation == 'portrait' and data.shape[0] < data.shape[1]) or \
             (orientation == 'landscape' and data.shape[0] > data.shape[1]):
         data = data.transpose()
+    if flip_ud:
+        data = data[::-1, :]
+    if flip_lr:
+        data = data[:, ::-1]
     plot = ax.imshow(data, cmap=cmap, vmin=array_interval[0],
                      vmax=array_interval[1], interpolation='none')
     if ticks_limit is not None:
@@ -1210,7 +1219,7 @@ def subplots(
                     letter_lowercase = letter.lower()
                     plot_kwargs['title'] = \
                         subplot_title_fmt.format_map(locals())
-                plot_func(*tuple(plot_args), **(plot_kwargs))
+                plot_func(*plot_args, **plot_kwargs)
 
             if col_label:
                 fig.text(

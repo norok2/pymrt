@@ -1,9 +1,9 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-Simulate the MP2RAGE signal as a function of T1.
+Simulate the MP2RAGE signal rho as a function of T1.
 
-Calculate the MP2RAGE signal as a function of T1, according to given
+Calculate the MP2RAGE signal rho as a function of T1, according to given
 parameters (adjustable at on-the-fly).
 Two different set of parameters (direct and indirect) are accepted.
 Direct:
@@ -32,15 +32,13 @@ timing parameters are positive.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
-
 
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Operating System facilities
 import argparse  # Argument Parsing
-
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -70,7 +68,7 @@ D_TI1 = 1100.0  # ms
 D_TI2 = 3300.0  # ms
 D_TA = 440.0  # ms
 D_TB = 1180.0  # ms
-D_TC = 4140.0 # ms
+D_TC = 4140.0  # ms
 # :: GUI constants
 T1_NUM = 256.0
 T1_INTERVAL = (100.0, 5000.0)
@@ -145,7 +143,7 @@ def ui_plot(
         if use_dicom_interval:
             ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val = [
                 pmu.scale(
-                    ii, mp2rage.DICOM_INTERVAL, mp2rage.UNIFORM_INTERVAL)
+                    ii, mp2rage.DICOM_INTERVAL, mp2rage.RHO_INTERVAL)
                 for ii in (ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val)]
         return ii_val, ii_p_val, ii_m_val, ii_p2_val, ii_m2_val
 
@@ -220,7 +218,7 @@ def ui_plot(
 
     # define parameter list
     if is_direct:
-        mp2rage_ii = mp2rage.signal
+        mp2rage_ii = mp2rage._signal
         param_list = [
             ['eff / #', EFF_SLIDER],
             ['n_GRE / #', N_SLIDER],
@@ -252,14 +250,14 @@ def ui_plot(
     # :: figure to plot
     fig, ax_main = plt.subplots()
     # set axes
-    ax_main.set_xlabel('MP2RAGE signal (a.u.)')
+    ax_main.set_xlabel('MP2RAGE rho (a.u.)')
     ax_main.set_ylabel('T1 (ms)')
     # set xy-ranges
     plt.ylim(T1_INTERVAL)
     if use_dicom_interval:
         plt.xlim(mp2rage.DICOM_INTERVAL)
     else:
-        plt.xlim(mp2rage.UNIFORM_INTERVAL)
+        plt.xlim(mp2rage.RHO_INTERVAL)
     # adjust subplot to include sliders
     ui_plt_main_b = 0.125
     ui_sld_params_h = 0.25
@@ -355,7 +353,7 @@ def handle_arg():
         '--dicom_interval',
         action='store_true',
         help='use {} intensity interval instead of {}.'. \
-            format(mp2rage.DICOM_INTERVAL, mp2rage.UNIFORM_INTERVAL))
+            format(mp2rage.DICOM_INTERVAL, mp2rage.RHO_INTERVAL))
     arg_parser.add_argument(
         '--no_optim_a1',
         action='store_false',

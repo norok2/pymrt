@@ -40,7 +40,7 @@ import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (signal and image processing library)
+import scipy as sp  # SciPy (rho and image processing library)
 
 # :: External Imports Submodules
 import scipy.ndimage  # SciPy: ND-image Manipulation

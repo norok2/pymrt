@@ -26,6 +26,7 @@ import h5py  # Read and write HDF5 files from Python
 import scipy.io  # SciPy: Input and output
 
 # :: Local Imports
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 
 
@@ -36,14 +37,19 @@ from pymrt import msg, dbg
 # ======================================================================
 def read(
         filename,
-        dirpath='.'):
+        dirpath='.',
+        exclude_keys=lambda s: s.startswith('__'),
+        verbose=D_VERB_LVL):
     """
-    Read a MATLAB files.
+    Read a MATLAB file.
 
     Args:
         filename (str): The input filename.
             The '.mat' extension can be omitted.
         dirpath (str): The working directory.
+        exclude_keys (callable): The function used to exclude unwanted keys.
+            Defaults to excluding potential private keys.
+        verbose (int): Set level of verbosity.
 
     Returns:
         data (dict): A dictionary containing the data read.
@@ -51,17 +57,30 @@ def read(
     Examples:
 
     """
+    if not filename.lower().endswith('.mat'):
+        filename += '.mat'
     filepath = os.path.join(dirpath, filename)
+
+    if not exclude_keys:
+        def exclude_keys(s):
+            return True
 
     try:
         # load traditional MATLAB files
-        data = sp.io.loadmat('file.mat')
+        data = sp.io.loadmat(filepath)
+        data = {
+            k: np.array(v) for k, v in data.items() if not exclude_keys(k)}
+        msg('Loaded using MATLAB v4 l1, v6, v7 <= v7.2 compatibility layer.',
+            VERB_LVL['debug'])
     except NotImplementedError:
-        # loda new-style MATLAB v7.3+ files (effectively HDF5)
+        # load new-style MATLAB v7.3+ files (effectively HDF5)
         data = {}
         h5file = h5py.File(filepath)
         for k, v in h5file.items():
-            data[k] = np.array(v)
+            if not exclude_keys(k):
+                data[k] = np.array(v)
+        msg('Loaded using MATLAB v7.3+ compatibility layer.',
+            VERB_LVL['debug'])
     return data
 
 
@@ -71,7 +90,7 @@ def write(
         filename,
         dirpath='.'):
     """
-    Write a MATLAB files.
+    Write a MATLAB file.
 
     Args:
         data (dict): A dictionary of arrays to save.
@@ -79,6 +98,7 @@ def write(
         filename (str): The input filename.
             The '.mat' extension can be omitted.
         dirpath (str): The working directory.
+        verbose (int): Set level of verbosity.
 
     Returns:
         None.
@@ -86,9 +106,13 @@ def write(
     Examples:
 
     """
+    if not filename.lower().endswith('.mat'):
+        filename += '.mat'
     filepath = os.path.join(dirpath, filename)
 
     sp.io.savemat(filepath, data)
+    msg('Saved using MATLAB v4 l1, v6, v7 <= v7.2 compatibility layer.',
+        VERB_LVL['debug'])
 
 
 # ======================================================================

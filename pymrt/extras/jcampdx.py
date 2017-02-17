@@ -8,7 +8,7 @@ The module is NumPy-aware.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -29,7 +29,6 @@ import datetime  # Basic date and time types
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-
 
 # import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
@@ -54,6 +53,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import pymrt.geometry as pmg
 # from pymrt.sequences import mp2rage
 from pymrt import msg, dbg
+
 
 # ======================================================================
 def _strip_comments(data, comment_start_str='$$'):

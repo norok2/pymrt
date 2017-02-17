@@ -470,7 +470,7 @@ def calc_mask(
     """
 
     def _calc_mask(
-            array,
+            arr,
             threshold,
             comparison,
             mode,
@@ -479,15 +479,15 @@ def calc_mask(
             dilation_iter):
         # :: preprocess
         if smoothing > 0.0:
-            array = sp.ndimage.gaussian_filter(array, smoothing)
+            arr = sp.ndimage.gaussian_filter(arr, smoothing)
         # :: masking
-        array = pms.mask_threshold(array, threshold, comparison, mode)
+        arr = pms.mask_threshold(arr, threshold, comparison, mode)
         # :: postprocess
         if erosion_iter > 0:
-            array = sp.ndimage.binary_erosion(array, iterations=erosion_iter)
+            arr = sp.ndimage.binary_erosion(arr, iterations=erosion_iter)
         if dilation_iter > 0:
-            array = sp.ndimage.binary_dilation(array, iterations=dilation_iter)
-        return array.astype(float)
+            arr = sp.ndimage.binary_dilation(arr, iterations=dilation_iter)
+        return arr.astype(float)
 
     # todo: move to pmio.
     if not out_dirpath:
