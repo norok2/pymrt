@@ -303,24 +303,38 @@ def sample2d(
         The figure object containing the plot.
 
     """
-    ndim = 2
+    data_dim = 2
+
     if ax is None:
         fig = plt.figure()
         ax = fig.gca()
     else:
         fig = plt.gcf()
+
+    # prepare data
     if axis is None:
-        axis = np.argsort(arr.shape)[:-ndim]
+        axis = np.argsort(arr.shape)[:-data_dim]
     else:
         axis = pmu.auto_repeat(axis, 1)
-    if arr.ndim - len(axis) == 2:
+    if arr.ndim - len(axis) == data_dim:
         data = pmu.ndim_slice(arr, axis, index)
-    elif arr.ndim == 2:
+    elif arr.ndim == data_dim:
         data = arr
     else:
         raise IndexError(
-            'Mismatching dimensions ({ndim}) and axis ({naxes}): '
-            '{ndim} - {naxes} != 2'.format(ndim=arr.ndim, naxes=len(axis)))
+            'Mismatching dimensions ({dim}) and axis ({num_axes}): '
+            '{dim} - {num_axes} != {data_dim}'.format(
+                dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
+    if ((orientation == 'transpose') or
+            (orientation == 'landscape' and data.shape[0] > data.shape[1]) or
+            (orientation == 'portrait' and data.shape[0] < data.shape[1])):
+        data = data.transpose()
+    if flip_ud:
+        data = data[::-1, :]
+    if flip_lr:
+        data = data[:, ::-1]
+
+    # prepare plot
     if title:
         ax.set_title(title)
     if array_interval is None:
@@ -336,21 +350,21 @@ def sample2d(
         else:
             text_color = 'k'
     ax.set_aspect('equal')
-    if (orientation == 'portrait' and data.shape[0] < data.shape[1]) or \
-            (orientation == 'landscape' and data.shape[0] > data.shape[1]):
-        data = data.transpose()
-    if flip_ud:
-        data = data[::-1, :]
-    if flip_lr:
-        data = data[:, ::-1]
-    plot = ax.imshow(data, cmap=cmap, vmin=array_interval[0],
-                     vmax=array_interval[1], interpolation='none')
+
+    # plot data
+    plot = ax.imshow(
+        data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
+        interpolation='none')
+
+    # plot ticks in plotting axes
     if ticks_limit is not None:
         if ticks_limit > 0:
             ax.locator_params(nbins=ticks_limit)
         else:
             ax.set_xticks([])
             ax.set_yticks([])
+
+    # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
         divider = make_axes_locatable(ax)
@@ -363,6 +377,7 @@ def sample2d(
                 cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
             else:
                 cbar.set_label(cbar_txt)
+
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
         if size_info >= 0.0:
@@ -391,10 +406,13 @@ def sample2d(
                  data.shape[1] * 0.025 + size_info_px),
                 (data.shape[0] * 0.965, data.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
+
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
+
+    # save plot
     if save_filepath and pmu.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
@@ -402,7 +420,162 @@ def sample2d(
         fig.savefig(save_filepath, **dict(save_kws))
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
+
     return data, fig
+
+
+# ======================================================================
+def sample2d_from3d(
+        arr,
+        transform=None,
+        axes=None,
+        indexes=None,
+        title=None,
+        array_interval=None,
+        ticks_limit=None,
+        cmap=None,
+        cbar_kws=None,
+        cbar_txt=None,
+        text_color=None,
+        resolution=None,
+        size_info=None,
+        more_texts=None,
+        ax=plt.gca(),
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    data_dim = 3
+    view_dim = 2
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+
+    # prepare data
+    if arr.ndim < data_dim:
+        raise IndexError(
+            'Input array dimension should be at least {data_dim}'.format_map(
+                locals()))
+    if axes is None:
+        gen_axes = np.argsort(arr.shape)[:-data_dim]
+    elif len(axes) != data_dim:
+        raise IndexError(
+            'The number of axes tuples must be {data_dim}'.format_map(
+                locals()))
+    if indexes is None:
+        indexes = pmu.auto_repeat(None, data_dim)
+    elif len(indexes) != data_dim:
+        raise IndexError(
+            'The number of indexes tuples must be {data_dim}'.format_map(
+                locals()))
+
+    data = []
+    for axis, index in zip(axes, indexes):
+        if arr.ndim - len(axis) == view_dim:
+            data.append(pmu.ndim_slice(arr, axis, index))
+            print(data.shape, axis, index)
+        else:
+            raise IndexError(
+                'Mismatching dimensions ({dim}) and axis ({num_axes}): '
+                '{dim} - {num_axes} != {view_dim}'.format(
+                    dim=arr.ndim, num_axes=len(axis), view_dim=view_dim))
+
+    # prepare plot
+    if title:
+        ax.set_title(title)
+    if array_interval is None:
+        array_interval = pmu.minmax(arr)
+    if not cmap:
+        if not pmu.is_same_sign(array_interval):
+            cmap = mpl.cm.RdBu_r
+        else:
+            cmap = mpl.cm.gray_r
+    if not text_color:
+        if not pmu.is_same_sign(array_interval):
+            text_color = 'k'
+        else:
+            text_color = 'k'
+    ax.set_aspect('equal')
+
+    # plot data
+    plot = ax.imshow(
+        data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
+        interpolation='none')
+
+    # plot ticks in plotting axes
+    if ticks_limit is not None:
+        if ticks_limit > 0:
+            ax.locator_params(nbins=ticks_limit)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+    # set colorbar
+    if cbar_kws is not None:
+        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
+        if cbar_txt is not None:
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            if only_extremes:
+                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
+            else:
+                cbar.set_label(cbar_txt)
+
+    # print resolution information and draw a ruler
+    if size_info is not None and resolution is not None:
+        if size_info >= 0.0:
+            # print resolution information
+            if resolution[0] == resolution[1] == resolution[2]:
+                x = resolution[0]
+                res_str = '{} {} iso.'.format(str(x), 'mm')
+            else:
+                res_str = 'x'.join([str(x) for x in resolution[0:3]]) \
+                          + ' ' + 'mm'
+            ax.text(
+                0.975, 0.975, res_str, rotation=0, color=text_color,
+                horizontalalignment='right', verticalalignment='top',
+                transform=ax.transAxes)
+        if size_info != 0.0:
+            res = resolution[1]
+            size_info_size = round(abs(size_info) * (data.shape[1] * res), -1)
+            size_info_str = '{} {}'.format(size_info_size, 'mm')
+            size_info_px = size_info_size / res
+            ax.text(
+                0.025, 0.050, size_info_str, rotation=0, color=text_color,
+                horizontalalignment='left', verticalalignment='bottom',
+                transform=ax.transAxes)
+            ax.plot(
+                (data.shape[1] * 0.025,
+                 data.shape[1] * 0.025 + size_info_px),
+                (data.shape[0] * 0.965, data.shape[0] * 0.965),
+                color=text_color, linewidth=2.5)
+
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+
+    # save plot
+    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+
+    return data, fig
+
+
+a = np.arange(3 * 4 * 5 * 6 * 7).reshape((3, 4, 5, 6, 7))
+sample2d_from3d(a)
+plt.show()
 
 
 # ======================================================================
@@ -1045,7 +1218,7 @@ def histogram2d(
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
         stats_dict = pmu.calc_stats(
-            arr1[mask] - arr2[mask], **dict(stats_kws))
+            arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *pmu.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
