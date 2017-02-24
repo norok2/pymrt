@@ -316,6 +316,14 @@ def sample2d(
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
         axis = pmu.auto_repeat(axis, 1)
+    if index is not None:
+        index = pmu.auto_repeat(index, 1)
+        if len(index) != len(axis):
+            raise IndexError(
+                'Mismatching number of axis ({num_axis}) and index '
+                '({num_index})'.format(
+                    num_axis=len(axis), num_index=len(index)))
+
     if arr.ndim - len(axis) == data_dim:
         data = pmu.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
@@ -329,6 +337,8 @@ def sample2d(
             (orientation == 'landscape' and data.shape[0] > data.shape[1]) or
             (orientation == 'portrait' and data.shape[0] < data.shape[1])):
         data = data.transpose()
+    if orientation == 'rot90':
+        data = np.rot90(data)
     if flip_ud:
         data = data[::-1, :]
     if flip_lr:
@@ -425,11 +435,17 @@ def sample2d(
 
 
 # ======================================================================
-def sample2d_from3d(
+def sample3d_view2d(
         arr,
         transform=None,
-        axes=None,
-        indexes=None,
+        axis=None,
+        index=None,
+        view_axes=None,
+        view_indexes=None,
+        view_flip=(False, False, False),
+        orientation='landscape',
+        flip_ud=(False, False, False),
+        flip_lr=(False, False, False),
         title=None,
         array_interval=None,
         ticks_limit=None,
@@ -455,33 +471,85 @@ def sample2d_from3d(
         fig = plt.gcf()
 
     # prepare data
-    if arr.ndim < data_dim:
-        raise IndexError(
-            'Input array dimension should be at least {data_dim}'.format_map(
-                locals()))
-    if axes is None:
-        gen_axes = np.argsort(arr.shape)[:-data_dim]
-    elif len(axes) != data_dim:
-        raise IndexError(
-            'The number of axes tuples must be {data_dim}'.format_map(
-                locals()))
-    if indexes is None:
-        indexes = pmu.auto_repeat(None, data_dim)
-    elif len(indexes) != data_dim:
-        raise IndexError(
-            'The number of indexes tuples must be {data_dim}'.format_map(
-                locals()))
-
-    data = []
-    for axis, index in zip(axes, indexes):
-        if arr.ndim - len(axis) == view_dim:
-            data.append(pmu.ndim_slice(arr, axis, index))
-            print(data.shape, axis, index)
-        else:
+    if axis is None:
+        axis = np.argsort(arr.shape)[:-data_dim]
+    else:
+        axis = pmu.auto_repeat(axis, 1)
+    if index is not None:
+        index = pmu.auto_repeat(index, 1)
+        if len(index) != len(axis):
             raise IndexError(
-                'Mismatching dimensions ({dim}) and axis ({num_axes}): '
-                '{dim} - {num_axes} != {view_dim}'.format(
-                    dim=arr.ndim, num_axes=len(axis), view_dim=view_dim))
+                'Mismatching number of axis ({num_axis}) and index '
+                '({num_index})'.format(
+                    num_axis=len(axis), num_index=len(index)))
+
+    if arr.ndim - len(axis) == data_dim:
+        data = pmu.ndim_slice(arr, axis, index)
+    elif arr.ndim == data_dim:
+        data = arr
+    else:
+        raise IndexError(
+            'Mismatching dimensions ({dim}) and axis ({num_axes}): '
+            '{dim} - {num_axes} != {data_dim}'.format(
+                dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
+    if view_flip:
+        data = data[
+            [slice(None, None, -1) if f else slice(None) for f in view_flip]]
+
+    # prepare view
+    if view_axes is None:
+        view_axes = np.argsort(data.shape)
+    if view_indexes is None:
+        view_indexes = pmu.auto_repeat(None, data_dim)
+    if len(view_axes) != data_dim:
+        raise IndexError('Incorrect number of view axes.')
+    if len(view_indexes) != data_dim:
+        raise IndexError('Incorrect number of view indexes.')
+
+    views = []
+    for view_axis, view_index in zip(view_axes, view_indexes):
+        views.append(pmu.ndim_slice(data, view_axis, view_index))
+    if ((orientation == 'transpose') or
+            (orientation == 'landscape'
+             and views[0].shape[0] > views[0].shape[1]) or
+            (orientation == 'portrait'
+             and views[0].shape[0] < views[0].shape[1])):
+        views[0] = views[0].transpose()
+    if orientation == 'rot90':
+        views[0] = np.rot90(views[0])
+
+    data_shape = list(data.shape)
+    view_shape = list(views[0].shape)
+    other_size = [
+        e for e in data_shape
+        if not e in view_shape or view_shape.remove(e)][0]
+    x_size = views[0].shape[0] + other_size
+    y_size = views[0].shape[1] + other_size
+    view = np.zeros((x_size, y_size))
+    print(view.shape)
+    print([v.shape for v in views])
+    for i, (v, f_ud, f_lr) in enumerate(zip(views, flip_ud, flip_lr)):
+        if v.shape[0] != views[0].shape[0] and v.shape[1] != views[0].shape[1]:
+            views[i] = v.transpose()
+        if f_ud:
+            views[i] = views[i][::-1, :]
+        if f_lr:
+            views[i] = views[i][:, ::-1]
+    print([v.shape for v in views])
+
+    x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
+    print(x0s, y0s)
+    # todo: fix this
+    if other_size != views[2].shape[1] and other_size != views[1].shape[0]:
+        x0s[1], y0s[1], x0s[2], y0s[2] = x0s[2], y0s[2], x0s[1], y0s[1]
+    print(x0s, y0s)
+
+    for i, (v, x0, y0) in enumerate(zip(views, x0s, y0s)):
+        x1, y1 = x0 + v.shape[0], y0 + v.shape[1]
+        print(x0, y0, x1, y1, v.shape, view[x0:x1, y0:y1].shape)
+        view[x0:x1, y0:y1] = v
+
+    # todo
 
     # prepare plot
     if title:
@@ -502,7 +570,7 @@ def sample2d_from3d(
 
     # plot data
     plot = ax.imshow(
-        data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
+        view, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
         interpolation='none')
 
     # plot ticks in plotting axes
@@ -543,7 +611,7 @@ def sample2d_from3d(
                 transform=ax.transAxes)
         if size_info != 0.0:
             res = resolution[1]
-            size_info_size = round(abs(size_info) * (data.shape[1] * res), -1)
+            size_info_size = round(abs(size_info) * (view.shape[1] * res), -1)
             size_info_str = '{} {}'.format(size_info_size, 'mm')
             size_info_px = size_info_size / res
             ax.text(
@@ -551,9 +619,9 @@ def sample2d_from3d(
                 horizontalalignment='left', verticalalignment='bottom',
                 transform=ax.transAxes)
             ax.plot(
-                (data.shape[1] * 0.025,
-                 data.shape[1] * 0.025 + size_info_px),
-                (data.shape[0] * 0.965, data.shape[0] * 0.965),
+                (view.shape[1] * 0.025,
+                 view.shape[1] * 0.025 + size_info_px),
+                (view.shape[0] * 0.965, view.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
 
     # include additional text
@@ -573,9 +641,9 @@ def sample2d_from3d(
     return data, fig
 
 
-a = np.arange(3 * 4 * 5 * 6 * 7).reshape((3, 4, 5, 6, 7))
-sample2d_from3d(a)
-plt.show()
+# ======================================================================
+def sample2d_multi():
+    pass
 
 
 # ======================================================================
