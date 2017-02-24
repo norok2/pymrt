@@ -3024,10 +3024,11 @@ def ndim_slice(
     # initialize slice index
     slab = [slice(None)] * arr.ndim
     # ensure index is meaningful
+    axes = auto_repeat(axes, 1)
     if indexes is None:
         indexes = auto_repeat(None, len(axes))
-    axes = auto_repeat(axes, 1)
-    indexes = auto_repeat(indexes, 1)
+    else:
+        indexes = auto_repeat(indexes, 1)
     indexes = list(indexes)
     for i, (index, axis) in enumerate(zip(indexes, axes)):
         if index is None:
