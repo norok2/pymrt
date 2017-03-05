@@ -154,6 +154,7 @@ def auto_repeat(
     return obj
 
 
+# ======================================================================
 def max_iter_len(items):
     """
     Determine the maximum length of an item within a collection of items.
@@ -1783,7 +1784,7 @@ def sgnlogspace(
         >>> sgnlogspace(2, 10, 4)
         array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
-    if is_same_sign((start, stop)):
+    if not is_same_sign((start, stop)):
         bounds = (
             (start, -(np.exp(-np.log(np.abs(start))))),
             ((np.exp(-np.log(np.abs(stop)))), stop))
@@ -1839,6 +1840,14 @@ def is_same_sign(items):
         same_sign (bool): The result of the comparison.
             True if the items are all positive or all negative.
             False otherwise, i.e. they have mixed signs.
+
+    Examples:
+        >>> is_same_sign((0, 1, 2 ,4))
+        True
+        >>> is_same_sign((-1, -2 , -4))
+        True
+        >>> is_same_sign((-1, 1))
+        False
     """
     return all(item >= 0 for item in items) or all(item < 0 for item in items)
 

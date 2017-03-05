@@ -956,7 +956,7 @@ class SpinModel(object):
         text = 'SpinModel: '
         names = ['m0', 'w0', 'r1', 'r2', 'k']
         for name in names:
-            text += '{}={}  '.format(name, self.__dict__[name])
+            text += '{}={}  '.format(name, getattr(self, name))
         return text
 
 
@@ -1177,7 +1177,7 @@ class PulseExc(object):
             'is_real', 'is_imag', 'propagator_mode', 'propagator_kwargs']
         for name in names:
             if hasattr(self, name):
-                text += '{}={}  '.format(name, self.__dict__[name])
+                text += '{}={}  '.format(name, getattr(self, name))
         if self.shape == 'custom':
             text += '\n w1_arr={}'.format(self.w1_arr)
         return text
@@ -1231,10 +1231,10 @@ class Spoiler(object):
         return np.diag(p_op_diag)
 
     def __str__(self):
-        text = 'Spoiler: '
+        text = '{}: '.format(self.__class__.__name__)
         names = ['efficiency']
         for name in names:
-            text += '{}={}  '.format(name, self.__dict__[name])
+            text += '{}={}  '.format(name, getattr(self, name))
         return text
 
 
@@ -1252,7 +1252,7 @@ class Delay(PulseExc):
         names = ['duration', 'w_c']
         for name in names:
             if hasattr(self, name):
-                text += '{}={}  '.format(name, self.__dict__[name])
+                text += '{}={}  '.format(name, getattr(self, name))
         return text
 
 

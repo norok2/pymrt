@@ -82,7 +82,7 @@ def pos_rel2abs(shape, rel_position=0.5):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
         (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    rel_position = pmu.auto_repeat(rel_position, len(shape), force=True)
+    rel_position = pmu.auto_repeat(rel_position, len(shape), check=True)
     return tuple((s - 1.0) * p for p, s in zip(rel_position, shape))
 
 
@@ -114,7 +114,7 @@ def pos_abs2rel(shape, abs_position=0):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0, 25, 50, 75, 100)))
         (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    abs_position = pmu.auto_repeat(abs_position, len(shape), force=True)
+    abs_position = pmu.auto_repeat(abs_position, len(shape), check=True)
     return tuple(p / (s - 1.0) for p, s in zip(abs_position, shape))
 
 
@@ -531,34 +531,34 @@ def ellipsoid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> sphere(5, 0.5, 2)
+        >>> ellipsoid(5, 0.5, (1., 2., 1.5))
         array([[[False, False, False, False, False],
                 [False, False, False, False, False],
-                [False, False,  True, False, False],
+                [False, False, False, False, False],
                 [False, False, False, False, False],
                 [False, False, False, False, False]],
         <BLANKLINE>
                [[False, False, False, False, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
                 [False, False, False, False, False]],
         <BLANKLINE>
                [[False, False,  True, False, False],
                 [False,  True,  True,  True, False],
-                [ True,  True,  True,  True,  True],
+                [False,  True,  True,  True, False],
                 [False,  True,  True,  True, False],
                 [False, False,  True, False, False]],
         <BLANKLINE>
                [[False, False, False, False, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
+                [False, False, False, False, False],
+                [False, False,  True, False, False],
+                [False, False, False, False, False],
                 [False, False, False, False, False]],
         <BLANKLINE>
                [[False, False, False, False, False],
                 [False, False, False, False, False],
-                [False, False,  True, False, False],
+                [False, False, False, False, False],
                 [False, False, False, False, False],
                 [False, False, False, False, False]]], dtype=bool)
     """
@@ -581,6 +581,7 @@ def cylinder(
             Values are in the range [0, 1].
         height (float): The height of the cylinder in px.
         radius (float): The radius of the cylinder in px.
+        axis (int): Orientation of the cylinder in the N-dim space.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
@@ -644,9 +645,9 @@ def nd_cuboid(
     if not n_dim:
         n_dim = pmu.max_iter_len((shape, position, semisides))
     # check compatibility of given parameters
-    shape = pmu.auto_repeat(shape, n_dim, True)
-    position = pmu.auto_repeat(position, n_dim, True)
-    semisides = pmu.auto_repeat(semisides, n_dim, True)
+    shape = pmu.auto_repeat(shape, n_dim, check=True)
+    position = pmu.auto_repeat(position, n_dim, check=True)
+    semisides = pmu.auto_repeat(semisides, n_dim, check=True)
     xx = pmu.coord(shape, position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
@@ -680,11 +681,13 @@ def nd_superellipsoid(
     """
     if not n_dim:
         n_dim = pmu.max_iter_len((shape, position, semiaxes, indexes))
+
     # check compatibility of given parameters
-    shape = pmu.auto_repeat(shape, n_dim, True)
-    position = pmu.auto_repeat(position, n_dim, True)
-    semiaxes = pmu.auto_repeat(semiaxes, n_dim, True)
-    indexes = pmu.auto_repeat(indexes, n_dim, True)
+    shape = pmu.auto_repeat(shape, n_dim, check=True)
+    position = pmu.auto_repeat(position, n_dim, check=True)
+    semiaxes = pmu.auto_repeat(semiaxes, n_dim, check=True)
+    indexes = pmu.auto_repeat(indexes, n_dim, check=True)
+
     xx = pmu.coord(shape, position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
@@ -772,7 +775,7 @@ def frame(
     result = background * np.ones(
         [dim + 2 * border for dim, border in zip(arr.shape, borders)])
     inner = [
-        slice(border, border + dim, None) \
+        slice(border, border + dim, None)
         for dim, border in zip(arr.shape, borders)]
     result[inner] = arr
     return result
@@ -838,7 +841,7 @@ def zoom_prepare(
     """
     zoom = list(pmu.auto_repeat(zoom, len(shape)))
     if extra_dim:
-        shape = list(shape) + [1.0] * (len(zoom) - len(shape))
+        shape = list(shape) + [1] * (len(zoom) - len(shape))
     else:
         zoom = zoom[:len(shape)]
     if fill_dim and len(zoom) < len(shape):
@@ -984,6 +987,8 @@ def angles2linear(
             If None, uses output of `itertools.combinations(range(n_dim), 2)`.
         use_degree (bool): Interpret angles as expressed in degree.
             Otherwise, use radians.
+        tol (float): Tolerance in the approximation.
+            If error tolerante is exceded, a warning is issued.
 
     Returns:
         linear (np.ndarray): The rotation matrix as defined by the angles.
