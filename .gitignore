@@ -108,3 +108,9 @@ docs/
 notebooks/
 tests/data/
 *~
+*.png
+*.gif
+*.jpg
+*.jpeg
+*.ico
+*.xbm
