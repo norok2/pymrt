@@ -91,6 +91,7 @@ def load(
     obj = nib.load(in_filepath)
     arr = obj.get_data()
     if meta:
+        #todo: polishing
         meta = dict(
             affine=obj.get_affine(),
             header=obj.get_header())
@@ -126,6 +127,14 @@ def save(
             arr = arr.astype(int)
         if 'affine' not in kwargs:
             kwargs['affine'] = np.eye(4)
+        if arr.dtype == float:
+            mask = np.isnan(arr)
+            arr[mask] = 0.0
+        if 'header' in kwargs:
+            kwargs['header'] = None
+        if '_header' in kwargs:
+            kwargs['header'] = kwargs['_header']
+            kwargs.pop('_header')
     obj = img_type(arr, *args, **kwargs)
     obj.to_filename(out_filepath)
 
@@ -151,7 +160,7 @@ def masking(
     arr, meta = load(in_filepath, meta=True)
     mask = load(mask_filepath).astype(bool)
     arr[~mask] = mask_val
-    save(out_filepath, arr, affine=meta['affine'])
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -165,9 +174,9 @@ def filter_1_1(
     Interface to generic 1-1 filter.
     filter(in_filepath) -> out_filepath
 
-    Note that the function must return the affine matrix and the header.
-    If the affine matrix is None, it is assumed to be the identity.
-    If the returned header is None, it is autocalculated.
+    Note that the function must return a tuple with the output
+    array and the its corresponding metadata.
+    If the metadata is None, it is automatically calculated.
 
     Args:
         in_filepath (str): Input file path.
@@ -181,11 +190,9 @@ def filter_1_1(
     Returns:
         None
     """
-    obj = nib.load(in_filepath)
-    arr, meta = func(
-        obj.get_data(), obj.get_affine(), obj.get_header(), *args,
-        **kwargs)
-    save(out_filepath, arr, affine=meta['affine'])
+    arr, meta = load(in_filepath, meta=True)
+    arr, meta = func(arr, meta, *args, **kwargs)
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -199,12 +206,13 @@ def filter_n_1(
     Interface to generic n-1 filter.
     filter(in_filepaths) -> out_filepath
 
-    Note that the function must return the affine matrix and the header.
-    If the affine matrix is None, it is assumed to be the identity.
-    If the returned header is None, it is autocalculated.
+    Note that the function must return a tuple with the output
+    array and the its corresponding metadata.
+    If the metadata is None, it is automatically calculated.
 
     Args:
         in_filepaths (list[str]): List of input file paths.
+            The metadata is taken from the last item.
         out_filepath (str): Output file path
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
@@ -215,12 +223,13 @@ def filter_n_1(
     Returns:
         None
     """
-    input_list = []
+    arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
-    arr, meta = func(input_list, *args, **kwargs)
-    save(out_filepath, arr, affine=meta['affine'])
+        arr, meta = load(in_filepath, meta=True)
+        arrs.append(arr)
+        metas.append(meta)
+    arr, meta = func(arrs, metas, *args, **kwargs)
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -234,14 +243,13 @@ def filter_n_m(
     Interface to generic n-m filter:
     filter(in_filepaths) -> out_filepaths
 
-    Note that the function must return the list of affine matrices and headers.
-    If the affine matrix is None, it is assumed to be the identity.
-    If the returned header is None, it is autocalculated.
+    Note that the function must return an iterable of tuples with the output
+    array and the its corresponding metadata.
+    If the metadata is None, it is automatically calculated.
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item
+            The metadata is taken from the last item.
         out_filepaths (list[str]): List of output file paths
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
@@ -250,21 +258,22 @@ def filter_n_m(
         **kwargs (dict): Keyword arguments passed to the filtering function
 
     Returns:
-        None
+        None.
     """
-    input_list = []
+    arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        input_list.append((obj.get_data(), obj.get_affine(), obj.get_header()))
-    output_list = func(input_list, *args, **kwargs)
-    for (arr, aff, hdr), out_filepath in zip(output_list, out_filepaths):
-        save(out_filepath, arr, aff, hdr)
+        arr, meta = load(in_filepath, meta=True)
+        arrs.append(arr)
+        metas.append(meta)
+    output_list = func(arrs, metas, *args, **kwargs)
+    for (arr, meta), out_filepath in zip(output_list, out_filepaths):
+        save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
 def filter_n_x(
         in_filepaths,
-        out_filepath_template,
+        out_dirpath,
         func,
         *args,
         **kwargs):
@@ -272,24 +281,23 @@ def filter_n_x(
     Interface to generic n-x filter:
     calculation(i_filepaths) -> o_filepaths
 
-    Note that the function must return the list of affine matrices and headers.
-    If the affine matrix is None, it is assumed to be the identity.
-    If the returned header is None, it is autocalculated.
+    Note that the function must return an iterable of tuples with the output
+    array and the its corresponding metadata.
+    If the metadata is None, it is automatically calculated.
     The number of output image is not known in advance.
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item
-        out_filepath_template (str): Output file path template
+            The metadata is taken from the last item.
+        out_dirpath (str): Output file path template.
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
             func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments passed to the filtering function.
+        **kwargs (dict): Keyword arguments passed to the filtering function.
 
     Returns:
-        None
+        None.
     """
     pass
 
@@ -318,11 +326,9 @@ def simple_filter_1_1(
     Returns:
         None
     """
-    obj = nib.load(in_filepath)
-    arr = obj.get_data()
-    aff = obj.get_affine()
+    arr, meta = load(in_filepath, meta=True)
     arr = func(arr, *args, **kwargs)
-    save(out_filepath, arr, affine=aff)
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -338,8 +344,8 @@ def simple_filter_n_1(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The affine matrix is taken from the last item.
-            The header is calculated automatically.
+            The shape of each array must be identical.
+            The metadata is taken from the last item.
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs)) -> arr
@@ -349,15 +355,14 @@ def simple_filter_n_1(
     Returns:
         None.
     """
-    arr_list = []
-    aff_list = []
+    arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        arr_list.append(obj.get_data())
-        aff_list.append(obj.get_affine())
-    arr = func(arr_list, *args, **kwargs)
-    aff = aff_list[-1]  # the affine of the first image
-    save(out_filepath, arr, affine=aff)
+        arr, meta = load(in_filepath, meta=True)
+        arrs.append(arr)
+        metas.append(meta)
+    arr = func(arrs, *args, **kwargs)
+    meta = metas[-1]  # the metadata of the first image
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -378,8 +383,7 @@ def simple_filter_nn_1(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The affine matrix is taken from the last item.
-            The header is calculated automatically.
+            The metadata is taken from the last item.
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
             func(*args, *kwargs)) -> arr
@@ -389,15 +393,14 @@ def simple_filter_nn_1(
     Returns:
         None.
     """
-    arr_list = []
-    aff_list = []
+    arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        arr_list.append(obj.get_data())
-        aff_list.append(obj.get_affine())
-    arr = func(*(arr_list + list(args)), **kwargs)
-    aff = aff_list[-1]  # the affine of the last image
-    save(out_filepath, arr, affine=aff)
+        arr, meta = load(in_filepath, meta=True)
+        arrs.append(arr)
+        metas.append(meta)
+    arr = func(*(arrs + list(args)), **kwargs)
+    meta = metas[-1]  # the affine of the last image
+    save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -413,8 +416,7 @@ def simple_filter_1_m(
 
     Args:
         in_filepath (str): Input file path
-            The affine matrix is taken from the input.
-            The header is calculated automatically.
+            The metadata information is taken from the input.
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
@@ -424,12 +426,10 @@ def simple_filter_1_m(
     Returns:
         None.
     """
-    obj = nib.load(in_filepath)
-    arr = obj.get_data()
-    aff = obj.get_affine()
-    o_arr_list = func(arr, *args, **kwargs)
-    for arr, out_filepath in zip(o_arr_list, out_filepaths):
-        save(out_filepath, arr, affine=aff)
+    arr, meta = load(in_filepath, meta=True)
+    o_arrs = func(arr, *args, **kwargs)
+    for arr, out_filepath in zip(o_arrs, out_filepaths):
+        save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -445,9 +445,7 @@ def simple_filter_n_m(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item.
-            The header is calculated automatically.
+            The metadata information is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
@@ -457,16 +455,15 @@ def simple_filter_n_m(
     Returns:
         None.
     """
-    i_arr_list = []
-    aff_list = []
+    i_arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        i_arr_list.append(obj.get_data())
-        aff_list.append(obj.get_affine())
-    o_arr_list = func(i_arr_list, *args, **kwargs)
-    aff = aff_list[0]  # the affine of the first image
-    for arr, out_filepath in zip(o_arr_list, out_filepaths):
-        save(out_filepath, arr, affine=aff)
+        arr, meta = load(in_filepath, meta=True)
+        i_arrs.append(arr)
+        metas.append(meta)
+    o_arrs = func(i_arrs, *args, **kwargs)
+    meta = metas[-1]  # the affine of the last image
+    for arr, out_filepath in zip(o_arrs, out_filepaths):
+        save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
@@ -480,11 +477,13 @@ def simple_filter_nn_m(
     Interface to simplified n-m filter.
     filter(in_filepaths) -> out_filepaths
 
+    Supports a different signature for `func` compared to `_n_1`.
+    Specifically, the input arrays are listed as arguments.
+    This is useful when the number of input arrays must be forced.
+
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item.
-            The header is calculated automatically.
+            The metadata information is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
@@ -494,22 +493,21 @@ def simple_filter_nn_m(
     Returns:
         None.
     """
-    i_arr_list = []
-    aff_list = []
+    i_arrs, metas = [], []
     for in_filepath in in_filepaths:
-        obj = nib.load(in_filepath)
-        i_arr_list.append(obj.get_data())
-        aff_list.append(obj.get_affine())
-    o_arr_list = func(i_arr_list, *args, **kwargs)
-    aff = aff_list[0]  # the affine of the first image
-    for arr, out_filepath in zip(o_arr_list, out_filepaths):
-        save(out_filepath, arr, affine=aff)
+        arr, meta = load(in_filepath, meta=True)
+        i_arrs.append(arr)
+        metas.append(meta)
+    o_arrs = func(*(i_arrs + list(args)), **kwargs)
+    meta = metas[-1]  # the affine of the last image
+    for arr, out_filepath in zip(o_arrs, out_filepaths):
+        save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
 def simple_filter_n_x(
         in_filepaths,
-        out_filepath_template,
+        out_dirpath,
         func,
         *args,
         **kwargs):
@@ -521,8 +519,7 @@ def simple_filter_n_x(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item.
+            The metadata information is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(list[arr], *args, *kwargs) -> list[ndarray]
@@ -538,7 +535,7 @@ def simple_filter_n_x(
 # ======================================================================
 def simple_filter_nn_x(
         in_filepaths,
-        out_filepath_template,
+        out_dirpath,
         func,
         *args,
         **kwargs):
@@ -550,8 +547,7 @@ def simple_filter_nn_x(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item.
+            The metadata information is taken from the last item.
         out_filepaths (list[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(*args, *kwargs) -> list[ndarray]
@@ -574,8 +570,7 @@ def stack(
 
     Args:
         in_filepaths (list[str]): List of input file paths.
-            The shape of each array must be identical.
-            The affine matrix is taken from the last item.
+            The metadata information is taken from the last item.
         out_filepath (str): Output file path.
         axis (int): Joining axis of orientation.
             Must be a valid index for the input shape.
@@ -597,7 +592,7 @@ def split(
 
     Args:
         in_filepath (str): Input file path.
-            The affine matrix is taken from the input.
+            The metadata information is taken from the input.
         axis (int): Joining axis of orientation.
             Must be a valid index for the input shape
         out_dirpath (str): Path to directory where to store results.
@@ -613,18 +608,17 @@ def split(
         out_basename = pmu.change_ext(
             os.path.basename(in_filepath), '', pmu.EXT['niz'])
     out_filepaths = []
-    # load source image
-    obj = nib.load(in_filepath)
-    arr = obj.get_data()
+
+    arr, meta = load(in_filepath, meta=True)
     # split data
-    arr_list = np.split(arr, arr.shape[axis], axis)
+    arrs = np.split(arr, arr.shape[axis], axis)
     # save data to output
-    for i, image in enumerate(arr_list):
-        i_str = str(i).zfill(len(str(len(arr_list))))
+    for i, image in enumerate(arrs):
+        i_str = str(i).zfill(len(str(len(arrs))))
         out_filepath = os.path.join(
             out_dirpath,
             pmu.change_ext(out_basename + '-' + i_str, pmu.EXT['niz'], ''))
-        save(out_filepath, image, obj.get_affine())
+        save(out_filepath, image, **{k: v for k, v in meta.items()})
         out_filepaths.append(out_filepath)
     return out_filepaths
 
@@ -906,13 +900,9 @@ def mask_threshold(
     See Also:
         pymrt.segmentation.mask_threshold
     """
-
-    def _arr_mask_threshold(array, *args, **kwargs):
-        return pms.mask_threshold(array, *args, **kwargs).astype(float)
-
     kw_params = pmu.set_keyword_parameters(pms.mask_threshold, locals())
-    simple_filter_1_1(in_filepath, out_filepath, _arr_mask_threshold,
-                      **kw_params)
+    simple_filter_1_1(
+        in_filepath, out_filepath, pms.mask_threshold, **kw_params)
 
 
 # ======================================================================
@@ -977,28 +967,12 @@ def calc_stats(
     See Also:
         pymrt.base.calc_stats
     """
-    obj = nib.load(arr_filepath)
-    arr = obj.get_data()
+    arr = load(arr_filepath)
     if mask_filepath:
         obj_mask = nib.load(mask_filepath)
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    # if not save_filepath and printing is not False:
-    #     printing = True
-    # if printing:
-    #     if not title:
-    #         if save_filepath:
-    #             title = os.path.basename(save_filepath)
-    #         else:
-    #             title = os.path.basename(arr_filepath)
-    #     print(save_filepath)
-    #     stats_dict = pmu.calc_stats(
-    #         arr[mask], mask_nan, mask_inf, mask_vals, save_filepath, title)
-    # else:
-    #     stats_dict = pmu.calc_stats(
-    #         arr[mask], mask_nan, mask_inf, mask_vals, save_filepath, title,
-    #         compact)
     return pmu.calc_stats(arr[mask], *args, **kwargs)
 
 
@@ -1018,9 +992,9 @@ def change_data_type(
     Returns:
         None
     """
-    obj = nib.load(in_filepath)
-    arr = obj.get_data()
-    save(out_filepath, arr.astype(data_type), obj.get_affine())
+    arr, meta = load(in_filepath, meta=True)
+    save(
+        out_filepath, arr.astype(data_type), **{k: v for k, v in meta.items()})
 
 
 # ======================================================================
