@@ -68,7 +68,7 @@ def mask_threshold(
     Create a mask from an image according to specific threshold.
 
     Args:
-        arr (np.ndarray): Array from which mask is created.
+        arr (np.ndarray): Input array for the masking.
         threshold (int|float|tuple[int|float]): Value(s) for the threshold.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
@@ -96,13 +96,54 @@ def mask_threshold(
             pass
         else:  # if mode not in modes:
             raise ValueError(
-                'valid modes are: {} (given: {})'.format(modes, mode))
-        mask = eval('arr {} threshold'.format(comparison))
+                'valid modes are: {modes}'
+                ' (given: {mode})'.format_map(locals()))
+        mask = eval('arr {comparison} threshold'.format_map(locals()))
     else:
         raise ValueError(
-            'valid comparisons are: {} (given: {})'.format(
-                comparisons, comparison))
+            'valid comparisons are: {comparisons}'
+            ' (given: {comparison})'.format_map(locals()))
     return mask
+
+
+# ======================================================================
+def mask_threshold_compact(
+        arr,
+        threshold=0.0,
+        comparison='>',
+        mode='absolute',
+        smoothing=0.0,
+        erosion_iter=0,
+        dilation_iter=0):
+    """
+    Create a mask from an image according to specific threshold.
+
+    Args:
+        arr (np.ndarray): Input array for the masking.
+        threshold (int|float|tuple[int|float]): Value(s) for the threshold.
+        comparison (str): A string representing the numeric relationship
+            Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
+        mode (str): Determines how to interpret / process the threshold value.
+            Available values are:
+             - 'absolute': use the absolute value
+             - 'relative': use a value relative to values interval
+             - 'percentile': use the value obtained from the percentiles
+
+    Returns:
+        arr (np.ndarray[bool]): Mask for which comparison is True.
+    """
+    if smoothing > 0.0:
+        arr = sp.ndimage.gaussian_filter(arr, smoothing)
+
+    arr = mask_threshold(arr, threshold, comparison, mode)
+
+    if erosion_iter > 0:
+        arr = sp.ndimage.binary_erosion(arr, iterations=erosion_iter)
+
+    if dilation_iter > 0:
+        arr = sp.ndimage.binary_dilation(arr, iterations=dilation_iter)
+
+    return arr
 
 
 # ======================================================================

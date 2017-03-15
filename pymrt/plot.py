@@ -89,7 +89,7 @@ def explore(array):
 
 
 # ======================================================================
-def quick(array):
+def quick(array, values_range=None):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -105,18 +105,18 @@ def quick(array):
     """
 
     if array.ndim == 1:
-        quick_1d(array)
+        quick_1d(array, values_range)
     elif array.ndim == 2:
-        quick_2d(array)
+        quick_2d(array, values_range)
     elif array.ndim == 3:
-        quick_3d(array)
+        quick_3d(array, values_range)
     else:
         warnings.warn('cannot quickly plot this array (try `explore`)')
     plt.show()
 
 
 # ======================================================================
-def quick_1d(array):
+def quick_1d(array, values_range=None):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -142,7 +142,7 @@ def quick_1d(array):
 
 
 # ======================================================================
-def quick_2d(array):
+def quick_2d(arr, values_range=None):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -156,18 +156,24 @@ def quick_2d(array):
     None
 
     """
-    if array.ndim == 2:
-        # using Matplotlib
-        fig = plt.subplots()
-        plt.imshow(array.astype(float), cmap=plt.cm.gray)
-    elif array.ndim > 2:
-        # todo: 2D projection
-        pass
+    if arr.ndim == 2:
+        img = arr
     else:
-        warnings.warn('cannot plot (2D projection of) current array')
+        warnings.warn('current array was not 2D, performing brute conversion')
+        img = arr.reshape(pmu.optimal_ratio(arr.size))
+
+    if not values_range:
+        values_range = pmu.minmax(img)
+
+    print(values_range)
+    # using Matplotlib
+    fig = plt.subplots()
+    plt.imshow(
+        img.astype(float), cmap=plt.cm.gray,
+        vmin=values_range[0], vmax=values_range[1])
 
 
-def quick_3d(array):
+def quick_3d(array, values_range=None):
     """
     TODO: DOCSTRING.
 

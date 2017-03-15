@@ -103,8 +103,6 @@ target/
 
 # IPython
 *.pynb_checkpoints*
-*.ipynb_checkpoints*
-*.ipynb
 .idea/
 docs/
 notebooks/
