@@ -995,8 +995,8 @@ def realpath(path):
 def listdir(
         path,
         file_ext='',
-        pattern=slice(None, None, None),
         full_path=True,
+        is_sorted=True,
         verbose=D_VERB_LVL):
     """
     Retrieve a sorted list of files matching specified extension and pattern.
@@ -1005,29 +1005,32 @@ def listdir(
         path (str): Path to search.
         file_ext (str|None): File extension. Empty string for all files.
             None for directories.
-        pattern (slice): Selection pattern (assuming alphabetical ordering).
         full_path (bool): Include the full path.
+        is_sorted (bool): Sort results alphabetically.
         verbose (int): Set level of verbosity.
 
     Returns:
         list[str]: List of file names/paths
     """
     if file_ext is None:
-        msg('Scanning for DIRS on:\n{}'.format(path),
+        msg('Scanning for dirs on:\n{}'.format(path),
             verbose, VERB_LVL['debug'])
         filepaths = [
             os.path.join(path, filename) if full_path else filename
             for filename in os.listdir(path)
             if os.path.isdir(os.path.join(path, filename))]
     else:
-        msg('Scanning for `{}` on:\n{}'.format(file_ext, path),
+        msg('Scanning for {} on:\n{}'.format(
+            ('`' + file_ext + '`') if file_ext else 'files', path),
             verbose, VERB_LVL['debug'])
         # extracts only those ending with specific file_ext
         filepaths = [
             os.path.join(path, filename) if full_path else filename
             for filename in os.listdir(path)
             if filename.lower().endswith(file_ext.lower())]
-    return sorted(filepaths)[pattern]
+    if is_sorted:
+        filepaths = sorted(filepaths)
+    return filepaths
 
 
 # ======================================================================

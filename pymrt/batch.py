@@ -90,6 +90,182 @@ def _simple_affines(affines):
 
 
 # ======================================================================
+def preset_t1_mp2rage_builtin():
+    """
+    Preset to get built-in T1 maps from the MP2RAGE sequence.
+    """
+    new_opts = {
+        'types': ['T1', 'INV2M'],
+        'param_select': ['ProtocolName', '_series'],
+        'match': '(?i).*mp2rage.*',
+        'dtype': 'float',
+        'mask': [[None], [None], [None], [1]],
+    }
+    new_opts.update({
+        'compute_func': 'match_series',
+        'compute_kwargs': {
+            'matches': (
+                ('.*_T1_Images.*', new_opts['types'][0]),
+                ('.*_INV2(?!_PHS).*', new_opts['types'][1]),
+            ),
+        }
+    })
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_memp2rage_loglin2():
+    """
+    Preset to get built-in T2* maps from the ME-MP2RAGE sequence.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '(?i).*me-mp2rage.*_INV2(?!_PHS).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_loglin2',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_flash_loglin2():
+    """
+    Preset to get T2* maps from multi-echo data using a log-linear fit.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '(?i).*(gre|flash).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_loglin',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_flash_builtin():
+    """
+    Preset to get built-in T2* maps from the FLASH sequence.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', '_series'],
+        'match': '.*T2Star_Images.*',
+        'dtype': 'float',
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_multiecho_loglin():
+    """
+    Preset to get T2* maps from multi-echo squared data using a log-linear fit.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '(?i).*(gre|flash|me).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_loglin2',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_multiecho_loglin2():
+    """
+    Preset to get T2* maps from multi-echo squared data using a log-linear fit.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '(?i).*(gre|flash|me).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_loglin2',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_t2s_multiecho_leasq():
+    """
+    Preset to get T2* maps from multi-echo data using a least-squares fit.
+    """
+    new_opts = {
+        'types': ['T2S', 'T1w'],
+        'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
+        'match': '.*(FLASH|ME-MP2RAGE).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'fit_monoexp_decay_leasq',
+        'compute_kwargs': {
+            'ti_label': 'EchoTime::ms',
+            'img_types': {'tau': 'T2S', 's_0': 'T1w'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_b1t_afi():
+    """
+    Preset to get B1+ maps from the AFI sequence.
+    """
+    new_opts = {
+        'types': ['B1T'],
+        'param_select': [
+            'ProtocolName', 'RepetitionTime::ms', 'FlipAngle::deg',
+            '_series'],
+        'match': '.*(afi|b1).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'calc_afi',
+        'compute_kwargs': {
+            'ti_label': 'RepetitionTime::ms',
+            'fa_label': 'FlipAngle::deg',
+            'img_types': {'eff': 'B1T'}}
+    }
+    return new_opts
+
+
+# ======================================================================
+def preset_qsm_as_legacy():
+    """
+    Preset to get CHI maps from a multi-echo sequence.
+    """
+    new_opts = {
+        'types': ['CHI', 'MSK'],
+        'param_select': [
+            'ProtocolName', 'EchoTime::ms', 'ImagingFrequency', '_series'],
+        # 'match': '.*((FLASH)|(ME-MP2RAGE.*INV2)).*',
+        'match': '.*(ME-MP2RAGE.*INV2).*',
+        'dtype': 'float',
+        'multi_acq': False,
+        'compute_func': 'ext_qsm_as_legacy',
+        'compute_kwargs': {
+            'te_label': 'EchoTime::ms',
+            'img_types': {'qsm': 'CHI', 'mask': 'MSK'}}
+    }
+    return new_opts
+
+
+# ======================================================================
 def ext_qsm_as_legacy(
         images,
         affines,
@@ -158,8 +334,49 @@ def ext_qsm_as_legacy(
 
 
 # ======================================================================
+def qsm_sdi(
+        images,
+        affines,
+        params,
+        img_types):
+    pass
+
+
+# ======================================================================
+def calc_afi(
+        images,
+        affines,
+        params,
+        ti_label,
+        fa_label,
+        img_types):
+    """
+    Fit monoexponential decay to images using the log-linear method.
+    """
+    y_arr = np.stack(images, -1).astype(float)
+
+    s_arr = pmu.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
+    # s_arr = images[0]
+    t_r = params[ti_label]
+    nominal_fa = params[fa_label]
+
+    mask = s_arr[..., 0] != 0.0
+    r = np.zeros_like(s_arr[..., 1])
+    r[mask] = s_arr[..., 0][mask] / s_arr[..., 1][mask]
+    n = t_r[1] / t_r[0]  # usually: t_r[1] > t_r[0]
+    fa = np.rad2deg(np.real(np.arccos((r * n - 1) / (n - r))))
+
+    img_list = [fa / nominal_fa]
+    aff_list = _simple_affines(affines)
+    type_list = ['eff']
+    img_type_list = tuple(img_types[key] for key in type_list)
+    params_list = ({},) * len(img_list)
+    return img_list, aff_list, img_type_list, params_list
+
+
+# ======================================================================
 def time_to_rate(
-        arr,
+        array,
         in_units='ms',
         out_units='Hz'):
     k = 1.0
@@ -167,13 +384,13 @@ def time_to_rate(
         k *= 1.0e3
     if out_units == 'kHz':
         k *= 1.0e-3
-    arr[arr != 0.0] = k / arr[arr != 0.0]
-    return arr
+    array[array != 0.0] = k / array[array != 0.0]
+    return array
 
 
 # ======================================================================
 def rate_to_time(
-        arr,
+        array,
         in_units='Hz',
         out_units='ms'):
     k = 1.0
@@ -181,8 +398,8 @@ def rate_to_time(
         k *= 1.0e3
     if out_units == 'ms':
         k *= 1.0e-3
-    arr[arr != 0.0] = k / arr[arr != 0.0]
-    return arr
+    array[array != 0.0] = k / array[array != 0.0]
+    return array
 
 
 # ======================================================================
@@ -251,7 +468,164 @@ def func_flash(m0, fa, tr, t1, te, t2s):
            (1.0 - np.exp(-tr / t1)) / (1.0 - np.cos(fa) * np.exp(-tr / t1))
 
 
+# ======================================================================
+def rho_mp2rage(
+        inv1m_arr,
+        inv1p_arr,
+        inv2m_arr,
+        inv2p_arr,
+        regularization=np.spacing(1),
+        values_interval=None):
+    """
+    Calculate the rho image from an MP2RAGE acquisition.
 
+    Args:
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the rho expression
+            for normalization purposes, therefore should be much smaller than
+            the average of the magnitude images.
+            Larger values of this parameter will have the side effect of
+            denoising the background.
+        values_interval (tuple[float|int]|None): The output values interval.
+            The standard values are linearly converted to this range.
+            If None, the natural [-0.5, 0.5] interval will be used.
+
+    Returns:
+        rho_arr (float|np.ndarray): The calculated rho image from
+        MP2RAGE.
+    """
+    if not regularization:
+        regularization = 0
+    inv1m_arr = inv1m_arr.astype(float)
+    inv2m_arr = inv2m_arr.astype(float)
+    inv1p_arr = fix_phase_interval(inv1p_arr)
+    inv2p_arr = fix_phase_interval(inv2p_arr)
+    inv1_arr = pmu.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = pmu.polar2complex(inv2m_arr, inv2p_arr)
+    rho_arr = np.real(inv1_arr.conj() * inv2_arr /
+                          (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
+    if values_interval:
+        rho_arr = pmu.scale(rho_arr, values_interval, (-0.5, 0.5))
+    return rho_arr
+
+
+# ======================================================================
+def rho_to_t1_mp2rage(
+        rho_arr,
+        eff_arr=None,
+        t1_values_range=(100, 5000),
+        t1_num=512,
+        eff_num=32,
+        **acq_params_kws):
+    """
+    Calculate the T1 map from an MP2RAGE acquisition.
+
+    Args:
+        rho_arr (float|np.ndarray): Magnitude of the first inversion image.
+        eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+            This is equivalent to the normalized B1T field.
+            Note that this must have the same spatial dimensions as the images
+            acquired with MP2RAGE.
+            If None, no correction for the RF efficiency is performed.
+        t1_values_range (tuple[float]): The T1 value range to consider.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        t1_num (int): The base number of sampling points of T1.
+            The actual number of sampling points is usually smaller, because of
+            the removal of non-bijective branches.
+            This affects the precision of the MP2RAGE estimation.
+        eff_num (int): The base number of sampling points for the RF efficiency.
+            This affects the precision of the RF efficiency correction.
+        **acq_params_kws (dict): The acquisition parameters.
+            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+
+    Returns:
+        t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
+    """
+    from pymrt.sequences import mp2rage
+    if eff_arr:
+        # todo: implement B1T correction
+        raise NotImplementedError('B1T correction is not yet implemented')
+    else:
+        # determine the rho expression
+        t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
+        rho = mp2rage.rho(
+            t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
+        # remove non-bijective branches
+        bijective_slice = pmu.bijective_part(rho)
+        t1 = t1[bijective_slice]
+        rho = rho[bijective_slice]
+        if rho[0] > rho[-1]:
+            rho = rho[::-1]
+            t1 = t1[::-1]
+        # check that rho values are strictly increasing
+        if not np.all(np.diff(rho) > 0):
+            raise ValueError('MP2RAGE look-up table was not properly prepared.')
+
+        # fix values range for rho
+        if not pmu.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+            rho_arr = pmu.scale(rho_arr, mp2rage.RHO_INTERVAL)
+
+        t1_arr = np.interp(rho_arr, rho, t1)
+    return t1_arr
+
+
+# ======================================================================
+def t1_mp2rage(
+        inv1m_arr,
+        inv1p_arr,
+        inv2m_arr,
+        inv2p_arr,
+        regularization=np.spacing(1),
+        eff_arr=None,
+        t1_values_range=(100, 5000),
+        t1_num=512,
+        eff_num=32,
+        **acq_param_kws):
+    """
+    Calculate the T1 map from an MP2RAGE acquisition.
+
+    Args:
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the rho expression
+            for normalization purposes, therefore should be much smaller than
+            the average of the magnitude images.
+            Larger values of this parameter will have the side effect of
+            denoising the background.
+        eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+            This is equivalent to the normalized B1T field.
+            Note that this must have the same spatial dimensions as the images
+            acquired with MP2RAGE.
+            If None, no correction for the RF efficiency is performed.
+        t1_values_range (tuple[float]): The T1 value range to consider.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        t1_num (int): The base number of sampling points of T1.
+            The actual number of sampling points is usually smaller, because of
+            the removal of non-bijective branches.
+            This affects the precision of the MP2RAGE estimation.
+        eff_num (int): The base number of sampling points for the RF efficiency.
+            This affects the precision of the RF efficiency correction.
+        **acq_param_kws (dict): The acquisition parameters.
+            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+
+    Returns:
+        t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
+    """
+    rho_arr = rho_mp2rage(
+        inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
+        values_interval=None)
+    t1_arr = rho_to_t1_mp2rage(
+        rho_arr, eff_arr, t1_values_range, t1_num, eff_num, **acq_param_kws)
+    return t1_arr
 
 
 # ======================================================================
@@ -391,7 +765,7 @@ def voxel_curve_fit(
         y_arr (np.ndarray): Dependent variable with x dependence in the n-th dim
         x_arr (np.ndarray): Independent variable with same size as n-th dim of y
         fit_func (func):
-        fit_params (iterable): The initial value(s) of the parameters to fit.
+        fit_params (list[float]):
         pre_func (func):
         pre_args (list):
         pre_kwargs (dict):

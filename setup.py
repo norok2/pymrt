@@ -166,6 +166,7 @@ setup(
 
     entry_points={
         'console_scripts': [
+            'pymrt_batch_compute=scripts_cli.batch_compute:main',
             'pymrt_compute=scripts_cli.compute:main',
             'pymrt_correlate=scripts_cli.correlate:main',
 
