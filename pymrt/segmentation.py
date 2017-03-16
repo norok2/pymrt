@@ -50,6 +50,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
+import pymrt.utils as pmu
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
@@ -149,7 +150,7 @@ def mask_threshold_compact(
 # ======================================================================
 def label_thresholds(
         arr,
-        thresholds=(0.0,),
+        thresholds=0.0,
         comparison='>',
         mode='absolute'):
     """
@@ -157,7 +158,7 @@ def label_thresholds(
 
     Args:
         arr (np.ndarray): Array from which mask is created.
-        threshold (int|float|tuple[int|float]): Value(s) for the threshold.
+        thresholds (int|float|tuple[int|float]): Value(s) for the threshold.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['>', '<', '>=', '<=']
         mode (str): Determines how to interpret / process the threshold value.
@@ -170,6 +171,7 @@ def label_thresholds(
         label (np.ndarray[int]): Labels for values
     """
     label = np.zeros_like(arr, dtype=int)
+    thresholds = pmu.auto_repeat(thresholds, 1)
     for threshold in thresholds:
         mask = mask_threshold(arr, threshold, comparison, mode)
         label += mask.astype(int)
@@ -192,34 +194,34 @@ def find_objects(
         arr (np.ndarray): The array to operate with.
         structure (ndarray|None): Definition of feature connections.
             If None, use default.
-        max_label (int): Limit the number of labels to search through.
+        max_label (int): Limit the number of labeled to search through.
         reduce_support (bool): Reduce the support of the masks to their size.
             Effectively, the shape of the output is adapted to the content.
 
     Returns:
-        labels (np.ndarray): The array containing the labeled objects.
+        labeled (np.ndarray): The array containing the labeled objects.
         masks (list[np.ndarray]): A list of the objects as mask arrays.
             The list is sorted by decresing size (larger to smaller).
             The shape of each mask is either the same as the input, or it is
             adapted to its content, depending on the `reduce_support` flag.
     """
-    labels, num_labels = sp.ndimage.label(arr, structure)
+    labeled, num_labels = sp.ndimage.label(arr, structure)
     masks = []
     if reduce_support:
-        containers = sp.ndimage.find_objects(labels, max_label)
+        containers = sp.ndimage.find_objects(labeled, max_label)
     else:
-        containers = [[slice(None)] * len(labels.shape)] * num_labels
-    for i, (label, container) in enumerate(zip(labels, containers)):
+        containers = [[slice(None)] * len(labeled.shape)] * num_labels
+    for i, (label, container) in enumerate(zip(labeled, containers)):
         label_value = i + 1
-        mask = labels[container]
+        mask = labeled[container]
         mask = (mask == label_value)
         masks.append(mask)
-    # sort labels and masks by size (descending)
+    # sort labeled and masks by size (descending)
     masks = sorted(masks, key=lambda x: -np.sum(x))
-    labels = np.zeros_like(labels).astype(int)
+    labeled = np.zeros_like(labeled).astype(int)
     for value, mask in enumerate(masks):
-        labels += mask.astype(int) * (value + 1)
-    return labels, masks
+        labeled += mask.astype(int) * (value + 1)
+    return labeled, masks
 
 
 # ======================================================================

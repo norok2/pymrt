@@ -52,7 +52,8 @@ def fit_exp_loglin(
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
-        exp_
+        exp_factor (float|None):
+        zero_cutoff (float|None):
 
     Returns:
         results (dict): The calculated information.
