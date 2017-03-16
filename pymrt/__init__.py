@@ -192,8 +192,8 @@ def elapsed(
     Args:
         name (str): The name of the event point.
         time_point (float): The time in seconds since the epoch.
-        events (list[(str,time)]): A list of named event time points.
-            Each event is a 2-tuple: (label, time).
+        events (list[(str,datetime.datetime)]): A list of named time points.
+            Each event is a 2-tuple: (label, datetime.datetime).
 
     Returns:
         None.
@@ -221,7 +221,7 @@ def print_elapsed(
     Print quick-and-dirty elapsed times between named event points.
 
     Args:
-        events (list[str,time]): A list of named event time points.
+        events (list[(str,datetime.datetime)]): A list of named time points.
             Each event is a 2-tuple: (label, time).
         label (str): heading of the elapsed time table.
         only_last (bool): print only the last event (useful inside a loop).
@@ -250,7 +250,7 @@ def print_elapsed(
         name = events[_id][0]
         curr_elapsed = events[_id][1]
         prev_elapsed = events[_id - 1][1]
-        diff_last = datetime.timedelta(0, curr_elapsed - prev_elapsed)
+        diff_last = datetime.timedelta(curr_elapsed - prev_elapsed)
         print('{!s}: {!s:>24s}'.format(name, diff_last))
 
 

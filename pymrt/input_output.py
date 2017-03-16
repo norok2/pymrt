@@ -119,10 +119,6 @@ def save(
     Returns:
         None.
     """
-    if not args:
-        args = ()
-    if not kwargs:
-        kwargs = {}
     if img_type == nib.Nifti1Image:
         if arr.dtype == bool:
             arr = arr.astype(int)
@@ -136,7 +132,7 @@ def save(
         if '_header' in kwargs:
             kwargs['header'] = kwargs['_header']
             kwargs.pop('_header')
-    obj = img_type(arr, *args, **kwargs)
+    obj = img_type(arr, *(args if args else ()), **(kwargs if kwargs else {}))
     obj.to_filename(out_filepath)
 
 
@@ -510,7 +506,7 @@ def simple_filter_1_x(
         in_filepath,
         out_dirpath,
         func,
-        out_filename_template='{base}_{i}_{name}.{ext}',
+        out_filename_template='{base}_{name}{ext}',
         *args,
         **kwargs):
     """
@@ -533,7 +529,7 @@ def simple_filter_1_x(
     arr, meta = load(in_filepath, meta=True)
     results = func(arr, *args, **kwargs)
     path, base, ext = pmu.split_path(in_filepath)
-    for i, (name, array) in enumerate(results.items()):
+    for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
             out_dirpath, out_filename_template.format_map(locals()))
         save(out_filepath, arr, **{k: v for k, v in meta.items()})
