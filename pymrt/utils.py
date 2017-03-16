@@ -68,7 +68,7 @@ def _is_hidden(filepath):
     Heuristic to determine hidden files.
 
     Args:
-        filepath (str): the input file path.
+        filepath (str): the input filepath.
 
     Returns:
         is_hidden (bool): True if is hidden, False otherwise.
@@ -88,7 +88,7 @@ def _is_special(stats_mode):
     Heuristic to determine non-standard files.
 
     Args:
-        filepath (str): the input file path.
+        filepath (str): The input filepath.
 
     Returns:
         is_special (bool): True if is hidden, False otherwise.
@@ -1054,27 +1054,214 @@ def add_extsep(ext):
     """
     if not ext:
         ext = ''
-    if not ext.startswith(os.path.extsep):
-        ext = os.path.extsep + ext
+    ext = ('' if ext.startswith(os.path.extsep) else os.path.extsep) + ext
     return ext
 
 
 # ======================================================================
-def change_ext(
+def split_ext(
         filepath,
+        ext=None,
+        case_sensitive=False,
+        auto_multi_ext=True):
+    """
+    Split the filepath into a pair (root, ext), so that: root + ext == path.
+    root is everything that preceeds the first extension separator.
+    ext is the extension (including the separator).
+
+    It can automatically detect multiple extensions.
+    Since `os.path.extsep` if often '.', a `os.path.extsep` between digits is
+    not
+    considered to be generating and extension.
+
+    Args:
+        filepath (str): The input filepath.
+        ext (str|None): The expected extension (with or without the dot).
+            If None, it will be obtained automatically.
+            If empty, no split is performed.
+        case_sensitive (bool): Case-sensitive match of old extension.
+            If `ext` is None or empty, it has no effect.
+        auto_multi_ext (bool): Automatically detect multiple extensions.
+            If True, include multiple extensions.
+            If False, only the last extension is detected.
+            If `ext` is not None or empty, it has no effect.
+
+    Returns:
+        root (str): The filepath without the extension.
+        ext (str): The extension including the separator.
+
+    Examples:
+        >>> split_ext('test.txt', '.txt')
+        ('test', '.txt')
+        >>> split_ext('test.txt')
+        ('test', '.txt')
+        >>> split_ext('test.txt.gz')
+        ('test', '.txt.gz')
+        >>> split_ext('test_1.0.txt')
+        ('test_1.0', '.txt')
+        >>> split_ext('test.0.txt')
+        ('test', '.0.txt')
+        >>> split_ext('test.txt', '')
+        ('test.txt', '')
+    """
+    root = filepath
+    if ext is not None:
+        ext = add_extsep(ext)
+        has_ext = filepath.lower().endswith(ext.lower()) \
+            if not case_sensitive else filepath.endswith(ext)
+        if has_ext:
+            root = filepath[:-len(ext)]
+        else:
+            ext = ''
+    else:
+        if auto_multi_ext:
+            ext = ''
+            is_valid = True
+            while is_valid:
+                tmp_filepath_noext, tmp_ext = os.path.splitext(root)
+                if tmp_filepath_noext and tmp_ext:
+                    is_valid = not (tmp_ext[1].isdigit() and
+                                    tmp_filepath_noext[-1].isdigit())
+                    if is_valid:
+                        root = tmp_filepath_noext
+                        ext = tmp_ext + ext
+                else:
+                    is_valid = False
+        else:
+            root, ext = os.path.splitext(filepath)
+    return root, ext
+
+
+# ======================================================================
+def split_path(
+        filepath,
+        auto_multi_ext=True):
+    """
+    Split the filepath into (root, base, ext).
+
+    Note that: root + os.path.sep + base + ext == path.
+    (and therfore: root + base + ext != path).
+
+    root is everything that preceeds the last path separator.
+    base is everything between the last path separator and the first
+    extension separator.
+    ext is the extension (including the separator).
+
+    Note that this separation is performed only on the string and it is not
+    aware of the filepath actually existing, being a file, a directory,
+    or similar aspects.
+
+    Args:
+        filepath (str): The input filepath.
+        auto_multi_ext (bool): Automatically detect multiple extensions.
+            Refer to `split_ext()` for more details.
+
+    Returns:
+        root (str): The filepath without the last item.
+        base (str): The file name without the extension.
+        ext (str): The extension including the separator.
+
+    Examples:
+        >>> split_path('/path/to/file.txt')
+        ('/path/to', 'file', '.txt')
+        >>> split_path('/path/to/file.tar.gz')
+        ('/path/to', 'file', '.tar.gz')
+        >>> split_path('file.tar.gz')
+        ('', 'file', '.tar.gz')
+        >>> split_path('/path/to/file')
+        ('/path/to', 'file', '')
+    """
+    root, base_ext = os.path.split(filepath)
+    base, ext = split_ext(base_ext, auto_multi_ext=auto_multi_ext)
+    return root, base, ext
+
+
+# ======================================================================
+def join_path(*args):
+    """
+    Join a list of items into a filepath.
+
+    The last item is treated as the file extension.
+    Path and extension separators do not need to be manually included.
+
+    Note that this is the inverse of `split_path()`.
+
+    Args:
+        *args (iterable[str]): The path elements to be concatenated.
+            The last item is treated as the file extension.
+
+    Returns:
+        filepath (str): The output filepath.
+
+    Examples:
+        >>> join_path('/path/to', 'file', '.txt')
+        '/path/to/file.txt'
+        >>> join_path('/path/to', 'file', '.tar.gz')
+        '/path/to/file.tar.gz'
+        >>> join_path('', 'file', '.tar.gz')
+        'file.tar.gz'
+        >>> join_path('path/to', 'file', '')
+        'path/to/file'
+        >>> paths = ['/path/to/file.txt', '/path/to/file.tar.gz', 'file.tar.gz']
+        >>> all([path == join_path(*split_path(path)) for path in paths])
+        True
+    """
+    return ((os.path.join(*args[:-1]) if args[:-1] else '') +
+            (add_extsep(args[-1]) if args[-1] else ''))
+
+
+# ======================================================================
+def basename(
+        filepath,
+        ext=None,
+        case_sensitive=False,
+        auto_multi_ext=True):
+    """
+    Remove path AND the extension from a filepath.
+
+    Args:
+        filepath (str): The input filepath.
+        ext (str|None): The expected extension (with or without the dot).
+            Refer to `split_ext()` for more details.
+        case_sensitive (bool): Case-sensitive match of expected extension.
+            Refer to `split_ext()` for more details.
+        auto_multi_ext (bool): Automatically detect multiple extensions.
+            Refer to `split_ext()` for more details.
+
+    Returns:
+         root (str): The file name without path and extension.
+
+    Examples:
+        >>> basename('/path/to/file/test.txt', '.txt')
+        'test'
+        >>> basename('/path/to/file/test.txt.gz')
+        'test'
+    """
+    filepath = os.path.basename(filepath)
+    root, ext = split_ext(
+        filepath, ext, case_sensitive, auto_multi_ext)
+    return root
+
+
+# ======================================================================
+def change_ext(
+        root,
         new_ext,
-        old_ext=None,
-        case_sensitive=False):
+        ext=None,
+        case_sensitive=False,
+        auto_multi_ext=True):
     """
     Substitute the old extension with a new one in a filepath.
 
     Args:
-        filepath (str): Input filepath.
+        filepath (str): The input filepath.
         new_ext (str): The new extension (with or without the dot).
-        old_ext (str|None): The old extension (with or without the dot).
-            If None, it will be obtained from os.path.splitext.
-        case_sensitive (bool): Case-sensitive match of old extension.
-            If old_ext is None or empty, it has no effect.
+        ext (str|None): The expected extension (with or without the dot).
+            Refer to `split_ext()` for more details.
+        case_sensitive (bool): Case-sensitive match of expected extension.
+            Refer to `split_ext()` for more details.
+        auto_multi_ext (bool): Automatically detect multiple extensions.
+            Refer to `split_ext()` for more details.
 
     Returns:
         filepath (str): Output filepath
@@ -1093,26 +1280,21 @@ def change_ext(
         >>> change_ext('test.txt', 'dat', 'TXT', True)
         'test.txt.dat'
         >>> change_ext('test.tar.gz', 'tgz')
-        'test.tar.tgz'
+        'test.tgz'
         >>> change_ext('test.tar.gz', 'tgz', 'tar.gz')
         'test.tgz'
+        >>> change_ext('test.tar.gz', 'tgz', auto_multi_ext=False)
+        'test.tar.tgz'
         >>> change_ext('test.tar', 'gz', '')
         'test.tar.gz'
         >>> change_ext('test.tar', 'gz', None)
         'test.gz'
+        >>> change_ext('test.tar', '')
+        'test'
     """
-    if old_ext is None:
-        filepath, old_ext = os.path.splitext(filepath)
-    else:
-        old_ext = add_extsep(old_ext)
-        if not case_sensitive:
-            true_old_ext = filepath.lower().endswith(old_ext.lower())
-        else:
-            true_old_ext = filepath.endswith(old_ext)
-        if true_old_ext:
-            filepath = filepath[:-len(old_ext)]
-    if new_ext:
-        filepath += add_extsep(new_ext)
+    root, ext = split_ext(
+        root, ext, case_sensitive, auto_multi_ext)
+    filepath = root + (add_extsep(new_ext) if new_ext else '')
     return filepath
 
 
@@ -1236,7 +1418,7 @@ def auto_convert(
     Convert value to numeric if possible, or strip delimiters from string.
 
     Args:
-        text (str): The text input string.
+        text (str|int|float|complex): The text input string.
         pre_decor (str): initial string decorator.
         post_decor (str): final string decorator.
 
@@ -1252,20 +1434,27 @@ def auto_convert(
         (100+50j)
         >>> auto_convert('1e3')
         1000.0
+        >>> auto_convert(1000)
+        1000
+        >>> auto_convert(1000.0)
+        1000.0
     """
-    if pre_decor and post_decor and \
-            has_decorator(text, pre_decor, post_decor):
-        text = strip_decorator(text, pre_decor, post_decor)
-    try:
-        val = int(text)
-    except (TypeError, ValueError):
+    if isinstance(text, str):
+        if pre_decor and post_decor and \
+                has_decorator(text, pre_decor, post_decor):
+            text = strip_decorator(text, pre_decor, post_decor)
         try:
-            val = float(text)
+            val = int(text)
         except (TypeError, ValueError):
             try:
-                val = complex(text)
+                val = float(text)
             except (TypeError, ValueError):
-                val = text
+                try:
+                    val = complex(text)
+                except (TypeError, ValueError):
+                    val = text
+    else:
+        val = text
     return val
 
 

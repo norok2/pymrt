@@ -53,6 +53,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
 import pymrt.utils as pmu
+import pymrt.naming as pmn
 import pymrt.geometry as pmg
 import pymrt.plot as pmp
 import pymrt.segmentation as pms
@@ -91,7 +92,7 @@ def load(
     obj = nib.load(in_filepath)
     arr = obj.get_data()
     if meta:
-        #todo: polishing
+        # todo: polishing
         meta = dict(
             affine=obj.get_affine(),
             header=obj.get_header())
@@ -125,11 +126,11 @@ def save(
     if img_type == nib.Nifti1Image:
         if arr.dtype == bool:
             arr = arr.astype(int)
-        if 'affine' not in kwargs:
-            kwargs['affine'] = np.eye(4)
         if arr.dtype == float:
             mask = np.isnan(arr)
             arr[mask] = 0.0
+        if 'affine' not in kwargs:
+            kwargs['affine'] = np.eye(4)
         if 'header' in kwargs:
             kwargs['header'] = None
         if '_header' in kwargs:
@@ -501,6 +502,40 @@ def simple_filter_nn_m(
     o_arrs = func(*(i_arrs + list(args)), **kwargs)
     meta = metas[-1]  # the affine of the last image
     for arr, out_filepath in zip(o_arrs, out_filepaths):
+        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+
+
+# ======================================================================
+def simple_filter_1_x(
+        in_filepath,
+        out_dirpath,
+        func,
+        out_filename_template='{base}_{i}_{name}.{ext}',
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-m filter.
+    filter(in_filepaths) -> out_filepaths
+
+    Args:
+        in_filepath (str): Input file path
+            The metadata information is taken from the input.
+        out_dirpath (list[str]): List of output file paths.
+        out_filename_template ():
+        func (callable): Filtering function (arr: ndarray)
+            func(list[arr], *args, *kwargs) -> list[ndarray]
+        *args (tuple): Positional arguments passed to the filtering function
+        **kwargs (dict): Keyword arguments passed to the filtering function
+
+    Returns:
+        None.
+    """
+    arr, meta = load(in_filepath, meta=True)
+    results = func(arr, *args, **kwargs)
+    path, base, ext = pmu.split_path(in_filepath)
+    for i, (name, array) in enumerate(results.items()):
+        out_filepath = os.path.join(
+            out_dirpath, out_filename_template.format_map(locals()))
         save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 

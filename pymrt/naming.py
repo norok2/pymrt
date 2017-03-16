@@ -359,10 +359,9 @@ def parse_filename(
     to_filename
 
     """
-    filename = os.path.basename(filepath)
-    filename_noext = pmu.change_ext(filename, '', pmu.EXT['niz'])
+    root = pmu.basename(filepath)
     if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
-        tokens = filename_noext.split(i_sep)
+        tokens = root.split(i_sep)
         info = {}
         # initialize end of name indexes
         idx_begin_name = 0
