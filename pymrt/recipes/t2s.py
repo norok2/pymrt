@@ -20,12 +20,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 # import pymrt.utils as pmu
-import pymrt.computation as pmc
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 
+from pymrt.recipes import generic
 
 # ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
@@ -86,7 +86,7 @@ def fit_exp_loglin(
 
     assert (x_arr.size == arr.shape[-1])
 
-    p_arr = pmc.voxel_curve_fit(
+    p_arr = generic.voxel_curve_fit(
         y_arr, x_arr,
         None, (np.mean(y_arr),) + (np.mean(x_arr),) * num,
         _pre_exp_loglin, [exp_factor, zero_cutoff], {},

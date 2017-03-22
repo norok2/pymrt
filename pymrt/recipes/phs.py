@@ -29,11 +29,107 @@ from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
+from pymrt.recipes import generic
+
+
+# ======================================================================
+def fix_phase_interval(arr):
+    """
+    Ensure that the range of values is interpreted as valid phase information.
+
+    This is useful for DICOM-converted images (without post-processing).
+
+    Args:
+        arr (np.ndarray): Array to be processed.
+
+    Returns:
+        array (np.ndarray): An array scaled to (-pi,pi).
+
+    Examples:
+        >>> fix_phase_interval(np.arange(8))
+        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
+                1.34639685,  2.24399475,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
+        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
+    """
+    if not pmu.is_in_range(arr, (-np.pi, np.pi)):
+        arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
+    return arr
+
+
+# ======================================================================
+def phs_to_dphs_multi(
+        phs_arr,
+        tis,
+        num=1,
+        full=False,
+        exp_factor=None,
+        zero_cutoff=None):
+    """
+    Calculate the polynomial components of the phase variation from phase data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb.units.
+            The sampling time Ti varies in the last dimension.
+        tis (iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+        num (int): The degree of the polynomial to fit.
+            For monoexponential fits, use num=1.
+        full (bool): Calculate additional information on the fit performance.
+            If True, more information is given.
+            If False, only the optimized parameters are returned.
+        exp_factor (float|None):
+        zero_cutoff (float|None):
+
+    Returns:
+        results (dict):
+    """
+    y_arr = np.array(phs_arr).astype(float)
+    x_arr = np.array(tis).astype(float)
+
+    assert (x_arr.size == y_arr.shape[-1])
+
+    p_arr = generic.voxel_curve_fit(
+        y_arr, x_arr,
+        None, (np.mean(y_arr),) + (np.mean(x_arr),) * num, method='poly')
+
+    p_arrs = np.split(p_arr, num + 1, -1)
+
+    results = collections.OrderedDict(
+        ('s0' if i == 0 else 'dphs_{i}'.format(i=i), x)
+        for i, x in enumerate(p_arrs[::-1]))
+
+    if full:
+        warnings.warn('E: Not implemented yet!')
+
+    return results
+
+
+# ======================================================================
+def phs_to_dphs(
+        phs_arr,
+        tis):
+    """
+    Calculate the phase variation from phase data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb.units.
+            The sampling time Ti varies in the last dimension.
+        tis (iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+
+    Returns:
+        dphs_arr (np.ndarray): The phase variation in rad/s.
+    """
+    return phs_to_dphs_multi(phs_arr, tis)['dphs_1']
+
 
 # ======================================================================
 def unwrap_laplacian(
         arr,
-        pre_func=pmc.fix_phase_interval,
+        pre_func=fix_phase_interval,
         pre_args=None,
         pre_kws=None,
         post_func=lambda x: x - np.median(x[x != 0.0]),
@@ -106,7 +202,7 @@ def unwrap_laplacian(
 # ======================================================================
 def unwrap_sorting_path(
         arr,
-        pre_func=pmc.fix_phase_interval,
+        pre_func=fix_phase_interval,
         pre_args=None,
         pre_kws=None,
         post_func=lambda x: x - np.median(x[x != 0.0]),
@@ -157,70 +253,3 @@ def unwrap_sorting_path(
             *(post_args if post_args else ()),
             **(post_kws if post_kws else {}))
     return arr
-
-
-# ======================================================================
-def phs_to_dphs_multi(
-        phs_arr,
-        tis,
-        num=1,
-        full=False,
-        exp_factor=None,
-        zero_cutoff=None):
-    """
-    Calculate the polynomial components of the phase variation from phase data.
-
-    Args:
-        phs_arr (np.ndarray): The input array in arb.units.
-            The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
-            The number of points must match the last shape size of arr.
-        num (int): The degree of the polynomial to fit.
-            For monoexponential fits, use num=1.
-        full (bool): Calculate additional information on the fit performance.
-            If True, more information is given.
-            If False, only the optimized parameters are returned.
-        exp_factor (float|None):
-        zero_cutoff (float|None):
-
-    Returns:
-        results (dict):
-    """
-    y_arr = np.array(phs_arr).astype(float)
-    x_arr = np.array(tis).astype(float)
-
-    assert (x_arr.size == y_arr.shape[-1])
-
-    p_arr = pmc.voxel_curve_fit(
-        y_arr, x_arr,
-        None, (np.mean(y_arr),) + (np.mean(x_arr),) * num, method='poly')
-
-    p_arrs = np.split(p_arr, num + 1, -1)
-
-    results = collections.OrderedDict(
-        ('s0' if i == 0 else 'dphs_{i}'.format(i=i), x)
-        for i, x in enumerate(p_arrs[::-1]))
-
-    if full:
-        warnings.warn('E: Not implemented yet!')
-
-    return results
-
-
-# ======================================================================
-def phs_to_dphs(
-        phs_arr,
-        tis):
-    """
-    Calculate the phase variation from phase data.
-
-    Args:
-        phs_arr (np.ndarray): The input array in arb.units.
-            The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
-            The number of points must match the last shape size of arr.
-
-    Returns:
-        dphs_arr (np.ndarray): The phase variation in rad/s.
-    """
-    return phs_to_dphs_multi(phs_arr, tis)['dphs_1']

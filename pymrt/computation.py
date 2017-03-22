@@ -30,7 +30,7 @@ import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 import re  # Regular expression operations
 # import subprocess  # Subprocess management
-import multiprocessing  # Process-based parallelism
+# import multiprocessing  # Process-based parallelism
 # import inspect  # Inspect live objects
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
@@ -311,95 +311,6 @@ def fit_monoexp_decay_loglin2(
     img_type_list = tuple(img_types[key] for key in type_list)
     params_list = ({},) * len(img_list)
     return img_list, aff_list, img_type_list, params_list
-
-
-# ======================================================================
-def voxel_curve_fit(
-        y_arr,
-        x_arr,
-        fit_func=None,
-        fit_params=None,
-        pre_func=None,
-        pre_args=None,
-        pre_kwargs=None,
-        post_func=None,
-        post_args=None,
-        post_kwargs=None,
-        method='curve_fit'):
-    """
-    Curve fitting for y = F(x, p)
-
-    Args:
-        y_arr (np.ndarray): Dependent variable with x dependence in the n-th dim
-        x_arr (np.ndarray): Independent variable with same size as n-th dim of y
-        fit_func (func):
-        fit_params (iterable): The initial value(s) of the parameters to fit.
-        pre_func (func):
-        pre_args (list):
-        pre_kwargs (dict):
-        post_func (func):
-        post_args (list):
-        post_kwargs (dict):
-        method (str): Method to use for the curve fitting procedure.
-
-    Returns:
-        p_arr (np.ndarray) :
-    """
-    # TODO: finish documentation
-
-    # y_arr : ndarray ???
-    #    Dependent variable (x dependence in the n-th dimension).
-    # x_arr : ndarray ???
-    #    Independent variable (same number of elements as the n-th dimension).
-
-    # reshape to linearize the independent dimensions of the array
-    support_axis = -1
-    shape = y_arr.shape
-    support_size = shape[support_axis]
-    y_arr = y_arr.reshape((-1, support_size))
-    num_voxels = y_arr.shape[0]
-    p_arr = np.zeros((num_voxels, len(fit_params)))
-    # preprocessing
-    if pre_func is not None:
-        if pre_args is None:
-            pre_args = []
-        if pre_kwargs is None:
-            pre_kwargs = {}
-        y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
-
-    if method == 'curve_fit':
-        print(y_arr.shape, support_size)
-        iter_param_list = [
-            (fit_func, x_arr, y_i_arr, fit_params)
-            for y_i_arr in np.split(y_arr, support_size, support_axis)]
-        pool = multiprocessing.Pool(multiprocessing.cpu_count())
-        for i, (par_opt, par_cov) in \
-                enumerate(pool.imap(pmu.curve_fit, iter_param_list)):
-            p_arr[i] = par_opt
-
-    elif method == 'poly':
-        # polyfit requires to change matrix orientation using transpose
-        p_arr = np.polyfit(x_arr, y_arr.transpose(), len(fit_params) - 1)
-        # transpose the results back
-        p_arr = p_arr.transpose()
-
-    else:
-        try:
-            p_arr = fit_func(y_arr, x_arr, fit_params)
-        except Exception as ex:
-            print('WW: Exception "{}" in ndarray_fit() method "{}"'.format(
-                ex, method))
-
-    # revert to original shape
-    p_arr = p_arr.reshape(list(shape[:support_axis]) + [len(fit_params)])
-    # post process
-    if post_func is not None:
-        if post_args is None:
-            post_args = []
-        if post_kwargs is None:
-            post_kwargs = {}
-        p_arr = post_func(p_arr, *post_args, **post_kwargs)
-    return p_arr
 
 
 # ======================================================================
