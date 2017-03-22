@@ -55,8 +55,10 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import sympy as sym  # SymPy (symbolic CAS library)
 import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
+import pandas as pd  # pandas (Python Data Analysis Library)
 import seaborn as sns  # Seaborn: statistical data visualization
 import PIL  # Python Image Library (image manipulation toolkit)
+
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import nipy  # NiPy (NeuroImaging in Python)
 import nipype  # NiPype (NiPy Pipelines and Interfaces)

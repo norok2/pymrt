@@ -39,8 +39,7 @@ from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 from pymrt.config import EXT_CMD
-from pymrt.recipes.unwrap_phase import (
-    unwrap_phase_sorting_path, unwrap_phase_laplacian)
+from pymrt.recipes import phs
 
 # ======================================================================
 METHODS = ('sorting-path', 'laplacian', 'merge-optim')
@@ -65,7 +64,7 @@ def unwrap(
                 options = {}
             pmio.simple_filter_1_1(
                 in_filepath, out_filepath,
-                unwrap_phase_sorting_path, **options)
+                phs.unwrap_sorting_path, **options)
         elif method == 'laplacian':
             if options is not None:
                 options = json.loads(options)
@@ -73,7 +72,7 @@ def unwrap(
                 options = {}
             pmio.simple_filter_1_1(
                 in_filepath, out_filepath,
-                unwrap_phase_laplacian, **options)
+                phs.unwrap_laplacian, **options)
         elif method == 'merge-optim':
             msg('W: method supported through FSL')
             ext_cmd = EXT_CMD['fsl/5.0/prelude']

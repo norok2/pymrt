@@ -158,61 +158,6 @@ def ext_qsm_as_legacy(
 
 
 # ======================================================================
-def time_to_rate(
-        arr,
-        in_units='ms',
-        out_units='Hz'):
-    k = 1.0
-    if in_units == 'ms':
-        k *= 1.0e3
-    if out_units == 'kHz':
-        k *= 1.0e-3
-    arr[arr != 0.0] = k / arr[arr != 0.0]
-    return arr
-
-
-# ======================================================================
-def rate_to_time(
-        arr,
-        in_units='Hz',
-        out_units='ms'):
-    k = 1.0
-    if in_units == 'kHz':
-        k *= 1.0e3
-    if out_units == 'ms':
-        k *= 1.0e-3
-    arr[arr != 0.0] = k / arr[arr != 0.0]
-    return arr
-
-
-# ======================================================================
-def fix_phase_interval(arr):
-    """
-    Ensure that the range of values is interpreted as valid phase information.
-
-    This is useful for DICOM-converted images (without post-processing).
-
-    Args:
-        arr (np.ndarray): Array to be processed.
-
-    Returns:
-        array (np.ndarray): An array scaled to (-pi,pi).
-
-    Examples:
-        >>> fix_phase_interval(np.arange(8))
-        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
-                1.34639685,  2.24399475,  3.14159265])
-        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
-        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
-        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
-        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
-    """
-    if not pmu.is_in_range(arr, (-np.pi, np.pi)):
-        arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
-    return arr
-
-
-# ======================================================================
 def func_exp_recovery(t_arr, tau, s_0, eff=1.0, const=0.0):
     """
     s(t)= s_0 * (1 - 2 * eff * exp(-t/tau)) + const
@@ -249,9 +194,6 @@ def func_flash(m0, fa, tr, t1, te, t2s):
     """
     return m0 * np.sin(fa) * np.exp(-te / t2s) * \
            (1.0 - np.exp(-tr / t1)) / (1.0 - np.cos(fa) * np.exp(-tr / t1))
-
-
-
 
 
 # ======================================================================
