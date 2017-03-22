@@ -2982,9 +2982,373 @@ def gaussian_nd(
     kernel = np.exp(
         -(sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
     if normalize:
-        kernel = kernel / np.sum(kernel)
+        kernel /= np.sum(kernel)
     return kernel
 
+
+# ======================================================================
+def moving_average(
+        arr,
+        weights=1,
+        **kws):
+    """
+    Calculate the running average.
+
+    The moving average will be applied to the flattened array.
+    Unless specified otherwise, the size of the array will be reduced by
+    len(weights) - 1
+    This is equivalent to passing `mode='valid'` to `scipy.signal.convolve`.
+    Please refer to `scipy.signal.convolve` for more options.
+
+    Args:
+        arr (np.ndarray): The input array.
+        weights (int|iterable): The running weights.
+            If int, the number of elements to group in the 'running' axis and
+            unity weights are used.
+            The size of the weights array len(weights) must be such that
+            len(weights) >= 1 and len(weights) <= len(array), otherwise the
+            flattened array is returned.
+        **kws (dict): Keyword arguments passed to `scipy.signal.convolve`.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Example:
+        >>> moving_average(np.linspace(1, 9, 9), 1)
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
+        >>> moving_average(np.linspace(1, 8, 8), 1)
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.])
+        >>> moving_average(np.linspace(1, 9, 9), 2)
+        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5,  8.5])
+        >>> moving_average(np.linspace(1, 8, 8), 2)
+        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5])
+        >>> moving_average(np.linspace(1, 9, 9), 5)
+        array([ 3.,  4.,  5.,  6.,  7.])
+        >>> moving_average(np.linspace(1, 8, 8), 5)
+        array([ 3.,  4.,  5.,  6.])
+        >>> moving_average(np.linspace(1, 8, 8), [1, 1, 1])
+        array([ 2.,  3.,  4.,  5.,  6.,  7.])
+        >>> moving_average(np.linspace(1, 8, 8), [1, 0.2])
+        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
+                6.16666667,  7.16666667])
+    """
+    arr = arr.ravel()
+    if isinstance(weights, int):
+        weights = np.ones((weights,))
+    else:
+        # weights order needs to be inverted
+        weights = np.array(weights)[::-1]
+    num = len(weights) if isinstance(weights, np.ndarray) else 0
+    if len(arr) >= num > 1:
+        if 'mode' not in kws:
+            kws['mode'] = 'valid'
+        arr = sp.signal.convolve(arr, weights / len(weights), **kws)
+        arr *= len(weights) / np.sum(weights)
+    return arr
+
+
+# ======================================================================
+def moving_mean(
+        arr,
+        num=1):
+    """
+    Calculate the moving mean.
+
+    The moving average will be applied to the flattened array.
+    Unless specified otherwise, the size of the array will be reduced by
+    (num - 1).
+
+    Args:
+        arr (np.ndarray): The input array.
+        num (int|iterable): The running window size.
+            The number of elements to group.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Example:
+        >>> moving_mean(np.linspace(1, 9, 9), 1)
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
+        >>> moving_mean(np.linspace(1, 8, 8), 1)
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.])
+        >>> moving_mean(np.linspace(1, 9, 9), 2)
+        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5,  8.5])
+        >>> moving_mean(np.linspace(1, 8, 8), 2)
+        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5])
+        >>> moving_mean(np.linspace(1, 9, 9), 5)
+        array([ 3.,  4.,  5.,  6.,  7.])
+        >>> moving_mean(np.linspace(1, 8, 8), 5)
+        array([ 3.,  4.,  5.,  6.])
+    """
+    arr = arr.ravel()
+    arr = np.cumsum(arr)
+    arr[num:] = arr[num:] - arr[:-num]
+    arr = arr[num - 1:] / num
+    return arr
+
+# ======================================================================
+def rolling_stat(
+        arr,
+        weights=1,
+        stat_func=np.mean,
+        stat_args=None,
+        stat_kws=None,
+        mode='valid',
+        borders=None):
+    """
+    Calculate the rolling statistics on an array.
+
+    This is calculated by running the specified statistics for each subset of
+    the array of given size, including optional weightings.
+
+    This function differs from `running_stat` in that it should be faster but
+    more memory demanding.
+    Also the `stat_func` callable is required to accept an `axis` parameter.
+
+    Args:
+        arr (np.ndarray): The input array.
+        weights (int|iterable): The running weights.
+            If int, the number of elements to group in the 'running' axis and
+            unity weights are used.
+            The size of the weights array len(weights) must be such that
+            len(weights) >= 1 and len(weights) <= len(array), otherwise the
+            flattened array is returned.
+            Note that these weights are
+        stat_func (callable): Function to calculate in the 'running' axis.
+            Must accept an `axis` parameter, which will be set to -1 on the
+            flattened input.
+        stat_args (tuple|list): Positional arguments passed to `stat_func`.
+        stat_kws (dict): Keyword arguments passed to `stat_func`.
+        mode (str): The output mode.
+            Can be one of:
+            - 'valid': only values inside the array are used.
+            - 'same': must have the same size as the input.
+            - 'full': the full output is provided.
+        borders (str|complex|iterable[complex]|None): The border parameters.
+            If int or float, the value is repeated at the borders.
+            If iterable of int, float or complex, the first and last values are
+            repeated to generate the head and tail, respectively.
+            If str, the following values are accepted:
+                - 'same': the array extrema are used to generate head / tail.
+                - 'circ': the values are repeated periodically / circularly.
+                - 'sym': the values are repeated periodically / symmetrically.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Examples:
+        >>> num = 8
+        >>> arr = np.linspace(1, num, num)
+        >>> all([np.allclose(
+        ...                  moving_average(arr, n, mode=mode),
+        ...                  rolling_stat(arr, n, mode=mode))
+        ...      for n in range(num) for mode in ('valid', 'same', 'full')])
+        True
+        >>> rolling_stat(arr, 4, mode='same', borders=100)
+        array([ 50.75,  26.5 ,   2.5 ,   3.5 ,   4.5 ,   5.5 ,   6.5 ,  30.25])
+        >>> rolling_stat(arr, 4, mode='full', borders='same')
+        array([ 1.  ,  1.25,  1.75,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 ,  7.25,
+                7.75,  8.  ])
+        >>> rolling_stat(arr, 4, mode='full', borders='circ')
+        array([ 5.5,  4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5,  4.5,\
+  3.5])
+        >>> rolling_stat(arr, 4, mode='full', borders='sym')
+        array([ 1.75,  1.5 ,  1.75,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 ,  7.25,
+                7.5 ,  7.25])
+        >>> rolling_stat(arr, 4, mode='same', borders='circ')
+        array([ 4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5])
+        >>> rolling_stat(arr, [1, 0.2])
+        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
+                6.16666667,  7.16666667])
+    """
+    arr = arr.ravel()
+    if isinstance(weights, int):
+        weights = np.ones((weights,))
+    else:
+        # weights order needs to be inverted
+        weights = np.array(weights)[::-1]
+    num = len(weights) if isinstance(weights, np.ndarray) else 0
+    size = len(arr)
+    if size >= num > 1:
+        # calculate how to extend the input array
+        if borders is None:
+            extension = np.zeros((num - 1,))
+        elif borders == 'same':
+            extension = np.concatenate(
+                (np.ones((num - 1,)) * arr[-1],
+                 np.ones((num - 1,)) * arr[0]))
+        elif borders == 'circ':
+            extension = arr
+        elif borders == 'sym':
+            extension = arr[::-1]
+        elif isinstance(borders, (int, float, complex)):
+            extension = np.ones((num - 1,)) * borders
+        elif isinstance(borders, (tuple, float)):
+            extension = np.concatenate(
+                (np.ones((num - 1,)) * borders[-1],
+                 np.ones((num - 1,)) * borders[0]))
+        else:
+            raise ValueError(
+                '`borders={borders}` not understood'.format_map(locals()))
+
+        # calculate generator for data and weights
+        arr = np.concatenate((arr, extension))
+        gen = np.zeros((size + num - 1, num))
+        for i in range(num):
+            gen[:, i] = np.roll(arr, i)[:size + num - 1]
+        w_gen = np.stack([weights] * (size + num - 1))
+
+        # calculate the running stats
+        arr = stat_func(
+            gen * w_gen,
+            *(stat_args if stat_args else ()), axis=-1,
+            **(stat_kws if stat_kws else {}))
+        arr *= len(weights) / np.sum(weights)
+
+        # adjust output according to mode
+        if mode == 'valid':
+            arr = arr[num - 1:-(num - 1)]
+        elif mode == 'same':
+            begin = (num - 1) // 2
+            arr = arr[begin:begin + size]
+    return arr
+
+
+# ======================================================================
+def running_stat(
+        arr,
+        weights=1,
+        stat_func=np.mean,
+        stat_args=None,
+        stat_kws=None,
+        mode='valid',
+        borders=None):
+    """
+    Calculate the running statistics on an array.
+
+    This is calculated by running the specified statistics for each subset of
+    the array of given size, including optional weightings.
+
+    This function differs from `rolling_stat` in that it should be slower but
+    less memory demanding.
+    Also the `stat_func` callable is not required to accept an `axis` parameter.
+
+    Args:
+        arr (np.ndarray): The input array.
+        weights (int|iterable): The running weights.
+            If int, the number of elements to group in the 'running' axis and
+            unity weights are used.
+            The size of the weights array len(weights) must be such that
+            len(weights) >= 1 and len(weights) <= len(array), otherwise the
+            flattened array is returned.
+            Note that these weights are
+        stat_func (callable): Function to calculate in the 'running' axis.
+        stat_args (tuple|list): Positional arguments passed to `stat_func`.
+        stat_kws (dict): Keyword arguments passed to `stat_func`.
+        mode (str): The output mode.
+            Can be one of:
+            - 'valid': only values inside the array are used.
+            - 'same': must have the same size as the input.
+            - 'full': the full output is provided.
+        borders (str|complex|None): The border parameters.
+            If int, float or complex, the value is repeated at the borders.
+            If iterable of int, float or complex, the first and last values are
+            repeated to generate the head and tail, respectively.
+            If str, the following values are accepted:
+                - 'same': the array extrema are used to generate head / tail.
+                - 'circ': the values are repeated periodically / circularly.
+                - 'sym': the values are repeated periodically / symmetrically.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Examples:
+        >>> num = 8
+        >>> arr = np.linspace(1, num, num)
+        >>> all([np.allclose(
+        ...                  moving_average(arr, n, mode=mode),
+        ...                  running_stat(arr, n, mode=mode))
+        ...      for n in range(num) for mode in ('valid', 'same', 'full')])
+        True
+        >>> running_stat(arr, 4, mode='same', borders=100)
+        array([ 50.75,  26.5 ,   2.5 ,   3.5 ,   4.5 ,   5.5 ,   6.5 ,  30.25])
+        >>> running_stat(arr, 4, mode='same', borders='circ')
+        array([ 4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5])
+        >>> running_stat(arr, 4, mode='full', borders='circ')
+        array([ 5.5,  4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5,  4.5,\
+  3.5])
+        >>> running_stat(arr, [1, 0.2])
+        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
+                6.16666667,  7.16666667])
+    """
+    arr = arr.ravel()
+    if isinstance(weights, int):
+        weights = np.ones((weights,))
+    else:
+        weights = np.array(weights)
+    num = len(weights) if isinstance(weights, np.ndarray) else 0
+    size = len(arr)
+    if size >= num > 1:
+        # calculate how to extend the input array
+        if borders is None:
+            head = tail = np.zeros((num - 1,))
+        elif borders == 'same':
+            head = np.ones((num - 1,)) * arr[0]
+            tail = np.ones((num - 1,)) * arr[-1]
+        elif borders == 'circ':
+            tail = arr[:num - 1]
+            head = arr[-num + 1:]
+        elif borders == 'sym':
+            tail = arr[-num + 1:]
+            head = arr[:num - 1]
+        elif isinstance(borders, (int, float, complex)):
+            head = tail = np.ones((num - 1,)) * borders
+        elif isinstance(borders, (tuple, float)):
+            head = np.ones((num - 1,)) * borders[0]
+            tail = np.ones((num - 1,)) * borders[-1]
+        else:
+            raise ValueError(
+                '`borders={borders}` not understood'.format_map(locals()))
+
+        # calculate generator for data and weights
+        gen = np.concatenate((head, arr, tail))
+        # print(gen)
+        arr = np.zeros((len(gen) - num + 1))
+        for i in range(len(arr)):
+            arr[i] = stat_func(
+                gen[i:i + num] * weights,
+                *(stat_args if stat_args else ()),
+                **(stat_kws if stat_kws else {}))
+        arr *= len(weights) / np.sum(weights)
+
+        # adjust output according to mode
+        if mode == 'valid':
+            arr = arr[num - 1:-(num - 1)]
+        elif mode == 'same':
+            begin = (num - 1) // 2
+            arr = arr[begin:begin + size]
+    return arr
+
+
+# import timeit
+#
+# z = timeit.repeat(
+#     'moving_mean(np.random.random(10000), 10)',
+#     'from __main__ import moving_mean; import numpy as np', number=100)
+#
+# a = timeit.repeat(
+#     'moving_average(np.random.random(10000), 10)',
+#     'from __main__ import moving_average; import numpy as np', number=100)
+#
+# b = timeit.repeat(
+#     'rolling_stat(np.random.random(10000), 10)',
+#     'from __main__ import rolling_stat; import numpy as np', number=100)
+#
+# c = timeit.repeat(
+#     'running_stat(np.random.random(10000), 10)',
+#     'from __main__ import running_stat; import numpy as np', number=100)
+#
+# print(z, a, b, c)
 
 # ======================================================================
 def polar2complex(modulus, phase):
@@ -3120,12 +3484,12 @@ def calc_stats(
     Examples:
         >>> a = np.arange(2)
         >>> d = calc_stats(a)
-        >>> print(tuple(sorted(d.items())))
+        >>> tuple(sorted(d.items()))
         (('avg', 0.5), ('max', 1), ('min', 0), ('num', 2), ('std', 0.5),\
  ('sum', 1))
         >>> a = np.arange(200)
         >>> d = calc_stats(a)
-        >>> print(tuple(sorted(d.items())))
+        >>> tuple(sorted(d.items()))
         (('avg', 99.5), ('max', 199), ('min', 0), ('num', 200),\
  ('std', 57.734305226615483), ('sum', 19900))
     """

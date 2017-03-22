@@ -1,11 +1,30 @@
-import collections
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+pymrt.recipes.t2s: T2* computation algorithms.
+"""
 
-import numpy as np
+# ======================================================================
+# :: Future Imports
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
 
-import pymrt.utils as pmu
+# ======================================================================
+# :: Python Standard Library Imports
+# import itertools  # Functions creating iterators for efficient looping
+import warnings  # Warning control
+import collections  # Container datatypes
 
-from pymrt import msg
-from pymrt.computation import voxel_curve_fit
+# :: External Imports
+import numpy as np  # NumPy (multidimensional numerical arrays library)
+
+# :: Local Imports
+# import pymrt.utils as pmu
+import pymrt.computation as pmc
+
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+# from pymrt import elapsed, print_elapsed
+# from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -37,15 +56,15 @@ def fit_exp_loglin(
         tis,
         num=1,
         full=False,
-        exp_factor=None,
-        zero_cutoff=None):
+        exp_factor=0,
+        zero_cutoff=np.spacing(1)):
     """
-    Fit monoexponential decay to images using the log-linear method.
+    Fit exponential decay to data using the log-linear method.
 
     Args:
         arr (np.ndarray): The input array in arb.units.
-            The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
+            The sampling time T_i varies in the last dimension.
+        tis (iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
         num (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
@@ -53,7 +72,7 @@ def fit_exp_loglin(
             If True, more information is given.
             If False, only the optimized parameters are returned.
         exp_factor (float|None):
-        zero_cutoff (float|None):
+        zero_cutoff (float|None): The threshold value for masking zero values.
 
     Returns:
         results (dict): The calculated information.
@@ -62,17 +81,12 @@ def fit_exp_loglin(
             `tau_{i}` for i=1,...,num contain the higher order terms of the fit.
     """
     # 0: untouched, other values might improve numerical stability
-    if exp_factor is None:
-        exp_factor = 0
-    if zero_cutoff is None:
-        zero_cutoff = np.spacing(1)
-
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
     assert (x_arr.size == arr.shape[-1])
 
-    p_arr = voxel_curve_fit(
+    p_arr = pmc.voxel_curve_fit(
         y_arr, x_arr,
         None, (np.mean(y_arr),) + (np.mean(x_arr),) * num,
         _pre_exp_loglin, [exp_factor, zero_cutoff], {},
@@ -80,11 +94,11 @@ def fit_exp_loglin(
         method='poly')
     p_arrs = np.split(p_arr, num + 1, -1)
 
-    results = dict(
+    results = collections.OrderedDict(
         ('s0' if i == 0 else 'tau_{i}'.format(i=i), x)
         for i, x in enumerate(p_arrs[::-1]))
 
     if full:
-        msg('E: Not implemented yet!')
+        warnings.warn('E: Not implemented yet!')
 
     return results

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.unwrap_phase: phase unwrapping algorithms.
+pymrt.recipes.phs: phase manipulation algorithms.
 """
 
 # ======================================================================
@@ -12,6 +12,8 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import itertools  # Functions creating iterators for efficient looping
+import warnings  # Warning control
+import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -29,14 +31,14 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def unwrap_phase_laplacian(
+def unwrap_laplacian(
         arr,
-        preprocess=pmc.fix_phase_interval,
-        preprocess_args=None,
-        preprocess_kws=None,
-        postprocess=lambda x: x - np.median(x[x != 0.0]),
-        postprocess_args=None,
-        postprocess_kws=None,
+        pre_func=pmc.fix_phase_interval,
+        pre_args=None,
+        pre_kws=None,
+        post_func=lambda x: x - np.median(x[x != 0.0]),
+        post_args=None,
+        post_kws=None,
         pad_width=0):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
@@ -51,7 +53,7 @@ def unwrap_phase_laplacian(
 
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
-        correction (callable): A correction function for improved accuracy.
+        pre_func (callable): A correction function for improved accuracy.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
@@ -63,12 +65,11 @@ def unwrap_phase_laplacian(
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
-    if preprocess:
-        if not preprocess_args:
-            preprocess_args = ()
-        if not preprocess_kws:
-            preprocess_kws = {}
-        arr = preprocess(arr, *preprocess_args, **preprocess_kws)
+    if pre_func:
+        arr = pre_func(
+            arr,
+            *(pre_args if pre_args else ()),
+            **(pre_kws if pre_kws else {}))
 
     if pad_width:
         shape = arr.shape
@@ -94,24 +95,23 @@ def unwrap_phase_laplacian(
     arr = np.real(ifftn(arr))
 
     arr = arr[mask]
-    if postprocess:
-        if not postprocess_args:
-            postprocess_args = ()
-        if not postprocess_kws:
-            postprocess_kws = {}
-        arr = postprocess(arr, *postprocess_args, **postprocess_kws)
+    if post_func:
+        arr = post_func(
+            arr,
+            *(post_args if post_args else ()),
+            **(post_kws if post_kws else {}))
     return arr
 
 
 # ======================================================================
-def unwrap_phase_sorting_path(
+def unwrap_sorting_path(
         arr,
-        preprocess=pmc.fix_phase_interval,
-        preprocess_args=None,
-        preprocess_kws=None,
-        postprocess=lambda x: x - np.median(x[x != 0.0]),
-        postprocess_args=None,
-        postprocess_kws=None,
+        pre_func=pmc.fix_phase_interval,
+        pre_args=None,
+        pre_kws=None,
+        post_func=lambda x: x - np.median(x[x != 0.0]),
+        post_args=None,
+        post_kws=None,
         unwrap_axes=(0, 1, 2),
         wrap_around=False,
         seed=0):
@@ -136,23 +136,91 @@ def unwrap_phase_sorting_path(
         Herraez, M. A. et al. (2002). Journal Applied Optics 41(35): 7437.
     """
     from skimage.restoration import unwrap_phase
-    if preprocess:
-        if not preprocess_args:
-            preprocess_args = ()
-        if not preprocess_kws:
-            preprocess_kws = {}
-        arr = preprocess(arr, *preprocess_args, **preprocess_kws)
+
+    if pre_func:
+        arr = pre_func(
+            arr,
+            *(pre_args if pre_args else ()),
+            **(pre_kws if pre_kws else {}))
+
     if unwrap_axes:
         loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
-            for j, dim in enumerate(arr.shape)]
+                    for j, dim in enumerate(arr.shape)]
     else:
         loop_gen = [slice(None)] * arr.ndim
     for indexes in itertools.product(*loop_gen):
         arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
-    if postprocess:
-        if not postprocess_args:
-            postprocess_args = ()
-        if not postprocess_kws:
-            postprocess_kws = {}
-        arr = postprocess(arr, *postprocess_args, **postprocess_kws)
+
+    if post_func:
+        arr = post_func(
+            arr,
+            *(post_args if post_args else ()),
+            **(post_kws if post_kws else {}))
     return arr
+
+
+# ======================================================================
+def phs_to_dphs_multi(
+        phs_arr,
+        tis,
+        num=1,
+        full=False,
+        exp_factor=None,
+        zero_cutoff=None):
+    """
+    Calculate the polynomial components of the phase variation from phase data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb.units.
+            The sampling time Ti varies in the last dimension.
+        tis (iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+        num (int): The degree of the polynomial to fit.
+            For monoexponential fits, use num=1.
+        full (bool): Calculate additional information on the fit performance.
+            If True, more information is given.
+            If False, only the optimized parameters are returned.
+        exp_factor (float|None):
+        zero_cutoff (float|None):
+
+    Returns:
+        results (dict):
+    """
+    y_arr = np.array(phs_arr).astype(float)
+    x_arr = np.array(tis).astype(float)
+
+    assert (x_arr.size == y_arr.shape[-1])
+
+    p_arr = pmc.voxel_curve_fit(
+        y_arr, x_arr,
+        None, (np.mean(y_arr),) + (np.mean(x_arr),) * num, method='poly')
+
+    p_arrs = np.split(p_arr, num + 1, -1)
+
+    results = collections.OrderedDict(
+        ('s0' if i == 0 else 'dphs_{i}'.format(i=i), x)
+        for i, x in enumerate(p_arrs[::-1]))
+
+    if full:
+        warnings.warn('E: Not implemented yet!')
+
+    return results
+
+
+# ======================================================================
+def phs_to_dphs(
+        phs_arr,
+        tis):
+    """
+    Calculate the phase variation from phase data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb.units.
+            The sampling time Ti varies in the last dimension.
+        tis (iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+
+    Returns:
+        dphs_arr (np.ndarray): The phase variation in rad/s.
+    """
+    return phs_to_dphs_multi(phs_arr, tis)['dphs_1']

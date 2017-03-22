@@ -3,13 +3,16 @@
 """
 pymrt.recipes.chi: generic basic utilities.
 """
+import warnings  # Warning control
 
-import numpy as np
+import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 import pymrt.utils as pmu
 import pymrt.geometry as pmg
 
-from pymrt.constants import GAMMA, GAMMA_BAR
+from pymrt.config import _B0
+from pymrt.computation import voxel_curve_fit
+from pymrt.recipes import b0, phs
 
 
 # ======================================================================
@@ -45,6 +48,7 @@ def dipole_kernel(
 
     Returns:
         dk_arr (np.ndarray): The dipole kernel in the Fourier domain.
+            Values are in the (1/3, -2/3) range.
     """
     #     / 1   (kz cos(th) cos(ph) - ky sin(th) cos(ph) + kx sin(ph))^2 \
     # C = | - - -------------------------------------------------------- |
@@ -55,9 +59,12 @@ def dipole_kernel(
     # generate the dipole kernel
     assert (len(shape) == 3)
     kk_x, kk_y, kk_z = pmu.coord(shape, origin)
-    dk_arr = (1.0 / 3.0 - (
-        kk_z * np.cos(theta) * np.cos(phi) - kk_y * np.sin(theta) * np.cos(phi)
-        + kk_x * np.sin(phi)) ** 2 / (kk_x ** 2 + kk_y ** 2 + kk_z ** 2))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        dk_arr = (1.0 / 3.0 - (
+            kk_z * np.cos(theta) * np.cos(phi)
+            - kk_y * np.sin(theta) * np.cos(phi)
+            + kk_x * np.sin(phi)) ** 2 /
+                  (kk_x ** 2 + kk_y ** 2 + kk_z ** 2))
     # fix singularity at |k|^2 == 0 in the denominator
     singularity = np.isnan(dk_arr)
     dk_arr[singularity] = 1.0 / 3.0
@@ -65,38 +72,92 @@ def dipole_kernel(
 
 
 # ======================================================================
-def phase_to_field(
-        phs_arr,
-        b0=3.0,
-        te=20.0,
-        units='ppb'):
+def ppm_to_ppb(arr):
+    return arr * 1e3
+
+
+# ======================================================================
+def ppb_to_ppm(arr):
+    return arr * 1e-3
+
+
+# ======================================================================
+def chi_to_db0(
+        chi_arr,
+        theta=0.0,
+        phi=0.0):
     """
-    Convert a phase array to relative magnetic field variations.
+    Convert magnetic susceptibility to magnetic field variation.
 
     Args:
-        phs_arr (np.ndarray): The input unwrapped phase array.
-        b0 (float): Main Magnetic Field B0 Strength in T
-        te (float): Echo Time in ms
-        units (str|float): Relative units of the field array.
-            Supported string values are:
-                - 'ppm': parts-per-million: 1e-6
-                - 'ppb': parts-per-billion: 1e-9
-            Otherwise, a numerical factor can be used.
+        chi_arr (np.ndarray): The magnetic susceptibility in ppb.
+        theta (int|float): Angle of 1st rotation (along x-axis) in deg.
+            Equivalent to the projection in the yz-plane of the angle between
+            the main magnetic field B0 (i.e. the principal axis of the dipole
+            kernel) and the z-axis. If phi is 0, the projection simplifies to
+            the identity.
+        phi (int|float): Angle of 2nd rotation (along y-axis) in deg.
+            Equivalent to the projection in the xz-plane of the angle between
+            the main magnetic field B0 (i.e. the principal axis of the dipole
+            kernel) and the z-axis. If theta is 0, the projection simplifies to
+            the identity.
 
     Returns:
-        db0_arr (np.ndarray): The relative field array in pure numbers.
-            A scale factor is used, depending on the value of `units`.
+        db0_arr (np.ndarray): The magnetic field variation in ppb.
     """
-    if units == 'ppm':
-        units_factor = 1.0e-6
-    elif units == 'ppb':
-        units_factor = 1.0e-9
-    elif isinstance(units, int) or isinstance(units, float):
-        units_factor = units
-    else:
-        raise ValueError(units + ': unknown output units')
-    db0_arr = phs_arr / (GAMMA['1H'] * b0 * (te * 1e-3) * units_factor)
-    return db0_arr
+    theta = np.deg2rad(theta)
+    phi = np.deg2rad(phi)
+    dk = dipole_kernel(chi_arr.shape, theta=theta, phi=phi)
+    return np.real(pmu.idftn(pmu.dftn(chi_arr) * dk))
+
+
+# ======================================================================
+def db0_to_chi(
+        db0_arr,
+        mask_arr=None,
+        threshold=np.spacing(1),
+        theta=0.0,
+        phi=0.0):
+    """
+    Convert magnetic field variation to magnetic susceptibility.
+
+    This implements the so-called Threshold-based K-space Division (TKD).
+    This requires that magnetic susceptibility sources are within the region
+    where magnetic field variation is known.
+
+    Args:
+        db0_arr (np.ndarray): The magnetic field variation in ppb.
+        mask_arr (np.ndarray): The boolean mask array.
+        threshold (float): The threshold for excluding the dipole kernel zeros.
+            The dipole kernel values range is (1/3, -2/3).
+        theta (int|float): Angle of 1st rotation (along x-axis) in deg.
+            Equivalent to the projection in the yz-plane of the angle between
+            the main magnetic field B0 (i.e. the principal axis of the dipole
+            kernel) and the z-axis. If phi is 0, the projection simplifies to
+            the identity.
+        phi (int|float): Angle of 2nd rotation (along y-axis) in deg.
+            Equivalent to the projection in the xz-plane of the angle between
+            the main magnetic field B0 (i.e. the principal axis of the dipole
+            kernel) and the z-axis. If theta is 0, the projection simplifies to
+            the identity.
+
+    Returns:
+        chi_arr (np.ndarray): The magnetic susceptibility in ppb.
+    """
+    if mask_arr is not None:
+        db0_arr[~mask_arr] = 0.0
+    theta = np.deg2rad(theta)
+    phi = np.deg2rad(phi)
+    dk = dipole_kernel(db0_arr.shape, theta=theta, phi=phi)
+    # threshold the zeros of the dipole kernel
+    if threshold:
+        mask = np.abs(dk) < threshold
+        dk[mask] = threshold
+    chi_k_arr = pmu.dftn(db0_arr) / dk
+    # remove singularity of susceptibility
+    chi_k_arr = pmu.subst(chi_k_arr)
+    chi_arr = np.real(pmu.idftn(chi_k_arr))
+    return chi_arr
 
 
 # ======================================================================
@@ -145,92 +206,6 @@ def qsm_sharp(
     # pfilt = (fftshift(real(ifftn(fftn(conv_fm).*(quotient))))).*mask;
 
 
-# ======================================================================
-def field_to_source(
-        db0_arr,
-        mask_arr=None,
-        threshold=1e-2,
-        mode='absolute',
-        theta=0.0,
-        phi=0.0):
-    """
-
-    Args:
-        db0_arr (np.ndarray): The B0 field array in ppb.
-        mask_arr (np.ndarray): The boolean mask array.
-        threshold (float): The threshold for excluding the dipole kernel zeros.
-        mode (str): Determines how to interpret / process the threshold value.
-            Available values are:
-             - 'absolute': use the absolute value
-             - 'relative': use a value relative to values interval
-             - 'percentile': use the value obtained from the percentiles
-        theta (int|float): Angle of 1st rotation (along x-axis) in deg.
-            Equivalent to the projection in the yz-plane of the angle between
-            the main magnetic field B0 (i.e. the principal axis of the dipole
-            kernel) and the z-axis. If phi is 0, the projection simplifies to
-            the identity.
-        phi (int|float): Angle of 2nd rotation (along y-axis) in deg.
-            Equivalent to the projection in the xz-plane of the angle between
-            the main magnetic field B0 (i.e. the principal axis of the dipole
-            kernel) and the z-axis. If theta is 0, the projection simplifies to
-            the identity.
-
-    Returns:
-
-    """
-    if mask_arr is not None:
-        db0_arr[~mask_arr] = 0.0
-    theta = np.deg2rad(theta)
-    phi = np.deg2rad(phi)
-    dk = dipole_kernel(db0_arr.shape, theta=theta, phi=phi)
-    db0_k_arr = pmu.dftn(db0_arr)
-    # threshold the zeros of the dipole kernel
-    if threshold:
-        mask = np.abs(dk) < threshold
-        dk[mask] = threshold
-    chi_k_arr = db0_k_arr / dk
-    # remove singularity of susceptibility
-    chi_k_arr = pmu.subst(chi_k_arr)
-    chi_arr = np.real(pmu.idftn(chi_k_arr))
-    return chi_arr
-
-
-# ======================================================================
-def source_to_field(
-        chi_arr,
-        threshold=1e-2,
-        theta=0.0,
-        phi=0.0):
-    """
-
-    Args:
-        chi_arr (np.ndarray): The magnetic susceptibility array in ppb.
-        mask_arr (np.ndarray): The boolean mask array.
-        threshold (float): The threshold for excluding the dipole kernel zeros.
-            See the values range for the dipole kernel.
-        theta (int|float): Angle of 1st rotation (along x-axis) in deg.
-            Equivalent to the projection in the yz-plane of the angle between
-            the main magnetic field B0 (i.e. the principal axis of the dipole
-            kernel) and the z-axis. If phi is 0, the projection simplifies to
-            the identity.
-        phi (int|float): Angle of 2nd rotation (along y-axis) in deg.
-            Equivalent to the projection in the xz-plane of the angle between
-            the main magnetic field B0 (i.e. the principal axis of the dipole
-            kernel) and the z-axis. If theta is 0, the projection simplifies to
-            the identity.
-
-    Returns:
-
-    """
-    theta = np.deg2rad(theta)
-    phi = np.deg2rad(phi)
-    dk = dipole_kernel(chi_arr.shape, theta=theta, phi=phi)
-    chi_k_arr = pmu.dftn(chi_arr)
-    db0_k_arr = chi_k_arr * dk
-    db0_arr = np.real(pmu.idftn(db0_k_arr))
-    return db0_arr
-
-
 '''
     # one-step QSM.. need for bias field removal?
     # convert input angles to radians
@@ -246,3 +221,7 @@ def source_to_field(
     dd = subst(dd)
     chi_arr = np.abs(idftn(3 * k_2 * dd * dftn(phs_arr)))
 '''
+
+# ======================================================================
+# : aliases for common QSM nomenclature
+qsm_tkd = db0_to_chi
