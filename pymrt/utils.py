@@ -2401,16 +2401,145 @@ def _kk_2(
                [[ 5.55555556,  2.77777778],
                 [ 2.77777778,  0.        ]]])
     """
-    kk = coord(shape)
+    kk_ = coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
-        kk = [k_i / factor for k_i, factor in zip(kk, factors)]
+        kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
     kk_2 = np.zeros(shape)
-    for k_i, dim in zip(kk, shape):
+    for k_i, dim in zip(kk_, shape):
         kk_2 += k_i ** 2
     return kk_2
 
 
+# ======================================================================
+def _kk(
+        shape,
+        factors=1):
+    """
+    Calculate the k kernel to be used for the gradient operators.
+
+    Args:
+        shape (iterable[int]): The size of the array.
+        factors (iterable[int|tuple]): The size conversion factors for each dim.
+
+    Returns:
+        arr (np.ndarray): The resulting array.
+
+    Examples:
+        >>> _kk((3, 3, 3))
+        array([[[ 1.73205081,  1.41421356,  1.73205081],
+                [ 1.41421356,  1.        ,  1.41421356],
+                [ 1.73205081,  1.41421356,  1.73205081]],
+        <BLANKLINE>
+               [[ 1.41421356,  1.        ,  1.41421356],
+                [ 1.        ,  0.        ,  1.        ],
+                [ 1.41421356,  1.        ,  1.41421356]],
+        <BLANKLINE>
+               [[ 1.73205081,  1.41421356,  1.73205081],
+                [ 1.41421356,  1.        ,  1.41421356],
+                [ 1.73205081,  1.41421356,  1.73205081]]])
+        >>> _kk((3, 3, 3), np.sqrt(3))
+        array([[[ 1.        ,  0.81649658,  1.        ],
+                [ 0.81649658,  0.57735027,  0.81649658],
+                [ 1.        ,  0.81649658,  1.        ]],
+        <BLANKLINE>
+               [[ 0.81649658,  0.57735027,  0.81649658],
+                [ 0.57735027,  0.        ,  0.57735027],
+                [ 0.81649658,  0.57735027,  0.81649658]],
+        <BLANKLINE>
+               [[ 1.        ,  0.81649658,  1.        ],
+                [ 0.81649658,  0.57735027,  0.81649658],
+                [ 1.        ,  0.81649658,  1.        ]]])
+        >>> _kk((2, 2, 2), 0.6)
+        array([[[ 2.88675135,  2.3570226 ],
+                [ 2.3570226 ,  1.66666667]],
+        <BLANKLINE>
+               [[ 2.3570226 ,  1.66666667],
+                [ 1.66666667,  0.        ]]])
+    """
+    kk_ = coord(shape)
+    if factors and factors != 1:
+        factors = auto_repeat(factors, len(shape), check=True)
+        kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
+    kk = np.zeros(shape)
+    for k_i, dim in zip(kk_, shape):
+        kk += (k_i ** 2)
+    return np.sqrt(kk)
+
+
+# ======================================================================
+def gradient(
+        arr,
+        ft_factor=(2 * np.pi),
+        pad_width=0):
+    """
+    Apply the gradient operator (in the Fourier domain).
+
+    Args:
+        arr (np.ndarray): The input array.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    kk = fftshift(_kk(arr.shape, arr.shape))
+    arr = ((-1j * ft_factor) ** 2) * ifftn(kk * fftn(arr))
+    return arr[mask]
+
+
+# ======================================================================
+def inv_gradient(
+        arr,
+        ft_factor=(2 * np.pi),
+        pad_width=0,
+        singularity=0):
+    """
+    Apply the inverse gradient operator (in the Fourier domain).
+
+    The singularity in the origin is corrected using the value set in the
+    corresponding parameter.
+
+
+    Args:
+        arr (np.ndarray): The input array.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    kk = fftshift(_kk(arr.shape, arr.shape))
+    kk[kk != 0] = 1.0 / kk[kk != 0]  # get the inverse
+    arr = ((-1j / ft_factor) ** 2) * ifftn(kk * fftn(arr))
+    return arr[mask]
+
+
+# ======================================================================
 def auto_pad_width(
         pad_width,
         shape,
@@ -2484,7 +2613,7 @@ def laplacian(
         ft_factor=(2 * np.pi),
         pad_width=0):
     """
-    Calculate the Laplacian operator in the Fourier domain.
+    Apply the Laplacian operator (in the Fourier domain).
 
     Args:
         arr (np.ndarray): The input array.
@@ -2507,7 +2636,7 @@ def laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    kk_2 = fftshift(_kk_2(arr.shape))
+    kk_2 = fftshift(_kk_2(arr.shape, arr.shape))
     arr = ((1j * ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
     return arr[mask]
 
@@ -2518,7 +2647,7 @@ def inv_laplacian(
         ft_factor=(2 * np.pi),
         pad_width=0):
     """
-    Calculate the inverse Laplacian operator in the Fourier domain.
+    Apply the inverse Laplacian operator (in the Fourier domain).
 
     Args:
         arr (np.ndarray): The input array.
@@ -2540,10 +2669,9 @@ def inv_laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    kk_2 = fftshift(_kk_2(arr.shape))
+    kk_2 = fftshift(_kk_2(arr.shape, arr.shape))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
-    arr = fftn(arr) * kk_2
-    arr = ((-1j / ft_factor) ** 2) * ifftn(arr)
+    arr = ((-1j / ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
     return arr[mask]
 
 
@@ -3085,6 +3213,7 @@ def moving_mean(
     arr[num:] = arr[num:] - arr[:-num]
     arr = arr[num - 1:] / num
     return arr
+
 
 # ======================================================================
 def rolling_stat(
@@ -3718,6 +3847,41 @@ def curve_fit(args):
 if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
+
+    # import scipy.misc
+    # import scipy.ndimage
+    # import matplotlib.pyplot as plt
+    # x = np.sum(sp.misc.face(), -1)
+    #
+    # fig, ax = plt.subplots(2, 3)
+    #
+    # x = sp.misc.ascent()
+    # # x_r = np.real(inv_gradient(gradient(x)))
+    # x_r = np.real(laplacian(inv_laplacian(x)))
+    #
+    # ax[0, 0].imshow(x, clim=(0.0, 255.0))
+    # ax[0, 1].imshow(x_r, clim=(0.0, 255.0))
+    # ax[0, 2].imshow(x - x_r, clim=(0.0, 255.0))
+    #
+    # # y = sum(np.gradient(x))
+    # y = np.real(gradient(x))
+    # # y = sp.ndimage.laplace(x)
+    # y_r = np.real(laplacian(x))
+    # ax[1, 0].imshow(y, clim=(0.0, 255.0))
+    # ax[1, 1].imshow(y_r, clim=(0.0, 255.0))
+    # ax[1, 2].imshow(y - y_r, clim=(0.0, 255.0))
+    #
+    # plt.show()
+    #
+    # # print(y)
+    # #
+    # # y_r = gradient(x, pad_width=50)
+    # # print(np.real(y_r))
+    # # print(np.sum(np.real(y_r) - y))
+    # #
+    # # x_r = gradient(inv_gradient(x))
+    # # print(np.real(x_r))
+    # # print(np.sum(np.real(x_r) - x))
 
 # ======================================================================
 elapsed(os.path.basename(__file__))

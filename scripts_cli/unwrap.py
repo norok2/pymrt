@@ -62,6 +62,10 @@ def unwrap(
                 options = json.loads(options)
             else:
                 options = {}
+            if 'pre_func' not in options:
+                options['pre_func'] = phs.fix_interval
+            if 'post_func' not in options:
+                options['post_func'] = phs.fix_offset
             pmio.simple_filter_1_1(
                 in_filepath, out_filepath,
                 phs.unwrap_sorting_path, **options)
@@ -70,6 +74,10 @@ def unwrap(
                 options = json.loads(options)
             else:
                 options = {}
+            if 'pre_func' not in options:
+                options['pre_func'] = phs.fix_interval
+            if 'post_func' not in options:
+                options['post_func'] = phs.fix_offset
             pmio.simple_filter_1_1(
                 in_filepath, out_filepath,
                 phs.unwrap_laplacian, **options)

@@ -1,8 +1,7 @@
 import numpy as np
 
 import pymrt.utils as pmu
-from pymrt.computation import fix_phase_interval
-
+from pymrt.recipes.generic import fix_phase_interval
 
 
 # ======================================================================
@@ -78,7 +77,7 @@ def rho_to_t1_mp2rage(
         eff_num (int): The base number of sampling points for the RF efficiency.
             This affects the precision of the RF efficiency correction.
         **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+            This should match the signature of: `mp2rage.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.

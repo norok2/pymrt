@@ -32,6 +32,7 @@ from __future__ import (
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import sympy as sym  # SymPy (symbolic CAS library)
+import appdirs
 
 # :: External Imports Submodules
 import scipy.signal  # SciPy: Signal Processing
@@ -83,6 +84,8 @@ def _mz_i(mz0, eff):
 # ======================================================================
 def _prepare(use_cache=True):
     """Solve the MP2RAGE rho expression analytically."""
+    # cache_filepath =
+    # if pmu.check_redo([])
     from sympy import exp, sin, cos
 
     t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
@@ -125,8 +128,9 @@ def _prepare(use_cache=True):
     s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
     s = s.subs(mz_ss, mz_ss_)
 
-    return np.vectorize(
+    result = np.vectorize(
         sym.lambdify((t1, eff, n_gre, tr_gre, ta, tb, tc, a1, a2), s))
+    return result
 
 
 # ======================================================================

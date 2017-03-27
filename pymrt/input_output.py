@@ -504,7 +504,7 @@ def simple_filter_nn_m(
 # ======================================================================
 def simple_filter_1_x(
         in_filepath,
-        out_dirpath,
+        out_basepath,
         func,
         out_filename_template='{base}_{name}{ext}',
         *args,
@@ -516,8 +516,16 @@ def simple_filter_1_x(
     Args:
         in_filepath (str): Input file path
             The metadata information is taken from the input.
-        out_dirpath (list[str]): List of output file paths.
-        out_filename_template ():
+        out_basepath (str): Base output directory path.
+            Additional subdirectories can be specified through the
+            `out_filename_template` parameter.
+        out_filename_template (str):
+            If subdirectories do not exists, they are created.
+            The following substitution are valid:
+             - `{path}`: the input directory path.
+             - `{base}`: the input file name without extension.
+             - `{ext}`: the input file extension.
+             - `{name}`: the result identifier from the computing function.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -531,7 +539,10 @@ def simple_filter_1_x(
     path, base, ext = pmu.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
-            out_dirpath, out_filename_template.format_map(locals()))
+            out_basepath, out_filename_template.format_map(locals()))
+        out_dirpath = os.path.dirname(out_filepath)
+        if not os.path.isdir(out_dirpath):
+            os.makedirs(out_dirpath)
         save(out_filepath, arr, **{k: v for k, v in meta.items()})
 
 

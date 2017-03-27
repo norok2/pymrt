@@ -30,40 +30,20 @@ from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
 from pymrt.recipes import generic
+from pymrt.recipes.generic import fix_phase_interval as fix_interval
 
 
 # ======================================================================
-def fix_phase_interval(arr):
-    """
-    Ensure that the range of values is interpreted as valid phase information.
-
-    This is useful for DICOM-converted images (without post-processing).
-
-    Args:
-        arr (np.ndarray): Array to be processed.
-
-    Returns:
-        array (np.ndarray): An array scaled to (-pi,pi).
-
-    Examples:
-        >>> fix_phase_interval(np.arange(8))
-        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
-                1.34639685,  2.24399475,  3.14159265])
-        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
-        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
-        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
-        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
-    """
-    if not pmu.is_in_range(arr, (-np.pi, np.pi)):
-        arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
-    return arr
+def fix_offset(arr):
+    return arr - np.median(arr)
 
 
 # ======================================================================
 def phs_to_dphs_multi(
         phs_arr,
         tis,
-        num=1,
+        tis_mask=None,
+        poly_deg=1,
         full=False,
         exp_factor=None,
         zero_cutoff=None):
@@ -75,7 +55,9 @@ def phs_to_dphs_multi(
             The sampling time Ti varies in the last dimension.
         tis (iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
-        num (int): The degree of the polynomial to fit.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
@@ -89,13 +71,21 @@ def phs_to_dphs_multi(
     y_arr = np.array(phs_arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
+    if tis_mask:
+        y_arr = y_arr[..., tis_mask]
+        x_arr = x_arr[tis_mask]
+
+    # unwrap along the time evolution
+    y_arr = fix_interval(y_arr)
+    y_arr = unwrap_laplacian(y_arr, post_func=None)
+
     assert (x_arr.size == y_arr.shape[-1])
 
     p_arr = generic.voxel_curve_fit(
         y_arr, x_arr,
-        None, (np.mean(y_arr),) + (np.mean(x_arr),) * num, method='poly')
+        None, (np.mean(y_arr),) + (np.mean(x_arr),) * poly_deg, method='poly')
 
-    p_arrs = np.split(p_arr, num + 1, -1)
+    p_arrs = np.split(p_arr, poly_deg + 1, -1)
 
     results = collections.OrderedDict(
         ('s0' if i == 0 else 'dphs_{i}'.format(i=i), x)
@@ -110,7 +100,8 @@ def phs_to_dphs_multi(
 # ======================================================================
 def phs_to_dphs(
         phs_arr,
-        tis):
+        tis,
+        tis_mask):
     """
     Calculate the phase variation from phase data.
 
@@ -119,20 +110,22 @@ def phs_to_dphs(
             The sampling time Ti varies in the last dimension.
         tis (iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
 
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    return phs_to_dphs_multi(phs_arr, tis)['dphs_1']
+    return phs_to_dphs_multi(phs_arr, tis, tis_mask, poly_deg=1)['dphs_1']
 
 
 # ======================================================================
 def unwrap_laplacian(
         arr,
-        pre_func=fix_phase_interval,
+        pre_func=fix_interval,
         pre_args=None,
         pre_kws=None,
-        post_func=lambda x: x - np.median(x[x != 0.0]),
+        post_func=fix_offset,
         post_args=None,
         post_kws=None,
         pad_width=0):
@@ -202,10 +195,10 @@ def unwrap_laplacian(
 # ======================================================================
 def unwrap_sorting_path(
         arr,
-        pre_func=fix_phase_interval,
+        pre_func=fix_interval,
         pre_args=None,
         pre_kws=None,
-        post_func=lambda x: x - np.median(x[x != 0.0]),
+        post_func=fix_offset,
         post_args=None,
         post_kws=None,
         unwrap_axes=(0, 1, 2),

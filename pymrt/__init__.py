@@ -22,6 +22,8 @@ __version__ = '0.1.dev154+n79cee1b'
 # ======================================================================
 # :: Project Details
 INFO = {
+    'application': 'PyMRT',
+    'developer': 'PyMRT developers',
     'authors': (
         'Riccardo Metere <metere@cbs.mpg.de>',
     ),
@@ -255,6 +257,34 @@ def print_elapsed(
 
 
 # ======================================================================
+def _app_dirs(
+        application=INFO['application'],
+        developer=INFO['developer'],
+        version=INFO['version']):
+    """
+
+    Args:
+        name (str):
+            Valid names are:
+            - 'config': The user config directory.
+            - 'cache'
+
+    Returns:
+        dirpath (str): The requested directory.
+
+    Examples:
+        >>> app_dir('config')
+    """
+    import appdirs
+    dirpaths = dict((
+        ('config', appdirs.user_config_dir(application, developer, version)),
+        ('cache', appdirs.user_cache_dir(application, developer, version)),
+        ('data', appdirs.user_data_dir(application, developer, version)),
+        ('log', appdirs.user_data_dir(application, developer, version)),
+    ))
+    return dirpaths
+
+# ======================================================================
 if __name__ == '__main__':
     import doctest
 
@@ -262,4 +292,5 @@ if __name__ == '__main__':
     doctest.testmod()
 
 else:
+    APP_DIRS = _app_dirs()
     elapsed()

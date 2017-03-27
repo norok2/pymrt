@@ -147,11 +147,14 @@ setup(
         'matplotlib',
         'pyparsing',
         'numeral',
+        'appdirs',
+        'seaborn',
     ],
 
     setup_requires=[
         'setuptools',
-        'setuptools_scm'
+        'setuptools_scm',
+        'appdirs',
     ],
 
     extras_require={
