@@ -22,10 +22,11 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # :: Local Imports
 import pymrt.utils as pmu
 
-
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
+
+from pymrt.constants import GAMMA, GAMMA_BAR
 
 
 # ======================================================================
@@ -57,6 +58,33 @@ def rate_to_time(
 
 
 # ======================================================================
+def fix_phase_interval(arr):
+    """
+    Ensure that the range of values is interpreted as valid phase information.
+
+    This is useful for DICOM-converted images (without post-processing).
+
+    Args:
+        arr (np.ndarray): Array to be processed.
+
+    Returns:
+        array (np.ndarray): An array scaled to (-pi,pi).
+
+    Examples:
+        >>> fix_phase_interval(np.arange(8))
+        array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
+                1.34639685,  2.24399475,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
+        array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
+    """
+    if not pmu.is_in_range(arr, (-np.pi, np.pi)):
+        arr = pmu.scale(arr.astype(float), (-np.pi, np.pi))
+    return arr
+
+
+# ======================================================================
 def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     """
     Convert magnitude and phase arrays into a complex array.
@@ -81,8 +109,8 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
         pymrt.computation.fix_phase_interval
     """
     if phs_arr is not None:
-        if fix_phase and not pmu.is_in_range(phs_arr, (-np.pi, np.pi)):
-            phs_arr = pmu.scale(phs_arr.astype(float), (-np.pi, np.pi))
+        if fix_phase:
+            phs_arr = fix_phase_interval(phs_arr)
         cx_arr = pmu.polar2complex(mag_arr.astype(float), phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)

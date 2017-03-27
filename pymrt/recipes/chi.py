@@ -11,8 +11,7 @@ import pymrt.utils as pmu
 import pymrt.geometry as pmg
 
 from pymrt.config import _B0
-from pymrt.computation import voxel_curve_fit
-from pymrt.recipes import b0, phs
+from pymrt.recipes import b0, phs, generic
 
 
 # ======================================================================

@@ -123,6 +123,7 @@ def db0_to_dphs(
 def fit_phase(
         phs_arr,
         tis,
+        tis_mask=None,
         b0=_B0):
     """
     Calculate magnetic field variation from phase evolution.
@@ -135,9 +136,11 @@ def fit_phase(
             The sampling time Ti varies in the last dimension.
         tis (iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
         b0 (float): Main Magnetic Field B0 Strength in T
 
     Returns:
         db0_arr (np.ndarray): The relative field array in ppb
     """
-    return dphs_to_db0(phs.phs_to_dphs(phs_arr, tis), b0)
+    return dphs_to_db0(phs.phs_to_dphs(phs_arr, tis, tis_mask), b0)

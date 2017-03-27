@@ -51,7 +51,7 @@ import scipy.constants  # SciPy: Constants
 # import pymrt.modules.plot as pmp
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import msg, dbg
 
 
 # ======================================================================

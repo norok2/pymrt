@@ -54,7 +54,8 @@ def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
 def fit_exp_loglin(
         arr,
         tis,
-        num=1,
+        tis_mask=None,
+        poly_deg=1,
         full=False,
         exp_factor=0,
         zero_cutoff=np.spacing(1)):
@@ -66,7 +67,9 @@ def fit_exp_loglin(
             The sampling time T_i varies in the last dimension.
         tis (iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        num (int): The degree of the polynomial to fit.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
@@ -84,15 +87,19 @@ def fit_exp_loglin(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
+    if tis_mask:
+        y_arr = y_arr[..., tis_mask]
+        x_arr = x_arr[tis_mask]
+
     assert (x_arr.size == arr.shape[-1])
 
     p_arr = generic.voxel_curve_fit(
         y_arr, x_arr,
-        None, (np.mean(y_arr),) + (np.mean(x_arr),) * num,
+        None, (np.mean(y_arr),) + (np.mean(x_arr),) * poly_deg,
         _pre_exp_loglin, [exp_factor, zero_cutoff], {},
         _post_exp_loglin, [exp_factor, zero_cutoff], {},
         method='poly')
-    p_arrs = np.split(p_arr, num + 1, -1)
+    p_arrs = np.split(p_arr, poly_deg + 1, -1)
 
     results = collections.OrderedDict(
         ('s0' if i == 0 else 'tau_{i}'.format(i=i), x)
