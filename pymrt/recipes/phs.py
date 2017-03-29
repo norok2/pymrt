@@ -142,7 +142,12 @@ def unwrap_laplacian(
 
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
-        pre_func (callable): A correction function for improved accuracy.
+        pre_func (callable|None): Preprocessing function for the input.
+        pre_args (iterable|None): Positional arguments of preprocess function.
+        pre_kws (iterable|None): Keyword arguments of preprocess function.
+        post_func (callable|None): Postprocessing function for the output.
+        post_args (iterable|None): Positional arguments of postprocess function.
+        post_kws (iterable|None): Keyword arguments of postprocess function.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
@@ -207,11 +212,20 @@ def unwrap_sorting_path(
     """
     2D/3D unwrap using sorting by reliability following a non-continous path.
 
-    This is a wrapper around the function skimage.restoration.unwrap_phase
+    This is a wrapper around the function `skimage.restoration.unwrap_phase`
+    
+    If higher dimensionality input, loop through extra dimensions.
 
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.`
-        correction (callable): A correction function for improved accuracy.
+        pre_func (callable|None): Preprocessing function for the input.
+        pre_args (iterable|None): Positional arguments of preprocess function.
+        pre_kws (iterable|None): Keyword arguments of preprocess function.
+        post_func (callable|None): Postprocessing function for the output.
+        post_args (iterable|None): Positional arguments of postprocess function.
+        post_kws (iterable|None): Keyword arguments of postprocess function.
+        unwrap_axes (tuple[int]): Axes along which unwrapping is performed.
+            Must have length 2 or 3.
         wrap_around (bool|iterable[bool]|None): Circular unwrapping.
             See also: skimage.restoration.unwrap_phase.
         seed (int|None): Randomization seed.

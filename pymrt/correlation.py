@@ -19,7 +19,7 @@ import shutil  # High-level file operations
 # import time  # Time access and conversions
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
+# import collections  # Container datatypes
 import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and subcommands
@@ -1299,7 +1299,7 @@ def comparing(
 # ======================================================================
 def check_correlation(
         dirpath,
-        val_type=None,
+        val_name=None,
         val_interval=None,
         val_units=None,
         mask_filepath=None,
@@ -1317,7 +1317,7 @@ def check_correlation(
 
     Args:
         dirpath (str): Path to directory to process.
-        val_type (str): Name of the data to be processed.
+        val_name (str): Name of the data to be processed.
         val_interval (tuple[float]): Interval (min, max) of the processed data.
         val_units (str): Units of measurements of the data to be processed.
         mask_filepath (str): Path to mask file. If None, extract it.
@@ -1338,15 +1338,15 @@ def check_correlation(
     """
     msg('Target: {}'.format(dirpath))
     # :: manage image type, inteval and units
-    if not val_type:
-        val_type = os.path.split(dirpath)[-1]
-        if val_type not in SRC_IMG_TYPE:
-            val_type = None
+    if not val_name:
+        val_name = os.path.split(dirpath)[-1]
+        if val_name not in SRC_IMG_TYPE:
+            val_name = None
         msg('W: image type not specified.', verbose, VERB_LVL['medium'])
-        msg('I: guessed image type: {}'.format(val_type),
+        msg('I: guessed image type: {}'.format(val_name),
             verbose, VERB_LVL['high'])
     else:
-        msg('I: {} {} {}'.format(val_type, val_interval, val_units),
+        msg('I: {} {} {}'.format(val_name, val_interval, val_units),
             verbose, VERB_LVL['medium'])
     if not val_interval:
         msg('W: values interval not specified.', verbose, VERB_LVL['medium'])
@@ -1359,15 +1359,15 @@ def check_correlation(
     if not val_units:
         val_units = 'a.u.'
         msg('W: values units not specified.', verbose, VERB_LVL['medium'])
-        msg('I: guessed image type: {}'.format(val_type),
+        msg('I: guessed image type: {}'.format(val_name),
             verbose, VERB_LVL['high'])
     # :: populate a list of images to analyze
     targets, corrs = [], []
     if os.path.exists(dirpath):
         filepath_list = pmu.listdir(dirpath, pmu.EXT['niz'])
         sources = [pmu.realpath(filepath) for filepath in filepath_list
-                   if not val_type or
-                   pmn.parse_filename(filepath)['type'] == val_type]
+                   if not val_name or
+                   pmn.parse_filename(filepath)['type'] == val_name]
         if len(sources) > 0:
             # :: create output directories
             # NOTE: use tmp/reg/msk/cmp/fig_path in code
@@ -1466,10 +1466,10 @@ def check_correlation(
             if fig_path:
                 for target in targets:
                     plot_sample(
-                        target, val_type, val_interval, val_units, fig_path,
+                        target, val_name, val_interval, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
-                        target, mask_filepath, val_type, val_interval,
+                        target, mask_filepath, val_name, val_interval,
                         val_units, fig_path,
                         force=force, verbose=verbose)
                 # use last plotted image to calculate approximate diff_interval
@@ -1481,16 +1481,16 @@ def check_correlation(
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
                     plot_sample(
-                        diff_filepath, val_type, diff_interval, val_units,
+                        diff_filepath, val_name, diff_interval, val_units,
                         fig_path,
                         force=force, verbose=verbose)
                     plot_histogram(
                         diff_filepath, mask_filepath,
-                        val_type, diff_interval, val_units, fig_path,
+                        val_name, diff_interval, val_units, fig_path,
                         force=force, verbose=verbose)
                     plot_correlation(
                         in_filepath, ref_filepath, mask_filepath,
-                        val_type, val_interval, val_units,
+                        val_name, val_interval, val_units,
                         fig_path,
                         force=force, verbose=verbose)
             msg('Done:   {}'.format(dirpath))
@@ -1501,7 +1501,7 @@ def check_correlation(
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,
-                    val_type, val_interval, val_units,
+                    val_name, val_interval, val_units,
                     mask_filepath,
                     reg_ref_ext, corr_ref_ext,
                     tmp_dir, reg_dir, msk_dir, cmp_dir, fig_dir,
