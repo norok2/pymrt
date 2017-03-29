@@ -89,7 +89,7 @@ def fix_version(
 setup(
     name=NAME.lower(),
 
-    description='Data analysis for quantitative MRI',
+    description='Python Magnetic Resonace Tools',
     long_description=LONG_DESCRIPTION_TEXT,
 
     version=fix_version(),
@@ -149,6 +149,7 @@ setup(
         'numeral',
         'appdirs',
         'seaborn',
+        'h5py',
     ],
 
     setup_requires=[
@@ -183,7 +184,11 @@ setup(
 
         'gui_scripts': [
             'pymrt_flash=scripts_gui.flash_sim_optim:main',
-            'pymrt_mp2rage=scripts_gui.mp2rage_sim_optim:main',
+            'pymrt_mp2rage=scripts_gui.mp2rage_b1t_sensitivity:main',
         ],
     },
 )
+
+# ======================================================================
+# :: create user directory
+from pymrt import _app_dirs

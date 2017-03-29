@@ -167,8 +167,8 @@ def rho(
         ta,
         tb,
         tc,
-        a1,
-        a2,
+        fa1,
+        fa2,
         eta_inv,
         eta_fa,
         bijective=False):
@@ -184,8 +184,8 @@ def rho(
         ta (float): Time TA between inversion pulse and first GRE block in ms.
         tb (float): Time TB between first and second GRE blocks in ms.
         tc (float): Time TC after second GRE block in ms.
-        a1 (float): Flip angle a1 of the first GRE block in deg.
-        a2 (float): Flip angle a2 of the second GRE block in deg.
+        fa1 (float): Flip angle fa1 of the first GRE block in deg.
+        fa2 (float): Flip angle fa2 of the second GRE block in deg.
         eta_inv (float): Efficiency of the adiabatic inversion pulse.
         eta_fa (float): Efficiency of the RF pulse excitation.
             Equivalent to B1+ efficiency.
@@ -195,10 +195,10 @@ def rho(
     Returns:
         rho (float|np.ndarray): rho intensity of the MP2RAGE sequence.
     """
-    a1 = np.deg2rad(a1)
-    a2 = np.deg2rad(a2)
+    fa1 = np.deg2rad(fa1)
+    fa2 = np.deg2rad(fa2)
     rho = _signal(
-        t1, eta_inv, n_gre, tr_gre, ta, tb, tc, a1 * eta_fa, a2 * eta_fa)
+        t1, eta_inv, n_gre, tr_gre, ta, tb, tc, fa1 * eta_fa, fa2 * eta_fa)
     if bijective:
         rho = _bijective_part(rho)
     return rho
@@ -286,8 +286,8 @@ def acq_to_seq_params(
         center_k_correction=0.5,
         tr_seq=8000,
         ti=(900, 3300),
-        alpha=(3.0, 5.0),
-        eff=0.95,
+        fa=(3.0, 5.0),
+        eta_inv=0.95,
         tr_gre=20.0):
     """
     Determine the sequence parameters from the acquisition parameters.
@@ -310,8 +310,8 @@ def acq_to_seq_params(
             This parameter affects the accessible inversion times.
         tr_seq (int): repetition time TR_seq of the sequence
         ti (tuple[int]):
-        alpha (tuple[int]):
-        eff (float):
+        fa (tuple[int]):
+        eta_inv (float):
         tr_gre (float):
 
     Returns:
@@ -325,10 +325,12 @@ def acq_to_seq_params(
 
     if len(ti) != 2:
         raise ValueError('Exactly two inversion times must be used.')
-    if len(ti) != len(alpha):
+    if len(ti) != len(fa):
         raise ValueError('Number of inversions and flip angles must match.')
+
     pe1 = 1 if sl_pe_swap else 2
     pe2 = 2 if sl_pe_swap else 1
+
     n_gre = k_space_lines(
         int(matrix_sizes[pe1] * pe_correction[0]),
         part_fourier_factors[pe1],
@@ -343,14 +345,14 @@ def acq_to_seq_params(
          tuple(np.diff(ti) - t_gre_block) + \
          ((tr_seq - ti[-1] - (1 - center_k) * t_gre_block),)
     seq_params = dict(
-        eff=eff,
+        eta_inv=eta_inv,
         n_gre=n_gre,
         tr_gre=tr_gre,
         ta=td[0],
         tb=td[1],
         tc=td[2],
-        a1=alpha[0],
-        a2=alpha[1])
+        fa1=fa[0],
+        fa2=fa[1])
     extra_info = dict(
         t_acq=tr_seq * 1e-3 * k_space_lines(
             int(matrix_sizes[pe2] * pe_correction[1]),
@@ -375,8 +377,8 @@ def test_signal():
         eta_inv=1.0,  # #
         n_gre=160,  # #
         tr_gre=7.0,  # ms
-        a1=4.0 * eff,  # deg
-        a2=5.0,  # deg
+        fa1=4.0 * eff,  # deg
+        fa2=5.0,  # deg
         # tr_seq': 8000.0,  # ms
         # ti1': 1000.0,  # ms
         # ti2': 3300.0,  # ms

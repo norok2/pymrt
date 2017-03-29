@@ -17,7 +17,7 @@ from __future__ import(
 # import time  # Time access and conversions
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
+# import collections  # Container datatypes
 # import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command

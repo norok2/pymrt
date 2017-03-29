@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-PyMRT: data analysis for quantitative MRI
+PyMRT - Python Magnetic Resonance Tools: data analysis for quantitative MRI.
 """
 
 # Copyright (c) Riccardo Metere <rick@metere.it>
@@ -22,17 +22,17 @@ __version__ = '0.1.dev154+n79cee1b'
 # ======================================================================
 # :: Project Details
 INFO = {
-    'application': 'PyMRT',
-    'developer': 'PyMRT developers',
-    'authors': (
+    'name': 'PyMRT',
+    'author': 'PyMRT developers',
+    'contrib': (
         'Riccardo Metere <metere@cbs.mpg.de>',
     ),
-    'copyright': 'Copyright (C) 2015',
+    'copyright': 'Copyright (C) 2015-2017',
     'license': 'GNU General Public License version 3 or later (GPLv3+)',
     'notice':
         """
 This program is free software and it comes with ABSOLUTELY NO WARRANTY.
-It is covered by the GNU General Public License version 3 (GPLv3).
+It is covered by the GNU General Public License version 3 (GPLv3+).
 You are welcome to redistribute it under its terms and conditions.
         """,
     'version': __version__
@@ -83,8 +83,8 @@ def msg(
         verb_threshold (int): Threshold level of verbosity.
         fmt (str): Format of the message (if `blessed` supported).
             If None, a standard formatting is used.
-        *args (tuple): Positional arguments to be passed to `print`.
-        **kwargs (dict): Keyword arguments to be passed to `print`.
+        *args (*tuple): Positional arguments to be passed to `print`.
+        **kwargs (**dict): Keyword arguments to be passed to `print`.
 
     Returns:
         None.
@@ -258,31 +258,40 @@ def print_elapsed(
 
 # ======================================================================
 def _app_dirs(
-        application=INFO['application'],
-        developer=INFO['developer'],
+        name=INFO['name'],
+        author=INFO['author'],
         version=INFO['version']):
     """
+    Generate application directories.
 
     Args:
-        name (str):
-            Valid names are:
-            - 'config': The user config directory.
-            - 'cache'
+        name (str): Application name.
+        author (str): Application author.
+        version (str): Application version.
 
     Returns:
-        dirpath (str): The requested directory.
+        dirs (dict): The requested directory.
+            - 'config': directory for configuration files.
+            - 'cache': directory for caching files.
+            - 'data': directory for data files.
+            - 'log': directory for log files.
 
     Examples:
-        >>> app_dir('config')
+        >>> sorted(_app_dirs().keys())
+        ['cache', 'config', 'data', 'log']
     """
     import appdirs
+    import os
     dirpaths = dict((
-        ('config', appdirs.user_config_dir(application, developer, version)),
-        ('cache', appdirs.user_cache_dir(application, developer, version)),
-        ('data', appdirs.user_data_dir(application, developer, version)),
-        ('log', appdirs.user_data_dir(application, developer, version)),
+        ('config', appdirs.user_config_dir(name, author, version)),
+        ('cache', appdirs.user_cache_dir(name, author, version)),
+        ('data', appdirs.user_data_dir(name, author, version)),
+        ('log', appdirs.user_data_dir(name, author, version)),
     ))
+    for name, dirpath in dirpaths.items():
+        os.makedirs(dirpath, exist_ok=True)
     return dirpaths
+
 
 # ======================================================================
 if __name__ == '__main__':
@@ -292,5 +301,6 @@ if __name__ == '__main__':
     doctest.testmod()
 
 else:
-    APP_DIRS = _app_dirs()
+    DIRS = _app_dirs()
+
     elapsed()

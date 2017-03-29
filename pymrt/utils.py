@@ -3848,40 +3848,6 @@ if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
 
-    # import scipy.misc
-    # import scipy.ndimage
-    # import matplotlib.pyplot as plt
-    # x = np.sum(sp.misc.face(), -1)
-    #
-    # fig, ax = plt.subplots(2, 3)
-    #
-    # x = sp.misc.ascent()
-    # # x_r = np.real(inv_gradient(gradient(x)))
-    # x_r = np.real(laplacian(inv_laplacian(x)))
-    #
-    # ax[0, 0].imshow(x, clim=(0.0, 255.0))
-    # ax[0, 1].imshow(x_r, clim=(0.0, 255.0))
-    # ax[0, 2].imshow(x - x_r, clim=(0.0, 255.0))
-    #
-    # # y = sum(np.gradient(x))
-    # y = np.real(gradient(x))
-    # # y = sp.ndimage.laplace(x)
-    # y_r = np.real(laplacian(x))
-    # ax[1, 0].imshow(y, clim=(0.0, 255.0))
-    # ax[1, 1].imshow(y_r, clim=(0.0, 255.0))
-    # ax[1, 2].imshow(y - y_r, clim=(0.0, 255.0))
-    #
-    # plt.show()
-    #
-    # # print(y)
-    # #
-    # # y_r = gradient(x, pad_width=50)
-    # # print(np.real(y_r))
-    # # print(np.sum(np.real(y_r) - y))
-    # #
-    # # x_r = gradient(inv_gradient(x))
-    # # print(np.real(x_r))
-    # # print(np.sum(np.real(x_r) - x))
 
 # ======================================================================
 elapsed(os.path.basename(__file__))

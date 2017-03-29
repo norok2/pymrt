@@ -1,6 +1,9 @@
-==========================================================
-PyMRT: Python MRI Tools for quantitative MRI data analysis
-==========================================================
+=======================================
+PyMRT - Python Magnetic Resonance Tools
+=======================================
+
+**PyMRT** - **Py**thon **M**agnetic **R**esonance **T**ools:
+data analysis for quantitative MRI
 
 .. code::
 

@@ -18,7 +18,7 @@ from __future__ import (
 # import time  # Time access and conversions
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
-# import collections  # High-performance container datatypes
+# import collections  # Container datatypes
 import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command
@@ -1467,6 +1467,9 @@ def subplots(
                     plot_kwargs['title'] = \
                         subplot_title_fmt.format_map(locals())
                 plot_func(*plot_args, **plot_kwargs)
+            else:
+                axs[i, j].clear()
+                axs[i, j].set_axis_off()
 
             if col_label:
                 fig.text(

@@ -66,7 +66,7 @@ def handle_arg():
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
         epilog='v.{} - {}\n{}'.format(
-            INFO['version'], ', '.join(INFO['authors']), INFO['license']),
+            INFO['version'], INFO['author'], INFO['license']),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
@@ -74,8 +74,7 @@ def handle_arg():
         version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
             INFO['version'],
             next(line for line in __doc__.splitlines() if line),
-            INFO['copyright'], ', '.join(INFO['authors']),
-            INFO['notice']),
+            INFO['copyright'], INFO['author'], INFO['notice']),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
@@ -95,19 +94,19 @@ def handle_arg():
         default='.',
         help='set working directory [%(default)s]')
     arg_parser.add_argument(
-        '-t', '--type', metavar='TYPE',
+        '-n', '--val_name', metavar='NAME',
         default=None,
-        help='set data type [%(default)s]')
+        help='set values name ( [%(default)s]')
     arg_parser.add_argument(
-        '-a', '--interval', metavar=('MIN', 'MAX'),
+        '-a', '--val_interval', metavar=('MIN', 'MAX'),
         type=float, nargs=2, default=None,
-        help='set parameters for the range of values [%(default)s]')
+        help='set interval of values [%(default)s]')
     arg_parser.add_argument(
-        '-u', '--units', metavar='UNITS',
+        '-u', '--val_units', metavar='UNITS',
         default=None,
         help='set units for values [%(default)s]')
     arg_parser.add_argument(
-        '-m', '--mask', metavar='MASK_FILE',
+        '-m', '--mask_filepath', metavar='FILE',
         default=None,
         help='set exact mask file [%(default)s]')
     arg_parser.add_argument(
@@ -155,23 +154,9 @@ def main():
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
     msg(__doc__.strip())
 
-    kwargs = {
-        'dirpath': args.dirpath,
-        'val_type': args.type,
-        'val_interval': args.interval,
-        'val_units': args.units,
-        'mask_filepath': args.mask,
-        'reg_ref_ext': args.reg_ref_ext,
-        'corr_ref_ext': args.corr_ref_ext,
-        'tmp_dir': args.tmp_dir,
-        'reg_dir': args.reg_dir,
-        'msk_dir': args.msk_dir,
-        'cmp_dir': args.cmp_dir,
-        'fig_dir': args.fig_dir,
-        'force': args.force,
-        'verbose': args.verbose,
-    }
-    pml.check_correlation(**kwargs)
+    kws = vars(args)
+    kws.pop('quiet')
+    pml.check_correlation(**kws)
 
     if args.verbose > VERB_LVL['low']:
         pmu.elapsed(os.path.basename(__file__))
