@@ -213,7 +213,7 @@ def simple(
         legends=None,
         legend_kws=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -272,7 +272,7 @@ def sample2d(
         resolution=None,
         size_info=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -462,7 +462,7 @@ def sample3d_view2d(
         resolution=None,
         size_info=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -670,7 +670,7 @@ def sample2d_anim(
         resolution=None,
         size_info=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -790,8 +790,8 @@ def sample2d_anim(
             if cbar_kws is not None:
                 cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
                 if cbar_txt is not None:
-                    only_extremes = 'ticks' in cbar_kws and \
-                                    len(cbar_kws['ticks']) == 2
+                    only_extremes = \
+                        'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
                     if only_extremes:
                         cbar.ax.text(
                             2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
@@ -824,7 +824,7 @@ def histogram1d(
         labels=('Value', 'Value Frequency'),
         style=(('linestyle', 'solid'), ('color', 'black')),
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -937,7 +937,7 @@ def histogram1d_list(
         legend_kws=None,
         styles=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
@@ -1115,7 +1115,7 @@ def histogram2d(
         cbar_kws=None,
         cbar_txt=None,
         more_texts=None,
-        ax=plt.gca(),
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
