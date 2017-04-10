@@ -47,8 +47,7 @@ from pymrt import msg
 
 # ======================================================================
 # :: Default values
-T1_INTERVAL = (50.0, 5000.0)
-D_SEQ_PARAMS = dict(
+_SEQ_PARAMS = dict(
     eff=1.0,  # #
     n_gre=160,  # #
     tr_gre=7.0,  # ms
@@ -61,7 +60,6 @@ D_SEQ_PARAMS = dict(
 
 # rho ranges
 RHO_INTERVAL = (-0.5, 0.5)
-DICOM_INTERVAL = (0, 4095)
 
 
 # ======================================================================
@@ -145,7 +143,7 @@ def _prepare(use_cache=CFG['use_cache']):
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_signal = _prepare()
+_rho = _prepare()
 
 
 # ======================================================================
@@ -207,81 +205,11 @@ def rho(
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
-    rho = _signal(
+    rho = _rho(
         t1, eta_inv, n_gre, tr_gre, ta, tb, tc, fa1 * eta_fa, fa2 * eta_fa)
     if bijective:
         rho = _bijective_part(rho)
     return rho
-
-
-# ======================================================================
-def _calc_tr_seq(eff, n_gre, tr_gre, ta, tb, tc, a1, a2):
-    """Calculate TR_SEQ for MP2RAGE sequence."""
-    return ta + tb + tc + 2 * n_gre * tr_gre
-
-
-# ======================================================================
-def _calc_ti1(eff, n_gre, tr_gre, ta, tb, tc, a1, a2):
-    """ Calculate TI1 for MP2RAGE sequence."""
-    return ta + (1 / 2) * n_gre * tr_gre
-
-
-# ======================================================================
-def _calc_ti2(eff, n_gre, tr_gre, ta, tb, tc, a1, a2):
-    """Calculate TI2 for MP2RAGE sequenc.e"""
-    return ta + tb + (3 / 2) * n_gre * tr_gre
-
-
-# ======================================================================
-def _calc_ta(eff, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
-    """Calculate TA for MP2RAGE sequence."""
-    return (2.0 * ti1 - n_gre * tr_gre) / 2.0
-
-
-# ======================================================================
-def _calc_tb(eff, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
-    """ Calculate TB for MP2RAGE sequence."""
-    return ti2 - ti1 - n_gre * tr_gre
-
-
-# ======================================================================
-def _calc_tc(eff, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
-    """Calculate TC for MP2RAGE sequence."""
-    return tr_seq - ti2 - n_gre * tr_gre / 2.0
-
-
-# ======================================================================
-def _signal2(t1, eta_inv, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2):
-    """
-    Calculate MP2RAGE intensity from indirect parameters (NumPy-aware).
-
-    DEPRECATED in favor of `rho` and `acq_to_seq_params`.
-
-    Args:
-        t1 (float|np.ndarray): T1 time in ms
-        eta_inv (float): efficiency eff of the adiabatic inversion pulse.
-        n_gre (int): number n of pulses in each GRE block.
-        tr_gre (float): TR_GRE repetition time of GRE pulses in ms.
-        tr_seq (float
-        total repetition time of the MP2RAGE sequence in ms.
-        t1 (float): T1 time in ms.
-        eta_inv (float): efficiency eff of the adiabatic inversion pulse.
-        n_gre (int): number n of r.f. pulses in each GRE block.
-        tr_gre (float): repetition time of GRE pulses in ms.
-        ti1 (float): inversion time of the center of first GRE blocks in ms.
-        ti2 (float): inversion time of the center of second GRE blocks in ms.
-        a1 (float): flip angle a1 of the first GRE block in deg.
-        a2 (float): flip angle a2 of the second GRE block in deg.
-
-    Returns:
-        s (float|np.ndarray): rho intensity of the MP2RAGE sequence.
-    """
-    a1 = np.deg2rad(a1)
-    a2 = np.deg2rad(a2)
-    ta = _calc_ta(eta_inv, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2)
-    tb = _calc_tb(eta_inv, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2)
-    tc = _calc_tc(eta_inv, n_gre, tr_gre, tr_seq, ti1, ti2, a1, a2)
-    return _signal(t1, eta_inv, n_gre, tr_gre, ta, tb, tc, a1, a2)
 
 
 # ======================================================================
@@ -378,7 +306,7 @@ def acq_to_seq_params(
 def test_signal():
     import matplotlib.pyplot as plt
     t1 = np.linspace(50, 5000, 5000)
-    s = rho(t1, **D_SEQ_PARAMS, bijective=True)
+    s = rho(t1, **_SEQ_PARAMS, bijective=True)
     plt.plot(s, t1)
     plt.show()
     eff = np.array([0.9, 1.0, 1.1])
