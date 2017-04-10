@@ -27,6 +27,8 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
+import pickle  # Python object serialization
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -38,6 +40,8 @@ import appdirs
 import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
+from pymrt import DIRS
+from pymrt.config import CFG
 import pymrt.utils as pmu
 from pymrt import msg
 
@@ -82,54 +86,60 @@ def _mz_i(mz0, eff):
 
 
 # ======================================================================
-def _prepare(use_cache=True):
+def _prepare(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE rho expression analytically."""
-    # cache_filepath =
-    # if pmu.check_redo([])
     from sympy import exp, sin, cos
 
-    t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
-        sym.symbols('T1 eff n_GRE TR_GRE M0 TA TB TC A1 A2 Mz_ss')
+    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
+    if not os.path.isfile(cache_filepath) or not use_cache:
+        t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
+            sym.symbols('T1 eff n_GRE TR_GRE M0 TA TB TC A1 A2 Mz_ss')
 
-    eqn_mz_ss = sym.Eq(
-        mz_ss,
-        _mz_0rf(
-            _mz_nrf(
-                _mz_0rf(
-                    _mz_nrf(
-                        _mz_0rf(
-                            _mz_i(mz_ss, eff),
-                            t1, ta, m0),
-                        t1, n_gre, tr_gre, a1, m0),
-                    t1, tb, m0),
-                t1, n_gre, tr_gre, a2, m0),
-            t1, tc, m0))
-    mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
+        eqn_mz_ss = sym.Eq(
+            mz_ss,
+            _mz_0rf(
+                _mz_nrf(
+                    _mz_0rf(
+                        _mz_nrf(
+                            _mz_0rf(
+                                _mz_i(mz_ss, eff),
+                                t1, ta, m0),
+                            t1, n_gre, tr_gre, a1, m0),
+                        t1, tb, m0),
+                    t1, n_gre, tr_gre, a2, m0),
+                t1, tc, m0))
+        mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
 
-    # convenient exponentials
-    e1 = exp(-tr_gre / t1)
-    ea = exp(-ta / t1)
-    # eb = exp(-tb / t1)
-    ec = exp(-tc / t1)
+        # convenient exponentials
+        e1 = exp(-tr_gre / t1)
+        ea = exp(-ta / t1)
+        # eb = exp(-tb / t1)
+        ec = exp(-tc / t1)
 
-    # rho for TI1 image (omitted factor: b1r * e2 * m0)
-    gre_ti1 = sin(a1) * (
-        (-eff * mz_ss / m0 * ea +
-         (1 - ea)) * (cos(a1) * e1) ** (n_gre / 2 - 1) + (
-            (1 - e1) * (1 - (cos(a1) * e1) ** (n_gre / 2 - 1)) /
-            (1 - cos(a1) * e1)))
+        # rho for TI1 image (omitted factor: b1r * e2 * m0)
+        gre_ti1 = sin(a1) * (
+            (-eff * mz_ss / m0 * ea +
+             (1 - ea)) * (cos(a1) * e1) ** (n_gre / 2 - 1) + (
+                (1 - e1) * (1 - (cos(a1) * e1) ** (n_gre / 2 - 1)) /
+                (1 - cos(a1) * e1)))
 
-    # rho for TI2 image (omitted factor: b1r * e2 * m0)
-    gre_ti2 = sin(a2) * (
-        ((mz_ss / m0) - (1 - ec)) / (ec * (cos(a2) * e1) ** (n_gre / 2))
-        - (1 - e1) * ((cos(a2) * e1) ** (-n_gre / 2) - 1) / (1 - cos(a2) * e1))
+        # rho for TI2 image (omitted factor: b1r * e2 * m0)
+        gre_ti2 = sin(a2) * (
+            ((mz_ss / m0) - (1 - ec)) / (ec * (cos(a2) * e1) ** (n_gre / 2))
+            - (1 - e1) * ((cos(a2) * e1) ** (-n_gre / 2) - 1)
+            / (1 - cos(a2) * e1))
 
-    # T1 map as a function of steady state rho
-    s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
-    s = s.subs(mz_ss, mz_ss_)
+        # T1 map as a function of steady state rho
+        s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
+        s = s.subs(mz_ss, mz_ss_)
 
-    result = np.vectorize(
-        sym.lambdify((t1, eff, n_gre, tr_gre, ta, tb, tc, a1, a2), s))
+        pickles = (t1, eff, n_gre, tr_gre, ta, tb, tc, a1, a2), s
+        with open(cache_filepath, 'wb') as cache_file:
+            pickle.dump(pickles, cache_file)
+    else:
+        with open(cache_filepath, 'rb') as cache_file:
+            pickles = pickle.load(cache_file)
+    result = np.vectorize(sym.lambdify(*pickles))
     return result
 
 
