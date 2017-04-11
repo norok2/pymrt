@@ -22,7 +22,8 @@ from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 import pymrt.computation as pmc
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -34,8 +35,22 @@ from pymrt.recipes.generic import fix_phase_interval as fix_interval
 
 
 # ======================================================================
-def fix_offset(arr):
-    return arr - np.median(arr)
+def fix_offset(
+        arr,
+        offset_estimator=np.median):
+    """
+    Remove the constant phase offset from the phase data.
+    
+    By default, the constant phase offset is estimated with the median.
+    
+    Args:
+        arr (np.ndarray): The input array.
+        offset_estimator (callable): The function to estimate the offset.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    return arr - offset_estimator(arr)
 
 
 # ======================================================================
@@ -43,6 +58,7 @@ def phs_to_dphs_multi(
         phs_arr,
         tis,
         tis_mask=None,
+        unwrap=None,
         poly_deg=1,
         full=False,
         exp_factor=None,
@@ -57,6 +73,14 @@ def phs_to_dphs_multi(
             The number of points must match the last shape size of arr.
         tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
+        unwrap (bool|callable|None): Determine unwrapping method.
+            If None, no unwrapping or fixing is performed (assume units is rad).
+            If False, data is not unwrapped but values range fix is performed.
+            If True, both N-dim unwrapping of data and values range fix are
+            performed.
+            If callable, the data is preprocessed through.
+            If values range fix is required, please consider
+            including it in the callable through `fix_interval()`.
         poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
         full (bool): Calculate additional information on the fit performance.
@@ -76,14 +100,20 @@ def phs_to_dphs_multi(
         x_arr = x_arr[tis_mask]
 
     # unwrap along the time evolution
-    y_arr = fix_interval(y_arr)
-    y_arr = unwrap_laplacian(y_arr, post_func=None)
+    if isinstance(unwrap, callable):
+        y_arr = unwrap(y_arr)
+    elif unwrap is None:
+        pass
+    elif unwrap:
+        y_arr = fix_interval(y_arr)
+        y_arr = unwrap_laplacian(y_arr, post_func=None)
+    else:
+        y_arr = fix_interval(y_arr)
 
     assert (x_arr.size == y_arr.shape[-1])
 
     p_arr = generic.voxel_curve_fit(
-        y_arr, x_arr,
-        None, (np.mean(y_arr),) + (np.mean(x_arr),) * poly_deg, method='poly')
+        y_arr, x_arr, fit_params=1 + poly_deg, method='poly')
 
     p_arrs = np.split(p_arr, poly_deg + 1, -1)
 
@@ -101,22 +131,69 @@ def phs_to_dphs_multi(
 def phs_to_dphs(
         phs_arr,
         tis,
-        tis_mask):
+        tis_mask,
+        units='ms'):
     """
     Calculate the phase variation from phase data.
 
     Args:
         phs_arr (np.ndarray): The input array in arb.units.
             The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
+            Arbitrary units are accepted, will be automatically converted to
+            radians under the assumption that data is wrapped.
+            Do not provide unwrapped data.
+        tis (iterable|int|float): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
         tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
+        units (str|float|int): Units of measurement of Ti.
+            If str, the following will be accepted: 'ms'
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    return phs_to_dphs_multi(phs_arr, tis, tis_mask, poly_deg=1)['dphs_1']
+    if isinstance(units, str):
+        if units == 'ms':
+            units = 1e-3
+        else:
+            warnings.warn('Invalid units `{units}`'.format_map(locals()))
+            units = 1
+    tis = np.array(mrt.utils.auto_repeat(tis)) * units
+    if len(tis) > 1:
+        dphs_arr = \
+            phs_to_dphs_multi(phs_arr, tis, tis_mask, poly_deg=1)['dphs_1']
+    else:
+        dphs_arr = phs_arr / tis[0]
+    return dphs_arr
+
+
+# ======================================================================
+def dphs_to_phs(
+        dphs_arr,
+        tis,
+        phs0_arr=None):
+    """
+    Calculate the phase variation from phase data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb.units.
+            The sampling time Ti varies in the last dimension.
+        tis (iterable|int|float): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        units (str|float|int): Units of measurement of Ti.
+            If str, the following will be accepted: 'ms'
+            If int or float, the conversion factor will be multiplied to `ti`.
+
+    Returns:
+        phs_arr (np.ndarray): The phase array in rad.
+    """
+    tis = np.array(mrt.utils.auto_repeat(tis))
+    phs_arr = np.zeros(dphs_arr.shape + (len(tis),))
+    for i, ti in enumerate(tis):
+        phs_arr[..., i] = dphs_arr * ti
 
 
 # ======================================================================
@@ -159,6 +236,8 @@ def unwrap_laplacian(
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
+    from numpy import sin, cos
+
     if pre_func:
         arr = pre_func(
             arr,
@@ -167,7 +246,7 @@ def unwrap_laplacian(
 
     if pad_width:
         shape = arr.shape
-        pad_width = pmu.auto_pad_width(pad_width, shape)
+        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
@@ -178,9 +257,9 @@ def unwrap_laplacian(
     # arr = real(inv_laplacian(
     #     cos(arr) * laplacian(sin(arr)) - sin(arr) * laplacian(cos(arr))))
 
-    cos_arr = np.cos(arr)
-    sin_arr = np.sin(arr)
-    kk_2 = fftshift(pmu._kk_2(arr.shape))
+    cos_arr = cos(arr)
+    sin_arr = sin(arr)
+    kk_2 = fftshift(mrt.utils._kk_2(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]

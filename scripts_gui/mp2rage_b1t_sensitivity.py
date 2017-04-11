@@ -30,7 +30,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-import os  # Operating System facilities
+import os  # Miscellaneous operating system interfaces
 import argparse  # Argument Parsing
 import collections  # Container datatypes
 
@@ -46,8 +46,7 @@ import pytk.widgets
 import matplotlib.backends.backend_tkagg as tkagg
 
 # :: Local Imports
-import pymrt
-# import pymrt.utils as pmu
+import pymrt as mrt
 from pymrt.sequences import mp2rage
 from pymrt.extras import interactive
 
@@ -71,9 +70,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
     ('tc', dict(
         label='T_C / ms', default=4140, start=0, stop=10000, step=10)),
 
-    ('a1', dict(
+    ('fa1', dict(
         label='α_1 / deg', default=4.0, start=0.05, stop=22.0, step=0.05)),
-    ('a2', dict(
+    ('fa2', dict(
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_inv', dict(
@@ -155,13 +154,14 @@ ACQ_INTERACTIVES = collections.OrderedDict([
 
 # ======================================================================
 def plot_rho_t1_mp2rage_seq(
-        ax,
+        fig,
         params=None,
         title=TITLE.split(':')[1].strip()):
+    ax = fig.gca()
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_step'])
     try:
-        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'a1', 'a2', 'eta_inv'
+        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_inv'
         seq_kws = {name: params[name] for name in kws_names}
 
         seq_kws['eta_fa'] = 1
@@ -191,7 +191,8 @@ def plot_rho_t1_mp2rage_seq(
         ax.plot(
             rho_arr, t1_arr, color='c',
             label='$B_1^+$ -{:.0%}'.format(2 * params['d_eta_fa']))
-    except:
+    except Exception as e:
+        print(e)
         ax.set_title('\n'.join(('WARNING! Some plot failed!', title)))
     else:
         ax.set_title(title)
@@ -204,11 +205,12 @@ def plot_rho_t1_mp2rage_seq(
 
 # ======================================================================
 def plot_rho_t1_mp2rage_acq(
-        ax,
+        fig,
         params=None,
         title=TITLE.split(':')[1].strip()):
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_step'])
+    ax = fig.gca()
     try:
         seq_kws, extra_info = mp2rage.acq_to_seq_params(
             matrix_sizes=(
@@ -279,11 +281,64 @@ def plot_rho_t1_mp2rage_acq(
 
 
 # ======================================================================
+def handle_arg():
+    """
+    Handle command-line application arguments.
+    """
+    # :: Create Argument Parser
+    arg_parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog='v.{} - {}\n{}'.format(
+            INFO['version'], INFO['author'], INFO['license']),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    # :: Add POSIX standard arguments
+    arg_parser.add_argument(
+        '--ver', '--version',
+        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
+            INFO['version'],
+            next(line for line in __doc__.splitlines() if line),
+            INFO['copyright'], INFO['author'], INFO['notice']),
+        action='version')
+    arg_parser.add_argument(
+        '-v', '--verbose',
+        action='count', default=D_VERB_LVL,
+        help='increase the level of verbosity [%(default)s]')
+    arg_parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='override verbosity settings to suppress output [%(default)s]')
+    # :: Add additional arguments
+    arg_parser.add_argument(
+        '-d', '--direct',
+        action='store_true',
+        help='use sequence params instead of acquisition params [%(default)s]')
+    return arg_parser
+
+
+# ======================================================================
 def main():
-    # interactive.mpl_plot(
-    #     plot_rho_t1_mp2rage_seq, SEQ_INTERACTIVES, title=TITLE, about=__doc__)
-    interactive.mpl_plot(
-        plot_rho_t1_mp2rage_acq, ACQ_INTERACTIVES, title=TITLE, about=__doc__)
+    # :: handle program parameters
+    arg_parser = handle_arg()
+    args = arg_parser.parse_args()
+    # fix verbosity in case of 'quiet'
+    if args.quiet:
+        args.verbose = VERB_LVL['none']
+    # :: print debug info
+    if args.verbose >= VERB_LVL['debug']:
+        arg_parser.print_help()
+        msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
+
+    if args.direct:
+        interactive.mpl_plot(
+            plot_rho_t1_mp2rage_seq,
+            SEQ_INTERACTIVES, title=TITLE, about=__doc__)
+    else:
+        interactive.mpl_plot(
+            plot_rho_t1_mp2rage_acq,
+            ACQ_INTERACTIVES, title=TITLE, about=__doc__)
+
+    elapsed(os.path.basename(__file__))
+    print_elapsed()
 
 
 # ======================================================================

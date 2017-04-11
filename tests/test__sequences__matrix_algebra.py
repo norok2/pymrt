@@ -14,7 +14,7 @@ import seaborn as sns
 
 import matplotlib.pyplot as plt
 
-import pymrt.utils as pmu
+import pymrt.utils
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
@@ -35,7 +35,7 @@ def check_dynamics_operator_symbolic():
     """
     # todo: make it flexible and working
     w_c, w1 = sym.symbols('w_c w1')
-    m0 = [sym.symbols('m0{}'.format())]
+    mc = [sym.symbols('m0{}'.format())]
 
     # 2-pool model
     spin_model = SpinModel(
@@ -224,7 +224,7 @@ def check_approx_propagator(
         'gauss': {},
         'lorentz': {},
         'sinc': {},
-        # 'fermi': {},
+        'fermi': {},
         # 'random': {},
         'cos_sin': {},
     }
@@ -257,15 +257,15 @@ def check_approx_propagator(
 # ======================================================================
 def check_z_spectrum(
         spin_model=SpinModel(
-            s0=1e4,
+            s0=1e8,
             mc=(0.8681, 0.1319),
             w0=((GAMMA['1H'] * B0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        freqs=np.round(pmu.sgnlogspace(50, 50000, 64)),
-        amplitudes=np.round(pmu.sgnlogspace(50, 5000, 64)),
+        freqs=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 32)),
         plot_data=True,
         save_file=None):
     """
@@ -289,13 +289,14 @@ def check_z_spectrum(
 
     mt_flash = MtFlash(
         PulseList([
-            Delay(10.0e-3),
+            Delay(50.0e-3),
             Spoiler(1.0),
             PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
                             0.0, 'poly', {'fit_order': 3}),
-            Delay(10.0e-3),
+            Delay(1.0e-3),
             Spoiler(1.0),
-            PulseExc.shaped(2.1e-3, 11.0, 1, 'rect', {})],
+            PulseExc.shaped(2.1e-3, 15.0, 1, 'rect', {}),
+            Delay(5.0e-3)],
             w_c=w_c),
         300)
 
@@ -316,7 +317,7 @@ def check_z_spectrum(
         ax.set_ylabel('Frequency offset / Hz (log10 scale)')
         ax.set_zlabel('Signal Intensity / arb.units')
         ax.plot_surface(
-            X, Y, data * 1e4, cmap=mpl.cm.plasma,
+            X, Y, data, cmap=mpl.cm.plasma,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
     if save_file:
         np.savez(save_file, freqs, amplitudes, data)
@@ -394,7 +395,7 @@ def check_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    freqs = pmu.sgnlogspace(100.0, 300.0e3, 32)
+    freqs = mrt.utils.sgnlogspace(100.0, 300.0e3, 32)
     flip_angles = np.linspace(1.0, 1100.0, 32)
 
     x_data = np.array(tuple(itertools.product(freqs, flip_angles)))
@@ -425,7 +426,7 @@ def check_fit_spin_model(
     # fitted = mt_signal(x_data, *p0).reshape(measured.shape)
 
     if plot_data:
-        X, Y = np.meshgrid(flip_angles, pmu.sgnlog(freqs, 10.0))
+        X, Y = np.meshgrid(flip_angles, mrt.utils.sgnlog(freqs, 10.0))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -446,13 +447,17 @@ def check_fit_spin_model(
 if __name__ == '__main__':
     msg(__doc__.strip())
     # check_dynamics_operator_symbolic()
-    # pmu.elapsed'check_symbolic')
+    # mrt.utils.elapsed('check_symbolic')
+
     # check_dynamics_operator()
-    # pmu.elapsed'check_dynamics_operator')
+    # mrt.utils.elapsed'check_dynamics_operator')
+
     # check_mt_sequence()
-    # pmu.elapsed'check_mt_sequence')
+    # mrt.utils.elapsed'check_mt_sequence')
+
     # check_approx_propagator()
-    # pmu.elapsed'check_approx_propagator')
+    # mrt.utils.elapsed'check_approx_propagator')
+
     # check_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA['1H'] * B0,) * 4,
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
@@ -460,8 +465,9 @@ if __name__ == '__main__':
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
     check_z_spectrum()
     elapsed('check_z_spectrum')
+
     # check_fit_spin_model()
-    # pmu.elapsed('check_fit_spin_model')
+    # mrt.utils.elapsed('check_fit_spin_model')
 
     print_elapsed()
     # profile.run('check_z_spectrum()', sort=1)

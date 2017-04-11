@@ -40,9 +40,10 @@ import appdirs
 import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
+import pymrt as mrt
 from pymrt import DIRS
 from pymrt.config import CFG
-import pymrt.utils as pmu
+import pymrt.utils
 from pymrt import msg
 
 # ======================================================================
@@ -159,7 +160,7 @@ def _bijective_part(arr, mask_val=np.nan):
         arr (np.ndarray): The larger bijective portion of arr.
             Non-bijective parts are masked.
     """
-    bijective_part = pmu.bijective_part(arr)
+    bijective_part = mrt.utils.bijective_part(arr)
     if bijective_part.start:
         arr[:bijective_part.start] = mask_val
     if bijective_part.stop:

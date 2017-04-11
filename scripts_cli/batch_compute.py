@@ -51,12 +51,13 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
-# import pymrt.naming as pmn
-# import pymrt.input_output as pmio
+import pymrt as mrt
+import pymrt.utils
+# import pymrt.naming
+# import pymrt.input_output
 import pymrt.computation as pmc
-# import pymrt.correlate as pmr
-# import pymrt.geometry as pmg
+# import pymrt.correlate
+# import pymrt.geometry
 # from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
@@ -188,9 +189,9 @@ def main():
     else:
         print('WW: Method not specified.')
 
-    pmu.elapsed('compute')
+    mrt.utils.elapsed('compute')
     if args.verbose > VERB_LVL['none']:
-        pmu.print_elapsed()
+        mrt.utils.print_elapsed()
 
 
 # ======================================================================

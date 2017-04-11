@@ -1,11 +1,37 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+pymrt.recipes.t1: T1 longitudinal relaxation computation.
+"""
 
-import pymrt.utils as pmu
+# ======================================================================
+# :: Future Imports
+from __future__ import (
+    division, absolute_import, print_function, unicode_literals)
+
+# ======================================================================
+# :: Python Standard Library Imports
+# import itertools  # Functions creating iterators for efficient looping
+# import warnings  # Warning control
+# import collections  # Container datatypes
+
+# :: External Imports
+import numpy as np  # NumPy (multidimensional numerical arrays library)
+
+# :: Local Imports
+import pymrt as mrt
+# import pymrt.utils
+
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+# from pymrt import elapsed, print_elapsed
+# from pymrt import msg, dbg
+import pymrt.utils
+from pymrt.recipes import generic
 from pymrt.recipes.generic import fix_phase_interval
 
 
 # ======================================================================
-def rho_mp2rage(
+def fit_mp2rage_rho(
         inv1m_arr,
         inv1p_arr,
         inv2m_arr,
@@ -14,6 +40,9 @@ def rho_mp2rage(
         values_interval=None):
     """
     Calculate the rho image from an MP2RAGE acquisition.
+    
+    This is also referred to as the uniform images, because it should be free
+    from low-spatial frequency biases.
 
     Args:
         inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
@@ -31,8 +60,7 @@ def rho_mp2rage(
             If None, the natural [-0.5, 0.5] interval will be used.
 
     Returns:
-        rho_arr (float|np.ndarray): The calculated rho image from
-        MP2RAGE.
+        rho_arr (float|np.ndarray): The calculated rho (uniform) image.
     """
     if not regularization:
         regularization = 0
@@ -40,17 +68,17 @@ def rho_mp2rage(
     inv2m_arr = inv2m_arr.astype(float)
     inv1p_arr = fix_phase_interval(inv1p_arr)
     inv2p_arr = fix_phase_interval(inv2p_arr)
-    inv1_arr = pmu.polar2complex(inv1m_arr, inv1p_arr)
-    inv2_arr = pmu.polar2complex(inv2m_arr, inv2p_arr)
+    inv1_arr = mrt.utils.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = mrt.utils.polar2complex(inv2m_arr, inv2p_arr)
     rho_arr = np.real(inv1_arr.conj() * inv2_arr /
                       (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
-        rho_arr = pmu.scale(rho_arr, values_interval, (-0.5, 0.5))
+        rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
 
 
 # ======================================================================
-def rho_to_t1_mp2rage(
+def fit_mp2rage_rho_to_t1(
         rho_arr,
         eff_arr=None,
         t1_values_range=(100, 5000),
@@ -80,7 +108,7 @@ def rho_to_t1_mp2rage(
             This should match the signature of: `mp2rage.acq_to_seq_params`.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
+        t1_arr (float|np.ndarray): The calculated T1 map.
     """
     from pymrt.sequences import mp2rage
     if eff_arr:
@@ -92,7 +120,7 @@ def rho_to_t1_mp2rage(
         rho = mp2rage.rho(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
-        bijective_slice = pmu.bijective_part(rho)
+        bijective_slice = mrt.utils.bijective_part(rho)
         t1 = t1[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:
@@ -103,15 +131,15 @@ def rho_to_t1_mp2rage(
             raise ValueError('MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
-        if not pmu.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-            rho_arr = pmu.scale(rho_arr, mp2rage.RHO_INTERVAL)
+        if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+            rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
 
         t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr
 
 
 # ======================================================================
-def t1_mp2rage(
+def fit_mp2rage(
         inv1m_arr,
         inv1p_arr,
         inv2m_arr,
@@ -154,11 +182,77 @@ def t1_mp2rage(
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
+        t1_arr (float|np.ndarray): The calculated T1 map.
     """
-    rho_arr = rho_mp2rage(
+    rho_arr = fit_mp2rage_rho(
         inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
         values_interval=None)
-    t1_arr = rho_to_t1_mp2rage(
+    t1_arr = fit_mp2rage_rho_to_t1(
         rho_arr, eff_arr, t1_values_range, t1_num, eff_num, **acq_param_kws)
+    return t1_arr
+
+
+# ======================================================================
+def dual_angle_flash(
+        arr1,
+        arr2,
+        eff_arr,
+        fa1,
+        fa2,
+        tr):
+    """
+    Calculate the T1 map from two FLASH acquisitions.
+    
+    Solving for T1 the ratio of two FLASH signals
+    (where :math:`s_1` is `arr1` and :math:`s_2` is `arr2`):
+    
+    .. math::
+        \\frac{s_1}{s_2} = \\frac{\\sin(\\alpha_1)}{\\sin(
+        \\alpha_2)}\\frac{1 - \\cos(\\alpha_2) e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\alpha_1) e^{-\\frac{T_R}{T_1}}}
+    
+    We obtain:
+    
+    .. math::
+        e^{-\\frac{T_R}{T_1}} = \\frac{\\sin(\\alpha_1) s_2-\\sin(
+        \\alpha_2) s_1}{\\sin(\\alpha_1) \\cos(\\alpha_2) s_2-\\cos(\\alpha_1) 
+        \\sin(\\alpha_2) s_1} = X
+        
+    Or:
+    
+    .. math::
+        T_1 = -\\frac{T_R}{\\log(X)}
+
+    This is a closed-form solution.
+    
+    Args:
+        arr1 (np.ndarray): The first input array in arb.units.
+            This is a FLASH image acquired with:
+                - the nominal flip angle specified in the `fa1` parameter;
+                - the repetition time specified in the `tr` parameter.
+        arr2 (np.ndarray): The second input array in arb.units.
+            This is a FLASH image acquired with:
+                - the nominal flip angle specified in the `fa2` parameter;
+                - the repetition time specified in the `tr` parameter.
+        eff_arr (np.ndarray): The flip angle efficient in #.
+        fa1 (float): Flip angle of the first acquisition in deg.
+        fa2 (float): Flip angle of the second acquisition in deg.
+        tr (float): Repetition time of the acquisitions in time units.
+            Both acquisitions must have the same TR.
+            Units of TR determine the units of T1.
+
+    Returns:
+        t1_arr (float|np.ndarray): The calculated T1 map.
+    """
+    from numpy import log, sin, cos
+    fa1 = np.deg2rad(fa1)
+    fa2 = np.deg2rad(fa2)
+    # t1_arr = -tr / log(
+    #     (sin(fa1) * arr2 - sin(fa2) * arr1) /
+    #     (sin(fa1) * cos(fa2) * arr2 - cos(fa1) * sin(fa2) * arr1))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        t1_arr = -tr / log(
+            (sin(fa1 * eff_arr) * arr2 - sin(fa2 * eff_arr) * arr1) / (
+                sin(fa1 * eff_arr) * cos(fa2 * eff_arr) * arr2 - cos(
+                    fa1 * eff_arr) * sin(fa2 * eff_arr) * arr1))
     return t1_arr

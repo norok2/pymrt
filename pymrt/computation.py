@@ -54,9 +54,10 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.utils as pmu
-import pymrt.naming as pmn
-import pymrt.input_output as pmio
+import pymrt as mrt
+import pymrt.utils
+import pymrt.naming
+import pymrt.input_output
 
 # from dcmpi.lib.common import ID
 
@@ -69,7 +70,7 @@ META_EXT = 'info'  # ID['info']
 
 D_OPTS = {
     # sources
-    'data_ext': pmu.EXT['niz'],
+    'data_ext': mrt.utils.EXT['niz'],
     'meta_ext': META_EXT,
     'multi_acq': False,
     'use_meta': True,
@@ -128,7 +129,7 @@ def ext_qsm_as_legacy(
         images = images[-2:]
         affines = affines[-2:]
     for image, affine, tmp_filepath in zip(images, affines, tmp_filepaths):
-        pmio.save(tmp_filepath, image[..., selected], affine)
+        mrt.input_output.save(tmp_filepath, image[..., selected], affine)
     # execute script on temp input
     cmd = [
         'qsm_as_legacy.py',
@@ -140,11 +141,11 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    pmu.execute(str(' '.join(cmd)))
+    mrt.utils.execute(str(' '.join(cmd)))
     # import temp output
     arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
-        img, meta = pmio.load(tmp_filepath, meta=True)
+        img, meta = mrt.input_output.load(tmp_filepath, meta=True)
         arr_list.append(img)
         meta_list.append(meta)
     # clean up tmp files
@@ -164,10 +165,11 @@ def func_exp_recovery(t_arr, tau, s_0, eff=1.0, const=0.0):
 
     [s_0 > 0, tau > 0, eff > 0]
     """
-    if s_0 > 0.0 and tau > 0.0 and eff > 0.0:
-        s_t_arr = s_0 * (1.0 - 2.0 * eff * np.exp(-t_arr / tau)) + const
-    else:
-        s_t_arr = np.tile(np.inf, len(t_arr))
+    s_t_arr = s_0 * (1.0 - 2.0 * eff * np.exp(-t_arr / tau)) + const
+    # if s_0 > 0.0 and tau > 0.0 and eff > 0.0:
+    #     s_t_arr = s_0 * (1.0 - 2.0 * eff * np.exp(-t_arr / tau)) + const
+    # else:
+    #     s_t_arr = np.tile(np.inf, len(t_arr))
     return s_t_arr
 
 
@@ -372,31 +374,31 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = pmu.merge_dicts(D_OPTS, opts)
+    opts = mrt.utils.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = pmu.listdir(
+        data_filepath_list = mrt.utils.listdir(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
-            info = pmn.parse_filename(
-                pmu.change_ext(pmu.os.path.basename(data_filepath), '',
-                               pmu.EXT['niz']))
+            info = mrt.naming.parse_filename(
+                mrt.utils.change_ext(mrt.utils.os.path.basename(data_filepath), '',
+                               mrt.utils.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
                 series_meta_filepath = os.path.join(
                     meta_dirpath,
-                    pmn.to_filename(info, ext=opts['meta_ext']))
+                    mrt.naming.to_filename(info, ext=opts['meta_ext']))
                 if os.path.isfile(series_meta_filepath):
                     with open(series_meta_filepath, 'r') as meta_file:
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      pmu.add_extsep(opts['meta_ext']))
+                                      mrt.utils.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -411,7 +413,7 @@ def sources_generic(
                     last_acq = acq_meta['_series']
             else:
                 # import parameters from filename
-                base, data_params = pmn.parse_series_name(info['name'])
+                base, data_params = mrt.naming.parse_series_name(info['name'])
                 new_acq = (last_acq and base != last_acq)
                 last_acq = base
             if not opts['multi_acq'] and new_acq and sources:
@@ -437,7 +439,7 @@ def sources_generic(
             for sources, params in zip(sources_list, params_list):
                 grouping = list(opts['groups']) * \
                            int((len(sources) / sum(opts['groups'])) + 1)
-                seps = pmu.accumulate(grouping) if grouping else []
+                seps = mrt.utils.accumulate(grouping) if grouping else []
                 for i, source in enumerate(sources):
                     grouped_sources.append(source)
                     grouped_params.append(params)
@@ -450,7 +452,7 @@ def sources_generic(
 
         if verbose >= VERB_LVL['debug']:
             for sources, params in zip(sources_list, params_list):
-                print(pmu.tty_colorify('DEBUG', 'r'))
+                print(mrt.utils.tty_colorify('DEBUG', 'r'))
                 print(sources, params)
     elif verbose >= VERB_LVL['medium']:
         print("WW: no data directory '{}'. Skipping.".format(data_dirpath))
@@ -502,7 +504,7 @@ def compute_generic(
     """
     # TODO: implement affine_func, affine_args, affine_kwargs?
     # get the num, name and seq from first source file
-    opts = pmu.merge_dicts(D_OPTS, opts)
+    opts = mrt.utils.merge_dicts(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -510,15 +512,15 @@ def compute_generic(
         opts = {}
 
     targets = []
-    info = pmn.parse_filename(sources[0])
+    info = mrt.naming.parse_filename(sources[0])
     if 'ProtocolName' in params:
         info['name'] = params['ProtocolName']
     for image_type in opts['types']:
         info['type'] = image_type
-        targets.append(os.path.join(out_dirpath, pmn.to_filename(info)))
+        targets.append(os.path.join(out_dirpath, mrt.naming.to_filename(info)))
 
     # perform the calculation
-    if pmu.check_redo(sources, targets, force):
+    if mrt.utils.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -532,7 +534,7 @@ def compute_generic(
                 print('Source:\t{}'.format(os.path.basename(source)))
             if verbose > VERB_LVL['none']:
                 print('Params:\t{}'.format(params))
-            image, affine, header = pmio.load(source, meta=True)
+            image, affine, header = mrt.input_output.load(source, meta=True)
             # fix mask if shapes are different
             if opts['adapt_mask']:
                 mask = [
@@ -563,10 +565,10 @@ def compute_generic(
                         img = img.astype(opts['dtype'])
                     if params:
                         for key, val in params.items():
-                            target = pmn.change_param_val(target, key, val)
+                            target = mrt.naming.change_param_val(target, key, val)
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
-                    pmio.save(target, img, affine=aff)
+                    mrt.input_output.save(target, img, affine=aff)
                     break
     return targets
 
@@ -653,9 +655,9 @@ def compute(
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kwargs)
-            pmu.elapsed('Time: ')
+            mrt.utils.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                pmu.print_elapsed(only_last=True)
+                mrt.utils.print_elapsed(only_last=True)
     else:
         recursive = True
 
@@ -678,4 +680,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-pmu.elapsed('pymrt.computation')
+mrt.utils.elapsed('pymrt.computation')

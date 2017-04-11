@@ -46,7 +46,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 
 
 # from pymrt import INFO
@@ -103,7 +104,7 @@ def tabular(labels, rows, label_filters, row_filters, format_dict):
     # separator
     output_str += '\hline\n'
     # write data
-    seps = pmu.accumulate(grouping) if grouping else []
+    seps = mrt.utils.accumulate(grouping) if grouping else []
     for i, row in enumerate(rows):
         for j, col in enumerate(row):
             if row_filters:

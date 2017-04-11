@@ -54,7 +54,8 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 
 # from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -160,10 +161,10 @@ def quick_2d(arr, values_range=None):
         img = arr
     else:
         warnings.warn('current array was not 2D, performing brute conversion')
-        img = arr.reshape(pmu.optimal_ratio(arr.size))
+        img = arr.reshape(mrt.utils.optimal_ratio(arr.size))
 
     if not values_range:
-        values_range = pmu.minmax(img)
+        values_range = mrt.utils.minmax(img)
 
     print(values_range)
     # using Matplotlib
@@ -225,9 +226,9 @@ def simple(
     else:
         fig = plt.gcf()
     if isinstance(x_datas, np.ndarray):
-        x_datas = pmu.auto_repeat(x_datas, len(y_datas), True, True)
+        x_datas = mrt.utils.auto_repeat(x_datas, len(y_datas), True, True)
     if legends is None:
-        legends = pmu.auto_repeat(None, len(y_datas), check=True)
+        legends = mrt.utils.auto_repeat(None, len(y_datas), check=True)
     for x_data, y_data, legend in zip(x_datas, y_datas, legends):
         plot = ax.plot(x_data, y_data, label=legend)
     # setup title and labels
@@ -244,7 +245,7 @@ def simple(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -321,9 +322,9 @@ def sample2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = pmu.auto_repeat(axis, 1)
+        axis = mrt.utils.auto_repeat(axis, 1)
     if index is not None:
-        index = pmu.auto_repeat(index, 1)
+        index = mrt.utils.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -331,7 +332,7 @@ def sample2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = pmu.ndim_slice(arr, axis, index)
+        data = mrt.utils.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -354,14 +355,14 @@ def sample2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmu.minmax(arr)
+        array_interval = mrt.utils.minmax(arr)
     if not cmap:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             cmap = mpl.cm.RdBu_r
         else:
             cmap = mpl.cm.gray_r
     if not text_color:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -429,7 +430,7 @@ def sample2d(
             ax.text(**dict(text_kws))
 
     # save plot
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -452,6 +453,9 @@ def sample3d_view2d(
         orientation='landscape',
         flip_ud=(False, False, False),
         flip_lr=(False, False, False),
+        rot90=(False, False, False),
+        transpose=(False, False, False),
+        mode='standard',
         title=None,
         array_interval=None,
         ticks_limit=None,
@@ -467,6 +471,7 @@ def sample3d_view2d(
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
+    warnings.warn('Experimental!')
     data_dim = 3
     view_dim = 2
 
@@ -480,9 +485,9 @@ def sample3d_view2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = pmu.auto_repeat(axis, 1)
+        axis = mrt.utils.auto_repeat(axis, 1)
     if index is not None:
-        index = pmu.auto_repeat(index, 1)
+        index = mrt.utils.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -490,7 +495,7 @@ def sample3d_view2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = pmu.ndim_slice(arr, axis, index)
+        data = mrt.utils.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -506,7 +511,7 @@ def sample3d_view2d(
     if view_axes is None:
         view_axes = np.argsort(data.shape)
     if view_indexes is None:
-        view_indexes = pmu.auto_repeat(None, data_dim)
+        view_indexes = mrt.utils.auto_repeat(None, data_dim)
     if len(view_axes) != data_dim:
         raise IndexError('Incorrect number of view axes.')
     if len(view_indexes) != data_dim:
@@ -514,7 +519,7 @@ def sample3d_view2d(
 
     views = []
     for view_axis, view_index in zip(view_axes, view_indexes):
-        views.append(pmu.ndim_slice(data, view_axis, view_index))
+        views.append(mrt.utils.ndim_slice(data, view_axis, view_index))
     if ((orientation == 'transpose') or
             (orientation == 'landscape'
              and views[0].shape[0] > views[0].shape[1]) or
@@ -524,51 +529,75 @@ def sample3d_view2d(
     if orientation == 'rot90':
         views[0] = np.rot90(views[0])
 
-    data_shape = list(data.shape)
-    view_shape = list(views[0].shape)
-    other_size = [
-        e for e in data_shape
-        if not e in view_shape or view_shape.remove(e)][0]
-    x_size = views[0].shape[0] + other_size
-    y_size = views[0].shape[1] + other_size
-    view = np.zeros((x_size, y_size))
-    print(view.shape)
-    print([v.shape for v in views])
-    for i, (v, f_ud, f_lr) in enumerate(zip(views, flip_ud, flip_lr)):
-        if v.shape[0] != views[0].shape[0] and v.shape[1] != views[0].shape[1]:
-            views[i] = v.transpose()
+    # perform flipping
+    for i, (v, f_ud, f_lr, r90, tr) in \
+            enumerate(zip(views, flip_ud, flip_lr, rot90, transpose)):
         if f_ud:
             views[i] = views[i][::-1, :]
         if f_lr:
             views[i] = views[i][:, ::-1]
-    print([v.shape for v in views])
+        if r90:
+            views[i] = np.rot90(views[i])
+        if tr:
+            views[i] = views[i].transpose()
+    # print([v.shape for v in views])  # DEBUG
 
-    x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
-    print(x0s, y0s)
-    # todo: fix this
-    if other_size != views[2].shape[1] and other_size != views[1].shape[0]:
-        x0s[1], y0s[1], x0s[2], y0s[2] = x0s[2], y0s[2], x0s[1], y0s[1]
-    print(x0s, y0s)
+    if mode == ('std', 'standard'):
+        data_shape = list(data.shape)
+        view_shape = list(views[0].shape)
+        other_size = [
+            e for e in data_shape
+            if not e in view_shape or view_shape.remove(e)][0]
+        x_size = views[0].shape[0] + other_size
+        y_size = views[0].shape[1] + other_size
+        view = np.zeros((x_size, y_size))
 
+        # transpose to match size
+        # todo: fix this
+        for i, v in enumerate(views):
+            if v.shape[0] != views[0].shape[0] and \
+                            v.shape[1] != views[0].shape[1]:
+                views[i] = v.transpose()
+
+        x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
+        if other_size != views[2].shape[1] and other_size != views[1].shape[0]:
+            x0s[1], y0s[1], x0s[2], y0s[2] = x0s[2], y0s[2], x0s[1], y0s[1]
+
+    elif mode in ('hor', 'horizontal'):
+        x_size = max([v.shape[0] for v in views])
+        y_size = sum([v.shape[1] for v in views])
+        view = np.zeros((x_size, y_size))
+        x0s = [(x_size - v.shape[0]) // 2 for v in views]
+        y0s = [0] + list(np.cumsum([v.shape[1] for v in views])[:-1])
+
+    elif mode in ('ver', 'vertical'):
+        x_size = sum([v.shape[0] for v in views])
+        y_size = max([v.shape[1] for v in views])
+        view = np.zeros((x_size, y_size))
+        x0s = [0] + list(np.cumsum([v.shape[0] for v in views])[:-1])
+        y0s = [(y_size - v.shape[1]) // 2 for v in views]
+
+    # assemble the image
+    print([v.shape for v in views])  # DEBUG
+    print(view.shape)  # DEBUG
+    print(x0s, y0s)  # DEBUG
     for i, (v, x0, y0) in enumerate(zip(views, x0s, y0s)):
         x1, y1 = x0 + v.shape[0], y0 + v.shape[1]
-        print(x0, y0, x1, y1, v.shape, view[x0:x1, y0:y1].shape)
+        # print(x0, y0, x1, y1, v.shape, view[x0:x1, y0:y1].shape)  #DEBUG
         view[x0:x1, y0:y1] = v
-
-    # todo
 
     # prepare plot
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmu.minmax(arr)
+        array_interval = mrt.utils.minmax(arr)
     if not cmap:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             cmap = mpl.cm.RdBu_r
         else:
             cmap = mpl.cm.gray_r
     if not text_color:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -636,7 +665,7 @@ def sample3d_view2d(
             ax.text(**dict(text_kws))
 
     # save plot
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -716,18 +745,18 @@ def sample2d_anim(
         fig = plt.gcf()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = pmu.ndim_slice(array, axis, 0)
+    sample = mrt.utils.ndim_slice(array, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = pmu.minmax(array)
+        array_interval = mrt.utils.minmax(array)
     if not cmap:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             cmap = mpl.cm.RdBu_r
         else:
             cmap = mpl.cm.gray_r
     if not text_color:
-        if not pmu.is_same_sign(array_interval):
+        if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -777,7 +806,7 @@ def sample2d_anim(
     plots = []
     data = []
     for i in range(0, n_frames, step):
-        sample = pmu.ndim_slice(array, axis, i)
+        sample = mrt.utils.ndim_slice(array, axis, i)
         plot = ax.imshow(
             sample, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
@@ -799,7 +828,7 @@ def sample2d_anim(
                         cbar.set_label(cbar_txt)
         plots.append([plot])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kwargs = {'fps': n_frames / step / duration}
         if save_kws is None:
@@ -878,7 +907,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmu.scale(val, array_interval)
+    hist_interval = tuple([mrt.utils.scale(val, array_interval)
                            for val in hist_interval])
 
     # create histogram
@@ -899,7 +928,7 @@ def histogram1d(
         ax = fig.gca()
     else:
         fig = plt.gcf()
-    plot = ax.plot(pmu.midval(bin_edges), hist, **dict(style))
+    plot = ax.plot(mrt.utils.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format_map(locals()))
@@ -912,7 +941,7 @@ def histogram1d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1017,7 +1046,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([pmu.scale(val, array_interval)
+    hist_interval = tuple([mrt.utils.scale(val, array_interval)
                            for val in hist_interval])
 
     # prepare style list
@@ -1058,7 +1087,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         plot = ax.plot(
-            pmu.midval(bin_edges), hist,
+            mrt.utils.midval(bin_edges), hist,
             **next(style_cycler),
             label=legend)
         data.append((hist, bin_edges))
@@ -1083,7 +1112,7 @@ def histogram1d_list(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1233,7 +1262,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[pmu.scale(val, array_interval[i])
+    hist_interval = tuple([[mrt.utils.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
@@ -1291,10 +1320,10 @@ def histogram2d(
         mask *= (arr1 < array_interval[0][1]).astype(bool)
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
-        stats_dict = pmu.calc_stats(
+        stats_dict = mrt.utils.calc_stats(
             arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *pmu.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
+            *mrt.utils.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
@@ -1318,7 +1347,7 @@ def histogram2d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1387,7 +1416,7 @@ def subplots(
                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
             elif isinstance(aspect_ratio, str):
                 if 'exact' in aspect_ratio:
-                    num_col, num_row = pmu.optimal_ratio(num_plots)
+                    num_col, num_row = mrt.utils.optimal_ratio(num_plots)
                     if 'portrait' in aspect_ratio:
                         num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
@@ -1411,16 +1440,16 @@ def subplots(
         num_col = len(cols)
     assert (num_row * num_col >= num_plots)
 
-    pads = list(pmu.auto_repeat(pads, 2, False, True))
-    label_pads = list(pmu.auto_repeat(label_pads, 2, False, True))
-    figsize_factors = list(pmu.auto_repeat(figsize_factors, 2, False, True))
+    pads = list(mrt.utils.auto_repeat(pads, 2, False, True))
+    label_pads = list(mrt.utils.auto_repeat(label_pads, 2, False, True))
+    figsize_factors = list(mrt.utils.auto_repeat(figsize_factors, 2, False, True))
 
     # fix row/col labels
     if row_labels is None:
-        row_labels = pmu.auto_repeat(None, num_row)
+        row_labels = mrt.utils.auto_repeat(None, num_row)
         label_pads[0] = 0.0
     if col_labels is None:
-        col_labels = pmu.auto_repeat(None, num_col)
+        col_labels = mrt.utils.auto_repeat(None, num_col)
         label_pads[1] = 0.0
     assert (num_row == len(row_labels))
     assert (num_col == len(col_labels))
@@ -1473,7 +1502,7 @@ def subplots(
 
             if col_label:
                 fig.text(
-                    pmu.scale(
+                    mrt.utils.scale(
                         (j * 2 + 1) / (num_col * 2),
                         out_interval=(label_pads[0], 1.0 - label_pads[0] / 5)),
                     1.0 - label_pads[1] / 2,
@@ -1484,7 +1513,7 @@ def subplots(
         if row_label:
             fig.text(
                 label_pads[0] / 2,
-                pmu.scale(
+                mrt.utils.scale(
                     1.0 - (i * 2 + 1) / (num_row * 2),
                     out_interval=(label_pads[1] / 5, 1.0 - label_pads[1])),
                 row_label, rotation=90,
@@ -1497,7 +1526,7 @@ def subplots(
             fig.text(**dict(text_kws))
 
     # save figure to file
-    if save_filepath and pmu.check_redo(None, [save_filepath], force):
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout(
             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
             pad=1.0, h_pad=pads[0], w_pad=pads[1])
@@ -1567,7 +1596,7 @@ def subplots(
 #                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
 #             elif isinstance(aspect_ratio, str):
 #                 if 'exact' in aspect_ratio:
-#                     num_col, num_row = pmu.optimal_ratio(num_plots)
+#                     num_col, num_row = mrt.utils.optimal_ratio(num_plots)
 #                     if 'portrait' in aspect_ratio:
 #                         num_row, num_col = num_col, num_row
 #                 if aspect_ratio == 'portrait':
@@ -1593,13 +1622,13 @@ def subplots(
 #         num_col = len(cols)
 #     assert (num_row * num_col >= num_plots)
 #
-#     pads = pmu.auto_repeat(pads, 2, False, True)
-#     figsize_factors = pmu.auto_repeat(figsize_factors, 2, False, True)
+#     pads = mrt.utils.auto_repeat(pads, 2, False, True)
+#     figsize_factors = mrt.utils.auto_repeat(figsize_factors, 2, False, True)
 #
 #     # fix row/col labels
-#     row_labels = pmu.auto_repeat(None, num_row) \
+#     row_labels = mrt.utils.auto_repeat(None, num_row) \
 #         if row_labels is None else [None] + list(row_labels)
-#     col_labels = pmu.auto_repeat(None, num_col) \
+#     col_labels = mrt.utils.auto_repeat(None, num_col) \
 #         if col_labels is None else [None] + list(row_labels)
 #     assert (num_row + 1 == len(row_labels))
 #     assert (num_col + 1 == len(col_labels))
@@ -1651,7 +1680,7 @@ def subplots(
 #
 #             if col_label and is_label(i, j, axs.shape, label_pos):
 #                 fig.text(
-#                     pmu.scale(
+#                     mrt.utils.scale(
 #                         (j * 2 + 1) / (num_col * 2),
 #                         out_interval=(label_pads[0], 1.0)),
 #                     1.0 - label_pads[1] / 2,
@@ -1662,7 +1691,7 @@ def subplots(
 #         if row_label:
 #             fig.text(
 #                 label_pads[0] / 2,
-#                 pmu.scale(
+#                 mrt.utils.scale(
 #                     1.0 - (i * 2 + 1) / (num_row * 2),
 #                     out_interval=(0, 1.0 - label_pads[1])),
 #                 row_label, rotation=90,
@@ -1675,7 +1704,7 @@ def subplots(
 #             fig.text(**dict(text_kws))
 #
 #     # save figure to file
-#     if save_filepath and pmu.check_redo(None, [save_filepath], force):
+#     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
 #         fig.tight_layout(
 #             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
 #             pad=1.0, h_pad=pads[0], w_pad=pads[1])

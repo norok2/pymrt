@@ -50,7 +50,8 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
@@ -171,7 +172,7 @@ def label_thresholds(
         label (np.ndarray[int]): Labels for values
     """
     label = np.zeros_like(arr, dtype=int)
-    thresholds = pmu.auto_repeat(thresholds, 1)
+    thresholds = mrt.utils.auto_repeat(thresholds, 1)
     for threshold in thresholds:
         mask = mask_threshold(arr, threshold, comparison, mode)
         label += mask.astype(int)

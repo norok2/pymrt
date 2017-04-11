@@ -26,6 +26,7 @@ import h5py  # Read and write HDF5 files from Python
 import scipy.io  # SciPy: Input and output
 
 # :: Local Imports
+import pymrt as mrt
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 

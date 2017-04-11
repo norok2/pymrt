@@ -32,8 +32,9 @@ import argparse  # Parser for command-line options, arguments and subcommands
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: Local Imports
-import pymrt.utils as pmu
-import pymrt.input_output as pmio
+import pymrt as mrt
+import pymrt.utils
+import pymrt.input_output
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -56,7 +57,7 @@ def unwrap(
     msg('Input:  {}'.format(in_filepath))
     msg('Output: {}'.format(out_filepath))
     msg('Method: {}'.format(method))
-    if pmu.check_redo([in_filepath], [out_filepath], force):
+    if mrt.utils.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
             if options is not None:
                 options = json.loads(options)
@@ -66,7 +67,7 @@ def unwrap(
                 options['pre_func'] = phs.fix_interval
             if 'post_func' not in options:
                 options['post_func'] = phs.fix_offset
-            pmio.simple_filter_1_1(
+            mrt.input_output.simple_filter_1_1(
                 in_filepath, out_filepath,
                 phs.unwrap_sorting_path, **options)
         elif method == 'laplacian':
@@ -78,7 +79,7 @@ def unwrap(
                 options['pre_func'] = phs.fix_interval
             if 'post_func' not in options:
                 options['post_func'] = phs.fix_offset
-            pmio.simple_filter_1_1(
+            mrt.input_output.simple_filter_1_1(
                 in_filepath, out_filepath,
                 phs.unwrap_laplacian, **options)
         elif method == 'merge-optim':
@@ -91,7 +92,7 @@ def unwrap(
                 [ext_cmd] +
                 ['-{} {}'.format(k, v) for k, v in cmd_args.items()] +
                 [options])
-            pmu.execute(cmd, verbose=verbose)
+            mrt.utils.execute(cmd, verbose=verbose)
 
 
 # ======================================================================

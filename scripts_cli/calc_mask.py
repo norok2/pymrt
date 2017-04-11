@@ -50,12 +50,13 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
-# import pymrt.naming as pmn
-# import pymrt.input_output as pmio
+import pymrt as mrt
+import pymrt.utils
+# import pymrt.naming
+# import pymrt.input_output
 # import pymrt.computation as pmc
 import pymrt.correlation as pml
-# import pymrt.geometry as pmg
+# import pymrt.geometry
 # from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
@@ -159,7 +160,7 @@ def main():
     begin_time = datetime.datetime.now()
 
     if args.output and args.verbose >= VERB_LVL['none']:
-        args.output = os.path.dirname(pmu.realpath(args.output))
+        args.output = os.path.dirname(mrt.utils.realpath(args.output))
         print('OutDir: {}'.format(args.output))
     pml.calc_mask(
         args.input,

@@ -38,6 +38,7 @@ from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 
 # :: Local Imports
+import pymrt as mrt
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
@@ -385,7 +386,7 @@ def gcd(*nums):
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *nums (tuple[int]): The input numbers.
+        *nums (iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
@@ -412,7 +413,7 @@ def lcm(*nums):
     Find the least common multiple (LCM) of a list of numbers.
 
     Args:
-        *numbers (tuple[int]): The input numbers.
+        *numbers (iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the least common multiple (LCM).
@@ -1320,6 +1321,7 @@ def compact_num_str(
         >>> compact_num_str(100.042, 9)
         '100.04200'
     """
+    from numpy import log10
     try:
         # this is to simplify formatting (and accepting even strings)
         val = float(val)
@@ -1328,7 +1330,7 @@ def compact_num_str(
         extra_char_in_dec = 2
         extra_char_in_sign = 1
         # 'order' of zero is 1 for our purposes, because needs 1 char
-        order = np.log10(abs(val)) if abs(val) > 0.0 else 1
+        order = log10(abs(val)) if abs(val) > 0.0 else 1
         # adjust limit for sign
         limit = max_lim - extra_char_in_sign if val < 0.0 else max_lim
         # perform the conversion
@@ -1579,10 +1581,11 @@ def significant_figures(
     See Also:
         The 'decimal' Python standard module.
     """
+    from numpy import log10
 
     val = float(val)
     num = int(num)
-    order = int(np.floor(np.log10(abs(val)))) if abs(val) != 0.0 else 0
+    order = int(np.floor(log10(abs(val)))) if abs(val) != 0.0 else 0
     dec = num - order - 1  # if abs(order) < abs(num) else 0
     typ = 'f' if order < num else 'g'
     prec = dec if order < num else num
@@ -1619,11 +1622,12 @@ def format_value_error(
         >>> format_value_error(12345.6, 78.9, 2)
         ('12346', '79')
     """
+    from numpy import log10
     val = float(val)
     err = float(err)
     num = int(num)
-    val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
-    err_order = np.ceil(np.log10(np.abs(err))) if val != 0 else 0
+    val_order = np.ceil(log10(np.abs(val))) if val != 0 else 0
+    err_order = np.ceil(log10(np.abs(err))) if val != 0 else 0
     try:
         val_str = significant_figures(val, val_order - err_order + num)
         err_str = significant_figures(err, num)
@@ -1941,7 +1945,8 @@ def sgnlog(
         >>> sgnlog(100, 2)
         6.6438561897747253
     """
-    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
+    from numpy import log
+    return log(np.abs(x)) / log(base) * np.sign(x)
 
 
 # ======================================================================
@@ -1976,12 +1981,13 @@ def sgnlogspace(
         >>> sgnlogspace(2, 10, 4)
         array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
+    from numpy import exp, log
     if not is_same_sign((start, stop)):
         bounds = (
-            (start, -(np.exp(-np.log(np.abs(start))))),
-            ((np.exp(-np.log(np.abs(stop)))), stop))
+            (start, -(exp(-log(np.abs(start))))),
+            ((exp(-log(np.abs(stop)))), stop))
         args_bounds = tuple(
-            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
+            tuple(log(np.abs(val)) / log(base) for val in arg_bounds)
             for arg_bounds in bounds)
         args_num = (num // 2, num - num // 2)
         args_sign = (np.sign(start), np.sign(stop))
@@ -1995,7 +2001,7 @@ def sgnlogspace(
     else:
         sign = np.sign(start)
         logspace_bound = \
-            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
+            tuple(log(np.abs(val)) / log(base) for val in (start, stop))
         samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
     return samples
 
@@ -2274,20 +2280,58 @@ def idftn(arr):
 # ======================================================================
 def coord(
         shape,
-        origin=0.5,
+        position=0.5,
         is_relative=True,
-        dense=False,
         use_int=True):
+    """
+    Calculate the coordinate in a given shape for a specified position.
+
+    Args:
+        shape (iterable[int]): The shape of the mask in px.
+        position (float|iterable[float]): Relative position of the origin.
+            Values are in the [0, 1] interval.
+        is_relative (bool): Interpret origin as relative.
+        use_int (bool): Force interger values for the coordinates.
+        
+    Returns:
+        position (list): The coordinate in the shape.
+        
+    Examples:
+        >>> coord((5, 5))
+        [2, 2]
+        >>> coord((4, 4))
+        [2, 2]
+    """
+    position = auto_repeat(position, len(shape), check=True)
+    if is_relative:
+        if use_int:
+            position = [int(scale(x, (0, dim)))
+                        for x, dim in zip(position, shape)]
+        else:
+            position = [scale(x, (0, dim - 1))
+                        for x, dim in zip(position, shape)]
+    elif any([not isinstance(x, int) for x in position]) and use_int:
+        raise TypeError('Absolute origin must be integer.')
+    return position
+
+
+# ======================================================================
+def grid_coord(
+        shape,
+        position=0.5,
+        is_relative=True,
+        use_int=True,
+        dense=False):
     """
     Calculate the generic x_i coordinates for N-dim operations.
 
     Args:
-        shape (tuple[int]): The shape of the mask in px.
-        origin (float|tuple[float]): Relative position of the origin.
+        shape (iterable[int]): The shape of the mask in px.
+        position (float|iterable[float]): Relative position of the origin.
             Values are in the [0, 1] interval.
         is_relative (bool): Interpret origin as relative.
         dense (bool): Determine the shape of the mesh-grid arrays.
-        use_int (bool):
+        use_int (bool): Force interger values for the coordinates.
 
     Returns:
         coord (list[np.ndarray]): mesh-grid ndarrays.
@@ -2295,63 +2339,54 @@ def coord(
             dimension is larger than 1.
 
     Examples:
-        >>> coord((4, 4))
+        >>> grid_coord((4, 4))
         [array([[-2],
                [-1],
                [ 0],
                [ 1]]), array([[-2, -1,  0,  1]])]
-        >>> coord((5, 5))
+        >>> grid_coord((5, 5))
         [array([[-2],
                [-1],
                [ 0],
                [ 1],
                [ 2]]), array([[-2, -1,  0,  1,  2]])]
-        >>> coord((2, 2))
+        >>> grid_coord((2, 2))
         [array([[-1],
                [ 0]]), array([[-1,  0]])]
-        >>> coord((2, 2), dense=True)
+        >>> grid_coord((2, 2), dense=True)
         array([[[-1, -1],
                 [ 0,  0]],
         <BLANKLINE>
                [[-1,  0],
                 [-1,  0]]])
-        >>> coord((2, 3), origin=(0.0, 0.5))
+        >>> grid_coord((2, 3), position=(0.0, 0.5))
         [array([[0],
                [1]]), array([[-1,  0,  1]])]
-        >>> coord((3, 9), origin=(1, 4), is_relative=False)
+        >>> grid_coord((3, 9), position=(1, 4), is_relative=False)
         [array([[-1],
                [ 0],
                [ 1]]), array([[-4, -3, -2, -1,  0,  1,  2,  3,  4]])]
-        >>> coord((3, 9), origin=0.2, is_relative=True)
+        >>> grid_coord((3, 9), position=0.2, is_relative=True)
         [array([[0],
                [1],
                [2]]), array([[-1,  0,  1,  2,  3,  4,  5,  6,  7]])]
-        >>> coord((4, 4), use_int=False)
+        >>> grid_coord((4, 4), use_int=False)
         [array([[-1.5],
                [-0.5],
                [ 0.5],
                [ 1.5]]), array([[-1.5, -0.5,  0.5,  1.5]])]
-        >>> coord((5, 5), use_int=False)
+        >>> grid_coord((5, 5), use_int=False)
         [array([[-2.],
                [-1.],
                [ 0.],
                [ 1.],
                [ 2.]]), array([[-2., -1.,  0.,  1.,  2.]])]
-        >>> coord((2, 3), origin=(0.0, 0.0), use_int=False)
+        >>> grid_coord((2, 3), position=(0.0, 0.0), use_int=False)
         [array([[ 0.],
                [ 1.]]), array([[ 0.,  1.,  2.]])]
     """
-    origin = auto_repeat(origin, len(shape), check=True)
-    if is_relative:
-        if use_int:
-            origin = [int(scale(x, (0, dim)))
-                      for x, dim in zip(origin, shape)]
-        else:
-            origin = [scale(x, (0, dim - 1))
-                      for x, dim in zip(origin, shape)]
-    elif any([not isinstance(x, int) for x in origin]) and use_int:
-        raise TypeError('Absolute origin must be integer.')
-    grid = [slice(-x0, dim - x0) for x0, dim in zip(origin, shape)]
+    position = coord(shape, position, is_relative, use_int)
+    grid = [slice(-x0, dim - x0) for x0, dim in zip(position, shape)]
     return np.ogrid[grid] if not dense else np.mgrid[grid]
 
 
@@ -2401,7 +2436,7 @@ def _kk_2(
                [[ 5.55555556,  2.77777778],
                 [ 2.77777778,  0.        ]]])
     """
-    kk_ = coord(shape)
+    kk_ = grid_coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
         kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
@@ -2457,14 +2492,15 @@ def _kk(
                [[ 2.3570226 ,  1.66666667],
                 [ 1.66666667,  0.        ]]])
     """
-    kk_ = coord(shape)
+    from numpy import sqrt
+    kk_ = grid_coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
         kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
     kk = np.zeros(shape)
     for k_i, dim in zip(kk_, shape):
         kk += (k_i ** 2)
-    return np.sqrt(kk)
+    return sqrt(kk)
 
 
 # ======================================================================
@@ -2708,12 +2744,13 @@ def auto_bin(
         >>> auto_bin(arr, None)
         100
     """
+    from numpy import sqrt, log2
     if method == 'auto':
         num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
     elif method == 'sqrt':
-        num = int(np.ceil(np.sqrt(arr.size)))
+        num = int(np.ceil(sqrt(arr.size)))
     elif method == 'sturges':
-        num = int(np.ceil(np.log2(arr.size)) + 1)
+        num = int(np.ceil(log2(arr.size)) + 1)
     elif method == 'rice':
         num = int(np.ceil(2 * arr.size ** (1 / 3)))
     elif method == 'scott':
@@ -2806,12 +2843,13 @@ def entropy(
     Examples:
         >>>
     """
+    from numpy import log
     # normalize histogram to unity
     hist = hist / np.sum(hist)
     # skip zero values
     mask = hist != 0.0
     log_hist = np.zeros_like(hist)
-    log_hist[mask] = np.log(hist[mask]) / np.log(base)
+    log_hist[mask] = log(hist[mask]) / log(base)
     h = -np.sum(hist * log_hist)
     return h
 
@@ -2914,7 +2952,7 @@ def mutual_information(
         arr1,
         arr2,
         base=np.e,
-        bins='auto'):
+        bins='sqrt'):
     """
     Calculate the mutual information between two arrays.
 
@@ -3014,10 +3052,11 @@ def mutual_information(
     return abs(mi)
 
 
+# ======================================================================
 def norm_mutual_information(
         arr1,
         arr2,
-        bins='auto'):
+        bins='sqrt'):
     """
 
     Args:
@@ -3099,6 +3138,8 @@ def gaussian_nd(
     Returns:
 
     """
+    from numpy import exp
+
     if not n_dim:
         n_dim = max_iter_len((shape, sigmas, origin))
 
@@ -3106,8 +3147,8 @@ def gaussian_nd(
     sigmas = auto_repeat(sigmas, n_dim)
     origin = auto_repeat(origin, n_dim)
 
-    xx = coord(shape, origin)
-    kernel = np.exp(
+    xx = grid_coord(shape, origin)
+    kernel = exp(
         -(sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
     if normalize:
         kernel /= np.sum(kernel)
@@ -3492,7 +3533,8 @@ def polar2complex(modulus, phase):
     Returns:
         z (complex|np.ndarray): The complex number z = R * exp(i * phi).
     """
-    return modulus * np.exp(1j * phase)
+    from numpy import exp
+    return modulus * exp(1j * phase)
 
 
 # ======================================================================
@@ -3556,7 +3598,8 @@ def polar2cartesian(modulus, phase):
          - real (float|np.ndarray): The real part z' of the complex number.
          - imag (float|np.ndarray): The imaginary part z" of the complex number.
     """
-    return modulus * np.cos(phase), modulus * np.sin(phase)
+    from numpy import sin, cos
+    return modulus * cos(phase), modulus * sin(phase)
 
 
 # ======================================================================
@@ -3573,7 +3616,8 @@ def cartesian2polar(real, imag):
          - modulus (float): The modulus R of the complex number.
          - argument (float): The phase phi of the complex number.
     """
-    return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
+    from numpy import sqrt, arctan2 as arctan
+    return sqrt(real ** 2 + imag ** 2), arctan(real, imag)
 
 
 # ======================================================================
@@ -3811,43 +3855,17 @@ def euclid_dist(
         array([-1.41421356, -2.82842712, -4.24264069, -5.65685425, -7.07106781,
                -8.48528137])
     """
-    array = (arr2 - arr1) / np.sqrt(2.0)
+    from numpy import sqrt
+    array = (arr2 - arr1) / sqrt(2.0)
     if unsigned:
         array = np.abs(array)
     return array
 
 
 # ======================================================================
-def curve_fit(args):
-    """
-    Interface to use scipy.optimize.curve_fit with multiprocessing.
-    If an error is encountered, optimized parameters and their covariance are
-    set to 0.
-
-    Args:
-        args (list): List of parameters to pass to the function
-
-    Returns:
-        par_fit (np.ndarray): Optimized parameters
-        par_cov (np.ndarray): The covariance of the optimized parameters.
-            The diagonals provide the variance of the parameter estimate
-    """
-    try:
-        result = sp.optimize.curve_fit(*args)
-    except (RuntimeError, RuntimeWarning, ValueError):
-        err_val = 0.0
-        n_fit_par = len(args[3])  # number of fitting parameters
-        result = \
-            np.tile(err_val, n_fit_par), \
-            np.tile(err_val, (n_fit_par, n_fit_par))
-    return result
-
-
-# ======================================================================
 if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
-
 
 # ======================================================================
 elapsed(os.path.basename(__file__))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.b0: dB0 computation algorithms.
+pymrt.recipes.b0: dB0 magnetic field variation computation.
 """
 
 # ======================================================================
@@ -19,7 +19,8 @@ import collections  # Container datatypes
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
-# import pymrt.utils as pmu
+import pymrt as mrt
+# import pymrt.utils
 # import pymrt.computation as pmc
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -30,16 +31,18 @@ from pymrt.constants import GAMMA, GAMMA_BAR
 from pymrt.config import _B0
 
 from pymrt.recipes import phs
+from pymrt.recipes.phs import phs_to_dphs, dphs_to_phs
 
 # ======================================================================
 _TE = 20.0  # ms
 
 
 # ======================================================================
-def single_phs_to_db0(
+def phs_to_db0(
         phs_arr,
         b0=_B0,
-        te=_TE):
+        tis=_TE,
+        units='ms'):
     """
     Convert single echo phase to magnetic field variation.
 
@@ -48,18 +51,17 @@ def single_phs_to_db0(
     Args:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
         b0 (float): Main Magnetic Field B0 Strength in T.
-        te (float): Echo Time in ms.
+        tis (float): Echo Time in ms.
 
     Returns:
         db0_arr (np.ndarray): The relative field array in ppb
     """
-    ppb_factor = 1e9
-    db0_arr = ppb_factor * phs_arr / (GAMMA['1H'] * b0 * (te * 1e-3))
-    return db0_arr
+    return dphs_to_db0(
+        phs_to_dphs(phs_arr, tis, tis_mask=None, units=units), b0=b0)
 
 
 # ======================================================================
-def db0_to_single_phs(
+def db0_to_phs(
         db0_arr,
         b0=_B0,
         te=_TE):
@@ -76,9 +78,7 @@ def db0_to_single_phs(
     Returns:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
     """
-    ppb_factor = 1e-9
-    phs_arr = ppb_factor * db0_arr * (GAMMA['1H'] * b0 * (te * 1e-3))
-    return phs_arr
+    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=te)
 
 
 # ======================================================================

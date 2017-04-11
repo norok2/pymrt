@@ -47,10 +47,11 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as pmu
-# import pymrt.naming as pmn
-# import pymrt.input_output as pmio
-# import pymrt.geometry as pmg
+import pymrt as mrt
+# import pymrt.base
+# import pymrt.naming
+# import pymrt.input_output
+# import pymrt.geometry
 # from pymrt.sequences import mp2rage
 from pymrt import msg, dbg
 

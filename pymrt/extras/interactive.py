@@ -24,9 +24,10 @@ Examples:
     ...         label='a (arb.units)',
     ...         default=10, start=-100, stop=100, step=0.01)), ])
     >>> def plot_func(
-    ...         ax,
+    ...         fig,
     ...         params=None,
     ...         title='Test'):
+    ...     ax = fig.add_subplot(111)
     ...     x = np.linspace(-100, 100, 128)
     ...     try:
     ...         y = np.sin(x / params['a'])
@@ -63,6 +64,7 @@ import pytk.widgets
 import matplotlib.backends.backend_tkagg as tkagg
 
 # :: Local Imports
+import pymrt as mrt
 import pymrt
 
 from pymrt import INFO, DIRS, MY_GREETINGS
@@ -157,7 +159,6 @@ class PytkMain(pytk.widgets.Frame):
             side='left', fill='both', padx=4, pady=4, expand=True)
 
         self.fig = mpl.figure.Figure(figsize=(0.1, 0.1))
-        self.ax = self.fig.add_subplot(111)
         self.canvas = tkagg.FigureCanvasTkAgg(
             self.fig, self.frmLeft)
         self.nav_toolbar = tkagg.NavigationToolbar2TkAgg(
@@ -235,7 +236,7 @@ class PytkMain(pytk.widgets.Frame):
 
     def actionPlotUpdate(self, *args):
         """Update the plot."""
-        self.ax.clear()
+        self.fig.clear()
         if hasattr(self, 'wdgInteractives'):
             params = {}
             for k, v in self.wdgInteractives.items():
@@ -247,7 +248,7 @@ class PytkMain(pytk.widgets.Frame):
                 params[k] = val
         else:
             params = {k: v['default'] for k, v in self.interactives.items()}
-        self.func(ax=self.ax, params=params)
+        self.func(fig=self.fig, params=params)
         self.canvas.draw()
 
     def actionExit(self, event=None):

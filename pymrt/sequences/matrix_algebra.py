@@ -8,7 +8,7 @@ pymrt/sequences/matrix_algebra: solver of the Bloch-McConnell equations.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -16,9 +16,9 @@ from __future__ import(
 import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-import cmath  # Mathematical functions for complex numbers
-import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import cmath  # Mathematical functions for complex numbers
+# import time  # Time access and conversions
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
 # import argparse  # Parser for command-line options, arguments and subcommands
@@ -30,6 +30,7 @@ import itertools  # Functions creating iterators for efficient looping
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import warnings  # Warning control
 # import profile  # Deterministic Profiler
+import pickle  # Python object serialization
 
 
 # :: External Imports
@@ -63,23 +64,23 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 # from numba import jit
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 
-# import pymrt.geometry as pmg
+# import pymrt.geometry
 # import pymrt.plot as pmp
-# import pymrt.segmentation as pms
+# import pymrt.segmentation
 
-# from pymrt import INFO
+from pymrt import INFO, DIRS
 # from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
+from pymrt.config import CFG
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
 # Magnetic Field Strength
 B0 = 7.0  # T
-
-_SUPERLORENTZ = {'x': None, 'y': None}
 
 
 # ======================================================================
@@ -98,10 +99,21 @@ def superlorentz(x):
 
 
 # ======================================================================
-# todo: check that the sampling rate is appropriate: 1024 is usually enough
-_SUPERLORENTZ['x'] = np.logspace(-10.0, 1.8, 1024)
-_SUPERLORENTZ['y'] = superlorentz(_SUPERLORENTZ['x'])
-pmu.elapsed('Superlorentz Approx.')
+def _prepare_superlorentz(
+        x=np.logspace(-10.0, 1.8, 2048),
+        use_cache=CFG['use_cache']):
+    cache_filepath = os.path.join(DIRS['cache'], 'superlorentz_approx.cache')
+    if not os.path.isfile(cache_filepath) or not use_cache:
+        result = dict(x=x, y=superlorentz(x))
+        with open(cache_filepath, 'wb') as cache_file:
+            pickle.dump(result, cache_file)
+    else:
+        with open(cache_filepath, 'rb') as cache_file:
+            result = pickle.load(cache_file)
+    return result
+
+_SUPERLORENTZ = _prepare_superlorentz()
+mrt.utils.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -200,6 +212,73 @@ def _shape_cauchy(
 
 
 # ======================================================================
+def _shape_gauss(
+        num_steps,
+        sigma=0.1,
+        mu=0.5):
+    """
+
+    Args:
+        num_steps:
+        truncation:
+
+    Returns:
+
+    """
+    from numpy import exp
+    mu *= num_steps
+    sigma *= num_steps
+    x = np.arange(num_steps)
+    y = exp(-(x - mu) ** 2 / (2 * sigma ** 2))
+    return y
+
+
+# ======================================================================
+def _shape_lorentz(
+        num_steps,
+        gamma=0.1,
+        mu=0.5):
+    """
+
+    Args:
+        num_steps:
+        truncation:
+
+    Returns:
+
+    """
+    mu *= num_steps
+    gamma *= num_steps
+    x = np.arange(num_steps)
+    y = gamma / (np.pi * ((x - mu) ** 2 + gamma ** 2))
+    return y
+
+
+# ======================================================================
+def _shape_fermi(
+        num_steps,
+        flat=0.2,
+        step=0.03,
+        mu=0.5):
+    """
+
+    Args:
+        num_steps (int):
+        truncation:
+
+    Returns:
+
+    """
+    from numpy import exp
+    mu *= num_steps
+    flat *= num_steps
+    step *= num_steps
+    x = np.arange(num_steps)
+    y = 1.0 / (1.0 + exp((np.abs(x - mu) - flat) / step))
+    return y
+
+
+# ======================================================================
 def _shape_sinc(
         num_steps,
         roots=(3.0, 3.0)):
@@ -250,7 +329,7 @@ def _shape_from_file(
 
     """
     tmp_dirpaths = [
-        pmu.realpath(dirpath),
+        mrt.utils.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
     ]
     for tmp_dirpath in tmp_dirpaths:
@@ -258,12 +337,12 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + pmu.add_extsep(pmu.EXT['tab']))
+        dirpath, filename + mrt.utils.add_extsep(mrt.utils.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
         y_im = 0.0
-    elif arr.ndim > 1:
+    else:  # if arr.ndim > 1:
         y_re = arr[:, 0]
         y_im = arr[:, 1]
     if arr.ndim > 2:
@@ -362,7 +441,7 @@ def _propagator_sum_order1(
     l_op_sum = sum(l_op_list)
     # pseudo-first-order correction
     comm_list = [
-        pmu.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
+        mrt.utils.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
         for i in range(len(l_op_list[:-1]))]
     comm_sum = sum(comm_list)
     return sp.linalg.expm(-(l_op_sum + comm_sum))
@@ -455,7 +534,7 @@ def _propagator_poly(
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -506,7 +585,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -553,7 +632,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -591,7 +670,7 @@ def _propagator_interp(
                     (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
                     method=method, fill_value=0.0)
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -635,7 +714,7 @@ def _propagator_linear(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_op_list = [p_op_arr[j, :, :] for j in
                      range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -679,7 +758,7 @@ def _propagator_linear(
                      np.abs(pulse_exc.w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = pmu.mdot(*p_op_list[::-1])
+        p_op = mrt.utils.mdot(*p_op_list[::-1])
     return p_op
 
 
@@ -715,7 +794,7 @@ def _propagator_reduced(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return pmu.mdot(*p_op_list[::-1])
+    return mrt.utils.mdot(*p_op_list[::-1])
 
 
 # ======================================================================
@@ -742,7 +821,7 @@ class SpinModel(object):
         Base constructor of the spin model class.
 
         Args:
-            s0 (float): magnetization vector magnitude scaling in arb.units.
+            s0 (float): signal magnitude scaling in arb.units.
             mc (ndarray[float]): magnetization concentration ratios in #.
             w0 (ndarray[float]): resonance angular frequencies in rad/s.
             r1 (ndarray[float]): longitudinal relaxation rates in Hz.
@@ -772,7 +851,7 @@ class SpinModel(object):
         sum_mc = sum(mc)
         self.s0 = s0
         self.mc = np.array(mc) / sum_mc
-        self.m0 = s0 * self.mc
+        self.m0 = self.mc
         self.w0 = np.array(w0)
         self.r1 = np.array(r1)
         self.r2 = np.array(r2)
@@ -954,7 +1033,7 @@ class SpinModel(object):
 
     def __str__(self):
         text = 'SpinModel: '
-        names = ['m0', 'w0', 'r1', 'r2', 'k']
+        names = ['s0', 'm0', 'w0', 'r1', 'r2', 'k']
         for name in names:
             text += '{}={}  '.format(name, getattr(self, name))
         return text
@@ -1152,7 +1231,7 @@ class PulseExc(object):
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self.w1_arr]
-            p_op = pmu.mdot(*p_op_list[::-1])
+            p_op = mrt.utils.mdot(*p_op_list[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
@@ -1164,7 +1243,7 @@ class PulseExc(object):
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self.w1_arr]
-                p_op = pmu.mdot(*p_op_list[::-1])
+                p_op = mrt.utils.mdot(*p_op_list[::-1])
         return p_op
 
     def __str__(self):
@@ -1271,14 +1350,14 @@ class PulseSequence:
             self,
             *args,
             **kwargs):
-        pass
+        return ()
 
     def signal(
             self,
             spin_model):
-        signal = pmu.mdot(
+        signal = mrt.utils.mdot(
             spin_model.det, self.propagator(spin_model), spin_model.m_eq)
-        return np.abs(signal)
+        return np.abs(signal) * spin_model.s0
 
     def __str__(self):
         text = '{}'.format(self.__class__.__name__)
@@ -1314,7 +1393,7 @@ class PulseList(PulseSequence):
         propagators = [
             pulse.propagator(spin_model, *args, **kwargs)
             for pulse in self.pulses]
-        return pmu.mdot(*propagators[::-1])
+        return mrt.utils.mdot(*propagators[::-1])
 
 
 # ======================================================================
@@ -1407,6 +1486,6 @@ class MtFlash(PulseTrain):
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-    pmu.print_elapsed()
+    mrt.utils.print_elapsed()
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()
