@@ -13,7 +13,7 @@ from __future__ import(
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Operating System facilities
+# import os  # Miscellaneous operating system interfaces
 # import math  # Mathematical Functions
 # import collections  # Container datatypes
 import argparse  # Argument Parsing
@@ -31,10 +31,11 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as pmu
-# import pymrt.naming as pmn
-# import pymrt.input_output as pmio
-# import pymrt.geometry as pmg
+import pymrt as mrt
+# import pymrt.base
+# import pymrt.naming
+# import pymrt.input_output
+# import pymrt.geometry
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
@@ -87,21 +88,7 @@ def main():
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
     msg(__doc__.strip())
 
-    T1_val, TR_val = np.ogrid[700:2500, 1:20:0.1]
-    th_E_val = np.rad2deg(np.arccos(np.exp(-TR_val / T1_val)))
-    plt.ion()
-    plt.xlabel('TR / ms')
-    plt.ylabel('flip angle / deg')
-    plt.contourf(np.arange(1, 20, 0.1), np.arange(700, 2500), th_E_val, 50)
-    plt.colorbar()
-    plt.show(block=True)
-    print(T1_val.shape)
 
-    import tkinter
-
-    top = tkinter.Tk()
-    # Code to add widgets will go here...
-    top.mainloop()
 
 
 # ======================================================================

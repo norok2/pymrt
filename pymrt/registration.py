@@ -51,9 +51,10 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
-# import pymrt.input_output as pmio
-import pymrt.geometry as pmg
+import pymrt as mrt
+import pymrt.utils
+# import pymrt.input_output
+import pymrt.geometry
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
 # from pymrt import msg, dbg
@@ -105,7 +106,7 @@ def params_to_affine(
         shift = params[:num_dim]
         params = params[num_dim:]
     if 'rotation' in transform or transform in ['rigid']:
-        linear = pmg.angles2linear(params)
+        linear = mrt.geometry.angles2linear(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
@@ -139,7 +140,7 @@ def set_init_parameters(
     # :: set up shift
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
-            shift = pmg.weighted_center(moving) - pmg.weighted_center(fixed)
+            shift = mrt.geometry.weighted_center(moving) - mrt.geometry.weighted_center(fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
         else:  # 'none' or not known
@@ -149,7 +150,7 @@ def set_init_parameters(
     # :: set up other parameters, according to transform
     if 'rotation' in transform or transform in ['rigid']:
         # todo: use inertia for rotation angles?
-        num_angles = pmg.num_angles_from_dim(moving.ndim)
+        num_angles = mrt.geometry.num_angles_from_dim(moving.ndim)
         if init_guess_other == 'random':
             angles = np.random.rand(num_angles) * np.pi / 2.0
         else:  # 'none' or not known
@@ -168,8 +169,8 @@ def set_init_parameters(
     elif transform == 'affine':
         if init_guess_other == 'weights':
             # todo: improve to find real rotation
-            rot_moving = pmg.rotation_axes(moving)
-            rot_fixed = pmg.rotation_axes(fixed)
+            rot_moving = mrt.geometry.rotation_axes(moving)
+            rot_fixed = mrt.geometry.rotation_axes(fixed)
             linear = np.dot(rot_fixed.transpose(), rot_moving)
         elif init_guess_other == 'random':
             linear = np.random.rand(moving.ndim, moving.ndim)
@@ -211,18 +212,18 @@ def _discrete_generator(transform, num_dim):
                 yield linear, shift
     elif transform == 'pi/2_rotation':
         shift = np.zeros((num_dim,))
-        num_angles = pmg.num_angles_from_dim(num_dim)
+        num_angles = mrt.geometry.num_angles_from_dim(num_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
-            linear = pmg.angles2linear(angles)
+            linear = mrt.geometry.angles2linear(angles)
             yield linear, shift
     elif transform == 'pi/2_rotation+':
         shift = np.zeros((num_dim,))
-        num_angles = pmg.num_angles_from_dim(num_dim)
+        num_angles = mrt.geometry.num_angles_from_dim(num_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             for diagonal in itertools.product([-1, 1], repeat=num_dim):
                 linear = np.dot(
                     np.diag(diagonal).astype(np.float),
-                    pmg.angles2linear(angles))
+                    mrt.geometry.angles2linear(angles))
                 yield linear, shift
     else:
         shift = np.zeros(num_dim)
@@ -250,7 +251,7 @@ def minimize_discrete(
                 interp_order=interp_order))
     if cost_func is None:
         cost_func = \
-            pmu.set_keyword_parameters(_min_func_affine, {})['cost_func']
+            mrt.utils.set_keyword_parameters(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
@@ -281,7 +282,7 @@ def _min_func_affine(
     linear, shift = params_to_affine(params, num_dim, transform)
     # the other valid parameters of the `affine_transform` function are:
     #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
-    moved_ravel = pmg.affine_transform(
+    moved_ravel = mrt.geometry.affine_transform(
         moving_ravel.reshape(shape), linear, shift, order=interp_order).ravel()
     return cost_func(moved_ravel, fixed_ravel)
 
@@ -343,7 +344,7 @@ def affine_registration(
             method = 'BFGS'
         if cost_func is None:
             kwargs__min_func_affine = \
-                pmu.set_keyword_parameters(_min_func_affine, {})
+                mrt.utils.set_keyword_parameters(_min_func_affine, {})
             cost_func = kwargs__min_func_affine['cost_func']
         args__min_func_affine = (
             moving.ravel(), fixed.ravel(), moving.shape,
@@ -396,7 +397,7 @@ def external_registration(
     # generate
     if tool.startswith('FSL'):
         cmd = EXT_CMD['fsl/5.0/flirt']
-        pmu.execute(cmd)
+        mrt.utils.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension
     return affine
@@ -428,7 +429,7 @@ s2 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH' \
 t12 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
       '-3D_e=pre0,l=1,reg__T2S.nii.gz'
 
-import pymrt.input_output as pmio
+import pymrt.input_output
 
 
 def my_reg(array_list, *args, **kwargs):
@@ -438,16 +439,16 @@ def my_reg(array_list, *args, **kwargs):
     # linear, shift = affine_registration(
     #     img, ref, transform='translation', init_guess=('weights', 'weights'))
     # # print(shift)
-    # img = pmg.affine_transform(img, linear, shift)
+    # img = mrt.geometry.affine_transform(img, linear, shift)
     # ... then reorient
     linear, shift = affine_registration(
         img, ref, transform='reflection', interp_order=0)
     print(linear)
-    img = pmg.affine_transform(img, linear, shift)
+    img = mrt.geometry.affine_transform(img, linear, shift)
     # # ... and finally perform finer registration
     # linear, shift = affine_registration(img, ref, *args, **kwargs)
-    # img = pmg.affine_transform(img, linear, shift)
-    # print(pmg.encode_affine(linear, shift))
+    # img = mrt.geometry.affine_transform(img, linear, shift)
+    # print(mrt.geometry.encode_affine(linear, shift))
     return img
 
 
@@ -460,14 +461,14 @@ if __name__ == '__main__':
     # 'reflection', 3)):
     #     print(idx)
     #     print(linear)
-    # pmio.simple_filter_n_1(
+    # mrt.input_output.simple_filter_n_1(
     #     [s1, s2], t12, my_reg,
     #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
-    # pmio.simple_filter_n_1(
+    # mrt.input_output.simple_filter_n_1(
     #     [s1, s3], t13, my_reg,
     #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
 
     end_time = datetime.datetime.now()
     print('ExecTime: {}'.format(end_time - begin_time))
-    pmu.print_elapsed()
+    mrt.utils.print_elapsed()

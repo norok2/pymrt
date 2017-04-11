@@ -52,11 +52,12 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
-import pymrt.utils as pmu
-import pymrt.naming as pmn
-import pymrt.geometry as pmg
+import pymrt as mrt
+import pymrt.utils
+import pymrt.naming
+import pymrt.geometry
 import pymrt.plot as pmp
-import pymrt.segmentation as pms
+import pymrt.segmentation
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
@@ -536,7 +537,7 @@ def simple_filter_1_x(
     """
     arr, meta = load(in_filepath, meta=True)
     results = func(arr, *args, **kwargs)
-    path, base, ext = pmu.split_path(in_filepath)
+    path, base, ext = mrt.utils.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
             out_basepath, out_filename_template.format_map(locals()))
@@ -647,8 +648,8 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = pmu.change_ext(
-            os.path.basename(in_filepath), '', pmu.EXT['niz'])
+        out_basename = mrt.utils.change_ext(
+            os.path.basename(in_filepath), '', mrt.utils.EXT['niz'])
     out_filepaths = []
 
     arr, meta = load(in_filepath, meta=True)
@@ -659,7 +660,7 @@ def split(
         i_str = str(i).zfill(len(str(len(arrs))))
         out_filepath = os.path.join(
             out_dirpath,
-            pmu.change_ext(out_basename + '-' + i_str, pmu.EXT['niz'], ''))
+            mrt.utils.change_ext(out_basename + '-' + i_str, mrt.utils.EXT['niz'], ''))
         save(out_filepath, image, **{k: v for k, v in meta.items()})
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -693,7 +694,7 @@ def zoom(
     """
 
     def _zoom(array, zoom, interp_order, extra_dim, fill_dim):
-        zoom, shape = pmg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -734,8 +735,8 @@ def resample(
 
     def _zoom(
             array, new_shape, aspect, interp_order, extra_dim, fill_dim):
-        zoom = pmg.shape2zoom(array.shape, new_shape, aspect)
-        zoom, shape = pmg.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom = mrt.geometry.shape2zoom(array.shape, new_shape, aspect)
+        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -768,7 +769,7 @@ def frame(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, pmg.frame, border, background,
+        in_filepath, out_filepath, mrt.geometry.frame, border, background,
         use_longest)
 
 
@@ -792,7 +793,7 @@ def reframe(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, pmg.reframe, new_shape, background)
+        in_filepath, out_filepath, mrt.geometry.reframe, new_shape, background)
 
 
 # ======================================================================
@@ -828,7 +829,7 @@ def common_sampling(
         shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
         for i, shape in enumerate(shape_list):
             shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = pmu.lcm if lossless else max
+        combiner = mrt.utils.lcm if lossless else max
         new_shape = [
             combiner(*list(shape_arr[:, i]))
             for i in range(len(new_shape))]
@@ -942,9 +943,9 @@ def mask_threshold(
     See Also:
         pymrt.segmentation.mask_threshold
     """
-    kw_params = pmu.set_keyword_parameters(pms.mask_threshold, locals())
+    kw_params = mrt.utils.set_keyword_parameters(mrt.segmentation.mask_threshold, locals())
     simple_filter_1_1(
-        in_filepath, out_filepath, pms.mask_threshold, **kw_params)
+        in_filepath, out_filepath, mrt.segmentation.mask_threshold, **kw_params)
 
 
 # ======================================================================
@@ -968,7 +969,7 @@ def find_objects(
     """
 
     def _find_objects(array, structure, max_label):
-        labels, masks = pms.find_objects(array, structure, max_label, False)
+        labels, masks = mrt.segmentation.find_objects(array, structure, max_label, False)
         return labels
 
     simple_filter_1_1(
@@ -1015,7 +1016,7 @@ def calc_stats(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    return pmu.calc_stats(arr[mask], *args, **kwargs)
+    return mrt.utils.calc_stats(arr[mask], *args, **kwargs)
 
 
 # ======================================================================

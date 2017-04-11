@@ -81,24 +81,27 @@ import scipy.signal  # SciPy: Signal Processing
 # import sympy.mpmath  # SymPy: Function approximation
 
 # :: Local Imports
-import pymrt.utils as pmu
-import pymrt.naming as pmn
-import pymrt.geometry as pmg
-import pymrt.plot as pmp
-import pymrt.registration as pmr
-import pymrt.segmentation as pms
-import pymrt.computation as pmc
-import pymrt.correlation as pml
-import pymrt.input_output as pmio
-import pymrt.sequences as pmq
-import pymrt.extras as pme
+import pymrt as mrt
+import pymrt as mrt
+import pymrt.utils
+import pymrt.naming
+import pymrt.geometry
+import pymrt.plot
+import pymrt.registration
+import pymrt.segmentation
+import pymrt.computation
+import pymrt.correlation
+import pymrt.input_output
+import pymrt.sequences
+import pymrt.extras
 
 from pymrt.sequences import mp2rage
 from pymrt.sequences import matrix_algebra
 from pymrt.extras import twix
 from pymrt.extras import jcampdx
+from pymrt.recipes import *
 
-from pymrt import INFO
+from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed

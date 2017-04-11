@@ -47,7 +47,8 @@ import scipy.constants  # SciPy: Constants
 
 
 # :: Local Imports
-# import pymrt.modules.base as pmu
+import pymrt as mrt
+# import pymrt.modules.base
 # import pymrt.modules.plot as pmp
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL

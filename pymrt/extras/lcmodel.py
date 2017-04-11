@@ -46,11 +46,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 
-# import pymrt.naming as pmn
-# import pymrt.input_output as pmio
-# import pymrt.geometry as pmg
+# import pymrt.naming
+# import pymrt.input_output
+# import pymrt.geometry
 # from pymrt.sequences import mp2rage
 from pymrt import elapsed, print_elapsed
 
@@ -143,7 +144,7 @@ def read_input(
 def read_output(
         filepath):
     """
-    Read LCModel output files (with extension `.coord` and `.txt`).
+    Read LCModel output files (with extension `.grid_coord` and `.txt`).
 
     Args:
         filepath (str): The filepath to read_output
@@ -215,7 +216,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            pmu.is_number(item)
+                            mrt.utils.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:
@@ -234,7 +235,7 @@ def test():
     Returns:
         None.
     """
-    test_filepath_list = []  # 'test/file1.coord']
+    test_filepath_list = []  # 'test/file1.grid_coord']
     try:
         for test_filepath in test_filepath_list:
             read_output(test_filepath)

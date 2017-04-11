@@ -28,7 +28,7 @@ Running this file directly will run some tests.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -40,13 +40,14 @@ import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (rho and image processing library)
+import scipy as sp  # SciPy (signal and image processing library)
 
 # :: External Imports Submodules
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 import pymrt.plot as pmp
 
 from pymrt import elapsed, print_elapsed
@@ -59,7 +60,7 @@ def pos_rel2abs(shape, rel_position=0.5):
     Calculate the absolute position from a relative position for a given shape.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         rel_position (float|tuple[float]): Relative position (to the lowest
         edge).
             Each element of the tuple should be in the range [0, 1].
@@ -82,7 +83,7 @@ def pos_rel2abs(shape, rel_position=0.5):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
         (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    rel_position = pmu.auto_repeat(rel_position, len(shape), check=True)
+    rel_position = mrt.utils.auto_repeat(rel_position, len(shape), check=True)
     return tuple((s - 1.0) * p for p, s in zip(rel_position, shape))
 
 
@@ -92,7 +93,7 @@ def pos_abs2rel(shape, abs_position=0):
     Calculate the relative position from an absolute position for a given shape.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         abs_position (float|tuple[float]): Absolute position inside the shape.
             Each element of the tuple should be in the range [0, dim - 1],
             where dim is the corresponding dimension of the shape.
@@ -114,7 +115,7 @@ def pos_abs2rel(shape, abs_position=0):
         >>> pos_abs2rel(shape, pos_rel2abs(shape, (0, 25, 50, 75, 100)))
         (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    abs_position = pmu.auto_repeat(abs_position, len(shape), check=True)
+    abs_position = mrt.utils.auto_repeat(abs_position, len(shape), check=True)
     return tuple(p / (s - 1.0) for p, s in zip(abs_position, shape))
 
 
@@ -152,7 +153,7 @@ def square(
     Generate a mask whose shape is a square.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         side (float): The side of the square in px.
@@ -185,7 +186,7 @@ def rectangle(
     Generate a mask whose shape is a rectangle.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the rectangle in px.
@@ -229,7 +230,7 @@ def rhombus(
     Generate a mask whose shape is a rhombus.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
@@ -263,7 +264,7 @@ def circle(
     Generate a mask whose shape is a circle.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         radius (float): The radius of the circle in px.
@@ -303,7 +304,7 @@ def ellipsis(
     Generate a mask whose shape is an ellipsis.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
@@ -339,7 +340,7 @@ def cube(
     Generate a mask whose shape is a cube.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         side (float): The side of the cube in px.
@@ -381,7 +382,7 @@ def cuboid(
     Generate a mask whose shape is a cuboid.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the cuboid in px.
@@ -418,7 +419,7 @@ def rhomboid(
     Generate a mask whose shape is a rhomboid.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
@@ -458,7 +459,7 @@ def sphere(
     Generate a mask whose shape is a sphere.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         radius (float): The radius of the sphere in px.
@@ -522,7 +523,7 @@ def ellipsoid(
     Generate a mask whose shape is an ellipsoid.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
@@ -576,7 +577,7 @@ def cylinder(
     Generate a mask whose shape is a cylinder.
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         height (float): The height of the cylinder in px.
@@ -609,8 +610,8 @@ def cylinder(
                 [False, False, False, False]]], dtype=bool)
     """
     n_dim = 3
-    shape = pmu.auto_repeat(shape, n_dim)
-    position = pmu.auto_repeat(position, n_dim)
+    shape = mrt.utils.auto_repeat(shape, n_dim)
+    position = mrt.utils.auto_repeat(position, n_dim)
     # generate base
     base_shape = tuple(
         dim for i, dim in enumerate(shape) if axis % n_dim != i)
@@ -632,7 +633,7 @@ def nd_cuboid(
     The cartesian equations are: sum[abs(x_n/a_n)^inf] < 1.0
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semisides (float|tuple[float]): The N-dim cuboid semisides in px.
@@ -643,12 +644,12 @@ def nd_cuboid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = pmu.max_iter_len((shape, position, semisides))
+        n_dim = mrt.utils.max_iter_len((shape, position, semisides))
     # check compatibility of given parameters
-    shape = pmu.auto_repeat(shape, n_dim, check=True)
-    position = pmu.auto_repeat(position, n_dim, check=True)
-    semisides = pmu.auto_repeat(semisides, n_dim, check=True)
-    xx = pmu.coord(shape, position, use_int=False)
+    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
+    position = mrt.utils.auto_repeat(position, n_dim, check=True)
+    semisides = mrt.utils.auto_repeat(semisides, n_dim, check=True)
+    xx = mrt.utils.grid_coord(shape, position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
     for x_i, semiside in zip(xx, semisides):
@@ -668,7 +669,7 @@ def nd_superellipsoid(
     The cartesian equations are: sum[abs(x_n/a_n)^k] < 1.0
 
     Args:
-        shape (int|tuple[int]): The shape of the mask in px.
+        shape (int|iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Relative position (to the lowest edge).
             Values are in the range [0, 1].
         semiaxes (float|tuple[float]): The N-dim superellipsoid axes in px.
@@ -680,15 +681,15 @@ def nd_superellipsoid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = pmu.max_iter_len((shape, position, semiaxes, indexes))
+        n_dim = mrt.utils.max_iter_len((shape, position, semiaxes, indexes))
 
     # check compatibility of given parameters
-    shape = pmu.auto_repeat(shape, n_dim, check=True)
-    position = pmu.auto_repeat(position, n_dim, check=True)
-    semiaxes = pmu.auto_repeat(semiaxes, n_dim, check=True)
-    indexes = pmu.auto_repeat(indexes, n_dim, check=True)
+    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
+    position = mrt.utils.auto_repeat(position, n_dim, check=True)
+    semiaxes = mrt.utils.auto_repeat(semiaxes, n_dim, check=True)
+    indexes = mrt.utils.auto_repeat(indexes, n_dim, check=True)
 
-    xx = pmu.coord(shape, position, use_int=False)
+    xx = mrt.utils.grid_coord(shape, position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
     for x_i, semiaxis, index in zip(xx, semiaxes, indexes):
@@ -723,7 +724,7 @@ def nd_prism(
     if axis > n_dim:
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
-    x_0 = pmu.coord((extra_shape,), (position,), use_int=False)[0]
+    x_0 = mrt.utils.grid_coord((extra_shape,), (position,), use_int=False)[0]
     # create the extra mask (height)
     extra_mask = np.abs(x_0) <= (height / 2.0)
     # calculate mask shape
@@ -736,6 +737,44 @@ def nd_prism(
             index = [slice(None)] * n_dim
             index[axis] = i
             mask[tuple(index)] = base
+    return mask
+
+
+# ======================================================================
+def dirac_delta(
+        shape,
+        position,
+        value=np.inf,
+        n_dim=None):
+    """
+    
+    Args:
+        shape (): 
+        position (): 
+        value (): 
+        n_dim (): 
+
+    Returns:
+
+    Examples:
+        >>> dirac_delta((5, 5), 0.5, 1)
+        array([[ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  1.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.]])
+    """
+    if not n_dim:
+        n_dim = mrt.utils.max_iter_len((shape, position))
+
+    # check compatibility of given parameters
+    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
+    position = mrt.utils.auto_repeat(position, n_dim, check=True)
+
+    origin = mrt.utils.coord(shape, position, use_int=True)
+
+    mask = np.zeros(shape)
+    mask[[slice(i, i + 1) for i in origin]] = value
     return mask
 
 
@@ -763,7 +802,7 @@ def frame(
     See Also:
         reframe
     """
-    borders = pmu.auto_repeat(borders, arr.ndim)
+    borders = mrt.utils.auto_repeat(borders, arr.ndim)
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
     if use_longest:
@@ -791,7 +830,7 @@ def reframe(
 
     Args:
         arr (np.ndarray): The input array.
-        new_shape (int|tuple[int]): The shape of the output array.
+        new_shape (int|iterable[int]): The shape of the output array.
             The number of dimensions between the input and the output array
             must match. Additionally, each dimensions of the new shape cannot
         background (int|float): The background value to be used for the frame.
@@ -831,15 +870,15 @@ def zoom_prepare(
 
     Args:
         zoom (float|tuple[float]): The zoom factors for each directions.
-        shape (int|tuple[int]): The shape of the array to operate with.
+        shape (int|iterable[int]): The shape of the array to operate with.
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
 
     Returns:
         zoom (tuple[float]): The zoom factors for each directions.
-        shape (int|tuple[int]): The shape of the array to operate with.
+        shape (int|iterable[int]): The shape of the array to operate with.
     """
-    zoom = list(pmu.auto_repeat(zoom, len(shape)))
+    zoom = list(mrt.utils.auto_repeat(zoom, len(shape)))
     if extra_dim:
         shape = list(shape) + [1] * (len(zoom) - len(shape))
     else:
@@ -858,8 +897,8 @@ def shape2zoom(
     Calculate zoom (or conversion) factor between two shapes.
 
     Args:
-        old_shape (int|tuple[int]): The shape of the source array.
-        new_shape (int|tuple[int]): The target shape of the array.
+        old_shape (int|iterable[int]): The shape of the source array.
+        new_shape (int|iterable[int]): The target shape of the array.
         aspect (callable|None): Function for the manipulation of the zoom.
             Signature: aspect(tuple[float]) -> float.
             None to leave the zoom unmodified. It specified, the function is
@@ -903,7 +942,7 @@ def apply_to_complex(
     """
     real = func(np.real(arr), *args, **kwargs)
     imag = func(np.imag(arr), *args, **kwargs)
-    arr = pmu.cartesian2complex(real, imag)
+    arr = mrt.utils.cartesian2complex(real, imag)
     return arr
 
 
@@ -997,8 +1036,9 @@ def angles2linear(
         num_angles_from_dim,
         itertools.combinations
     """
+    from numpy import sin, cos, sqrt
     # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
-    num_dim = ((1 + np.sqrt(1 + 8 * len(angles))) / 2)
+    num_dim = ((1 + sqrt(1 + 8 * len(angles))) / 2)
     if np.modf(num_dim)[0] != 0.0:
         raise ValueError('cannot get the dimension from the number of angles')
     else:
@@ -1010,10 +1050,10 @@ def angles2linear(
         if use_degree:
             angle = np.deg2rad(angle)
         rotation = np.eye(num_dim)
-        rotation[axes[0], axes[0]] = np.cos(angle)
-        rotation[axes[1], axes[1]] = np.cos(angle)
-        rotation[axes[0], axes[1]] = -np.sin(angle)
-        rotation[axes[1], axes[0]] = np.sin(angle)
+        rotation[axes[0], axes[0]] = cos(angle)
+        rotation[axes[1], axes[1]] = cos(angle)
+        rotation[axes[0], axes[1]] = -sin(angle)
+        rotation[axes[1], axes[0]] = sin(angle)
         linear = np.dot(linear, rotation)
     # :: check that this is a rotation matrix
     det = np.linalg.det(linear)
@@ -1090,7 +1130,7 @@ def weighted_center(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1138,7 +1178,7 @@ def weighted_covariance(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1194,7 +1234,7 @@ def tensor_of_inertia(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1232,7 +1272,7 @@ def rotation_axes(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1289,7 +1329,7 @@ def auto_rotate(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1346,7 +1386,7 @@ def auto_shift(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1405,7 +1445,7 @@ def realign(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|tuple[int]|None): Labels used for the calculation.
+        index (int|iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.

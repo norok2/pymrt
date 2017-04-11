@@ -46,15 +46,16 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-# import pymrt.base as pmu
-# import pymrt.naming as pmn
-import pymrt.geometry as pmg
+import pymrt as mrt
+# import pymrt.base
+# import pymrt.naming
+import pymrt.geometry
 # import pymrt.plot as pmp
-# import pymrt.registration as pmr
-# import pymrt.segmentation as pms
+# import pymrt.registration
+# import pymrt.segmentation
 # import pymrt.computation as pmc
 # import pymrt.correlation as pml
-import pymrt.input_output as pmio
+import pymrt.input_output
 # import pymrt.sequences as pmq
 # from pymrt.debug import dbg
 # from pymrt.sequences import mp2rage
@@ -118,15 +119,15 @@ def make_phantom(
     position = position
     # :: create the mask
     if phantom == 'cuboid':
-        mask = pmg.cuboid(shape, position, lengths)
+        mask = mrt.geometry.cuboid(shape, position, lengths)
     elif phantom == 'ellipsoid':
-        mask = pmg.ellipsoid(shape, position, lengths)
+        mask = mrt.geometry.ellipsoid(shape, position, lengths)
     elif phantom == 'rhomboid':
-        mask = pmg.rhomboid(shape, position, lengths)
+        mask = mrt.geometry.rhomboid(shape, position, lengths)
     elif phantom == 'cylinder':
-        mask = pmg.cylinder(shape, position, lengths[0], lengths[1])
+        mask = mrt.geometry.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
-    img_append = pmg.render(mask, fill)
+    img_append = mrt.geometry.render(mask, fill)
     if append == APPEND_MODE['sum']:
         img += img_append
     elif append == APPEND_MODE['prod']:
@@ -146,7 +147,7 @@ def make_phantom(
             fill,
             append, i_filepath,
             o_filepath))
-    pmio.save(o_filepath, img, aff, hdr)
+    mrt.input_output.save(o_filepath, img, aff, hdr)
 
 
 # ======================================================================
@@ -160,13 +161,13 @@ def handle_arg():
     # number of dimensions of the image
     d_dim = 3
     # size of the resulting image
-    d_sizes = tuple([pmg.D_SHAPE] * d_dim)
+    d_sizes = tuple([mrt.geometry.D_SHAPE] * d_dim)
     # phantom to create
     d_phantom = PHANTOMS[0]
     # proportional position of the center relative to the middle
     d_position = (0.0, 0.0, 0.0)
     # lengths of the resulting object
-    d_lengths = tuple([pmg.D_LENGTH_1] * d_dim)
+    d_lengths = tuple([mrt.geometry.D_LENGTH_1] * d_dim)
     # lengths of the resulting object
     d_angles = tuple([0.0] * d_dim)
     # intensity values (internal, external)

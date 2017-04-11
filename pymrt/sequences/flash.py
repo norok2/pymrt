@@ -9,7 +9,7 @@ other quantities related to the FLASH pu
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -50,9 +50,9 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.constants  # SciPy: Constants
 
-
 # :: Local Imports
-# import pymrt.modules.base as pmu
+import pymrt as mrt
+# import pymrt.modules.base
 # import pymrt.modules.plot as pmp
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -60,8 +60,35 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def signal():
-    pass
+def signal(m0, fa, tr, t1, te, t2s):
+    """
+    The FLASH (a.k.a. GRE, TFL, SPGR) signal expression:
+    
+    s = m0 sin(fa) exp(-te/t2s) (1 - exp(-tr/t1)) / (1 - cos(fa) exp(-tr/t1))
+    
+    :math:`s = m_0 \sin(\\alpha) e^{-\\frac{T_E}{T_2^*}} \\frac{1 - e^{
+    -\\frac{T_R}{T_1}}}{1 - \cos(\\alpha) e^{-\\frac{T_R}{T_1}}}`
+    
+    Args:
+        m0 (float|np.ndarray): The bulk magnetization M0 in arb.units.
+            This includes both spin density and all additional experimental
+            factors (coil contribution, electronics calibration, etc.).
+        fa (float|np.ndarray): The flip angle in rad.
+        tr (float|np.ndarray): The repetition time in time units.
+            Units must be the same as `t1`.
+        t1 (float|np.ndarray): The longitudinal relaxation time in time units.
+            Units must be the same as `tr`.
+        te (float|np.ndarray): The echo time in time units.
+            Units must be the same as `t2s`.
+        t2s (float|np.ndarray): The transverse relaxation time in time units.
+            Units must be the same as `te`.
+            
+    Returns:
+        s (float|np.ndarray): The signal expression.
+    """
+    from numpy import sin, cos, exp
+    return m0 * sin(fa) * exp(-te / t2s) * \
+           (1.0 - exp(-tr / t1)) / (1.0 - cos(fa) * exp(-tr / t1))
 
 
 # ======================================================================
@@ -190,14 +217,15 @@ def ernst_calc(
         >>> ernst_calc(None, 30.0, 42)
         (101.05626250025875, 'T1', 'ms')
     """
+    from numpy import exp, log, cos, arccos
     if t1 and tr:
-        fa = np.rad2deg(np.arccos(np.exp(-tr / t1)))
+        fa = np.rad2deg(arccos(exp(-tr / t1)))
         val, name, units = fa, 'FA', 'deg'
     elif tr and fa:
-        t1 = -tr / np.log(np.cos(np.deg2rad(fa)))
+        t1 = -tr / log(cos(np.deg2rad(fa)))
         val, name, units = t1, 'T1', 'ms'
     elif t1 and fa:
-        tr = -t1 * np.log(np.cos(np.deg2rad(fa)))
+        tr = -t1 * log(cos(np.deg2rad(fa)))
         val, name, units = tr, 'TR', 'ms'
     else:
         val = name = units = None

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Operating System facilities
+# import os  # Miscellaneous operating system interfaces
 # import math  # Mathematical Functions
 # import collections  # Container datatypes
 import argparse  # Argument Parsing
@@ -29,10 +29,11 @@ import argparse  # Argument Parsing
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-# import pymrt.base as pmu
+import pymrt as mrt
+# import pymrt.base
 import pymrt.sequences.flash
-# import pymrt.input_output as pmio
-# import pymrt.geometry as pmg
+# import pymrt.input_output
+# import pymrt.geometry
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
@@ -95,7 +96,8 @@ def main():
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
     msg(__doc__.strip())
 
-    val, name, units = pymrt.sequences.flash.ernst_calc(args.t1, args.tr, args.fa)
+    val, name, units = pymrt.sequences.flash.ernst_calc(
+        args.t1, args.tr, args.fa)
     print('{}={} {}'.format(name, val, units))
 
 

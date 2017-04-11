@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.t2: T2 transverse relaxation computation.
+pymrt.recipes.m0: spin density computation.
 """
 
 # ======================================================================
@@ -26,14 +26,3 @@ import pymrt as mrt
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 
-from pymrt.recipes.generic import fit_exp_loglin
-
-
-# ======================================================================
-def fit_monoexp(
-        arr, echo_times, echo_times_mask=None, mode='loglin'):
-    if mode == 'loglin':
-        return fit_exp_loglin(arr, echo_times, echo_times_mask)['tau']
-    else:
-        warnings.warn('Unknonw mode `{mode}`'.format_map(locals()))
-    return

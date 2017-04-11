@@ -183,8 +183,8 @@ setup(
         ],
 
         'gui_scripts': [
-            'pymrt_flash=scripts_gui.flash_sim_optim:main',
             'pymrt_mp2rage=scripts_gui.mp2rage_b1t_sensitivity:main',
+            'pymrt_ernst_angle=scripts_gui.flash_ernst_angle:main',
         ],
     },
 )

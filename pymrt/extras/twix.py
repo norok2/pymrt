@@ -50,7 +50,8 @@ import pyparsing as pp  # A Python Parsing Module
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt.utils as pmu
+import pymrt as mrt
+import pymrt.utils
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
@@ -233,9 +234,9 @@ def _read_protocol(text):
                     val = prot[key]
                 else:
                     val = []
-                val.append((indexes, pmu.auto_convert(value, '""', '""')))
+                val.append((indexes, mrt.utils.auto_convert(value, '""', '""')))
             else:
-                val = pmu.auto_convert(value, '""', '""')
+                val = mrt.utils.auto_convert(value, '""', '""')
             if key:
                 prot[key] = val
     return prot
@@ -304,7 +305,7 @@ def _guess_version(file_stream):
 def _guess_header_type(text):
     if text.startswith('<XProtocol'):
         header_type = 'x_prot'
-    elif pmu.has_decorator(text, *PROT['prot_decor']):
+    elif mrt.utils.has_decorator(text, *PROT['prot_decor']):
         header_type = 'prot'
     else:
         header_type = None
