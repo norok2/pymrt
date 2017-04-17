@@ -112,3 +112,5 @@ tests/data/
 *.jpeg
 *.ico
 *.xbm
+_version.py
+
