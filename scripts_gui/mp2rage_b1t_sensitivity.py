@@ -14,7 +14,8 @@ Two different set of parameters are accepted:
 
 References:
 1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W., Van de Moortele, 
-   P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected sequence for 
+   P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected sequence 
+   for 
    improved segmentation and T1-mapping at high field. NeuroImage 49, 
    1271–1281. 
    doi:10.1016/j.neuroimage.2009.10.002
@@ -161,7 +162,8 @@ def plot_rho_t1_mp2rage_seq(
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_step'])
     try:
-        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_inv'
+        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', \
+                    'eta_inv'
         seq_kws = {name: params[name] for name in kws_names}
 
         seq_kws['eta_fa'] = 1

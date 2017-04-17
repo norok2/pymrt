@@ -25,7 +25,7 @@ MESSAGE=${INPUT:-"$MESSAGE"}
 subtitle "Update project"
 git commit -uno -a -m "$MESSAGE"
 git tag -f "$NEW_VERSION" -m "$MESSAGE"
-git push
+git push --prune --tags
 
 
 # ======================================================================
@@ -43,34 +43,48 @@ python setup.py bdist_wheel --universal
 
 # ======================================================================
 title "Distribute package"
-PYPIRC_EXT=pypirc
-PYPIRC_FILES=(*.$PYPIRC_EXT)
-NUM_PYPIRC_FILES=${#PYPIRC_FILES[@]}
-if [ -z "$1" ]; then
-    if [ "$NUM_PYPIRC_FILES" -gt 1 ]; then
-        for FILE in ${PYPIRC_FILES[@]}; do
-            CHOICE=${FILE%\.*}
-            CHOICES=${CHOICE}"|"${CHOICES}
-        done
-        echo -e -n "\n>> available targets: ["${CHOICES%?}"]"
-        echo -e -n "\n>> choose target ["${CHOICE}"]: "
-        read INPUT
-        PYPIRC=${INPUT:-$CHOICE}
-    else
-        PYPIRC_FILE="${PYPIRC_FILES[0]}"
-    fi
+
+echo -e "(using config file: \`~/.pypirc\`)"
+
+# content of `~/.pypirc`:
+#[distutils]
+#index-servers =
+#    pypi
+#    test
+#
+#[pypi]
+#repository:https://pypi.python.org/pypi
+#username:<user>
+#password:<password>
+#
+#[test]
+#repository:https://testpypi.python.org/pypi
+#username:<user>
+#password:<password>
+
+PYPI_REPOSITORIES=("test" "pypi");
+NUM_PYPI_REPOSITORIES=${#PYPI_REPOSITORIES[@]}
+if [ "$NUM_PYPI_REPOSITORIES" -gt 1 ]; then
+    for ITEM in ${PYPI_REPOSITORIES[@]}; do
+        CHOICE=${ITEM%\.*}
+        CHOICES=${CHOICE}"|"${CHOICES}
+    done
+    echo -e -n "\n>> available targets: ["${CHOICES%?}"]"
+    echo -e -n "\n>> choose target ["${CHOICE}"]: "
+    read INPUT
+    PYPI_REPOSITORY=${INPUT:-$CHOICE}
 else
-    PYPIRC=$1
+    PYPI_REPOSITORY="${PYPI_REPOSITORIES[0]}"
 fi
-if [ -z ${PYPIRC_FILE} ]; then
-    PYPIRC_FILE=${PYPIRC}.${PYPIRC_EXT}
-fi
-echo -e "(use config file: $PYPIRC_FILE)"
+echo -e "(using repository: ${PYPI_REPOSITORY})"
+
 
 function twine_upload() {
-    if [ -f $1 ] && [ -f ${PYPIRC_FILE} ]; then
-        subtitle "Uploading \`$1\`"
-        twine upload --config-file "$PYPIRC_FILE" "$1"
+    PYPI_TARGET=$1
+    PYPI_REPOSITORY=${2:-pypi}
+    if [ -f ${PYPI_TARGET} ]; then
+        subtitle "Uploading \`${PYPI_TARGET}\` to \`${PYPI_REPOSITORY}\`"
+        twine upload --repository "${PYPI_REPOSITORY}" "${PYPI_TARGET}"
     else
         subtitle "Skipping \`$1\`"
     fi
@@ -85,12 +99,12 @@ if [ "$NUM_DISTS_FILES" -gt 1 ]; then
     read INPUT
     ONLY_LAST=${INPUT:-yes}
     if [ "$ONLY_LAST" = "no" ]; then
-        for FILE in ${DISTS_FILES[@]}; do
-            twine_upload "$FILE"
+        for ITEM in ${DISTS_FILES[@]}; do
+            twine_upload "$ITEM"
         done
     fi
 fi
 
 if [ "$NUM_DISTS_FILES" -eq 1 ] || [ -z $ONLY_LAST ] || [ $ONLY_LAST = "yes" ]; then
-    twine_upload "${DISTS_FILES[${#DIST_FILES[@]} - 1]}"
+    twine_upload "${DISTS_FILES[${#DIST_FILES[@]} - 1]}" ${PYPI_REPOSITORY}
 fi
