@@ -289,7 +289,8 @@ def _app_dirs(
         ('log', appdirs.user_data_dir(name, author, version)),
     ))
     for name, dirpath in dirpaths.items():
-        os.makedirs(dirpath, exist_ok=True)
+        if not os.path.isdir(dirpath):
+            os.makedirs(dirpath)
     return dirpaths
 
 
