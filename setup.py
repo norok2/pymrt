@@ -164,7 +164,7 @@ setup(
     },
 
     package_data={
-        'pymrt': ['sequences/pulses/*.csv', ''],
+        'pymrt': ['sequences/pulses/*.csv', ],
     },
 
     # data_files=[('my_data', ['data/data_file'])],
