@@ -2,7 +2,7 @@
 PyMRT - Python Magnetic Resonance Tools
 =======================================
 
-**PyMRT** - **Py**thon **M**agnetic **R**esonance **T**ools:
+**PyMRT** - Python Magnetic Resonance Tools:
 data analysis for quantitative MRI
 
 .. code::
