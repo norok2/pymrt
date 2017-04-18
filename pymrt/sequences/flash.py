@@ -188,6 +188,7 @@ def magnetization(
 
 
 # ======================================================================
+@np.vectorize
 def ernst_calc(
         t1=None,
         tr=None,
@@ -219,13 +220,16 @@ def ernst_calc(
     """
     from numpy import exp, log, cos, arccos
     if t1 and tr:
-        fa = np.rad2deg(arccos(exp(-tr / t1)))
+        fa = arccos(exp(-tr / t1))
+        fa = np.rad2deg(fa)
         val, name, units = fa, 'FA', 'deg'
     elif tr and fa:
-        t1 = -tr / log(cos(np.deg2rad(fa)))
+        fa = np.deg2rad(fa)
+        t1 = -tr / log(cos(fa))
         val, name, units = t1, 'T1', 'ms'
     elif t1 and fa:
-        tr = -t1 * log(cos(np.deg2rad(fa)))
+        fa = np.deg2rad(fa)
+        tr = -t1 * log(cos(fa))
         val, name, units = tr, 'TR', 'ms'
     else:
         val = name = units = None

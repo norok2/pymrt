@@ -51,7 +51,7 @@ import pymrt as mrt
 from pymrt.sequences import mp2rage
 from pymrt.extras import interactive
 
-from pymrt import INFO, DIRS, MY_GREETINGS
+from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, print_elapsed
@@ -85,8 +85,8 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='T1_start / ms', default=50, start=0, stop=1000, step=10)),
     ('t1_stop', dict(
         label='T1_stop / ms', default=4100, start=2000, stop=6000, step=100)),
-    ('t1_step', dict(
-        label='T1_step / ms', default=256, start=32, stop=1024, step=16)),
+    ('t1_num', dict(
+        label='T1_num / #', default=256, start=32, stop=1024, step=16)),
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
