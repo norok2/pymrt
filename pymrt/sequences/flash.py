@@ -197,17 +197,18 @@ def ernst_calc(
     Calculate optimal T1, TR or FA (given the other two) for FLASH sequence.
 
     Args:
-        t1 (float|None): Longitudinal relaxation time T1 in ms.
-        tr (float|None): Repetition time TE in ms.
-        fa (float|None): flip angle FA in deg.
+        t1 (float|np.ndarray|None): Longitudinal relaxation time T1 in ms.
+        tr (float|np.ndarray|None): Repetition time TE in ms.
+        fa (float|np.ndarray|None): flip angle FA in deg.
 
     Returns:
-        val (float): The value of T1, TR or FA fulfilling Ernst condition.
-            This correspond to the input argument left to None.
+        val (float|np.ndarray|None): The value of fulfilling Ernst condition.
+            This can be T1, TR or FA, depending on the input argument
+            left to None.
             If the input is invalid, this is set to None.
-        name (str): The label of the result.
+        name (str|None): The label of the result.
             If the input is invalid, this is set to None.
-        units (str): The units of measurement for the result.
+        units (str|None): The units of measurement for the result.
             If the input is invalid, this is set to None.
 
     Examples:
