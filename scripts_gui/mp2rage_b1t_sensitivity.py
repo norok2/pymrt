@@ -34,6 +34,7 @@ from __future__ import (
 import os  # Miscellaneous operating system interfaces
 import argparse  # Argument Parsing
 import collections  # Container datatypes
+import datetime  # Basic date and time types
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -78,6 +79,8 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 
     ('eta_inv', dict(
         label='η_inv / #', default=0.96, start=0, stop=1, step=0.01)),
+    ('eta_fa', dict(
+        label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
         label='Δη_α / #', default=0.1, start=0, stop=1, step=0.05)),
 
@@ -91,11 +94,11 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 
 ACQ_INTERACTIVES = collections.OrderedDict([
     ('matrix_size_ro', dict(
-        label='N_ro / #', default=256, start=16, stop=1024, step=16)),
+        label='N_ro / #', default=256, start=16, stop=1024, step=1)),
     ('matrix_size_pe', dict(
-        label='N_pe / #', default=256, start=16, stop=1024, step=16)),
+        label='N_pe / #', default=256, start=16, stop=1024, step=1)),
     ('matrix_size_sl', dict(
-        label='N_sl / #', default=256, start=16, stop=1024, step=16)),
+        label='N_sl / #', default=256, start=16, stop=1024, step=1)),
 
     ('grappa_factor_ro', dict(
         label='GRAPPA_ro / #', default=1, start=1, stop=8, step=1)),
@@ -134,13 +137,15 @@ ACQ_INTERACTIVES = collections.OrderedDict([
     ('sl_pe_swap', dict(
         label='Swap PE/SL', default=False)),
 
-    ('a1', dict(
+    ('fa1', dict(
         label='α_1 / deg', default=4.0, start=0.05, stop=22.0, step=0.05)),
-    ('a2', dict(
+    ('fa2', dict(
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_inv', dict(
         label='η_inv / #', default=0.96, start=0, stop=1, step=0.01)),
+    ('eta_fa', dict(
+        label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
         label='Δη_α / #', default=0.1, start=0, stop=1, step=0.05)),
 
@@ -166,41 +171,43 @@ def plot_rho_t1_mp2rage_seq(
                     'eta_inv'
         seq_kws = {name: params[name] for name in kws_names}
 
-        seq_kws['eta_fa'] = 1
+        seq_kws['eta_fa'] = params['eta_fa']
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
-        seq_kws['eta_fa'] = 1 + params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='r',
+            rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 - params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='b',
-            label='$B_1^+$ -{:.0%}'.format(params['d_eta_fa']))
+            rho_arr, t1_arr, color='#3333cc',
+            label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 + 2 * params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='y',
+            rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 - 2 * params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='c',
-            label='$B_1^+$ -{:.0%}'.format(2 * params['d_eta_fa']))
+            rho_arr, t1_arr, color='#9999ff',
+            label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
     except Exception as e:
         print(e)
         ax.set_title('\n'.join(('WARNING! Some plot failed!', title)))
     else:
         ax.set_title(title)
     finally:
-        ax.set_xlabel(r'$\rho$ (a.u.)')
-        ax.set_ylabel(r'$T_1$ (ms)')
+        ax.set_ylim(params['t1_start'], params['t1_stop'])
+        ax.set_xlim(mp2rage.RHO_INTERVAL)
+        ax.set_xlabel(r'$\rho$ / arb.units')
+        ax.set_ylabel(r'$T_1$ / ms')
         ax.legend()
     return ax
 
@@ -234,50 +241,54 @@ def plot_rho_t1_mp2rage_acq(
             sl_pe_swap=params['sl_pe_swap'],
             tr_seq=params['tr_seq'],
             ti=(params['ti1'], params['ti2']),
-            fa=(params['a1'], params['a2']),
+            fa=(params['fa1'], params['fa2']),
             eta_inv=params['eta_inv'],
             tr_gre=params['tr_gre'])
 
         seq_kws_str = ', '.join(
-            sorted(['{}={}'.format(k, v) for k, v in seq_kws.items()]))
+            sorted(['{}={:.2f}'.format(k, v) for k, v in seq_kws.items()]))
         extra_info_str = ', '.join(
-            sorted(['{}={}'.format(k, v) for k, v in extra_info.items()]))
+            sorted(['{}={:.2f}'.format(k, v) for k, v in extra_info.items()]))
+        extra_info_str += ', {!s}'.format(
+            datetime.timedelta(seconds=extra_info['t_acq']))
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
-        seq_kws['eta_fa'] = 1
+        seq_kws['eta_fa'] = params['eta_fa']
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
-        seq_kws['eta_fa'] = 1 + params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='r',
+            rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 - params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='b',
-            label='$B_1^+$ -{:.0%}'.format(params['d_eta_fa']))
+            rho_arr, t1_arr, color='#3333cc',
+            label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 + 2 * params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='y',
+            rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = 1 - 2 * params['d_eta_fa']
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
         rho_arr = mp2rage.rho(t1_arr, **seq_kws)
         ax.plot(
-            rho_arr, t1_arr, color='c',
-            label='$B_1^+$ -{:.0%}'.format(2 * params['d_eta_fa']))
+            rho_arr, t1_arr, color='#9999ff',
+            label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
     except:
         ax.set_title('\n'.join(('WARNING! Some plot failed!', title)))
     else:
         ax.set_title('\n'.join((acq_to_seq_info, title)))
     finally:
-        ax.set_xlabel(r'$\rho$ (a.u.)')
-        ax.set_ylabel(r'$T_1$ (ms)')
+        ax.set_ylim(params['t1_start'], params['t1_stop'])
+        ax.set_xlim(mp2rage.RHO_INTERVAL)
+        ax.set_xlabel(r'$\rho$ / arb.units')
+        ax.set_ylabel(r'$T_1$ / ms')
         ax.legend()
     return ax
 
