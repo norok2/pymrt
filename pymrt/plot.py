@@ -279,7 +279,9 @@ def sample2d(
         force=False,
         verbose=D_VERB_LVL):
     """
-    Plot a 2D sample image of a 3D array.
+    Plot a 2D sample image of an ND array.
+
+    TODO: fix documentation!!!
 
     Parameters
     ==========
