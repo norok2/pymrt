@@ -869,8 +869,8 @@ def reframe(
 def apply_mask(
         arr,
         mask,
-        background=0.0,
-        borders=None):
+        borders=None,
+        background=0.0):
     """
     Apply a mask to an array.
 
