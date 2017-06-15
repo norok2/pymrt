@@ -13,7 +13,7 @@ Workflow is:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -52,13 +52,9 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-# import pymrt.naming
-# import pymrt.input_output
-# import pymrt.computation as pmc
-import pymrt.correlation as pml
-# import pymrt.geometry
-# from pymrt.sequences import mp2rage
-# import dcmpi.common as dcmlib
+import pymrt.input_output
+import pymrt.segmentation
+import pymrt.naming
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
@@ -106,19 +102,11 @@ def handle_arg():
         default=None,
         help='set output filepath [%(default)s]')
     arg_parser.add_argument(
-        '-b', '--bet_params', metavar='STR',
-        default='',
-        help='parameters to FSL\'s BET tool. Empty STR to skip [%(default)s]')
-    arg_parser.add_argument(
         '-s', '--smoothing', metavar='SIGMA',
         type=float, default=0.0,
         help='value of Gaussian smoothing\'s sigma [%(default)s]')
     arg_parser.add_argument(
-        '-r', '--percentile_range', metavar=('MIN', 'MAX'),
-        type=float, nargs=2, default=(0.0, 1.0),
-        help='percentiles to obtain values range for threshold [%(default)s]')
-    arg_parser.add_argument(
-        '-a', '--val_threshold', metavar='R',
+        '-a', '--threshold', metavar='R',
         type=float, default=0.1,
         help='value threshold (relative to values range) [%(default)s]')
     arg_parser.add_argument(
@@ -127,12 +115,8 @@ def handle_arg():
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-m', '--mode', metavar='absolute|relative|percentile',
-        default='percentile',
+        default='relative',
         help='comparison directive [%(default)s]')
-    arg_parser.add_argument(
-        '-z', '--size_threshold', metavar='Z',
-        type=float, default=0.02,
-        help='size threshold (relative to matrix size) [%(default)s]')
     arg_parser.add_argument(
         '-e', '--erosion_iter', metavar='N',
         type=int, default=0,
@@ -141,6 +125,10 @@ def handle_arg():
         '-d', '--dilation_iter', metavar='N',
         type=int, default=0,
         help='number of postprocess binary dilation iterations [%(default)s]')
+    arg_parser.add_argument(
+        '-t', '--dtype', metavar='TYPE',
+        default='int',
+        help='data type of the output [%(default)s]')
     return arg_parser
 
 
@@ -159,26 +147,21 @@ def main():
     msg(__doc__.strip())
     begin_time = datetime.datetime.now()
 
-    if args.output and args.verbose >= VERB_LVL['none']:
-        args.output = os.path.dirname(mrt.utils.realpath(args.output))
-        print('OutDir: {}'.format(args.output))
-    pml.calc_mask(
-        args.input,
-        args.output,
-        args.val_threshold,
-        args.comparison,
-        args.mode,
-        args.smoothing,
-        args.erosion_iter,
-        args.dilation_iter,
-        args.bet_params,
-        '',
-        args.force,
-        args.verbose)
+    if not args.output:
+        root, base, ext = mrt.utils.split_path(args.input)
+        args.output = mrt.utils.join_path(root, 'mask__' + base, ext)
+
+    kw_params = mrt.utils.set_keyword_parameters(
+        mrt.segmentation.mask_compact, vars(args))
+
+    data, meta = mrt.input_output.load(args.input, meta=True)
+    data = mrt.segmentation.mask_compact(data, **kw_params).astype(args.dtype)
+    mrt.input_output.save(
+        args.output, data, **{k: v for k, v in meta.items()})
 
     end_time = datetime.datetime.now()
     if args.verbose > VERB_LVL['low']:
-        print('ExecTime: {}'.format(end_time - begin_time))
+        msg('ExecTime: {}'.format(end_time - begin_time))
 
 
 # ======================================================================
