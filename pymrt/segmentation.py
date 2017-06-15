@@ -109,7 +109,7 @@ def mask_threshold(
 
 
 # ======================================================================
-def mask_threshold_compact(
+def mask_compact(
         arr,
         threshold=0.0,
         comparison='>',
@@ -118,7 +118,13 @@ def mask_threshold_compact(
         erosion_iter=0,
         dilation_iter=0):
     """
-    Create a mask from an image according to specific threshold.
+    Create a compact mask from an image according to specific threshold.
+    
+    This is achieved with the following workflow:
+        - Gaussian filter smoothing
+        - masking values according to threshold
+        - binary erosion
+        - binary dilation
 
     Args:
         arr (np.ndarray): Input array for the masking.
@@ -130,7 +136,12 @@ def mask_threshold_compact(
              - 'absolute': use the absolute value
              - 'relative': use a value relative to values interval
              - 'percentile': use the value obtained from the percentiles
-
+        smoothing (float): Sigma to be used for Gaussian smoothing.
+            If zero, no filtering done.
+        erosion_iter : int (optional)
+            Number of binary erosion iteration in mask post-processing.
+        dilation_iter : int (optional)
+            Number of binary dilation iteration in mask post-processing.
     Returns:
         arr (np.ndarray[bool]): Mask for which comparison is True.
     """
