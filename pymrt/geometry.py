@@ -789,8 +789,11 @@ def frame(
 
     Args:
         arr (np.ndarray): The input array.
-        borders (float|tuple[float]): The relative border size.
-            This is proportional to the initial array shape.
+        borders (int|float|tuple[int|float]): The border size(s).
+            If int, this is in units of pixels.
+            If float, this is proportional to the initial array shape.
+            If int or float, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
         background (int|float): The background value to be used for the frame.
@@ -800,17 +803,18 @@ def frame(
         result (np.ndarray): The result array with added borders.
 
     See Also:
-        reframe
+        reframe()
     """
     borders = mrt.utils.auto_repeat(borders, arr.ndim)
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
-    if use_longest:
-        dim = max(arr.shape)
-        borders = [round(border * dim) for border in borders]
-    else:
-        borders = [
-            round(border * dim) for dim, border in zip(arr.shape, borders)]
+    if isinstance(borders[0], float):
+        if use_longest:
+            dim = max(arr.shape)
+            borders = [round(border * dim) for border in borders]
+        else:
+            borders = [
+                round(border * dim) for dim, border in zip(arr.shape, borders)]
     result = background * np.ones(
         [dim + 2 * border for dim, border in zip(arr.shape, borders)])
     inner = [
@@ -831,8 +835,10 @@ def reframe(
     Args:
         arr (np.ndarray): The input array.
         new_shape (int|iterable[int]): The shape of the output array.
-            The number of dimensions between the input and the output array
-            must match. Additionally, each dimensions of the new shape cannot
+            If int, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
+            Additionally, each value of `new_shape` must be greater than or
+            equal to the corresponding dimensions of `arr`.
         background (int|float): The background value to be used for the frame.
 
     Returns:
@@ -843,7 +849,7 @@ def reframe(
         ValueError: output shape cannot be smaller than the input shape.
 
     See Also:
-        frame
+        frame()
     """
     if arr.ndim != len(new_shape):
         raise IndexError('number of dimensions must match')
@@ -857,6 +863,49 @@ def reframe(
         for dim, border in zip(arr.shape, borders)]
     result[inner] = arr
     return result
+
+
+# ======================================================================
+def apply_mask(
+        arr,
+        mask,
+        background=0.0,
+        borders=None):
+    """
+    Apply a mask to an array.
+
+    Note: this will not produced a `numpy.ma` object.
+
+    Args:
+        arr (np.ndarray): The input array.
+        mask (np.ndarray): The mask array.
+        background (int|float): The value used for masked-out pixels.
+        borders (int|float|tuple[int|float]|None): The border size(s).
+            If None, the border is not modified.
+            Otherwise, a border is added to the masked array.
+            If int, this is in units of pixels.
+            If float, this is proportional to the initial array shape.
+            If int or float, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
+            If 'use_longest' is True, use the longest dimension for the
+            calculations.
+
+    Returns:
+        arr (np.ndarray): The output array.
+            Values outside of the mask are set to background.
+            Array shape may have changed (depending on `borders`).
+
+    See Also:
+        frame()
+    """
+    mask = mask.astype(bool)
+    arr[~mask] = background
+    if borders is not None:
+        container = sp.ndimage.find_objects(mask.astype(int))[0]
+        if container:
+            arr = arr[container]
+        arr = frame(arr, borders, background)
+    return arr
 
 
 # ======================================================================
