@@ -660,7 +660,8 @@ def split(
         i_str = str(i).zfill(len(str(len(arrs))))
         out_filepath = os.path.join(
             out_dirpath,
-            mrt.utils.change_ext(out_basename + '-' + i_str, mrt.utils.EXT['niz'], ''))
+            mrt.utils.change_ext(out_basename + '-' + i_str,
+                                 mrt.utils.EXT['niz'], ''))
         save(out_filepath, image, **{k: v for k, v in meta.items()})
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -694,7 +695,8 @@ def zoom(
     """
 
     def _zoom(array, zoom, interp_order, extra_dim, fill_dim):
-        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim,
+                                                fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -717,10 +719,62 @@ def resample(
     """
     Resample the image to a new shape (different resolution / voxel size).
 
+    Warning: it uses `scipy.ndimage.zoom` internally!
+    For downsampling applications, this might not be appropriate.
+
     Args:
         in_filepath (str): Input file path
         out_filepath (str): Output file path
         new_shape (tuple[int]): New dimensions of the image
+        aspect (callable|list[callable]): Zoom shape manipulation.
+            Useful for obtaining specific aspect ratio effects.
+            This is passed to `pymrt.geometry.shape2zoom()`.
+        interp_order (int): Order of the spline interpolation
+            0: nearest. Accepted range: [0, 5]
+        extra_dim (bool): Force extra dimensions in the zoom parameters
+        fill_dim (bool): Dimensions not specified are left untouched
+
+    Returns:
+        None
+
+    See Also:
+        pymrt.geometry.shape2zoom()
+    """
+
+    # todo: check for correctness
+
+    def _zoom(
+            array, new_shape, aspect, interp_order, extra_dim, fill_dim):
+        zoom = mrt.geometry.shape2zoom(array.shape, new_shape, aspect)
+        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim,
+                                                fill_dim)
+        array = sp.ndimage.zoom(
+            array.reshape(shape), zoom, order=interp_order)
+        # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
+        return array
+
+    simple_filter_1_1(
+        in_filepath, out_filepath, _zoom,
+        new_shape, aspect, extra_dim, fill_dim,
+        interp_order)
+
+
+# ======================================================================
+def downsample(
+        in_filepath,
+        out_filepath,
+        shape):
+    """
+    Down-sample the image to a new shape (different resolution / voxel size).
+
+    This assumes linearity in the down-sampled dimensions.
+    This means that the signal from a larger sample is proportional to the
+    (weighted) sum of the signals from smaller samples with overlapping support.
+
+    Args:
+        in_filepath (str): Input file path
+        out_filepath (str): Output file path
+        new_shape (tuple[int|None]): New dimensions of the image
         aspect (callable|list[callable]): Transformation applied to
         interp_order (int): Order of the spline interpolation
             0: nearest. Accepted range: [0, 5]
@@ -736,7 +790,8 @@ def resample(
     def _zoom(
             array, new_shape, aspect, interp_order, extra_dim, fill_dim):
         zoom = mrt.geometry.shape2zoom(array.shape, new_shape, aspect)
-        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim, fill_dim)
+        zoom, shape = mrt.geometry.zoom_prepare(
+            zoom, array.shape, extra_dim, fill_dim)
         array = sp.ndimage.zoom(
             array.reshape(shape), zoom, order=interp_order)
         # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
@@ -970,7 +1025,8 @@ def find_objects(
     """
 
     def _find_objects(array, structure, max_label):
-        labels, masks = mrt.segmentation.find_objects(array, structure, max_label, False)
+        labels, masks = mrt.segmentation.find_objects(array, structure,
+                                                      max_label, False)
         return labels
 
     simple_filter_1_1(
