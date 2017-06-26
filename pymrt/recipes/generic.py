@@ -216,7 +216,8 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     if phs_arr is not None:
         if fix_phase:
             phs_arr = fix_phase_interval(phs_arr)
-        cx_arr = mrt.utils.polar2complex(mag_arr.astype(float), phs_arr.astype(float))
+        cx_arr = mrt.utils.polar2complex(mag_arr.astype(float),
+                                         phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)
     return cx_arr
@@ -724,6 +725,8 @@ def fit_exp_tau(
             Units are determined by the units of `tis`.
 
     """
+    pass
+
 
 # ======================================================================
 def _curve_fit(args):

@@ -2886,7 +2886,7 @@ def variation_information(
         arr1,
         arr2,
         base=np.e,
-        bins='auto'):
+        bins='sturges'):
     """
     Calculate the variation of information between two arrays.
 
@@ -2931,7 +2931,7 @@ def variation_information(
     if not isinstance(bins, int):
         if bins is not None and not isinstance(bins, str):
             raise ValueError('Invalid value for `bins`')
-        bins = auto_bins((arr1, arr2), bins)
+        bins = auto_bins((arr1, arr2), method=bins, combine=max)
 
     if not np.array_equal(arr1, arr2):
         hist1, bin_edges1 = np.histogram(arr1, bins)
@@ -2952,7 +2952,7 @@ def mutual_information(
         arr1,
         arr2,
         base=np.e,
-        bins='sqrt'):
+        bins='sturges'):
     """
     Calculate the mutual information between two arrays.
 
@@ -3024,7 +3024,7 @@ def mutual_information(
     if not isinstance(bins, int):
         if bins is not None and not isinstance(bins, str):
             raise ValueError('Invalid value for `bins`')
-        bins = auto_bins((arr1, arr2), bins)
+        bins = auto_bins((arr1, arr2), method=bins, combine=max)
 
     # # scikit.learn implementation
     # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
@@ -3056,7 +3056,7 @@ def mutual_information(
 def norm_mutual_information(
         arr1,
         arr2,
-        bins='sqrt'):
+        bins='sturges'):
     """
 
     Args:
@@ -3101,7 +3101,7 @@ def norm_mutual_information(
     if not isinstance(bins, int):
         if bins is not None and not isinstance(bins, str):
             raise ValueError('Invalid value for `bins`')
-        bins = auto_bins((arr1, arr2), bins)
+        bins = auto_bins((arr1, arr2), method=bins, combine=max)
     hist1, bin_edges1 = np.histogram(arr1, bins)
     hist2, bin_edges2 = np.histogram(arr2, bins)
     hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
@@ -3519,6 +3519,7 @@ def running_stat(
 #     'from __main__ import running_stat; import numpy as np', number=100)
 #
 # print(z, a, b, c)
+
 
 # ======================================================================
 def polar2complex(modulus, phase):

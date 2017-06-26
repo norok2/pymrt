@@ -329,6 +329,8 @@ def register(
         in_filepath,
         ref_filepath,
         out_filepath,
+        in_weight_filepath=None,
+        ref_weight_filepath=None,
         force=False,
         verbose=D_VERB_LVL):
     """

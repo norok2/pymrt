@@ -92,7 +92,7 @@ def _prepare(use_cache=CFG['use_cache']):
     cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
-            sym.symbols('T1 eff n_GRE TR_GRE M0 TA TB TC A1 A2 Mz_ss')
+            sym.symbols('t1 eff n_gre tr_gre m0 ta tb tc a1 a2 mz_ss')
 
         eqn_mz_ss = sym.Eq(
             mz_ss,
@@ -206,11 +206,11 @@ def rho(
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
-    rho = _rho(
+    result = _rho(
         t1, eta_inv, n_gre, tr_gre, ta, tb, tc, fa1 * eta_fa, fa2 * eta_fa)
     if bijective:
-        rho = _bijective_part(rho)
-    return rho
+        result = _bijective_part(result)
+    return result
 
 
 # ======================================================================

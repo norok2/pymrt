@@ -151,6 +151,7 @@ setup(
         'appdirs',
         'seaborn',
         'h5py',
+        'pytk',
     ],
 
     setup_requires=[
