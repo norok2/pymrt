@@ -302,6 +302,8 @@ def dual_flash(
 
     if eta_fa_arr is None:
         eta_fa_arr = 1
+    if approx:
+        approx = approx.lower()
 
     fa1 = np.deg2rad(fa1) * eta_fa_arr
     fa2 = np.deg2rad(fa2) * eta_fa_arr
@@ -312,12 +314,11 @@ def dual_flash(
     fa_ratio = fa2 / fa1
     same_tr = np.isclose(tr1, tr2)
     same_fa = np.isclose(fa1, fa2)
-    double_fa = np.isclose(2, fa_ratio)
 
     if same_tr:
         fa1 *= eta_fa_arr
         fa2 *= eta_fa_arr
-        if approx.lower() == 'short_tr':
+        if approx == 'short_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * tr_ratio * (
                     (sin(fa1) * cos(fa2) * arr2 -
@@ -333,7 +334,7 @@ def dual_flash(
                      cos(fa1) * sin(fa2) * arr1))
 
     else:
-        if approx.lower() == 'short_tr' and same_fa:
+        if approx == 'short_tr' and same_fa:
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * tr_ratio * (
                     cos(fa) * (arr2 - arr1) /

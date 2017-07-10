@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.b1: B1 pulse excitation magnetic field computation.
+pymrt.recipes.b1t: B1+ (or flip angle efficiency) computation.
 """
 
 # ======================================================================
@@ -22,7 +22,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
-
+from pymrt.recipes import t1
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -82,7 +82,7 @@ def afi(
     fa_arr = np.real(np.arccos(fa_arr))
 
     result = {
-        'fa': fa_arr,
+        'fa': np.rad2deg(fa_arr),
         'eta': fa_arr / np.deg2rad(nominal_fa)}
 
     return result
@@ -96,7 +96,7 @@ def dual_flash(
         fa2,
         tr1,
         tr2,
-        t1=None,
+        t1_arr=None,
         approx=None):
     """
     Calculate the flip angle efficiency from two FLASH acquisitions.
@@ -130,7 +130,7 @@ def dual_flash(
         fa2 (int|float): The second nominal flip angle in deg.
         tr1 (int|float): The first repetition time in time units.
         tr2 (int|float): The second repetition time in time units.
-        t1 (int|float|np.ndarray|None): The T1 value in time units.
+        t1_arr (int|float|np.ndarray|None): The T1 value in time units.
             If None, one of the following conditions must be met:
              a. `approx == 'long_tr'`, `tr1 == tr2` and `fa2 == 2 * fa1`.
             If int or float, one of the following conditions must be met:
@@ -157,6 +157,9 @@ def dual_flash(
     """
     from numpy import exp, sqrt, arccos
 
+    if approx:
+        approx = approx.lower()
+
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
 
@@ -170,46 +173,46 @@ def dual_flash(
 
     # double angle methods
     if double_fa and same_tr:  # no approximation
-        if approx.lower() == 'long_tr':
+        if approx == 'long_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = arr2 / arr1 / 2
-        elif approx.lower() == 'short_tr':
+        elif approx == 'short_tr' and t1_arr:
             sgn = 1  # choose between the two separate solutions
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (arr1 / arr2)
                 fa_arr = (
                     (fa_arr + sgn * sqrt(
                         (fa_arr - 2) ** 2 +
-                        6 * (fa_arr - 1) * (tr / t1) +
-                        2 * (1 - fa_arr) * (tr / t1) ** 2)) /
-                    (2 * (1 - fa_arr) * (1 + tr / t1)))
-        else:
+                        6 * (fa_arr - 1) * (tr / t1_arr) +
+                        2 * (1 - fa_arr) * (tr / t1_arr) ** 2)) /
+                    (2 * (1 - fa_arr) * (1 + tr / t1_arr)))
+        elif t1_arr:
             sgn = 1  # choose between the two separate solutions
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (arr1 / arr2)
                 fa_arr = (
                     (fa_arr + sgn * sqrt(
                         fa_arr ** 2
-                        + 2 * (fa_arr - 1) * exp(-tr / t1)
-                        + 2 * (fa_arr - 1) * exp(-tr / t1) ** 2)) /
-                    (2 * (fa_arr - 1) * exp(-tr / t1)))
+                        + 2 * (fa_arr - 1) * exp(-tr / t1_arr)
+                        + 2 * (fa_arr - 1) * exp(-tr / t1_arr) ** 2)) /
+                    (2 * (fa_arr - 1) * exp(-tr / t1_arr)))
 
     # same-angle method (variable tr)
     elif same_fa:
-        if approx.lower() == 'short_tr':
+        if approx == 'short_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (arr1 / arr2)
                 fa_arr = (
                     (1 - tr_ratio * fa_arr) /
-                    (tr_ratio * (fa_arr - 1) * (tr / t1) +
+                    (tr_ratio * (fa_arr - 1) * (tr / t1_arr) +
                      1 - tr_ratio * fa_arr))
-        else:
+        elif t1_arr:
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (
-                    (arr2 * exp(tr2 / t1) - arr1 * exp(tr1 / t1) +
-                     (arr1 - arr2) * exp((tr1 + tr2) / t1)) /
+                    (arr2 * exp(tr2 / t1_arr) - arr1 * exp(tr1 / t1_arr) +
+                     (arr1 - arr2) * exp((tr1 + tr2) / t1_arr)) /
                     (arr2 - arr1 +
-                     arr1 * exp(tr2 / t1) - arr2 * exp(tr1 / t1)))
+                     arr1 * exp(tr2 / t1_arr) - arr2 * exp(tr1 / t1_arr)))
 
     else:
         warnings.warn(
@@ -219,8 +222,8 @@ def dual_flash(
     fa_arr = np.real(arccos(fa_arr))
 
     result = {
-        'fa': fa_arr,
-        'eta': fa_arr / fa}
+        'fa': np.rad2deg(fa_arr),
+        'eta': fa_arr / np.rad2deg(fa)}
 
     return result
 
@@ -341,6 +344,5 @@ def mu2rage(
 def multi_flash(
         arrs,
         flip_angles,
-        repetition_times,
-        zero_cutoff=np.spacing(1)):
+        repetition_times):
     warnings.warn('Not implemented yet')
