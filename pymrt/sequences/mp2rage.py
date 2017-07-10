@@ -17,7 +17,14 @@ Calculate the analytical expression of MP2RAGE signal rho and related functions.
 
 Additionally, Conversion from acquisition to sequence parameters is supported.
 
-[ref: J. P. Marques at al., NeuroImage 49 (2010) 1271-1281]
+See Also:
+    - Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W., Van de
+    Moortele, P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected
+    sequence for improved segmentation and T1-mapping at high field.
+    NeuroImage 49, 1271–1281. doi:10.1016/j.neuroimage.2009.10.002
+    - Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous
+    Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with
+    Multi-Echo MP2RAGE. PLOS ONE 12, e0169265. doi:10.1371/journal.pone.0169265
 """
 
 # ======================================================================
@@ -89,7 +96,7 @@ def _prepare(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE rho expression analytically."""
     from sympy import exp, sin, cos
 
-    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
+    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage_t1.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         t1, eff, n_gre, tr_gre, m0, ta, tb, tc, a1, a2, mz_ss = \
             sym.symbols('t1 eff n_gre tr_gre m0 ta tb tc a1 a2 mz_ss')
@@ -143,7 +150,7 @@ def _prepare(use_cache=CFG['use_cache']):
 
 
 # ======================================================================
-# :: defines the mp2rage signal expression
+# :: defines the mp2rage_t1 signal expression
 _rho = _prepare()
 
 
@@ -187,7 +194,7 @@ def rho(
     This function is NumPy-aware.
 
     Args:
-        t1 (float|np.ndarray): T1 time in ms.
+        t1 (float): T1 time in ms.
         n_gre (int): Number n of r.f. pulses in each GRE block.
         tr_gre (float): repetition time of GRE pulses in ms.
         ta (float): Time TA between inversion pulse and first GRE block in ms.
@@ -202,7 +209,7 @@ def rho(
             Non-bijective parts of rho are masked out (using NaN).
 
     Returns:
-        rho (float|np.ndarray): rho intensity of the MP2RAGE sequence.
+        rho (float): rho intensity of the MP2RAGE sequence.
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
@@ -254,8 +261,10 @@ def acq_to_seq_params(
         tr_gre (float):
 
     Returns:
-        seq_params (dict): The sequence parameters for rho calculation.
-        extra_info (dict): Additional sequence information.
+        result (tuple[dict]): The tuple
+            contains:
+             - seq_params (dict): The sequence parameters for rho calculation.
+             - extra_info (dict): Additional sequence information.
     """
 
     def k_space_lines(size, part_fourier, grappa, grappa_refs):

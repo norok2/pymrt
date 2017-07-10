@@ -52,7 +52,7 @@ import pymrt.utils
 # import pymrt.naming
 # import pymrt.input_output
 # import pymrt.geometry
-# from pymrt.sequences import mp2rage
+# from pymrt.sequences import mp2rage_t1
 from pymrt import elapsed, print_elapsed
 
 # ======================================================================

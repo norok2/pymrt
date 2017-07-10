@@ -163,6 +163,37 @@ def is_linear(arr, axis=-1):
 
 
 # ======================================================================
+def cx_div(
+        arr1,
+        arr2,
+        regularization=np.spacing(1),
+        values_interval=None):
+    """
+    Calculate the expression: s1 * s2 / (s1^2 + s2^2)
+
+    This is an SNR optimal expression for (s1 / s2) or (s2 / s1).
+    Resulting values are in the [-0.5, 0.5] interval.
+
+    Args:
+        arr1 (float|np.ndarray): Complex image of the first inversion.
+        arr2 (float|np.ndarray): Complex image of the second inversion.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the expression
+            for preventing undefined values when both s1 and s2 vanish.
+        values_interval (tuple[float|int]|None): The output values interval.
+            The standard values are linearly converted to this range.
+            If None, the natural [-0.5, 0.5] interval will be used.
+
+    Returns:
+        rho_arr (float|np.ndarray): The calculated rho (uniform) image.
+    """
+    rho_arr = arr1 * arr2 / (np.abs(arr1) + np.abs(arr2) + regularization)
+    if values_interval:
+        rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
+    return rho_arr
+
+
+# ======================================================================
 def fix_phase_interval(arr):
     """
     Ensure that the range of values is interpreted as valid phase information.

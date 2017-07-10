@@ -24,6 +24,8 @@ import stat  # Interpreting stat() results
 import doctest  # Test interactive Python examples
 import shlex  # Simple lexical analysis
 import warnings  # Warning control
+import importlib  # The implementation of import
+import gzip  # Support for gzip files
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -215,15 +217,7 @@ def is_prime(num):
         >>> is_prime(1)
         True
     """
-    num = abs(num)
-    if num % 2 == 0 and num > 2:
-        return False
-    for i in range(3, int(num ** 0.5) + 1, 2):
-        if num % i == 0:
-            return False
-    return True
-
-    # # alternate implementation
+    # # : alternate implementation
     # is_divisible = num == 1 or num != 2 and num % 2 == 0
     # i = 3
     # while not is_divisible and i * i < num:
@@ -231,6 +225,15 @@ def is_prime(num):
     #     # only odd factors needs to be tested
     #     i += 2
     # return not is_divisible
+
+    # : fastest implementation
+    num = abs(num)
+    if num % 2 == 0 and num > 2:
+        return False
+    for i in range(3, int(num ** 0.5) + 1, 2):
+        if num % i == 0:
+            return False
+    return True
 
 
 # ======================================================================
@@ -487,8 +490,76 @@ def accumulate(
         [1, 2, 6, 24, 120, 720, 5040, 40320]
     """
     return [
-        functools.reduce(func, list(items)[:idx + 1])
-        for idx in range(len(items))]
+        functools.reduce(func, list(items)[:i + 1])
+        for i in range(len(items))]
+
+
+# =====================================================================
+def pseudo_ratio(x, y):
+    """
+    Calculate the pseudo-ratio of x, y: 1 / ((x / y) + (y / x))
+
+    .. math::
+        \\frac{1}{\\frac{x}{y}+\\frac{y}{x}} = \\frac{xy}{x^2+y^2}
+
+
+    Args:
+        x: First input.
+        y: Second input
+
+    Returns:
+        result: 1 / ((x / y) + (y / x))
+
+    Examples:
+        >>> pseudo_ratio(2, 2)
+        0.5
+        >>> pseudo_ratio(200, 200)
+        0.5
+        >>> pseudo_ratio(1, 2)
+        0.4
+        >>> pseudo_ratio(100, 200)
+        0.4
+        >>> items = 100, 200
+        >>> (pseudo_ratio(*items) == pseudo_ratio(*items[::-1]))
+        True
+    """
+    return x * y / (x ** 2 + y ** 2)
+
+
+# =====================================================================
+def gen_pseudo_ratio(*items):
+    """
+    Calculate the pseudo-ratio of x, y: 1 / ((x / y) + (y / x))
+
+    .. math::
+        \\frac{1}{\\frac{x}{y}+\\frac{y}{x}} = \\frac{xy}{x^2+y^2}
+
+
+    Args:
+        x: First input.
+        y: Second input
+
+    Returns:
+        result: 1 / ((x / y) + (y / x))
+
+    Examples:
+        >>> gen_pseudo_ratio(2, 2, 2, 2, 2)
+        0.05
+        >>> gen_pseudo_ratio(200, 200, 200, 200, 200)
+        0.05
+        >>> gen_pseudo_ratio(1, 2)
+        0.4
+        >>> gen_pseudo_ratio(100, 200)
+        0.4
+        >>> items1 = [x * 10 for x in range(2, 10)]
+        >>> items2 = [x * 1000 for x in range(2, 10)]
+        >>> np.isclose(gen_pseudo_ratio(*items1), gen_pseudo_ratio(*items2))
+        True
+        >>> items = list(range(2, 10))
+        >>> np.isclose(gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[::-1]))
+        True
+    """
+    return 1 / np.sum(x / y for x, y in itertools.permutations(items, 2))
 
 
 # ======================================================================
@@ -500,7 +571,7 @@ def multi_replace(
 
     Args:
         text (str): The input string.
-        replaces (tuple[str,str]): The listing of the replacements.
+        replaces (tuple[tuple[str]]): The listing of the replacements.
             Format: ((<old>, <new>), ...).
 
     Returns:
@@ -608,6 +679,86 @@ def common_substr(
                 tmps.extend(common_substr_2(common, text, sorting))
         commons = tmps
     return commons
+
+
+# ======================================================================
+def auto_open(filepath, *args, **kwargs):
+    """
+    Auto-magically open a compressed file.
+
+    Supports `gzip` and `bzip2`.
+
+    Note: all compressed files should be opened as binary.
+    Opening in text mode is not supported.
+
+    Args:
+        filepath (str): The file path.
+        *args (iterable): Positional arguments passed to `open()`.
+        **kwargs (dict): Keyword arguments passed to `open()`.
+
+    Returns:
+        file_obj: A file object.
+
+    Raises:
+        IOError: on failure.
+
+    See Also:
+        open(), gzip.open(), bz2.open()
+
+    Examples:
+        >>> file_obj = auto_open(__file__, 'rb')
+    """
+    zip_module_names = 'gzip', 'bz2'
+    file_obj = None
+    for zip_module_name in zip_module_names:
+        try:
+            zip_module = importlib.import_module(zip_module_name)
+            file_obj = zip_module.open(filepath, *args, **kwargs)
+            file_obj.read(1)
+        except (OSError, IOError, AttributeError, ImportError):
+            file_obj = None
+        else:
+            file_obj.seek(0)
+            break
+    if not file_obj:
+        file_obj = open(filepath, *args, **kwargs)
+    return file_obj
+
+
+# ======================================================================
+def zopen(filepath, *args, **kwargs):
+    """
+    Auto-magically open a gzip-compressed file.
+
+    Note: all compressed files should be opened as binary.
+    Opening in text mode is not supported.
+
+    Args:
+        filepath (str): The file path.
+        *args (iterable): Positional arguments passed to `open()`.
+        **kwargs (dict): Keyword arguments passed to `open()`.
+
+    Returns:
+        file_obj: A file object.
+
+    Raises:
+        IOError: on failure.
+
+    See Also:
+        open(), gzip.open()
+
+    Examples:
+        >>> file_obj = zopen(__file__, 'rb')
+    """
+    file_obj = open(filepath, *args, **kwargs)
+
+    # test if file is gzip using magic type (first 2 bytes)
+    magic = file_obj.read(2)
+    file_obj.seek(0)
+    if magic == b'\x1f\x8b':
+        file_obj = gzip.GzipFile(fileobj=file_obj)
+
+    return file_obj
 
 
 # ======================================================================
@@ -1071,9 +1222,8 @@ def split_ext(
     ext is the extension (including the separator).
 
     It can automatically detect multiple extensions.
-    Since `os.path.extsep` if often '.', a `os.path.extsep` between digits is
-    not
-    considered to be generating and extension.
+    Since `os.path.extsep` is often '.', a `os.path.extsep` between digits is
+    not considered to be generating and extension.
 
     Args:
         filepath (str): The input filepath.

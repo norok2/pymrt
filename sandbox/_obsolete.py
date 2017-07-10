@@ -249,6 +249,7 @@ def sequence(
         >>> list(sequence(10, 20, 15))
         [10]
     """
+    from pymrt.utils import guess_decimals
     if step is None:
         step = 1 if stop > start else -1
     if precision is None:
@@ -258,6 +259,29 @@ def sequence(
         if precision:
             item = round(item, precision)
         yield item
+
+
+# ======================================================================
+def transparent_compression(func):
+    def _wrapped():
+        from importlib import import_module
+        zip_module_names = "gzip", "bz2"
+        fallback_module_name = "builtins"
+        open_module_names = zip_module_names + (fallback_module_name,)
+        for open_module_name in open_module_names:
+            try:
+                open_module = import_module(open_module_name)
+                tmp_fp = open_module.open(fp, "rb")
+                tmp_fp.read(1)
+            except (OSError, IOError, AttributeError, ImportError) as e:
+                if open_module_name is fallback_module_name:
+                    raise(e)
+            else:
+                tmp_fp.seek(0)
+                fp = tmp_fp
+                break
+        return func(fp=fp)
+    return _wrapped
 
 
 # ======================================================================

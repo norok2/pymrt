@@ -12,7 +12,7 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 # import itertools  # Functions creating iterators for efficient looping
-# import warnings  # Warning control
+import warnings  # Warning control
 # import collections  # Container datatypes
 
 # :: External Imports
@@ -31,28 +31,24 @@ from pymrt.recipes.generic import fix_phase_interval
 
 
 # ======================================================================
-def fit_mp2rage_rho(
-        inv1m_arr,
-        inv1p_arr,
-        inv2m_arr,
-        inv2p_arr,
+def mp2rage_cx_to_rho(
+        inv1_arr,
+        inv2_arr,
         regularization=np.spacing(1),
         values_interval=None):
     """
-    Calculate the rho image from an MP2RAGE acquisition.
-    
-    This is also referred to as the uniform images, because it should be free
+    Calculate the rho signal from an MP2RAGE acquisition.
+
+    This is also referred to as the uniform arrays, because it should be free
     from low-spatial frequency biases.
 
     Args:
-        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
-        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
-        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
-        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        inv1_arr (float|np.ndarray): Complex array of the first inversion.
+        inv2_arr (float|np.ndarray): Complex array of the second inversion.
         regularization (float|int): Parameter for the regularization.
             This parameter is added to the denominator of the rho expression
             for normalization purposes, therefore should be much smaller than
-            the average of the magnitude images.
+            the average of the magnitude arrays.
             Larger values of this parameter will have the side effect of
             denoising the background.
         values_interval (tuple[float|int]|None): The output values interval.
@@ -60,58 +56,100 @@ def fit_mp2rage_rho(
             If None, the natural [-0.5, 0.5] interval will be used.
 
     Returns:
-        rho_arr (float|np.ndarray): The calculated rho (uniform) image.
+        rho_arr (float|np.ndarray): The calculated rho (uniform) array.
     """
-    if not regularization:
-        regularization = 0
-    inv1m_arr = inv1m_arr.astype(float)
-    inv2m_arr = inv2m_arr.astype(float)
-    inv1p_arr = fix_phase_interval(inv1p_arr)
-    inv2p_arr = fix_phase_interval(inv2p_arr)
-    inv1_arr = mrt.utils.polar2complex(inv1m_arr, inv1p_arr)
-    inv2_arr = mrt.utils.polar2complex(inv2m_arr, inv2p_arr)
-    rho_arr = np.real(inv1_arr.conj() * inv2_arr /
-                      (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
+    rho_arr = np.real(
+        inv1_arr.conj() * inv2_arr /
+        (np.abs(inv1_arr) + np.abs(inv2_arr) + regularization))
     if values_interval:
         rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
 
 
 # ======================================================================
-def fit_mp2rage_rho_to_t1(
+def mp2rage_mag_phs_to_rho(
+        inv1m_arr,
+        inv1p_arr,
+        inv2m_arr,
+        inv2p_arr,
+        regularization=np.spacing(1),
+        values_interval=None):
+    """
+    Calculate the rho signal from an MP2RAGE acquisition.
+    
+    This is also referred to as the uniform arrays, because it should be free
+    from low-spatial frequency biases.
+
+    Args:
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion.
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the rho expression
+            for normalization purposes, therefore should be much smaller than
+            the average of the magnitude arrays.
+            Larger values of this parameter will have the side effect of
+            denoising the background.
+        values_interval (tuple[float|int]|None): The output values interval.
+            The standard values are linearly converted to this range.
+            If None, the natural [-0.5, 0.5] interval will be used.
+
+    Returns:
+        rho_arr (float|np.ndarray): The calculated rho (uniform) array.
+    """
+    inv1m_arr = inv1m_arr.astype(float)
+    inv2m_arr = inv2m_arr.astype(float)
+    inv1p_arr = fix_phase_interval(inv1p_arr)
+    inv2p_arr = fix_phase_interval(inv2p_arr)
+    inv1_arr = mrt.utils.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = mrt.utils.polar2complex(inv2m_arr, inv2p_arr)
+    rho_arr = mp2rage_cx_to_rho(
+        inv1_arr, inv2_arr, regularization, values_interval)
+    return rho_arr
+
+
+# ======================================================================
+def mp2rage_rho_to_t1(
         rho_arr,
-        eff_arr=None,
+        eta_fa_arr=None,
         t1_values_range=(100, 5000),
         t1_num=512,
-        eff_num=32,
+        eta_fa_values_range=(0.1, 2),
+        eta_fa_num=512,
         **acq_params_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
 
     Args:
-        rho_arr (float|np.ndarray): Magnitude of the first inversion image.
-        eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+        rho_arr (float|np.ndarray): MP2RAGE signal (uniform) array.
+        eta_fa_arr (float|np.array|None): Flip angle efficiency.
             This is equivalent to the normalized B1T field.
-            Note that this must have the same spatial dimensions as the images
+            Note that this must have the same spatial dimensions as the arrays
             acquired with MP2RAGE.
-            If None, no correction for the RF efficiency is performed.
-        t1_values_range (tuple[float]): The T1 value range to consider.
+            If None, no correction for the flip angle efficiency is performed.
+        t1_values_range (tuple[float]): The T1 range.
             The format is (min, max) where min < max.
             Values should be positive.
-        t1_num (int): The base number of sampling points of T1.
+        t1_num (int): The number of samples for T1.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the MP2RAGE estimation.
-        eff_num (int): The base number of sampling points for the RF efficiency.
-            This affects the precision of the RF efficiency correction.
+            This affects the precision of the estimation.
+        eta_fa_values_range (tuple[float]): The flip angle efficiency range.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        eta_fa_num (int): The number of samples for flip angle efficiency.
+            The actual number of sampling points is usually smaller, because of
+            the removal of non-bijective branches.
+            This affects the precision of the estimation.
         **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of: `mp2rage.acq_to_seq_params`.
+            This should match the signature of: `mp2rage_t1.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
     from pymrt.sequences import mp2rage
-    if eff_arr:
+    if eta_fa_arr:
         # todo: implement B1T correction
         raise NotImplementedError('B1T correction is not yet implemented')
     else:
@@ -139,79 +177,89 @@ def fit_mp2rage_rho_to_t1(
 
 
 # ======================================================================
-def fit_mp2rage(
+def mp2rage_t1(
         inv1m_arr,
         inv1p_arr,
         inv2m_arr,
         inv2p_arr,
         regularization=np.spacing(1),
-        eff_arr=None,
+        eta_fa_arr=None,
         t1_values_range=(100, 5000),
         t1_num=512,
-        eff_num=32,
+        eta_fa_values_range=(0.1, 2),
+        eta_fa_num=512,
         **acq_param_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
 
     Args:
-        inv1m_arr (float|np.ndarray): Magnitude of the first inversion image.
-        inv1p_arr (float|np.ndarray): Phase of the first inversion image.
-        inv2m_arr (float|np.ndarray): Magnitude of the second inversion image.
-        inv2p_arr (float|np.ndarray): Phase of the second inversion image.
+        inv1m_arr (float|np.ndarray): Magnitude of the first inversion.
+        inv1p_arr (float|np.ndarray): Phase of the first inversion.
+        inv2m_arr (float|np.ndarray): Magnitude of the second inversion.
+        inv2p_arr (float|np.ndarray): Phase of the second inversion.
         regularization (float|int): Parameter for the regularization.
             This parameter is added to the denominator of the rho expression
             for normalization purposes, therefore should be much smaller than
-            the average of the magnitude images.
+            the average of the magnitude arrays.
             Larger values of this parameter will have the side effect of
             denoising the background.
-        eff_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+        eta_fa_arr (float|np.array|None): Flip angle efficiency.
             This is equivalent to the normalized B1T field.
-            Note that this must have the same spatial dimensions as the images
+            Note that this must have the same spatial dimensions as the arrays
             acquired with MP2RAGE.
-            If None, no correction for the RF efficiency is performed.
-        t1_values_range (tuple[float]): The T1 value range to consider.
+            If None, no correction for the flip angle efficiency is performed.
+        t1_values_range (tuple[float]): The T1 range.
             The format is (min, max) where min < max.
             Values should be positive.
-        t1_num (int): The base number of sampling points of T1.
+        t1_num (int): The number of samples for T1.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the MP2RAGE estimation.
-        eff_num (int): The base number of sampling points for the RF efficiency.
-            This affects the precision of the RF efficiency correction.
+            This affects the precision of the estimation.
+        eta_fa_values_range (tuple[float]): The flip angle efficiency range.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        eta_fa_num (int): The number of samples for flip angle efficiency.
+            The actual number of sampling points is usually smaller, because of
+            the removal of non-bijective branches.
+            This affects the precision of the estimation.
         **acq_param_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+            This should match the signature of:  `mp2rage_t1.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
-    rho_arr = fit_mp2rage_rho(
+    rho_arr = mp2rage_mag_phs_to_rho(
         inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
         values_interval=None)
-    t1_arr = fit_mp2rage_rho_to_t1(
-        rho_arr, eff_arr, t1_values_range, t1_num, eff_num, **acq_param_kws)
+    t1_arr = mp2rage_rho_to_t1(
+        rho_arr, eta_fa_arr,
+        t1_values_range, t1_num,
+        eta_fa_values_range, eta_fa_num, **acq_param_kws)
     return t1_arr
 
 
 # ======================================================================
-def dual_angle_flash(
+def dual_flash(
         arr1,
         arr2,
-        eff_arr,
         fa1,
         fa2,
-        tr):
+        tr1,
+        tr2,
+        eta_fa_arr=None,
+        approx=None):
     """
     Calculate the T1 map from two FLASH acquisitions.
     
-    Solving for T1 the ratio of two FLASH signals
-    (where :math:`s_1` is `arr1` and :math:`s_2` is `arr2`):
-    
+    Solving for T1 the combination of two FLASH signals
+    (where :math:`s_1` is `arr1` and :math:`s_2` is `arr2`).
+
     .. math::
         \\frac{s_1}{s_2} = \\frac{\\sin(\\alpha_1)}{\\sin(
         \\alpha_2)}\\frac{1 - \\cos(\\alpha_2) e^{-\\frac{T_R}{T_1}}}
         {1 - \\cos(\\alpha_1) e^{-\\frac{T_R}{T_1}}}
     
-    We obtain:
+    which becomes:
     
     .. math::
         e^{-\\frac{T_R}{T_1}} = \\frac{\\sin(\\alpha_1) s_2-\\sin(
@@ -224,35 +272,74 @@ def dual_angle_flash(
         T_1 = -\\frac{T_R}{\\log(X)}
 
     This is a closed-form solution.
+
+    Array units must be consistent.
+    Time units must be consistent.
     
     Args:
         arr1 (np.ndarray): The first input array in arb.units.
-            This is a FLASH image acquired with:
+            This is a FLASH array acquired with:
                 - the nominal flip angle specified in the `fa1` parameter;
                 - the repetition time specified in the `tr` parameter.
         arr2 (np.ndarray): The second input array in arb.units.
-            This is a FLASH image acquired with:
+            This is a FLASH array acquired with:
                 - the nominal flip angle specified in the `fa2` parameter;
                 - the repetition time specified in the `tr` parameter.
-        eff_arr (np.ndarray): The flip angle efficient in #.
-        fa1 (float): Flip angle of the first acquisition in deg.
-        fa2 (float): Flip angle of the second acquisition in deg.
-        tr (float): Repetition time of the acquisitions in time units.
-            Both acquisitions must have the same TR.
-            Units of TR determine the units of T1.
+        fa1 (int|float): The first nominal flip angle in deg.
+        fa2 (int|float): The second nominal flip angle in deg.
+        tr1 (int|float): The first repetition time in time units.
+        tr2 (int|float): The second repetition time in time units.
+        eta_fa_arr (np.ndarray|None): The flip angle efficient in #.
+            If None, a significant bias may still be present.
+        approx (str|None): Determine the approximation to use.
+            Accepted values:
+             - `short_tr`: assumes tr1, tr2 << min(T1)
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
     from numpy import log, sin, cos
-    fa1 = np.deg2rad(fa1)
-    fa2 = np.deg2rad(fa2)
-    # t1_arr = -tr / log(
-    #     (sin(fa1) * arr2 - sin(fa2) * arr1) /
-    #     (sin(fa1) * cos(fa2) * arr2 - cos(fa1) * sin(fa2) * arr1))
-    with np.errstate(divide='ignore', invalid='ignore'):
-        t1_arr = -tr / log(
-            (sin(fa1 * eff_arr) * arr2 - sin(fa2 * eff_arr) * arr1) / (
-                sin(fa1 * eff_arr) * cos(fa2 * eff_arr) * arr2 - cos(
-                    fa1 * eff_arr) * sin(fa2 * eff_arr) * arr1))
+
+    if eta_fa_arr is None:
+        eta_fa_arr = 1
+
+    fa1 = np.deg2rad(fa1) * eta_fa_arr
+    fa2 = np.deg2rad(fa2) * eta_fa_arr
+
+    tr = tr1
+    fa = fa1
+    tr_ratio = tr2 / tr1
+    fa_ratio = fa2 / fa1
+    same_tr = np.isclose(tr1, tr2)
+    same_fa = np.isclose(fa1, fa2)
+    double_fa = np.isclose(2, fa_ratio)
+
+    if same_tr:
+        fa1 *= eta_fa_arr
+        fa2 *= eta_fa_arr
+        if approx.lower() == 'short_tr':
+            with np.errstate(divide='ignore', invalid='ignore'):
+                t1_arr = tr * tr_ratio * (
+                    (sin(fa1) * cos(fa2) * arr2 -
+                     cos(fa1) * sin(fa2) * arr1) /
+                    ((sin(fa1) * cos(fa2) - sin(fa1)) * arr2 +
+                     (1 - cos(fa1)) * sin(fa2) * tr_ratio * arr1))
+        else:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                t1_arr = -tr / log(
+                    (sin(fa1) * arr2 -
+                     sin(fa2) * arr1) /
+                    (sin(fa1) * cos(fa2) * arr2 -
+                     cos(fa1) * sin(fa2) * arr1))
+
+    else:
+        if approx.lower() == 'short_tr' and same_fa:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                t1_arr = tr * tr_ratio * (
+                    cos(fa) * (arr2 - arr1) /
+                    ((cos(fa) - 1) * arr2 + (1 - cos(fa)) * tr_ratio * arr1))
+        else:
+            # todo: implement tan approx.
+            warnings.warn('Unsupported fa1, fa2, tr1, tr2 combination')
+            t1_arr = np.ones_like(arr1)
     return t1_arr

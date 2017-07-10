@@ -85,20 +85,20 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='Δη_α / #', default=0.1, start=0, stop=1, step=0.05)),
 
     ('t1_start', dict(
-        label='T1_start / ms', default=50, start=0, stop=1000, step=10)),
+        label='T1_start / ms', default=50, start=1, stop=1000, step=10)),
     ('t1_stop', dict(
-        label='T1_stop / ms', default=4100, start=2000, stop=6000, step=100)),
+        label='T1_stop / ms', default=4100, start=1, stop=6000, step=100)),
     ('t1_num', dict(
-        label='T1_num / #', default=256, start=32, stop=1024, step=16)),
+        label='T1_num / #', default=256, start=1, stop=1024, step=16)),
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
     ('matrix_size_ro', dict(
-        label='N_ro / #', default=256, start=16, stop=1024, step=1)),
+        label='N_ro / #', default=256, start=1, stop=1024, step=1)),
     ('matrix_size_pe', dict(
-        label='N_pe / #', default=256, start=16, stop=1024, step=1)),
+        label='N_pe / #', default=256, start=1, stop=1024, step=1)),
     ('matrix_size_sl', dict(
-        label='N_sl / #', default=256, start=16, stop=1024, step=1)),
+        label='N_sl / #', default=256, start=1, stop=1024, step=1)),
 
     ('grappa_factor_ro', dict(
         label='GRAPPA_ro / #', default=1, start=1, stop=8, step=1)),
@@ -153,8 +153,8 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='T1_start / ms', default=50, start=0, stop=1000, step=10)),
     ('t1_stop', dict(
         label='T1_stop / ms', default=4100, start=2000, stop=6000, step=100)),
-    ('t1_step', dict(
-        label='T1_step / ms', default=256, start=32, stop=1024, step=16)),
+    ('t1_num', dict(
+        label='T1_num / ms', default=256, start=32, stop=1024, step=16)),
 ])
 
 
@@ -165,7 +165,7 @@ def plot_rho_t1_mp2rage_seq(
         title=TITLE.split(':')[1].strip()):
     ax = fig.gca()
     t1_arr = np.linspace(
-        params['t1_start'], params['t1_stop'], params['t1_step'])
+        params['t1_start'], params['t1_stop'], params['t1_num'])
     try:
         kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', \
                     'eta_inv'
@@ -218,7 +218,7 @@ def plot_rho_t1_mp2rage_acq(
         params=None,
         title=TITLE.split(':')[1].strip()):
     t1_arr = np.linspace(
-        params['t1_start'], params['t1_stop'], params['t1_step'])
+        params['t1_start'], params['t1_stop'], params['t1_num'])
     ax = fig.gca()
     try:
         seq_kws, extra_info = mp2rage.acq_to_seq_params(
