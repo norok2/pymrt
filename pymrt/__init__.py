@@ -174,7 +174,6 @@ def dbg(obj, fmt=None):
     """
     import inspect
 
-
     outer_frame = inspect.getouterframes(inspect.currentframe())[1]
     name_str = outer_frame[4][0][:-1]
     msg(name_str, fmt=fmt, end=': ')
@@ -205,7 +204,6 @@ def elapsed(
     import inspect
     import os
 
-
     if name is None:
         outer_frame = inspect.getouterframes(inspect.currentframe())[1]
         filename = __file__
@@ -234,7 +232,6 @@ def print_elapsed(
         None.
     """
     import datetime
-
 
     if not only_last:
         print(label, end='\n' if len(events) > 2 else '')
@@ -285,7 +282,6 @@ def _app_dirs(
     """
     import appdirs
     import os
-
 
     dirpaths = dict((
         ('config', appdirs.user_config_dir(name, author, version)),

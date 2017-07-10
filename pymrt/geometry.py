@@ -910,7 +910,7 @@ def apply_mask(
 
 # ======================================================================
 def zoom_prepare(
-        zoom,
+        zoom_factors,
         shape,
         extra_dim=True,
         fill_dim=True):
@@ -918,7 +918,7 @@ def zoom_prepare(
     Prepare the zoom and shape tuples to allow for non-homogeneous shapes.
 
     Args:
-        zoom (float|tuple[float]): The zoom factors for each directions.
+        zoom_factors (float|tuple[float]): The zoom factors for each directions.
         shape (int|iterable[int]): The shape of the array to operate with.
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
@@ -927,14 +927,15 @@ def zoom_prepare(
         zoom (tuple[float]): The zoom factors for each directions.
         shape (int|iterable[int]): The shape of the array to operate with.
     """
-    zoom = list(mrt.utils.auto_repeat(zoom, len(shape)))
+    zoom_factors = list(mrt.utils.auto_repeat(zoom_factors, len(shape)))
     if extra_dim:
-        shape = list(shape) + [1] * (len(zoom) - len(shape))
+        shape = list(shape) + [1] * (len(zoom_factors) - len(shape))
     else:
-        zoom = zoom[:len(shape)]
-    if fill_dim and len(zoom) < len(shape):
-        zoom[len(zoom):] = [1.0] * (len(shape) - len(zoom))
-    return zoom, shape
+        zoom_factors = zoom_factors[:len(shape)]
+    if fill_dim and len(zoom_factors) < len(shape):
+        zoom_factors[len(zoom_factors):] = \
+            [1.0] * (len(shape) - len(zoom_factors))
+    return zoom_factors, shape
 
 
 # ======================================================================
@@ -949,8 +950,8 @@ def shape2zoom(
         old_shape (int|iterable[int]): The shape of the source array.
         new_shape (int|iterable[int]): The target shape of the array.
         aspect (callable|None): Function for the manipulation of the zoom.
-            Signature: aspect(tuple[float]) -> float.
-            None to leave the zoom unmodified. It specified, the function is
+            Signature: aspect(iterable[float]) -> float.
+            None to leave the zoom unmodified. If specified, the function is
             applied to zoom factors tuple for fine tuning of the aspect.
             Particularly, to obtain specific aspect ratio results:
              - 'min': image strictly contained into new shape
@@ -961,10 +962,110 @@ def shape2zoom(
     """
     if len(old_shape) != len(new_shape):
         raise IndexError('length of tuples must match')
-    zoom = [new / old for old, new in zip(old_shape, new_shape)]
+    zoom_factors = [new / old for old, new in zip(old_shape, new_shape)]
     if aspect:
-        zoom = [aspect(zoom)] * len(zoom)
-    return zoom
+        zoom_factors = [aspect(zoom_factors)] * len(zoom_factors)
+    return zoom_factors
+
+
+# ======================================================================
+def zoom(
+        arr,
+        factors,
+        interp_order=1,
+        extra_dim=True,
+        fill_dim=True):
+    """
+    Zoom the array with a specified magnification factor.
+
+    Args:
+        arr (np.ndarray): The input array.
+        factors (float|iterable[float]): The zoom factor along the axes.
+        interp_order (int): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
+
+    Returns:
+        result (np.ndarray): The output array.
+
+    See Also:
+        pymrt.geometry.reshape(), pymrt.geometry.resample()
+    """
+    factors, shape = zoom_prepare(factors, arr.shape, extra_dim, fill_dim)
+    arr = sp.ndimage.zoom(
+        arr.reshape(shape), factors, order=interp_order)
+    # aff_transform = np.diag(1.0 / np.array(factors[:3] + [1.0]))
+    return arr
+
+
+# ======================================================================
+def reshape(
+        arr,
+        new_shape,
+        aspect,
+        interp_order=1,
+        extra_dim=True,
+        fill_dim=True):
+    """
+    Reshape the array to a new shape (different resolution / pixel size).
+
+    Warning: uses `scipy.ndimage.zoom` internally!
+    For downsampling applications, this might not be appropriate.
+
+    Args:
+        arr (np.ndarray): The input array.
+        new_shape (tuple[int|None]): New dimensions of the array.
+        aspect (callable|iterable[callable]): Zoom shape manipulation.
+            Useful for obtaining specific aspect ratio effects.
+            This is passed to `pymrt.geometry.shape2zoom()`.
+        interp_order (int): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    See Also:
+        pymrt.geometry.zoom(), pymrt.geometry.resample()
+    """
+    factors = shape2zoom(arr.shape, new_shape, aspect)
+    factors, shape = zoom_prepare(factors, arr.shape, extra_dim, fill_dim)
+    arr = sp.ndimage.zoom(
+        arr.reshape(shape), factors, order=interp_order)
+    return arr
+
+
+# ======================================================================
+def resample(
+        arr,
+        resampling):
+    """
+    Resample the array with different (different resolution / pixel size).
+
+    This assumes linearity in the down-sampled dimensions.
+    This means that the signal from a larger sample is proportional to the
+    (weighted) sum of the signals from smaller samples with overlapping support.
+
+    Args:
+        arr (np.ndarray): The input array.
+        resampling (float): Resampling factor.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    See Also:
+        pymrt.geometry.zoom(), pymrt.geometry.reshape()
+    """
+    # todo: implement anisotropic resampling
+    if resampling >= 1.0:
+        arr = sp.ndimage.zoom(arr, resampling, order=0)
+    else:  # downsampling
+        print((1.0 / resampling) / 2 - 0.5)
+        arr = sp.ndimage.gaussian_filter(arr, (1.0 / resampling) / 2 - 0.5)
+        arr = sp.ndimage.zoom(arr, resampling, order=0)
+    return arr
 
 
 # ======================================================================

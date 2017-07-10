@@ -318,8 +318,8 @@ def simple_filter_1_1(
         out_filepath (str): Output file path
         func (callable): Filtering function (arr: np.ndarray)
             func(arr, *args, *kwargs) -> arr
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (*tuple): Positional arguments passed to the filtering function
+        **kwargs (**dict): Keyword arguments passed to the filtering function
 
     Returns:
         None
@@ -671,7 +671,7 @@ def split(
 def zoom(
         in_filepath,
         out_filepath,
-        zoom=1.0,
+        factors,
         interp_order=1,
         extra_dim=True,
         fill_dim=True):
@@ -679,36 +679,27 @@ def zoom(
     Zoom the image with a specified magnification factor.
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        zoom (float|iterable): The zoom factor along the axes
-        interp_order (int): Order of the spline interpolation
-            0: nearest. Accepted range: [0, 5]
-        extra_dim (bool): Force extra dimensions in the zoom parameters
-        fill_dim (bool): Dimensions not specified are left untouched
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        factors (float|iterable): The zoom factor along the axes.
+        interp_order (int): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
 
     Returns:    
-        None
+        None.
 
     See Also:
-        pymrt.geometry
+        pymrt.geometry.reshape()
     """
-
-    def _zoom(array, zoom, interp_order, extra_dim, fill_dim):
-        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim,
-                                                fill_dim)
-        array = sp.ndimage.zoom(
-            array.reshape(shape), zoom, order=interp_order)
-        aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
-        return array, aff_transform
-
     simple_filter_1_1(
-        in_filepath, out_filepath, _zoom,
-        zoom, interp_order, extra_dim, fill_dim)
+        in_filepath, out_filepath, mrt.geometry.zoom,
+        factors, interp_order, extra_dim, fill_dim)
 
 
 # ======================================================================
-def resample(
+def reshape(
         in_filepath,
         out_filepath,
         new_shape,
@@ -717,90 +708,56 @@ def resample(
         extra_dim=True,
         fill_dim=True):
     """
-    Resample the image to a new shape (different resolution / voxel size).
+    Reshape the image to a new shape (different resolution / voxel size).
 
-    Warning: it uses `scipy.ndimage.zoom` internally!
+    Warning: uses `scipy.ndimage.zoom` internally!
     For downsampling applications, this might not be appropriate.
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        new_shape (tuple[int]): New dimensions of the image
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        new_shape (tuple[int|None]): New dimensions of the image.
         aspect (callable|list[callable]): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
             This is passed to `pymrt.geometry.shape2zoom()`.
-        interp_order (int): Order of the spline interpolation
-            0: nearest. Accepted range: [0, 5]
-        extra_dim (bool): Force extra dimensions in the zoom parameters
-        fill_dim (bool): Dimensions not specified are left untouched
+        interp_order (int): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
 
     Returns:
-        None
+        None.
 
     See Also:
-        pymrt.geometry.shape2zoom()
+        pymrt.geometry.zoom()
     """
-
-    # todo: check for correctness
-
-    def _zoom(
-            array, new_shape, aspect, interp_order, extra_dim, fill_dim):
-        zoom = mrt.geometry.shape2zoom(array.shape, new_shape, aspect)
-        zoom, shape = mrt.geometry.zoom_prepare(zoom, array.shape, extra_dim,
-                                                fill_dim)
-        array = sp.ndimage.zoom(
-            array.reshape(shape), zoom, order=interp_order)
-        # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
-        return array
-
     simple_filter_1_1(
-        in_filepath, out_filepath, _zoom,
-        new_shape, aspect, extra_dim, fill_dim,
-        interp_order)
+        in_filepath, out_filepath, mrt.geometry.reshape,
+        new_shape, aspect, extra_dim, fill_dim, interp_order)
 
 
 # ======================================================================
-def downsample(
+def resample(
         in_filepath,
         out_filepath,
-        shape):
+        resampling):
     """
-    Down-sample the image to a new shape (different resolution / voxel size).
+    Resample the image to a new shape (different resolution / voxel size).
 
     This assumes linearity in the down-sampled dimensions.
     This means that the signal from a larger sample is proportional to the
     (weighted) sum of the signals from smaller samples with overlapping support.
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        new_shape (tuple[int|None]): New dimensions of the image
-        aspect (callable|list[callable]): Transformation applied to
-        interp_order (int): Order of the spline interpolation
-            0: nearest. Accepted range: [0, 5]
-        extra_dim (bool): Force extra dimensions in the zoom parameters
-        fill_dim (bool): Dimensions not specified are left untouched
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        resampling (float|tuple[float]): Resampling factors.
 
     Returns:
-        None
+        None.
     """
-
-    # todo: check for correctness
-
-    def _zoom(
-            array, new_shape, aspect, interp_order, extra_dim, fill_dim):
-        zoom = mrt.geometry.shape2zoom(array.shape, new_shape, aspect)
-        zoom, shape = mrt.geometry.zoom_prepare(
-            zoom, array.shape, extra_dim, fill_dim)
-        array = sp.ndimage.zoom(
-            array.reshape(shape), zoom, order=interp_order)
-        # aff_transform = np.diag(1.0 / np.array(zoom[:3] + [1.0]))
-        return array
-
     simple_filter_1_1(
-        in_filepath, out_filepath, _zoom,
-        new_shape, aspect, extra_dim, fill_dim,
-        interp_order)
+        in_filepath, out_filepath, mrt.geometry.resample, resampling)
 
 
 # ======================================================================
@@ -863,7 +820,7 @@ def common_sampling(
     Resample images sizes and affine transformations to match the same shape.
 
     Note that:
-        - uses 'resample' under the hood
+        - uses 'reshape' under the hood
         - the sampling / resolution / voxel size will change
         - the support space / field-of-view will NOT change
 
@@ -898,7 +855,7 @@ def common_sampling(
             shape_list.append(obj.get_data().shape)
         new_shape = combine_shape(shape_list)
 
-    # resample images
+    # reshape images
     interpolation_order = 0 if lossless else 1
 
     # when output files are not specified, modify inputs
@@ -907,7 +864,7 @@ def common_sampling(
 
     for in_filepath, out_filepath in zip(in_filepaths, out_filepaths):
         # ratio should not be kept: keep_ratio_method=None
-        resample(
+        reshape(
             in_filepath, out_filepath, new_shape, None,
             interpolation_order,
             extra_dim, fill_dim)

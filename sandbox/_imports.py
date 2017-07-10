@@ -43,6 +43,9 @@ import smtplib  # SMTP protocol client
 import tempfile  # Generate temporary files and directories
 import re  # Regular expression operations
 import glob  # Unix style pathname pattern expansion
+import importlib  # The implementation of import
+import gzip  # Support for gzip files
+import bz2  # Support for bzip2 compression
 
 # Configuration file parser
 try:

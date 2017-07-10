@@ -98,7 +98,7 @@ def preset_t1_mp2rage_builtin():
     new_opts = {
         'types': ['T1', 'INV2M'],
         'param_select': ['ProtocolName', '_series'],
-        'match': '(?i).*mp2rage.*',
+        'match': '(?i).*mp2rage_t1.*',
         'dtype': 'float',
         'mask': [[None], [None], [None], [1]],
     }
@@ -122,7 +122,7 @@ def preset_t2s_memp2rage_loglin2():
     new_opts = {
         'types': ['T2S', 'T1w'],
         'param_select': ['ProtocolName', 'EchoTime::ms', '_series'],
-        'match': '(?i).*me-mp2rage.*_INV2(?!_PHS).*',
+        'match': '(?i).*me-mp2rage_t1.*_INV2(?!_PHS).*',
         'dtype': 'float',
         'multi_acq': False,
         'compute_func': 'fit_monoexp_decay_loglin2',
@@ -542,7 +542,7 @@ def rho_to_t1_mp2rage(
         eff_num (int): The base number of sampling points for the RF efficiency.
             This affects the precision of the RF efficiency correction.
         **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+            This should match the signature of:  `mp2rage_t1.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
@@ -616,7 +616,7 @@ def t1_mp2rage(
         eff_num (int): The base number of sampling points for the RF efficiency.
             This affects the precision of the RF efficiency correction.
         **acq_param_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage.acq_to_seq_params`.
+            This should match the signature of:  `mp2rage_t1.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
