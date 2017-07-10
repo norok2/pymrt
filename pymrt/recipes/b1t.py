@@ -197,10 +197,12 @@ def dual_flash(
     # same-angle method (variable tr)
     elif same_fa:
         if approx.lower() == 'short_tr':
-            fa_arr = (arr1 / arr2)
-            fa_arr = (
-                (1 - tr_ratio * fa_arr) /
-                (tr_ratio * (fa_arr - 1) * (tr / t1) + 1 - tr_ratio * fa_arr))
+            with np.errstate(divide='ignore', invalid='ignore'):
+                fa_arr = (arr1 / arr2)
+                fa_arr = (
+                    (1 - tr_ratio * fa_arr) /
+                    (tr_ratio * (fa_arr - 1) * (tr / t1) +
+                     1 - tr_ratio * fa_arr))
         else:
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (
@@ -296,7 +298,7 @@ def mu2rage(
         fa2,
         tr_gre,
         n_gre,
-        t1=5000,
+        t1=4000,
         eta_fa_values_range=(0.01, 2.0),
         eta_fa_num=512):
     """
