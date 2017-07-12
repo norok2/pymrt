@@ -164,7 +164,6 @@ class PytkMain(pytk.widgets.Frame):
         self.nav_toolbar = tkagg.NavigationToolbar2TkAgg(
             self.canvas, self.frmLeft)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
-        self.actionPlotUpdate()
 
         # : right frame
         self.frmRight = pytk.widgets.ScrollingFrame(
@@ -189,7 +188,7 @@ class PytkMain(pytk.widgets.Frame):
                 self.wdgInteractives[name] = {'var': var, 'chk': chk}
             elif isinstance(info['default'], (int, float)):
                 var = pytk.tk.StringVar()
-                var.set(info['default'])
+                var.set(str(info['default']))
                 frm = pytk.widgets.Frame(self.frmParams)
                 frm.pack(fill='x', padx=1, pady=1, expand=True)
                 lbl = pytk.widgets.Label(frm, text=info['label'])
@@ -213,6 +212,7 @@ class PytkMain(pytk.widgets.Frame):
             elif isinstance(info['default'], (str, bytes)):
                 pass
         self._bind_interactions()
+        self.actionReset()
 
     def _make_menu(self):
         self.mnuMain = pytk.widgets.Menu(self.parent, tearoff=False)

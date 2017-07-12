@@ -1,7 +1,7 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-PyMRT - Interactive: MP2RAGE B1T sensitivity.
+PyMRT - Interactive: MP2RAGE T1 -- sensitivity to B1+.
 
 Simulate the MP2RAGE signal rho as a function of T1.
 

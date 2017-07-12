@@ -185,7 +185,8 @@ setup(
         ],
 
         'gui_scripts': [
-            'pymrt_mp2rage=scripts_gui.mp2rage_b1t_sensitivity:main',
+            'pymrt_mp2rage_t1=scripts_gui.mp2rage_t1_sensitivity_b1t:main',
+            'pymrt_mp2rage_b1t=scripts_gui.mp2rage_b1t_sensitivity_t1:main',
             'pymrt_ernst_angle=scripts_gui.flash_ernst_angle:main',
         ],
     },
