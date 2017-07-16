@@ -15,10 +15,8 @@ Two different set of parameters are accepted:
 References:
 1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W., Van de Moortele, 
    P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected sequence 
-   for 
-   improved segmentation and T1-mapping at high field. NeuroImage 49, 
-   1271–1281. 
-   doi:10.1016/j.neuroimage.2009.10.002
+   for improved segmentation and T1-mapping at high field. NeuroImage 49,
+   1271–1281. doi:10.1016/j.neuroimage.2009.10.002
 2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous 
    Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with 
    Multi-Echo MP2RAGE. PLOS ONE 12, e0169265. doi:10.1371/journal.pone.0169265

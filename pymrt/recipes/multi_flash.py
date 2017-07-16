@@ -33,9 +33,9 @@ def multi_flash(
         arrs,
         flip_angles,
         repetition_times,
-        fit_fa_eff=True,
-        fit_t1=True,
-        fit_m0=True):
+        calc_fa_eff=True,
+        calc_t1=True,
+        calc_m0=True):
     """
 
     This is a closed-form solution.
@@ -44,9 +44,9 @@ def multi_flash(
         arrs ():
         flip_angles ():
         repetition_times ():
-        fit_fa_eff ():
-        fit_t1 ():
-        fit_m0 ():
+        calc_fa_eff ():
+        calc_t1 ():
+        calc_m0 ():
 
     Returns:
 
