@@ -76,8 +76,10 @@ SEQ_INTERACTIVES = collections.OrderedDict([
     ('fa2', dict(
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
-    ('eta_inv', dict(
-        label='η_inv / #', default=0.0, start=0, stop=1, step=0.01)),
+    ('eta_p', dict(
+        label='η_p / #', default=1, start=0, stop=1, step=0.01)),
+    ('fa_p', dict(
+        label='α_p / #', default=0, start=-180, stop=180, step=5)),
 
     ('t1_start', dict(
         label='T1_start / ms', default=500, start=0, stop=1000, step=10)),
@@ -144,8 +146,10 @@ ACQ_INTERACTIVES = collections.OrderedDict([
     ('fa2', dict(
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
-    ('eta_inv', dict(
-        label='η_inv / #', default=0.0, start=0, stop=1, step=0.01)),
+    ('eta_p', dict(
+        label='η_p / #', default=1, start=0, stop=1, step=0.01)),
+    ('fa_p', dict(
+        label='α_p / #', default=0, start=-180, stop=180, step=5)),
 
     ('t1_start', dict(
         label='T1_start / ms', default=500, start=0, stop=1000, step=10)),
@@ -175,7 +179,8 @@ def plot_rho_b1t_mp2rage_seq(
             params['eta_fa_num'])
         t1_arr = np.linspace(
                 params['t1_start'], params['t1_stop'], params['t1_num'])
-        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_inv'
+        kws_names = (
+            'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['eta_fa'] = eta_fa_arr
         for t1 in t1_arr:
@@ -183,6 +188,7 @@ def plot_rho_b1t_mp2rage_seq(
             rho_arr = mp2rage.rho(**seq_kws)
             ax.plot(rho_arr, eta_fa_arr, label='T1={:.1f} ms'.format(t1))
     except Exception as e:
+        print(seq_kws)
         print(traceback.format_exc())
         ax.set_title('\n'.join(('WARNING! Some plot failed!', title)))
     else:
@@ -228,8 +234,6 @@ def plot_rho_b1t_mp2rage_acq(
             sl_pe_swap=params['sl_pe_swap'],
             tr_seq=params['tr_seq'],
             ti=(params['ti1'], params['ti2']),
-            fa=(params['fa1'], params['fa2']),
-            eta_inv=params['eta_inv'],
             tr_gre=params['tr_gre'])
 
         seq_kws_str = ', '.join(
@@ -243,6 +247,8 @@ def plot_rho_b1t_mp2rage_acq(
         print(seq_kws.keys())
 
         seq_kws['eta_fa'] = eta_fa_arr
+        kws_names = ('eta_p', 'fa_p')
+        seq_kws.update({name: params[name] for name in kws_names})
         for t1 in t1_arr:
             seq_kws['t1'] = t1
             rho_arr = mp2rage.rho(**seq_kws)
