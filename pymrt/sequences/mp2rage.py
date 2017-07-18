@@ -3,13 +3,14 @@
 """
 MP2RAGE pulse sequence library.
 
-Calculate the analytical expression of MP2RAGE signal rho and related functions.
+Calculate the analytical expression of MP2RAGE signal rho and related
+functions.
 
 - T1: longitudinal relaxation time
-- eff : efficiency eff of the adiabatic inversion pulse
+- eff : efficiency eff of the preparation pulse
 - n_GRE : number of pulses in each GRE block
 - TR_GRE : repetition time of GRE pulses in ms
-- TA : time between inversion pulse and first GRE block in ms
+- TA : time between preparation pulse and first GRE block in ms
 - TB : time between first and second GRE blocks in ms
 - TC : time after second GRE block in ms
 - A1 : flip angle of the first GRE block in deg
@@ -18,13 +19,16 @@ Calculate the analytical expression of MP2RAGE signal rho and related functions.
 Additionally, Conversion from acquisition to sequence parameters is supported.
 
 See Also:
-    - Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W., Van de
-    Moortele, P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected
-    sequence for improved segmentation and T1-mapping at high field.
-    NeuroImage 49, 1271–1281. doi:10.1016/j.neuroimage.2009.10.002
-    - Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous
-    Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with
-    Multi-Echo MP2RAGE. PLOS ONE 12, e0169265. doi:10.1371/journal.pone.0169265
+1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W., Van de Moortele,
+   P.-F., Gruetter, R., 2010. MP2RAGE, a self bias-field corrected sequence
+   for improved segmentation and T1-mapping at high field. NeuroImage 49,
+   1271–1281. doi:10.1016/j.neuroimage.2009.10.002
+2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous
+   Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with
+   Multi-Echo MP2RAGE. PLOS ONE 12, e0169265. doi:10.1371/journal.pone.0169265
+3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R., Marques, J.P.,
+   2012. SA2RAGE: A new sequence for fast B1+-mapping. Magnetic Resonance
+   Medicine 67, 1609–1619. doi:10.1002/mrm.23145
 """
 
 # ======================================================================
@@ -39,24 +43,24 @@ import pickle  # Python object serialization
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (signal and image processing library)
+# import scipy as sp  # SciPy (signal and image processing library)
 import sympy as sym  # SymPy (symbolic CAS library)
-import appdirs
+from sympy import pi, exp, sin, cos
 
 # :: External Imports Submodules
-import scipy.signal  # SciPy: Signal Processing
+# import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
 import pymrt as mrt
+import pymrt.utils
 from pymrt import DIRS
 from pymrt.config import CFG
-import pymrt.utils
 from pymrt import msg
 
 # ======================================================================
 # :: Default values
 _SEQ_PARAMS = dict(
-    eff=1.0,  # #
+    eta_p=1.0,  # #
     n_gre=160,  # #
     tr_gre=7.0,  # ms
     fa1=4.0,  # deg
@@ -64,6 +68,8 @@ _SEQ_PARAMS = dict(
     ta=440.0,  # ms
     tb=1180.0,  # ms
     tc=4140.0,  # ms
+    eta_fa=1.0,  # #
+    fa_p=180,  # deg
 )
 
 # rho ranges
@@ -71,36 +77,36 @@ RHO_INTERVAL = (-0.5, 0.5)
 
 
 # ======================================================================
-def _mz_nrf(mz0, t1, n_gre, tr_gre, fa, m0):
+def _mz_nrf(mz0, t1, n_gre, tr_gre, fa, m0, eta_fa):
     """Magnetization during the GRE block"""
-    from sympy import exp, cos
-    return mz0 * (cos(fa) * exp(-tr_gre / t1)) ** n_gre + \
-           m0 * (1 - exp(-tr_gre / t1)) * \
-           (1 - (cos(fa) * exp(-tr_gre / t1)) ** n_gre) / \
-           (1 - cos(fa) * exp(-tr_gre / t1))
+    return mz0 * (cos(fa * eta_fa) * exp(-tr_gre / t1)) ** n_gre + (
+        m0 * (1 - exp(-tr_gre / t1)) *
+        (1 - (cos(fa * eta_fa) * exp(-tr_gre / t1)) ** n_gre) /
+        (1 - cos(fa * eta_fa) * exp(-tr_gre / t1)))
 
 
 def _mz_0rf(mz0, t1, t, m0):
     """Magnetization during the period with no pulses"""
-    from sympy import exp
     return mz0 * exp(-t / t1) + m0 * (1 - exp(-t / t1))
 
 
-def _mz_i(mz0, eta_p=1.0, fa_p=sym.pi):
-    """Magnetization after adiabatic inversion pulse"""
-    from sympy import cos, pi
-    return eta_p * mz0 * cos(fa_p)
+def _mz_i(mz0, fa_p, eta_p):
+    """Magnetization after preparation pulse"""
+    return mz0 * cos(fa_p * eta_p)
 
 
 # ======================================================================
 def _prepare(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE rho expression analytically."""
-    from sympy import exp, sin, cos
 
-    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage_t1.cache')
+    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
-        t1, eta_p, n_gre, tr_gre, m0, ta, tb, tc, fa1, fa2, mz_ss = \
-            sym.symbols('t1 eta_p n_gre tr_gre m0 ta tb tc fa1 fa2 mz_ss')
+        m0, mz_ss = sym.symbols('m0 mz_ss')
+        n_gre, tr_gre = sym.symbols('n_gre tr_gre')
+        fa1, fa2 = sym.symbols('fa1 fa2')
+        ta, tb, tc = sym.symbols('ta tb tc')
+        fa_p, eta_p = sym.symbols('fa_p eta_p')
+        t1, eta_fa = sym.symbols('t1 eta_fa')
 
         eqn_mz_ss = sym.Eq(
             mz_ss,
@@ -109,11 +115,11 @@ def _prepare(use_cache=CFG['use_cache']):
                     _mz_0rf(
                         _mz_nrf(
                             _mz_0rf(
-                                _mz_i(mz_ss, eta_p),
+                                _mz_i(mz_ss, fa_p, eta_p),
                                 t1, ta, m0),
-                            t1, n_gre, tr_gre, fa1, m0),
+                            t1, n_gre, tr_gre, fa1, m0, eta_fa),
                         t1, tb, m0),
-                    t1, n_gre, tr_gre, fa2, m0),
+                    t1, n_gre, tr_gre, fa2, m0, eta_fa),
                 t1, tc, m0))
         mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
 
@@ -124,23 +130,25 @@ def _prepare(use_cache=CFG['use_cache']):
         ec = exp(-tc / t1)
 
         # rho for TI1 image (omitted factor: b1r * e2 * m0)
-        gre_ti1 = sin(fa1) * (
-            (-eta_p * mz_ss / m0 * ea +
-             (1 - ea)) * (cos(fa1) * e1) ** (n_gre / 2 - 1) + (
-                (1 - e1) * (1 - (cos(fa1) * e1) ** (n_gre / 2 - 1)) /
-                (1 - cos(fa1) * e1)))
+        gre_ti1 = sin(fa1 * eta_fa) * (
+            (_mz_i(mz_ss, fa_p, eta_p) / m0 * ea +
+             (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
+                (1 - e1) * (1 - (cos(fa1* eta_fa) * e1) ** (n_gre / 2 - 1)) /
+                (1 - cos(fa1 * eta_fa) * e1)))
 
         # rho for TI2 image (omitted factor: b1r * e2 * m0)
-        gre_ti2 = sin(fa2) * (
-            ((mz_ss / m0) - (1 - ec)) / (ec * (cos(fa2) * e1) ** (n_gre / 2))
-            - (1 - e1) * ((cos(fa2) * e1) ** (-n_gre / 2) - 1)
-            / (1 - cos(fa2) * e1))
+        gre_ti2 = sin(fa2 * eta_fa) * (
+            ((mz_ss / m0) - (1 - ec)) /
+            (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre / 2)) -
+            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (-n_gre / 2) - 1) /
+            (1 - cos(fa2 * eta_fa) * e1))
 
         # T1 map as a function of steady state rho
         s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
         s = s.subs(mz_ss, mz_ss_)
 
-        pickles = (t1, eta_p, n_gre, tr_gre, ta, tb, tc, fa1, fa2), s
+        pickles = (
+            (n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa), s)
         with open(cache_filepath, 'wb') as cache_file:
             pickle.dump(pickles, cache_file)
     else:
@@ -178,16 +186,16 @@ def _bijective_part(arr, mask_val=np.nan):
 
 # ======================================================================
 def rho(
-        t1,
         n_gre,
         tr_gre,
+        fa1,
+        fa2,
         ta,
         tb,
         tc,
-        fa1,
-        fa2,
         fa_p,
         eta_p,
+        t1,
         eta_fa,
         bijective=False):
     """
@@ -196,16 +204,18 @@ def rho(
     This function is NumPy-aware.
 
     Args:
-        t1 (float): T1 time in ms.
         n_gre (int): Number n of r.f. pulses in each GRE block.
         tr_gre (float): repetition time of GRE pulses in ms.
-        ta (float): Time TA between inversion pulse and first GRE block in ms.
-        tb (float): Time TB between first and second GRE blocks in ms.
-        tc (float): Time TC after second GRE block in ms.
         fa1 (float): Flip angle fa1 of the first GRE block in deg.
         fa2 (float): Flip angle fa2 of the second GRE block in deg.
-        eta_p (float): Efficiency of the adiabatic inversion pulse.
-        eta_fa (float): Efficiency of the RF pulse excitation.
+        ta (float): Time TA between preparation pulse and first GRE block in
+        ms.
+        tb (float): Time TB between first and second GRE blocks in ms.
+        tc (float): Time TC after second GRE block in ms.
+        fa_p (float): Flip angle fa_p of the preparation pulse.
+        eta_p (float): Efficiency of the preparation pulse.
+        t1 (float): T1 time in ms.
+        eta_fa (float): Efficiency of the RF excitation in the GRE block.
             Equivalent to B1+ efficiency.
         bijective (bool): Force the rho to be bijective.
             Non-bijective parts of rho are masked out (using NaN).
@@ -215,8 +225,9 @@ def rho(
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
+    fa_p = np.deg2rad(fa_p)
     result = _rho(
-        t1, eta_p, n_gre, tr_gre, ta, tb, tc, fa1 * eta_fa, fa2 * eta_fa, )
+        n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
     return result
@@ -234,8 +245,6 @@ def acq_to_seq_params(
         center_k_correction=0.5,
         tr_seq=8000,
         ti=(900, 3300),
-        fa=(3.0, 5.0),
-        eta_p=0.95,
         tr_gre=20.0):
     """
     Determine the sequence parameters from the acquisition parameters.
@@ -275,8 +284,6 @@ def acq_to_seq_params(
 
     if len(ti) != 2:
         raise ValueError('Exactly two inversion times must be used.')
-    if len(ti) != len(fa):
-        raise ValueError('Number of inversions and flip angles must match.')
 
     pe1 = 1 if sl_pe_swap else 2
     pe2 = 2 if sl_pe_swap else 1
@@ -295,14 +302,11 @@ def acq_to_seq_params(
          tuple(np.diff(ti) - t_gre_block) + \
          ((tr_seq - ti[-1] - (1 - center_k) * t_gre_block),)
     seq_params = dict(
-        eta_p=eta_p,
         n_gre=n_gre,
         tr_gre=tr_gre,
         ta=td[0],
         tb=td[1],
-        tc=td[2],
-        fa1=fa[0],
-        fa2=fa[1])
+        tc=td[2])
     extra_info = dict(
         t_acq=tr_seq * 1e-3 * k_space_lines(
             int(matrix_sizes[pe2] * pe_correction[1]),
@@ -317,17 +321,19 @@ def acq_to_seq_params(
 # ======================================================================
 def test_signal():
     import matplotlib.pyplot as plt
+
+
     t1 = np.linspace(50, 5000, 5000)
-    s = rho(t1, **_SEQ_PARAMS, bijective=True)
+    s = rho(t1=t1, **_SEQ_PARAMS, bijective=True)
     plt.plot(s, t1)
     plt.show()
-    eff = np.array([0.9, 1.0, 1.1])
+    eta_fa = np.array([0.9, 1.0, 1.1])
     s0 = rho(
-        100,
+        t1=100,
         eta_p=1.0,  # #
         n_gre=160,  # #
         tr_gre=7.0,  # ms
-        fa1=4.0 * eff,  # deg
+        fa1=4.0,  # deg
         fa2=5.0,  # deg
         # tr_seq': 8000.0,  # ms
         # ti1': 1000.0,  # ms
@@ -335,8 +341,11 @@ def test_signal():
         ta=440.0,  # ms
         tb=1180.0,  # ms
         tc=4140.0,  # ms
-        bijective=True)
+        eta_fa=eta_fa,  # #
+        fa_p=180,  # deg
+        bijective=False)
     print(s0)
+    return
 
 
 # ======================================================================

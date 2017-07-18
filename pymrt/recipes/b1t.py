@@ -259,7 +259,7 @@ def mp2rage_rho_to_eta_fa(
             the removal of non-bijective branches.
             This affects the precision of the MP2RAGE estimation.
         **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of: `mp2rage_t1.acq_to_seq_params`.
+            This should match the signature of: `mp2rage.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.

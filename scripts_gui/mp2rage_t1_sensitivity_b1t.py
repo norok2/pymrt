@@ -20,6 +20,9 @@ References:
 2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous 
    Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with 
    Multi-Echo MP2RAGE. PLOS ONE 12, e0169265. doi:10.1371/journal.pone.0169265
+3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R., Marques, J.P.,
+   2012. SA2RAGE: A new sequence for fast B1+-mapping. Magnetic Resonance
+   Medicine 67, 1609–1619. doi:10.1002/mrm.23145
 """
 
 # ======================================================================
@@ -172,6 +175,7 @@ def plot_rho_t1_mp2rage_seq(
         kws_names = (
             'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
         rho_kws = {name: params[name] for name in kws_names}
+        rho_kws['t1'] = t1_arr
 
         rho_kws['eta_fa'] = params['eta_fa']
         rho_arr = mp2rage.rho(**rho_kws)
@@ -253,7 +257,7 @@ def plot_rho_t1_mp2rage_acq(
             datetime.timedelta(seconds=extra_info['t_acq']))
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
-        kws_names = ('eta_p', 'fa_p')
+        kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
         rho_kws.update({name: params[name] for name in kws_names})
         rho_kws['t1'] = t1_arr
         
@@ -284,7 +288,8 @@ def plot_rho_t1_mp2rage_acq(
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
-    except:
+    except Exception as e:
+        print(e)
         ax.set_title('\n'.join(('WARNING! Some plot failed!', title)))
     else:
         ax.set_title('\n'.join((acq_to_seq_info, title)))
