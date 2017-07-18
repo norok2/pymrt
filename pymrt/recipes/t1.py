@@ -117,7 +117,7 @@ def mp2rage_rho_to_t1(
         t1_num=512,
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
-        **acq_params_kws):
+        **params_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
 
@@ -143,7 +143,7 @@ def mp2rage_rho_to_t1(
             the removal of non-bijective branches.
             This affects the precision of the estimation.
         **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of: `mp2rage_t1.acq_to_seq_params`.
+            This should match the signature of: `mp2rage.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
@@ -155,8 +155,11 @@ def mp2rage_rho_to_t1(
     else:
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage.rho(
-            t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
+        for k, v in params_kws.items():
+            pass
+        # todo: split acq_params and seq_params
+        seq_pars = mp2rage.acq_to_seq_params(**acq_params_kws)[0]
+        rho = mp2rage.rho(t1=t1, **seq_pars)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         t1 = t1[bijective_slice]
@@ -223,7 +226,7 @@ def mp2rage_t1(
             the removal of non-bijective branches.
             This affects the precision of the estimation.
         **acq_param_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage_t1.acq_to_seq_params`.
+            This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.

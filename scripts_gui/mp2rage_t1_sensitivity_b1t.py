@@ -75,8 +75,10 @@ SEQ_INTERACTIVES = collections.OrderedDict([
     ('fa2', dict(
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
-    ('eta_inv', dict(
-        label='η_inv / #', default=0.96, start=0, stop=1, step=0.01)),
+    ('eta_p', dict(
+        label='η_p / #', default=0.96, start=0, stop=1, step=0.01)),
+    ('fa_p', dict(
+        label='α_p / #', default=180, start=-180, stop=180, step=5)),
     ('eta_fa', dict(
         label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
@@ -140,8 +142,10 @@ ACQ_INTERACTIVES = collections.OrderedDict([
     ('fa2', dict(
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
-    ('eta_inv', dict(
+    ('eta_p', dict(
         label='η_inv / #', default=0.96, start=0, stop=1, step=0.01)),
+    ('fa_p', dict(
+        label='α_p / #', default=180, start=-180, stop=180, step=5)),
     ('eta_fa', dict(
         label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
@@ -165,34 +169,34 @@ def plot_rho_t1_mp2rage_seq(
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     try:
-        kws_names = 'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', \
-                    'eta_inv'
-        seq_kws = {name: params[name] for name in kws_names}
+        kws_names = (
+            'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
+        rho_kws = {name: params[name] for name in kws_names}
 
-        seq_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa']
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
@@ -219,7 +223,7 @@ def plot_rho_t1_mp2rage_acq(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     ax = fig.gca()
     try:
-        seq_kws, extra_info = mp2rage.acq_to_seq_params(
+        rho_kws, extra_info = mp2rage.acq_to_seq_params(
             matrix_sizes=(
                 params['matrix_size_ro'],
                 params['matrix_size_pe'],
@@ -239,42 +243,44 @@ def plot_rho_t1_mp2rage_acq(
             sl_pe_swap=params['sl_pe_swap'],
             tr_seq=params['tr_seq'],
             ti=(params['ti1'], params['ti2']),
-            fa=(params['fa1'], params['fa2']),
-            eta_inv=params['eta_inv'],
             tr_gre=params['tr_gre'])
 
         seq_kws_str = ', '.join(
-            sorted(['{}={:.2f}'.format(k, v) for k, v in seq_kws.items()]))
+            sorted(['{}={:.2f}'.format(k, v) for k, v in rho_kws.items()]))
         extra_info_str = ', '.join(
             sorted(['{}={:.2f}'.format(k, v) for k, v in extra_info.items()]))
         extra_info_str += ', {!s}'.format(
             datetime.timedelta(seconds=extra_info['t_acq']))
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
-        seq_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        kws_names = ('eta_p', 'fa_p')
+        rho_kws.update({name: params[name] for name in kws_names})
+        rho_kws['t1'] = t1_arr
+        
+        rho_kws['eta_fa'] = params['eta_fa']
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
-        seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(t1_arr, **seq_kws)
+        rho_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
+        rho_arr = mp2rage.rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
