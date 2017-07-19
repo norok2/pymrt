@@ -58,11 +58,7 @@ import pymrt.utils
 import pymrt.computation as pmc
 # import pymrt.correlate
 # import pymrt.geometry
-<<<<<<< HEAD:scripts_cli/batch_compute.py
-# from pymrt.sequences import mp2rage_t1
-=======
 # from pymrt.sequences import mp2rage
->>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b:scripts_cli/batch_compute.py
 # import dcmpi.common as dcmlib
 
 from pymrt import INFO

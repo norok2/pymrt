@@ -28,8 +28,6 @@ from pymrt.recipes import t1
 # from pymrt import msg, dbg
 
 
-<<<<<<< HEAD
-=======
 # # ======================================================================
 # def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
 #     """Solve the MP2RAGE rho expression analytically."""
@@ -98,7 +96,6 @@ from pymrt.recipes import t1
 # _rho = _prepare_rho_mp2rage()
 
 
->>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
 # ======================================================================
 def multi_flash(
         arrs,
@@ -122,10 +119,7 @@ def multi_flash(
     Returns:
 
     """
-<<<<<<< HEAD
-=======
     assert(len(arrs) == len(flip_angles) == len(repetition_times))
->>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
     warnings.warn('Not implemented yet')
 
 
@@ -152,8 +146,5 @@ def fit_multi_flash(
     Returns:
 
     """
-<<<<<<< HEAD
-=======
     assert(len(arrs) == len(flip_angles) == len(repetition_times))
->>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
     warnings.warn('Not implemented yet')

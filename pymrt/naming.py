@@ -190,11 +190,7 @@ def info_to_str(
         text (str):
 
     Examples:
-<<<<<<< HEAD
-        >>> info = {'_#': 10, '_id': mp2rmp2rage_t1 't1': 2000}
-=======
         >>> info = {'_#': 10, '_id': 'mp2rage', 't1': 2000}
->>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
     """
     tokens = []
     for key, val in info.items():
