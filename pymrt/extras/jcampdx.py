@@ -52,7 +52,7 @@ import pymrt as mrt
 # import pymrt.naming
 # import pymrt.input_output
 # import pymrt.geometry
-# from pymrt.sequences import mp2rage_t1
+# from pymrt.sequences import mp2rage
 from pymrt import msg, dbg
 
 

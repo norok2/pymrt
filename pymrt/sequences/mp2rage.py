@@ -96,7 +96,7 @@ def _mz_i(mz0, fa_p, eta_p):
 
 
 # ======================================================================
-def _prepare(use_cache=CFG['use_cache']):
+def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE rho expression analytically."""
 
     cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
@@ -159,8 +159,8 @@ def _prepare(use_cache=CFG['use_cache']):
 
 
 # ======================================================================
-# :: defines the mp2rage_t1 signal expression
-_rho = _prepare()
+# :: defines the mp2rage signal expression
+_rho = _prepare_rho_mp2rage()
 
 
 # ======================================================================

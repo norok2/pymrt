@@ -58,7 +58,7 @@ import pymrt.utils
 import pymrt.computation as pmc
 # import pymrt.correlate
 # import pymrt.geometry
-# from pymrt.sequences import mp2rage_t1
+# from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
 from pymrt import INFO
