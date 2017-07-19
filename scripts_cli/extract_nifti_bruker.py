@@ -56,7 +56,7 @@ import pymrt.naming
 import pymrt.input_output
 import pymrt.extras as pme
 # import pymrt.geometry
-# from pymrt.sequences import mp2rage_t1
+# from pymrt.sequences import mp2rage
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
