@@ -504,8 +504,13 @@ def pseudo_ratio(x, y):
 
 
     Args:
+<<<<<<< HEAD
         x: First input.
         y: Second input
+=======
+        x (int|float|np.ndarray): First input value.
+        y (int|float|np.ndarray): Second input value.
+>>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
 
     Returns:
         result: 1 / ((x / y) + (y / x))
@@ -523,12 +528,17 @@ def pseudo_ratio(x, y):
         >>> (pseudo_ratio(*items) == pseudo_ratio(*items[::-1]))
         True
     """
+<<<<<<< HEAD
     return x * y / (x ** 2 + y ** 2)
+=======
+    return (x * y) / (x ** 2 + y ** 2)
+>>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
 
 
 # =====================================================================
 def gen_pseudo_ratio(*items):
     """
+<<<<<<< HEAD
     Calculate the pseudo-ratio of x, y: 1 / ((x / y) + (y / x))
 
     .. math::
@@ -541,6 +551,19 @@ def gen_pseudo_ratio(*items):
 
     Returns:
         result: 1 / ((x / y) + (y / x))
+=======
+    Calculate the generalized pseudo-ratio of x_i: 1 / sum_ij [ x_i / x_j ]
+
+    .. math::
+        \\frac{1}{\\sum_{ij} \\frac{x_i}{x_j}}
+
+
+    Args:
+        *items (iterable[int|float|np.ndarray]): Input values.
+
+    Returns:
+        result: 1 / sum_ij [ x_i / x_j ]
+>>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
 
     Examples:
         >>> gen_pseudo_ratio(2, 2, 2, 2, 2)

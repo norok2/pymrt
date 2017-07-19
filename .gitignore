@@ -100,7 +100,11 @@ docs/_build/
 target/
 
 # IPython
+<<<<<<< HEAD
 *.pynb_checkpoints*
+=======
+*.ipynb*
+>>>>>>> ded52091300dc4ebb8fc4f838c8b972b4ffa188b
 .idea/
 docs/
 notebooks/
