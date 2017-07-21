@@ -133,7 +133,7 @@ def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
         gre_ti1 = sin(fa1 * eta_fa) * (
             (_mz_i(mz_ss, fa_p, eta_p) / m0 * ea +
              (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
-                (1 - e1) * (1 - (cos(fa1* eta_fa) * e1) ** (n_gre / 2 - 1)) /
+                (1 - e1) * (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1)) /
                 (1 - cos(fa1 * eta_fa) * e1)))
 
         # rho for TI2 image (omitted factor: b1r * e2 * m0)
