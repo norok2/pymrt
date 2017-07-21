@@ -58,7 +58,7 @@ import pymrt.geometry
 import pymrt.input_output
 # import pymrt.sequences as pmq
 # from pymrt.debug import dbg
-# from pymrt.sequences import mp2rage_t1
+# from pymrt.sequences import mp2rage
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
