@@ -314,6 +314,10 @@ def virtual_reference(
 
     Returns:
 
+    References:
+        - Parker, D.L., Payne, A., Todd, N., Hadley, J.R., 2014. Phase
+          reconstruction from multiple coil data using a virtual reference
+          coil. Magn. Reson. Med. 72, 563–569. doi:10.1002/mrm.24932
     """
     raise NotImplementedError
 
@@ -364,6 +368,93 @@ def me_svd(
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def me_composer(
+        arr,
+        echo_axis=-2,
+        coil_axis=-1):
+    """
+    Coil sensitivity for the 'conjugate_hermitian' combination method.
+
+    Note: the input itself is used as sensitivity. Therefore, this function
+    actually returns the same array used for input, and the `coil_axis`
+    parameter is left unused.
+
+    Args:
+        arr (np.ndarray): The input array.
+        echo_axis (int): The echo dimension.
+            The dimension of `arr` along which different echoes are stored.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def ref_snr_optimal(
+        arr,
+        ref,
+        coil_axis=-1):
+    """
+    Coil sensitivity for the 'conjugate_hermitian' combination method.
+
+    Note: the input itself is used as sensitivity. Therefore, this function
+    actually returns the same array used for input, and the `coil_axis`
+    parameter is left unused.
+
+    Args:
+        arr (np.ndarray): The input array.
+        echo_axis (int): The echo dimension.
+            The dimension of `arr` along which different echoes are stored.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Roemer, P.B., Edelstein, W.A., Hayes, C.E., Souza, S.P., Mueller,
+          O.M., 1990. The NMR phased array. Magn Reson Med 16, 192–225.
+          doi:10.1002/mrm.1910160203
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def ref_adaptive(
+        arr,
+        ref,
+        coil_axis=-1):
+    """
+    Coil sensitivity for the 'conjugate_hermitian' combination method.
+
+    Note: the input itself is used as sensitivity. Therefore, this function
+    actually returns the same array used for input, and the `coil_axis`
+    parameter is left unused.
+
+    Args:
+        arr (np.ndarray): The input array.
+        echo_axis (int): The echo dimension.
+            The dimension of `arr` along which different echoes are stored.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Jellúš, V., Kannengiesser, S.A.R., 2014. Adaptive Coil Combination
+          Using a Body Coil Scan as Phase Reference, in: Proceedings of the
+          ISMRM 22nd Annual Meeting & Exhibition. Presented at the 22nd Annual
+          Meeting & Exhibition of the International Society for Magnetic
+          Resonance in Medicine, Milan, Italy.
     """
     raise NotImplementedError
 
