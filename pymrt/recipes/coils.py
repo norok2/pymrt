@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.coil_combination: Coil combination of phased array.
+pymrt.recipes.coils: Coil sensitivity and combination for phased array.
 """
 
 # ======================================================================
@@ -515,7 +515,7 @@ def combine(
 # ======================================================================
 def combine_ref(
         arr,
-        sens,
+        ref,
         norm=False,
         coil_axis=-1):
     """
@@ -550,6 +550,7 @@ def combine_me(
         arr,
         sens,
         norm=False,
+        echo_axis=-2,
         coil_axis=-1):
     """
     Calculate the coil combination array from multiple coil elements.
