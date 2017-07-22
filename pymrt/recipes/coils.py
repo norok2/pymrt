@@ -26,7 +26,6 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
