@@ -1434,9 +1434,8 @@ def bar_chart(
     if title:
         ax.set_title(title)
 
-    if legend_kws:
-        legend_kws = {}
-    ax.legend(tuple(bc[0] for bc in bcs), series, **legend_kws)
+    if legend_kws is not None:
+        ax.legend(tuple(bc[0] for bc in bcs), series, **dict(legend_kws))
     # barplot_autolabel(ax, bc)
     return data, fig
 
