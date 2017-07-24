@@ -1360,7 +1360,7 @@ def histogram2d(
 
 
 # ======================================================================
-def bar_groups(
+def bar_chart(
         data,
         err,
         series,
@@ -1373,7 +1373,7 @@ def bar_groups(
         bar_width=None,
         ax=None):
     """
-    Plot a bar chart with grouped data.
+    Plot a bar chart.
 
     WIP
 
@@ -1394,6 +1394,10 @@ def bar_groups(
 
     """
     #todo: polish code and documentation
+    #todo: add support for orientation
+    #todo: add support for stacked bars
+    #todo: add support for variable bar_width
+
     # create a new figure
     if ax is None:
         fig = plt.figure()
