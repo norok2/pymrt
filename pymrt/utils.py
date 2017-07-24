@@ -371,7 +371,8 @@ def optimal_ratio(
         >>> [optimal_ratio(i, max) for i in range(n1, n2)]
         [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
         >>> [optimal_ratio(i, min) for i in range(n1, n2)]
-        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2), (47, 1)]
+        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2), (47,
+        1)]
     """
     ratios = []
     if is_prime(num):
@@ -555,7 +556,8 @@ def gen_pseudo_ratio(*items):
         >>> np.isclose(gen_pseudo_ratio(*items1), gen_pseudo_ratio(*items2))
         True
         >>> items = list(range(2, 10))
-        >>> np.isclose(gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[::-1]))
+        >>> np.isclose(gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[
+        ::-1]))
         True
     """
     return 1 / np.sum(x / y for x, y in itertools.permutations(items, 2))
@@ -1352,7 +1354,8 @@ def join_path(*args):
         'file.tar.gz'
         >>> join_path('path/to', 'file', '')
         'path/to/file'
-        >>> paths = ['/path/to/file.txt', '/path/to/file.tar.gz', 'file.tar.gz']
+        >>> paths = ['/path/to/file.txt', '/path/to/file.tar.gz',
+        'file.tar.gz']
         >>> all([path == join_path(*split_path(path)) for path in paths])
         True
     """
@@ -1471,6 +1474,8 @@ def compact_num_str(
         '100.04200'
     """
     from numpy import log10
+
+
     try:
         # this is to simplify formatting (and accepting even strings)
         val = float(val)
@@ -1732,6 +1737,7 @@ def significant_figures(
     """
     from numpy import log10
 
+
     val = float(val)
     num = int(num)
     order = int(np.floor(log10(abs(val)))) if abs(val) != 0.0 else 0
@@ -1772,6 +1778,8 @@ def format_value_error(
         ('12346', '79')
     """
     from numpy import log10
+
+
     val = float(val)
     err = float(err)
     num = int(num)
@@ -2095,6 +2103,8 @@ def sgnlog(
         6.6438561897747253
     """
     from numpy import log
+
+
     return log(np.abs(x)) / log(base) * np.sign(x)
 
 
@@ -2131,6 +2141,8 @@ def sgnlogspace(
         array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
     from numpy import exp, log
+
+
     if not is_same_sign((start, stop)):
         bounds = (
             (start, -(exp(-log(np.abs(start))))),
@@ -2548,7 +2560,8 @@ def _kk_2(
 
     Args:
         shape (iterable[int]): The size of the array.
-        factors (iterable[int|tuple]): The size conversion factors for each dim.
+        factors (iterable[int|tuple]): The size conversion factors for each
+        dim.
 
     Returns:
         arr (np.ndarray): The resulting array.
@@ -2604,7 +2617,8 @@ def _kk(
 
     Args:
         shape (iterable[int]): The size of the array.
-        factors (iterable[int|tuple]): The size conversion factors for each dim.
+        factors (iterable[int|tuple]): The size conversion factors for each
+        dim.
 
     Returns:
         arr (np.ndarray): The resulting array.
@@ -2642,6 +2656,8 @@ def _kk(
                 [ 1.66666667,  0.        ]]])
     """
     from numpy import sqrt
+
+
     kk_ = grid_coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
@@ -2894,6 +2910,8 @@ def auto_bin(
         100
     """
     from numpy import sqrt, log2
+
+
     if method == 'auto':
         num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
     elif method == 'sqrt':
@@ -2993,6 +3011,8 @@ def entropy(
         >>>
     """
     from numpy import log
+
+
     # normalize histogram to unity
     hist = hist / np.sum(hist)
     # skip zero values
@@ -3289,6 +3309,7 @@ def gaussian_nd(
     """
     from numpy import exp
 
+
     if not n_dim:
         n_dim = max_iter_len((shape, sigmas, origin))
 
@@ -3298,7 +3319,8 @@ def gaussian_nd(
 
     xx = grid_coord(shape, origin)
     kernel = exp(
-        -(sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
+        -(
+        sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
     if normalize:
         kernel /= np.sum(kernel)
     return kernel
@@ -3550,7 +3572,8 @@ def running_stat(
 
     This function differs from `rolling_stat` in that it should be slower but
     less memory demanding.
-    Also the `stat_func` callable is not required to accept an `axis` parameter.
+    Also the `stat_func` callable is not required to accept an `axis`
+    parameter.
 
     Args:
         arr (np.ndarray): The input array.
@@ -3684,6 +3707,8 @@ def polar2complex(modulus, phase):
         z (complex|np.ndarray): The complex number z = R * exp(i * phi).
     """
     from numpy import exp
+
+
     return modulus * exp(1j * phase)
 
 
@@ -3713,7 +3738,8 @@ def complex2cartesian(z):
     Returns:
         tuple[float|np.ndarray]:
          - real (float|np.ndarray): The real part z' of the complex number.
-         - imag (float|np.ndarray): The imaginary part z" of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex
+         number.
     """
     return np.real(z), np.imag(z)
 
@@ -3746,9 +3772,12 @@ def polar2cartesian(modulus, phase):
     Returns:
         tuple[float]:
          - real (float|np.ndarray): The real part z' of the complex number.
-         - imag (float|np.ndarray): The imaginary part z" of the complex number.
+         - imag (float|np.ndarray): The imaginary part z" of the complex
+         number.
     """
     from numpy import sin, cos
+
+
     return modulus * cos(phase), modulus * sin(phase)
 
 
@@ -3767,7 +3796,55 @@ def cartesian2polar(real, imag):
          - argument (float): The phase phi of the complex number.
     """
     from numpy import sqrt, arctan2 as arctan
+
+
     return sqrt(real ** 2 + imag ** 2), arctan(real, imag)
+
+
+# ======================================================================
+def filter_cx(
+        arr,
+        filter_func,
+        filter_args=None,
+        filter_kws=None,
+        mode='cartesian'):
+    """
+    Calculate a non-complex function on a complex input array.
+
+    Args:
+        arr (np.ndarray): The input array.
+        filter_func (callable): The function used to filter the input.
+            Requires the first arguments to be an `np.ndarray`.
+        filter_args (tuple|None): Positional arguments of `filter_func`.
+        filter_kws (dict|None): Keyword arguments of `filter_func`.
+        mode (str): Complex calculation mode.
+            Available:
+             - 'cartesian': apply the n-dim filter to real and imaginary parts.
+             - 'polar': apply the n-dim filter to the magnitude and phase.
+            If unknown, uses defalt.
+
+    Returns:
+        arr (np.ndarray): The filtered complex array.
+    """
+    if mode:
+        mode = mode.lower()
+    if not filter_args:
+        filter_args = ()
+    if not filter_kws:
+        filter_kws = {}
+    if mode == 'cartesian':
+        re_arr = filter_func(arr.real, *filter_args, **filter_kws)
+        im_arr = filter_func(arr.imag, *filter_args, **filter_kws)
+        arr = re_arr + 1j * im_arr
+    elif mode == 'polar':
+        mag_arr = filter_func(np.abs(arr), *filter_args, **filter_kws)
+        phs_arr = filter_func(np.angle(arr), *filter_args, **filter_kws)
+        arr = mag_arr * np.exp(1j * phs_arr)
+    else:
+        warnings.warn(
+            'Mode `{}` not known'.format(mode) + ' Using default.')
+        arr = filter_cx(arr, filter_func, filter_args, filter_kws)
+    return arr
 
 
 # ======================================================================
@@ -4006,6 +4083,8 @@ def euclid_dist(
                -8.48528137])
     """
     from numpy import sqrt
+
+
     array = (arr2 - arr1) / sqrt(2.0)
     if unsigned:
         array = np.abs(array)
