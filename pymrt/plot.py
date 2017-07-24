@@ -1411,7 +1411,7 @@ def bar_chart(
     indices = np.arange(num_groups)
     if not bar_width:
         bar_width = 1 / (num_series + 0.5)
-    print(bar_width)
+
     color_cycler = itertools.cycle(mrt.plot.PLOT_COLORS)
     bcs = []
     for j, serie in enumerate(series):
