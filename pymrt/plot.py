@@ -1360,6 +1360,84 @@ def histogram2d(
 
 
 # ======================================================================
+def bar_groups(
+        data,
+        err,
+        series,
+        groups,
+        x_label=None,
+        y_label=None,
+        title=None,
+        y_limits=None,
+        legend_kws=None,
+        bar_width=None,
+        ax=None):
+    """
+    Plot a bar chart with grouped data.
+
+    WIP
+
+    Args:
+        data:
+        err:
+        series:
+        groups:
+        x_label:
+        y_label:
+        title:
+        y_limits:
+        legend_kws:
+        bar_width:
+        ax:
+
+    Returns:
+
+    """
+    #todo: polish code and documentation
+    # create a new figure
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+    else:
+        fig = plt.gcf()
+    if y_limits:
+        ax.set_ylim(y_limits)
+    num_series = len(series)
+    num_groups = len(groups)
+    indices = np.arange(num_groups)
+    if not bar_width:
+        bar_width = 1 / (num_series + 0.5)
+    print(bar_width)
+    color_cycler = itertools.cycle(mrt.plot.PLOT_COLORS)
+    bcs = []
+    for j, serie in enumerate(series):
+        bar_data = data[serie]
+        bar_err = err[serie]
+        bc = ax.bar(
+            indices + (j * bar_width),
+            bar_data,
+            bar_width,
+            yerr=bar_err,
+            color=next(color_cycler)['color'])
+        bcs.append(bc)
+    ax.set_xticks(indices + bar_width)
+    if groups:
+        ax.set_xticklabels(groups)
+    if x_label:
+        ax.set_xlabel(x_label)
+    if y_label:
+        ax.set_ylabel(y_label)
+    if title:
+        ax.set_title(title)
+
+    if legend_kws:
+        legend_kws = {}
+    ax.legend(tuple(bc[0] for bc in bcs), series, **legend_kws)
+    # barplot_autolabel(ax, bc)
+    return data, fig
+
+
+# ======================================================================
 def subplots(
         plots,
         rows=None,
