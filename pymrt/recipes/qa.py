@@ -89,9 +89,9 @@ def signal_noise_threshold(
         signal_kws=None,
         noise_kws=None):
     """
-    Separate signal from noise in an array using a percentile threshold.
+    Separate signal from noise using value thresholds.
 
-    Assumes
+    Assumes that a significant portion of the data contains no signal.
 
     Args:
         arr (np.ndarray): The input array.
