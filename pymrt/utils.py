@@ -3332,7 +3332,7 @@ def moving_average(
         weights=1,
         **kws):
     """
-    Calculate the running average.
+    Calculate the moving average (with optional weights).
 
     The moving average will be applied to the flattened array.
     Unless specified otherwise, the size of the array will be reduced by
@@ -3441,6 +3441,7 @@ def rolling_stat(
 
     This is calculated by running the specified statistics for each subset of
     the array of given size, including optional weightings.
+    The moving average will be applied to the flattened array.
 
     This function differs from `running_stat` in that it should be faster but
     more memory demanding.
@@ -3569,6 +3570,7 @@ def running_stat(
 
     This is calculated by running the specified statistics for each subset of
     the array of given size, including optional weightings.
+    The moving average will be applied to the flattened array.
 
     This function differs from `rolling_stat` in that it should be slower but
     less memory demanding.
@@ -3864,7 +3866,8 @@ def calc_stats(
         arr (np.ndarray): The array to be investigated.
         mask_nan (bool): Mask NaN values.
         mask_inf (bool): Mask Inf values.
-        mask_vals (list[int|float]|None): List of values to mask.
+        mask_vals (iterable|None): Values to mask.
+            If None, no values are masked.
         val_interval (tuple): The (min, max) values interval.
         save_path (str|None): The path to which the plot is to be saved.
             If None, no output.
@@ -3902,7 +3905,7 @@ def calc_stats(
     if mask_inf and len(arr) > 0:
         arr = arr[~np.isinf(arr)]
     if not mask_vals:
-        mask_vals = []
+        mask_vals = ()
     for val in mask_vals:
         if len(arr) > 0:
             arr = arr[arr != val]
