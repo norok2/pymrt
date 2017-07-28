@@ -18,7 +18,6 @@ import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
 import subprocess  # Subprocess management
 import fractions  # Rational numbers
-import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
 import doctest  # Test interactive Python examples
@@ -26,6 +25,8 @@ import shlex  # Simple lexical analysis
 import warnings  # Warning control
 import importlib  # The implementation of import
 import gzip  # Support for gzip files
+import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -1807,6 +1808,9 @@ def str2dict(
     """
     Convert a string to a dictionary.
 
+    Escaping and quotes are not supported.
+    Dictionary name is always a string.
+
     Args:
         in_str (str): The input string.
         entry_sep (str): The entry separator.
@@ -2351,7 +2355,7 @@ def subst(
 
     Args:
         arr (np.ndarray): The input array.
-        subst (tuple[tuple]): The substitution rules.
+        pairs (tuple[tuple]): The substitution rules.
             Each rule consist of a value to replace and its replacement.
             Each rule is applied sequentially in the order they appear and
             modify the content of the array immediately.
@@ -2385,6 +2389,37 @@ def subst(
             arr[arr == k] = v
     return arr
 
+
+# ======================================================================
+def ravel_clean(
+        arr,
+        removes=(np.nan, np.inf, -np.inf)):
+    """
+    Ravel and remove values to an array.
+
+    Args:
+        arr (np.ndarray): The input array.
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    Examples:
+        >>> a = np.array([0.0, 1.0, np.inf, -np.inf, np.nan, -np.nan])
+        >>> ravel_clean(a)
+        array([ 0.,  1.])
+
+    See Also:
+        utils.subst
+    """
+    arr = arr.ravel()
+    for val in removes:
+        if val is np.nan:
+            arr = arr[~np.isnan(arr)]
+        if len(arr) > 0:
+            arr = arr[arr != val]
+    return arr
 
 # ======================================================================
 def dftn(arr):
@@ -3852,9 +3887,7 @@ def filter_cx(
 # ======================================================================
 def calc_stats(
         arr,
-        mask_nan=True,
-        mask_inf=True,
-        mask_vals=None,
+        removes=(np.nan, np.inf, -np.inf),
         val_interval=None,
         save_path=None,
         title=None,
@@ -3864,10 +3897,8 @@ def calc_stats(
 
     Args:
         arr (np.ndarray): The array to be investigated.
-        mask_nan (bool): Mask NaN values.
-        mask_inf (bool): Mask Inf values.
-        mask_vals (iterable|None): Values to mask.
-            If None, no values are masked.
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
         val_interval (tuple): The (min, max) values interval.
         save_path (str|None): The path to which the plot is to be saved.
             If None, no output.
@@ -3900,15 +3931,7 @@ def calc_stats(
         'avg': None, 'std': None,
         'min': None, 'max': None,
         'sum': None, 'num': None}
-    if mask_nan and len(arr) > 0:
-        arr = arr[~np.isnan(arr)]
-    if mask_inf and len(arr) > 0:
-        arr = arr[~np.isinf(arr)]
-    if not mask_vals:
-        mask_vals = ()
-    for val in mask_vals:
-        if len(arr) > 0:
-            arr = arr[arr != val]
+    arr = ravel_clean(arr, removes)
     if val_interval is None and len(arr) > 0:
         val_interval = minmax(arr)
     if len(arr) > 0:
