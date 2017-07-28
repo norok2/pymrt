@@ -18,7 +18,7 @@ from __future__ import (
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
-# import itertools  # Functions creating iterators for efficient looping
+import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and subcommands
 # import re  # Regular expression operations
@@ -29,6 +29,7 @@ from __future__ import (
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -63,10 +64,7 @@ from pymrt import msg, dbg
 # ======================================================================
 def threshold_otsu(
         arr,
-        bins='sqrt',
-        mask_nan=True,
-        mask_inf=True,
-        mask_vals=None):
+        bins='sqrt'):
     """
     Optimal foreground/background threshold value based on Otsu's method.
 
@@ -76,10 +74,6 @@ def threshold_otsu(
             If str or None, this is automatically calculated from the data
             using `utils.auto_bin()` with `method` set to `bins` if str,
             and using the default `utils.auto_bin()` method if set to None.
-        mask_nan (bool): Mask NaN values.
-        mask_inf (bool): Mask Inf values.
-        mask_vals (iterable|None): Values to mask.
-            If None, no values are masked.
 
     Returns:
         threshold (float): The threshold value.
@@ -100,19 +94,10 @@ def threshold_otsu(
           Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
           62–66. doi:10.1109/TSMC.1979.4310076
     """
+    # todo: extend to multiple classes
     # Check if flat-valued array
     if arr.min() == arr.max():
         raise ValueError('The array contains a single value.')
-
-    if mask_nan and len(arr) > 0:
-        arr = arr[~np.isnan(arr)]
-    if mask_inf and len(arr) > 0:
-        arr = arr[~np.isinf(arr)]
-    if not mask_vals:
-        mask_vals = ()
-    for val in mask_vals:
-        if len(arr) > 0:
-            arr = arr[arr != val]
 
     if isinstance(bins, str):
         bins = mrt.utils.auto_bin(arr, bins)
@@ -140,28 +125,31 @@ def threshold_otsu(
 # ======================================================================
 def threshold_relative(
         arr,
-        value=0.5):
+        values=0.5):
     """
     Calculate threshold relative to array values range.
 
     Args:
         arr (np.ndarray): The input array.
-        value (float): The relative threshold value.
+        values (float|iterable[float]): The relative threshold value(s).
             Values must be in the [0, 1] range.
 
     Returns:
-        threshold (float): the calculated threshold.
+        result (tuple[float]): the calculated threshold.
     """
 
     min_val = np.min(arr)
     max_val = np.max(arr)
-    return min_val + (max_val - min_val) * float(value)
+    values = mrt.utils.auto_repeat(values, 1)
+    return tuple(
+        min_val + (max_val - min_val) * float(value)
+        for value in values)
 
 
 # ======================================================================
 def threshold_percentile(
         arr,
-        value=0.5):
+        values=0.5):
     """
     Calculate threshold percentile.
 
@@ -170,49 +158,140 @@ def threshold_percentile(
 
     Args:
         arr (np.ndarray): The input array.
-        value (float): The percentile value.
+        values (float|iterable[float]): The percentile value(s).
             Values must be in the [0, 1] range.
 
     Returns:
-        threshold (float): the calculated threshold.
+        result (tuple[float]): the calculated threshold.
     """
-    return np.percentile(arr, 100 * value)
+    values = mrt.utils.auto_repeat(values, 1)
+    values = tuple(100.0 * value for value in values)
+    return np.percentile(arr, values)
 
 
 # ======================================================================
-def threshold_hist_peak(
+def threshold_hist_peaks(
         arr,
-        depth=None,
-        index=None):
+        bins='sqrt',
+        depth=None):
     """
     Calculate threshold from the peaks in the histogram.
 
     Args:
         arr (np.ndarray): The input array.
-        depth (float): The peak finding depth.
+        bins (int|None): The number of bins for the histogram.
+            If None, this is dete
+        depth (int|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
-            histograms.
+            ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-        index (int|None): Index of the histogram peak to use for thresholding.
-            If None, the middle one is used.
-            If the first one is desired, use `0`.
-            If the last one is desired, use `-1`.
+            If None, this is the determined using the number of bins.
 
     Returns:
         threshold (float): the calculated threshold.
     """
-    # todo: improve definition of `depth`
-    hist, bin_edges = np.histogram(arr, mrt.utils.auto_bin(arr))
+    if isinstance(bins, str):
+        bins = mrt.utils.auto_bin(arr, bins)
+    elif bins is None:
+        bins = mrt.utils.auto_bin(arr)
+    hist, bin_edges = np.histogram(arr, bins)
     bin_centers = mrt.utils.midval(bin_edges)
+    # depth determines the dynamic smoothing of the histogram
+    if depth is None:
+        depth = int(bins / 16)
+    # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     peaks = sp.signal.find_peaks_cwt(hist, widths)
-    if index is None:
-        index = int(len(peaks) / 2)
-    return bin_centers[index]
+    return bin_centers[peaks]
 
 
 # ======================================================================
-def thresholding(
+def threshold_inv_hist_peaks(
+        arr,
+        bins='sqrt',
+        depth=None):
+    """
+    Calculate threshold from the peaks in the inverted histogram.
+
+    The inverted histogram is obtained by subtracting the histogram to its
+    maximum value.
+
+    Args:
+        arr (np.ndarray): The input array.
+        bins (int|None): The number of bins for the histogram.
+            If None, this is dete
+        depth (int|None): The peak finding depth.
+            This parameter determines the peak finding rate in rapidly varying
+            ("noisy") histograms.
+            Smaller values correspond to more peaks being found.
+            If None, this is the determined using the number of bins.
+
+    Returns:
+        threshold (float): the calculated threshold.
+    """
+    if isinstance(bins, str):
+        bins = mrt.utils.auto_bin(arr, bins)
+    elif bins is None:
+        bins = mrt.utils.auto_bin(arr)
+    hist, bin_edges = np.histogram(arr, bins)
+    bin_centers = mrt.utils.midval(bin_edges)
+    # depth determines the dynamic smoothing of the histogram
+    if depth is None:
+        depth = int(bins / 16)
+    # at least 1 width value is required
+    widths = np.arange(1, max(2, depth))
+    peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
+    return bin_centers[peaks]
+
+
+# ======================================================================
+def threshold_hist_peak_edges(
+        arr,
+        bins='sqrt',
+        depth=None):
+    """
+    Calculate threshold from the peak edges in the histogram.
+
+    The peak edges are defined as the mid-values of the peaks and the
+    inverse peaks.
+
+    Args:
+        arr (np.ndarray): The input array.
+        bins (int|None): The number of bins for the histogram.
+            If None, this is dete
+        depth (int|None): The peak finding depth.
+            This parameter determines the peak finding rate in rapidly varying
+            ("noisy") histograms.
+            Smaller values correspond to more peaks being found.
+            If None, this is the determined using the number of bins.
+
+    Returns:
+        threshold (float): the calculated threshold.
+    """
+    if isinstance(bins, str):
+        bins = mrt.utils.auto_bin(arr, bins)
+    elif bins is None:
+        bins = mrt.utils.auto_bin(arr)
+    hist, bin_edges = np.histogram(arr, bins)
+    bin_centers = mrt.utils.midval(bin_edges)
+    # depth determines the dynamic smoothing of the histogram
+    if depth is None:
+        depth = int(bins / 16)
+    # at least 1 width value is required
+    widths = np.arange(1, max(2, depth))
+    peaks = sp.signal.find_peaks_cwt(hist, widths)
+    inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
+    peak_edges = mrt.utils.midval(np.ndarray(
+        x for x in itertools.chain.from_iterable(
+            itertools.zip_longest(peaks, inv_peaks)
+            if peaks[0] < inv_peaks[0] else
+            itertools.zip_longest(inv_peaks, peaks))
+        if x))
+    return bin_centers[peak_edges]
+
+
+# ======================================================================
+def auto_thresholds(
         arr,
         method='otsu',
         kws=None):
@@ -220,7 +299,7 @@ def thresholding(
     Calculate a thresholding value based on the specified method.
 
     Args:
-        arr ():
+        arr (np.ndarray):
         method ():
         kws ():
 
@@ -229,41 +308,41 @@ def thresholding(
     """
     if method:
         method = method.lower()
-    modes = ('otsu', 'relative', 'percentile', 'hist_peak', 'inv_hist_peak')
+    modes = (
+        'otsu', 'relative', 'percentile', 'hist_peak', 'inv_hist_peak',
+        'hist_peak_edges')
     if kws is None:
         kws = dict()
     if method == 'otsu':
-        threshold = threshold_otsu(arr, **dict(kws))
+        thresholds = (threshold_otsu(arr, **dict(kws)),)
     elif method == 'relative':
-        threshold = threshold_relative(arr, **dict(kws))
+        thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'percentile':
-        threshold = threshold_relative(arr, **dict(kws))
+        thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'hist_peak':
-        raise NotImplementedError
+        thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'inv_hist_peak':
-        raise NotImplementedError
+        thresholds = threshold_inv_hist_peaks(arr, **dict(kws))
+    elif method == 'hist_peak_edges':
+        thresholds = threshold_hist_peak_edges(arr, **dict(kws))
     else:  # if mode not in modes:
         raise ValueError(
             'valid modes are: {modes}'
             ' (given: {mode})'.format_map(locals()))
-    return threshold
+    return thresholds
 
 
 # ======================================================================
-def mask_threshold(
+def _threshold(
         arr,
-        threshold='otsu',
-        thresholding_kws=None,
+        threshold,
         comparison='>'):
     """
-    Create a mask from an image according to specific threshold.
+    Apply the specified threshold to the array.
 
     Args:
         arr (np.ndarray): Input array for the masking.
-        threshold (int|float|str): Value for the threshold.
-            If str, the threshold is estimated using `thresholding()` with
-            its `mode` parameter set to `threshold`.
-        thresholding_kws (dict|None): Keyword parameters for `thresholding()`.
+        threshold (int|float): Value for the threshold.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
 
@@ -273,11 +352,7 @@ def mask_threshold(
     # for security reasons comparison is checked before eval
     comparisons = ('==', '!=', '>', '<', '>=', '<=')
     if comparison in comparisons:
-        if isinstance(threshold, str):
-            if thresholding_kws is None:
-                thresholding_kws = dict()
-            threshold = thresholding(arr, threshold, **dict(thresholding_kws))
-        mask = eval('arr {comparison} threshold'.format_map(locals()))
+        mask = eval('arr {c} threshold'.format(c=comparison))
     else:
         raise ValueError(
             'valid comparisons are: {comparisons}'
@@ -286,83 +361,25 @@ def mask_threshold(
 
 
 # ======================================================================
-def mask_compact(
-        arr,
-        threshold=0.0,
-        comparison='>',
-        mode='absolute',
-        smoothing=0.0,
-        erosion_iter=0,
-        dilation_iter=0):
-    """
-    Create a compact mask from an image according to specific threshold.
-    
-    This is achieved with the following workflow:
-        - Gaussian filter smoothing
-        - masking values according to threshold
-        - binary erosion
-        - binary dilation
-
-    Args:
-        arr (np.ndarray): Input array for the masking.
-        threshold (int|float|tuple[int|float]): Value(s) for the threshold.
-        comparison (str): A string representing the numeric relationship
-            Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
-        mode (str): Determines how to interpret / process the threshold value.
-            Available values are:
-             - 'absolute': use the absolute value
-             - 'relative': use a value relative to values interval
-             - 'percentile': use the value obtained from the percentiles
-        smoothing (float): Sigma to be used for Gaussian smoothing.
-            If zero, no filtering done.
-        erosion_iter : int (optional)
-            Number of binary erosion iteration in mask post-processing.
-        dilation_iter : int (optional)
-            Number of binary dilation iteration in mask post-processing.
-    Returns:
-        arr (np.ndarray[bool]): Mask for which comparison is True.
-    """
-    if smoothing > 0.0:
-        arr = sp.ndimage.gaussian_filter(arr, smoothing)
-
-    arr = mask_threshold(arr, threshold, comparison, mode)
-
-    if erosion_iter > 0:
-        arr = sp.ndimage.binary_erosion(arr, iterations=erosion_iter)
-
-    if dilation_iter > 0:
-        arr = sp.ndimage.binary_dilation(arr, iterations=dilation_iter)
-
-    return arr
-
-
-# ======================================================================
 def label_thresholds(
         arr,
-        thresholds=0.0,
-        comparison='>',
-        mode='absolute'):
+        thresholds,
+        comparison='>'):
     """
     Create labels from an image according to specific thresholds.
 
     Args:
         arr (np.ndarray): Array from which mask is created.
-        thresholds (int|float|tuple[int|float]): Value(s) for the threshold.
+        thresholds (iterable[int|float]): Value(s) for the threshold.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['>', '<', '>=', '<=']
-        mode (str): Determines how to interpret / process the threshold value.
-            Available values are:
-             - 'absolute': use the absolute value
-             - 'relative': use a value relative to values interval
-             - 'percentile': use the value obtained from the percentiles
 
     Returns:
         label (np.ndarray[int]): Labels for values
     """
     label = np.zeros_like(arr, dtype=int)
-    thresholds = mrt.utils.auto_repeat(thresholds, 1)
     for threshold in thresholds:
-        mask = mask_threshold(arr, threshold, comparison, mode)
+        mask = _threshold(arr, threshold, comparison)
         label += mask.astype(int)
     return label
 
@@ -414,51 +431,78 @@ def find_objects(
 
 
 # ======================================================================
-def snr_analysis(
+def label_nested_structures(
         arr,
-        num_samples=200):
+        seed=None):
     """
-    Estimate the SNR of a real-positive-valued array.
+    Label nested structures incrementally.
+
+    This is useful for segmenting self-contained structures.
 
     Args:
         arr:
+        seed:
 
     Returns:
-        _snr (float):
-        signal_level (float):
-        noise_level (float):
-    """
-    # todo: calculate the SNR of an image
-    import matplotlib.pyplot as plt
 
-    print('start...')
-    hist, bin_edges = np.histogram(arr, bins=num_samples, normed=True)
-    step = bin_edges[1] - bin_edges[0]
-    x = np.linspace(0, 100, num_samples)
-    y = np.cumsum(hist) * step
-    y2 = np.array([sp.percentile(arr, q) for q in x])
-    plt.figure()
-    plt.plot(hist)
-    plt.figure()
-    plt.plot(x, y)
-    plt.figure()
-    plt.plot(x, y2)
-    plt.show()
-    signal_level = 1
-    noise_level = 10
-    snr = signal_level / noise_level
-    return snr, signal_level, noise_level
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def auto_mask(
+        arr,
+        threshold='otsu',
+        threshold_kws=None,
+        comparison='>',
+        smoothing=0.0,
+        erosion_iter=0,
+        dilation_iter=0):
+    """
+    Create a compact mask from an image according to specific threshold.
+
+    This is achieved with the following workflow:
+        - Gaussian filter smoothing
+        - masking values according to threshold
+        - binary erosion
+        - binary dilation
+
+    Args:
+        arr (np.ndarray): Input array for the masking.
+        threshold (int|float|str): Value for the threshold.
+            If str, the threshold is estimated using `thresholding()` with
+            its `mode` parameter set to `threshold`.
+        threshold_kws (dict|None): Keyword parameters for `thresholding()`.
+        comparison (str): A string representing the numeric relationship
+            Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
+        smoothing (float): Sigma to be used for Gaussian smoothing.
+            If zero, no filtering done.
+        erosion_iter : int (optional)
+            Number of binary erosion iteration in mask post-processing.
+        dilation_iter : int (optional)
+            Number of binary dilation iteration in mask post-processing.
+    Returns:
+        arr (np.ndarray[bool]): Mask for which comparison is True.
+    """
+    if smoothing > 0.0:
+        arr = sp.ndimage.gaussian_filter(arr, smoothing)
+
+    if isinstance(threshold, str):
+        thresholds = auto_thresholds(arr, threshold, threshold_kws)
+        index = 0 if len(thresholds) > 1 else len(thresholds) // 2
+        threshold = thresholds[index]
+    arr = _threshold(arr, threshold, comparison)
+
+    if erosion_iter > 0:
+        arr = sp.ndimage.binary_erosion(arr, iterations=erosion_iter)
+
+    if dilation_iter > 0:
+        arr = sp.ndimage.binary_dilation(arr, iterations=dilation_iter)
+
+    return arr
 
 
 # ======================================================================
 if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
-
-    import nibabel as nib
-
-    src = "~/hd1/TEMP/QSM-PLB" \
-          "/P05_d0_S8_FLASH_3D_0p6_multiecho_corrected_magnitude_sum_Te8.16" \
-          ".nii"
-    array = nib.load(src).get_data()
-    print(snr_analysis(array))

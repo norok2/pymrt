@@ -4,11 +4,10 @@
 Extract a mask from an image (with specialized options for brain extraction).
 
 Workflow is:
-- Brain extraction with FSL's BET (if any)
 - Gaussian filter (smoothing) with specified sigma
-- histogram deviation reduction by a specified factor
-- masking values using a relative threshold (and thresholding method)
-- binary erosion(s) witha specified number of iterations.
+- masking of values according to specific method or threshold value
+- binary erosion with a specified number of iterations.
+- binary dilation with a specified number of iterations.
 """
 
 # ======================================================================
@@ -29,7 +28,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 # import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 # :: External Imports
 # import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -106,16 +105,16 @@ def handle_arg():
         type=float, default=0.0,
         help='value of Gaussian smoothing\'s sigma [%(default)s]')
     arg_parser.add_argument(
-        '-a', '--threshold', metavar='R',
-        type=float, default=0.1,
-        help='value threshold (relative to values range) [%(default)s]')
+        '-a', '--threshold', metavar='METHOD|X',
+        default='otsu',
+        help='thresholding method or value [%(default)s]')
+    arg_parser.add_argument(
+        '-A', '--threshold_opts', metavar='JSON',
+        default='{"bins":"sqrt"}',
+        help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-c', '--comparison', metavar='">"|">="|"<"|"<="|"="|"!="',
         default='>',
-        help='comparison directive [%(default)s]')
-    arg_parser.add_argument(
-        '-m', '--mode', metavar='absolute|relative|percentile',
-        default='relative',
         help='comparison directive [%(default)s]')
     arg_parser.add_argument(
         '-e', '--erosion_iter', metavar='N',
@@ -151,11 +150,14 @@ def main():
         root, base, ext = mrt.utils.split_path(args.input)
         args.output = mrt.utils.join_path(root, 'mask__' + base, ext)
 
-    kw_params = mrt.utils.set_keyword_parameters(
-        mrt.segmentation.mask_compact, vars(args))
+    kws = mrt.utils.set_keyword_parameters(
+        mrt.segmentation.auto_mask, vars(args))
+
+    kws['threshold_kws'] = json.loads(args.threshold_opts)
+    kws['threshold'] = mrt.utils.auto_convert(kws['threshold'])
 
     data, meta = mrt.input_output.load(args.input, meta=True)
-    data = mrt.segmentation.mask_compact(data, **kw_params).astype(args.dtype)
+    data = mrt.segmentation.auto_mask(data, **kws).astype(args.dtype)
     mrt.input_output.save(
         args.output, data, **{k: v for k, v in meta.items()})
 
