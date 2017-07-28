@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes.b1t: B1+ (or flip angle efficiency) computation.
+pymrt.recipes.b1t: relative B1+ (or flip angle efficiency) computation.
 """
 
 # ======================================================================
@@ -22,7 +22,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
-from pymrt.recipes import t1
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -229,7 +228,7 @@ def dual_flash(
 
 
 # ======================================================================
-def mp2rage_rho_to_eta_fa(
+def sa2rage_rho_to_eta_fa(
         rho_arr,
         t1_arr=None,
         eta_fa_values_range=(0.1, 2),
@@ -301,7 +300,7 @@ def mu2rage(
         fa2,
         tr_gre,
         n_gre,
-        t1=4000,
+        t1=2000,
         eta_fa_values_range=(0.01, 2.0),
         eta_fa_num=512):
     """

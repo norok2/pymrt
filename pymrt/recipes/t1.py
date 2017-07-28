@@ -319,8 +319,6 @@ def dual_flash(
     same_fa = np.isclose(fa1, fa2)
 
     if same_tr:
-        fa1 *= eta_fa_arr
-        fa2 *= eta_fa_arr
         if approx == 'short_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * tr_ratio * (
@@ -343,7 +341,7 @@ def dual_flash(
                     cos(fa) * (arr2 - arr1) /
                     ((cos(fa) - 1) * arr2 + (1 - cos(fa)) * tr_ratio * arr1))
         else:
-            # todo: implement tan approx.
+            # todo: implement tan "gunther helms" approx.
             warnings.warn('Unsupported fa1, fa2, tr1, tr2 combination')
             t1_arr = np.ones_like(arr1)
     return t1_arr

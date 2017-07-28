@@ -100,11 +100,14 @@ from pymrt.recipes import t1
 def multi_flash(
         arrs,
         flip_angles,
-        repetition_times,
-        calc_fa_eff=True,
-        calc_t1=True,
-        calc_m0=True):
+        repetition_times,):
     """
+    Calculate the parameters of the FLASH signal at fixed echo time.
+
+    In particular, the following are obtained:
+     - T1: the longitudinal relaxation time
+     - FA_eff: the flip-angle efficiency (proportional to B1+)
+     - M0: the (apparent) spin density (modulated by B1-)
 
     This is a closed-form solution.
 
