@@ -1186,9 +1186,8 @@ def angles2linear(
         num_angles_from_dim,
         itertools.combinations
     """
-    from numpy import sin, cos, sqrt
     # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
-    num_dim = ((1 + sqrt(1 + 8 * len(angles))) / 2)
+    num_dim = ((1 + np.sqrt(1 + 8 * len(angles))) / 2)
     if np.modf(num_dim)[0] != 0.0:
         raise ValueError('cannot get the dimension from the number of angles')
     else:
@@ -1200,10 +1199,10 @@ def angles2linear(
         if use_degree:
             angle = np.deg2rad(angle)
         rotation = np.eye(num_dim)
-        rotation[axes[0], axes[0]] = cos(angle)
-        rotation[axes[1], axes[1]] = cos(angle)
-        rotation[axes[0], axes[1]] = -sin(angle)
-        rotation[axes[1], axes[0]] = sin(angle)
+        rotation[axes[0], axes[0]] = np.cos(angle)
+        rotation[axes[1], axes[1]] = np.cos(angle)
+        rotation[axes[0], axes[1]] = -np.sin(angle)
+        rotation[axes[1], axes[0]] = np.sin(angle)
         linear = np.dot(linear, rotation)
     # :: check that this is a rotation matrix
     det = np.linalg.det(linear)

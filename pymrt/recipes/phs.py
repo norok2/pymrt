@@ -236,8 +236,6 @@ def unwrap_laplacian(
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
-    from numpy import sin, cos
-
     if pre_func:
         arr = pre_func(
             arr,
@@ -257,8 +255,8 @@ def unwrap_laplacian(
     # arr = real(inv_laplacian(
     #     cos(arr) * laplacian(sin(arr)) - sin(arr) * laplacian(cos(arr))))
 
-    cos_arr = cos(arr)
-    sin_arr = sin(arr)
+    cos_arr = np.cos(arr)
+    sin_arr = np.sin(arr)
     kk_2 = fftshift(mrt.utils._kk_2(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))

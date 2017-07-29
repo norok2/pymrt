@@ -101,9 +101,11 @@ def dipole_kernel(
     assert (len(shape) == 3)
     kk = np.array(mrt.utils.grid_coord(shape, origin))
     if b0_direction is None:
-        from numpy import sin, cos
         theta, phi = [np.deg2rad(angle) for angle in (theta, phi)]
-        b0_direction = [sin(phi), -sin(theta) * cos(phi), cos(theta) * cos(phi)]
+        b0_direction = [
+            np.sin(phi),
+            -np.sin(theta) * np.cos(phi),
+            np.cos(theta) * np.cos(phi)]
     b0_direction = np.array(b0_direction) / np.sum(b0_direction)
     with np.errstate(divide='ignore', invalid='ignore'):
         dk_arr = (1.0 / 3.0 - (np.dot(kk, b0_direction)) ** 2 / np.dot(kk, kk))

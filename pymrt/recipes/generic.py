@@ -42,8 +42,7 @@ def func_exp_recovery(t_arr, tau, s_0, eff=1.0, const=0.0):
 
     [s_0 > 0, tau > 0, eff > 0]
     """
-    from numpy import exp
-    s_t_arr = s_0 * (1.0 - 2.0 * eff * exp(-t_arr / tau)) + const
+    s_t_arr = s_0 * (1.0 - 2.0 * eff * np.exp(-t_arr / tau)) + const
     # if s_0 > 0.0 and tau > 0.0 and eff > 0.0:
     #     s_t_arr = s_0 * (1.0 - 2.0 * eff * exp(-t_arr / tau)) + const
     # else:
@@ -58,8 +57,7 @@ def func_exp_decay(t_arr, tau, s_0, const=0.0):
 
     [s_0 > 0, tau > 0]
     """
-    from numpy import exp
-    s_t_arr = s_0 * exp(-t_arr / tau) + const
+    s_t_arr = s_0 * np.exp(-t_arr / tau) + const
     #    if s_0 > 0.0 and tau > 0.0:
     #        s_t_arr = s_0 * exp(-t_arr / tau) + const
     #    else:
@@ -256,17 +254,16 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
 
 # ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
-    from numpy import exp, log
     arr = np.abs(arr)
     log_arr = np.zeros_like(arr)
     # calculate logarithm only of strictly positive values
-    log_arr[arr > zero_cutoff] = log(arr[arr > zero_cutoff] * exp(exp_factor))
+    log_arr[arr > zero_cutoff] = (
+        np.log(arr[arr > zero_cutoff] * np.exp(exp_factor)))
     return log_arr
 
 
 # ======================================================================
 def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
-    from numpy import exp
     # tau = p_arr[..., 0]
     # s_0 = p_arr[..., 1]
     axis = -1
@@ -275,7 +272,7 @@ def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
             mask = np.abs(arr[..., i]) > zero_cutoff
             arr[..., i][mask] = -1.0 / arr[..., i][mask]
         else:
-            arr[..., i] = exp(arr[..., i] - exp_factor)
+            arr[..., i] = np.exp(arr[..., i] - exp_factor)
     return arr
 
 

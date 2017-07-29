@@ -40,11 +40,15 @@ import scipy.signal  # SciPy: Signal Processing
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 
-# :: Local Imports
+# :: Internal Imports
 import pymrt as mrt
+
+# :: Local Imports
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
+
+
 
 # ======================================================================
 # :: Custom defined constants
@@ -1474,7 +1478,7 @@ def compact_num_str(
         >>> compact_num_str(100.042, 9)
         '100.04200'
     """
-    from numpy import log10
+    
 
 
     try:
@@ -1485,7 +1489,7 @@ def compact_num_str(
         extra_char_in_dec = 2
         extra_char_in_sign = 1
         # 'order' of zero is 1 for our purposes, because needs 1 char
-        order = log10(abs(val)) if abs(val) > 0.0 else 1
+        order = np.log10(abs(val)) if abs(val) > 0.0 else 1
         # adjust limit for sign
         limit = max_lim - extra_char_in_sign if val < 0.0 else max_lim
         # perform the conversion
@@ -1736,12 +1740,9 @@ def significant_figures(
     See Also:
         The 'decimal' Python standard module.
     """
-    from numpy import log10
-
-
     val = float(val)
     num = int(num)
-    order = int(np.floor(log10(abs(val)))) if abs(val) != 0.0 else 0
+    order = int(np.floor(np.log10(abs(val)))) if abs(val) != 0.0 else 0
     dec = num - order - 1  # if abs(order) < abs(num) else 0
     typ = 'f' if order < num else 'g'
     prec = dec if order < num else num
@@ -1778,14 +1779,11 @@ def format_value_error(
         >>> format_value_error(12345.6, 78.9, 2)
         ('12346', '79')
     """
-    from numpy import log10
-
-
     val = float(val)
     err = float(err)
     num = int(num)
-    val_order = np.ceil(log10(np.abs(val))) if val != 0 else 0
-    err_order = np.ceil(log10(np.abs(err))) if val != 0 else 0
+    val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
+    err_order = np.ceil(np.log10(np.abs(err))) if val != 0 else 0
     try:
         val_str = significant_figures(val, val_order - err_order + num)
         err_str = significant_figures(err, num)
@@ -2106,10 +2104,7 @@ def sgnlog(
         >>> sgnlog(100, 2)
         6.6438561897747253
     """
-    from numpy import log
-
-
-    return log(np.abs(x)) / log(base) * np.sign(x)
+    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
 
 
 # ======================================================================
@@ -2144,15 +2139,12 @@ def sgnlogspace(
         >>> sgnlogspace(2, 10, 4)
         array([  2.        ,   3.41995189,   5.84803548,  10.        ])
     """
-    from numpy import exp, log
-
-
     if not is_same_sign((start, stop)):
         bounds = (
-            (start, -(exp(-log(np.abs(start))))),
-            ((exp(-log(np.abs(stop)))), stop))
+            (start, -(np.exp(-np.log(np.abs(start))))),
+            ((np.exp(-np.log(np.abs(stop)))), stop))
         args_bounds = tuple(
-            tuple(log(np.abs(val)) / log(base) for val in arg_bounds)
+            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
             for arg_bounds in bounds)
         args_num = (num // 2, num - num // 2)
         args_sign = (np.sign(start), np.sign(stop))
@@ -2166,7 +2158,7 @@ def sgnlogspace(
     else:
         sign = np.sign(start)
         logspace_bound = \
-            tuple(log(np.abs(val)) / log(base) for val in (start, stop))
+            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
         samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
     return samples
 
@@ -2690,9 +2682,6 @@ def _kk(
                [[ 2.3570226 ,  1.66666667],
                 [ 1.66666667,  0.        ]]])
     """
-    from numpy import sqrt
-
-
     kk_ = grid_coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
@@ -2700,7 +2689,7 @@ def _kk(
     kk = np.zeros(shape)
     for k_i, dim in zip(kk_, shape):
         kk += (k_i ** 2)
-    return sqrt(kk)
+    return np.sqrt(kk)
 
 
 # ======================================================================
@@ -2920,8 +2909,15 @@ def auto_bin(
 
     Args:
         arr (np.ndarray): The input array.
-        method (str|None):
-
+        method (str|None): The estimation method.
+            Available options (with N the array size):
+             - 'auto': max('fd', 'sturges')
+             - 'sqrt': sqrt(N), simple
+             - 'sturges': log_2(N) + 1
+             - 'rice': 2 * N^(1/3)
+             - 'scott': 3.5 * SD(arr) / N^(1/3)
+             - 'fd': (Freedman-Diaconis) 2 * (Q75 - Q25) / N^(1/3)
+             - None: N
     Returns:
         num (int): The number of bins.
 
@@ -2943,16 +2939,16 @@ def auto_bin(
         22
         >>> auto_bin(arr, None)
         100
+
+    References:
+         - https://en.wikipedia.org/wiki/Histogram#Number_of_bins_and_width
     """
-    from numpy import sqrt, log2
-
-
     if method == 'auto':
         num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
     elif method == 'sqrt':
-        num = int(np.ceil(sqrt(arr.size)))
+        num = int(np.ceil(np.sqrt(arr.size)))
     elif method == 'sturges':
-        num = int(np.ceil(log2(arr.size)) + 1)
+        num = int(np.ceil(np.log2(arr.size)) + 1)
     elif method == 'rice':
         num = int(np.ceil(2 * arr.size ** (1 / 3)))
     elif method == 'scott':
@@ -2976,8 +2972,8 @@ def auto_bins(
     Args:
         arrs (iterable[np.ndarray]): The input arrays.
         method (str|iterable[str]|None): The method to use calculating bins.
-            If a string or None, the same method is applied to both arrays.
-            Otherwise
+            If str, the same method is applied to both arrays.
+            See `auto_bin()` for available methods.
         combine (callable|None): Combine each bin using the combine function.
             combine(n_bins) -> n_bin
             n_bins is of type iterable[int]
@@ -3045,15 +3041,12 @@ def entropy(
     Examples:
         >>>
     """
-    from numpy import log
-
-
     # normalize histogram to unity
     hist = hist / np.sum(hist)
     # skip zero values
     mask = hist != 0.0
     log_hist = np.zeros_like(hist)
-    log_hist[mask] = log(hist[mask]) / log(base)
+    log_hist[mask] = np.log(hist[mask]) / np.log(base)
     h = -np.sum(hist * log_hist)
     return h
 
@@ -3342,9 +3335,6 @@ def gaussian_nd(
     Returns:
 
     """
-    from numpy import exp
-
-
     if not n_dim:
         n_dim = max_iter_len((shape, sigmas, origin))
 
@@ -3353,7 +3343,7 @@ def gaussian_nd(
     origin = auto_repeat(origin, n_dim)
 
     xx = grid_coord(shape, origin)
-    kernel = exp(
+    kernel = np.exp(
         -(
         sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
     if normalize:
@@ -3743,10 +3733,7 @@ def polar2complex(modulus, phase):
     Returns:
         z (complex|np.ndarray): The complex number z = R * exp(i * phi).
     """
-    from numpy import exp
-
-
-    return modulus * exp(1j * phase)
+    return modulus * np.exp(1j * phase)
 
 
 # ======================================================================
@@ -3812,10 +3799,7 @@ def polar2cartesian(modulus, phase):
          - imag (float|np.ndarray): The imaginary part z" of the complex
          number.
     """
-    from numpy import sin, cos
-
-
-    return modulus * cos(phase), modulus * sin(phase)
+    return modulus * np.cos(phase), modulus * np.sin(phase)
 
 
 # ======================================================================
@@ -3832,10 +3816,7 @@ def cartesian2polar(real, imag):
          - modulus (float): The modulus R of the complex number.
          - argument (float): The phase phi of the complex number.
     """
-    from numpy import sqrt, arctan2 as arctan
-
-
-    return sqrt(real ** 2 + imag ** 2), arctan(real, imag)
+    return np.sqrt(real ** 2 + imag ** 2), np.arctan2(real, imag)
 
 
 # ======================================================================
@@ -4108,10 +4089,7 @@ def euclid_dist(
         array([-1.41421356, -2.82842712, -4.24264069, -5.65685425, -7.07106781,
                -8.48528137])
     """
-    from numpy import sqrt
-
-
-    array = (arr2 - arr1) / sqrt(2.0)
+    array = (arr2 - arr1) / np.sqrt(2.0)
     if unsigned:
         array = np.abs(array)
     return array

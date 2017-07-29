@@ -225,7 +225,6 @@ def _shape_gauss(
     Returns:
 
     """
-    from numpy import exp
     mu *= num_steps
     sigma *= num_steps
     x = np.arange(num_steps)
@@ -269,7 +268,6 @@ def _shape_fermi(
     Returns:
 
     """
-    from numpy import exp
     mu *= num_steps
     flat *= num_steps
     step *= num_steps

@@ -50,24 +50,39 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.constants  # SciPy: Constants
 
-# :: Local Imports
+# :: Internal Imports
 import pymrt as mrt
 # import pymrt.modules.base
 # import pymrt.modules.plot as pmp
+
+# :: Local Imports
+from numpy import sin, cos, exp
+# from sympy import sin, cos, exp
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 
 
 # ======================================================================
-def signal(m0, fa, tr, t1, te, t2s):
+def signal(
+        m0,
+        fa,
+        tr,
+        t1,
+        te,
+        t2s,
+        eta_fa=1,
+        eta_m0=1):
     """
     The FLASH (a.k.a. GRE, TFL, SPGR) signal expression:
     
     s = m0 sin(fa) exp(-te/t2s) (1 - exp(-tr/t1)) / (1 - cos(fa) exp(-tr/t1))
     
-    :math:`s = m_0 \sin(\\alpha) e^{-\\frac{T_E}{T_2^*}} \\frac{1 - e^{
-    -\\frac{T_R}{T_1}}}{1 - \cos(\\alpha) e^{-\\frac{T_R}{T_1}}}`
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
     
     Args:
         m0 (float|np.ndarray): The bulk magnetization M0 in arb.units.
@@ -82,13 +97,14 @@ def signal(m0, fa, tr, t1, te, t2s):
             Units must be the same as `t2s`.
         t2s (float|np.ndarray): The transverse relaxation time in time units.
             Units must be the same as `te`.
+        eta_fa ():
+        eta_m0 ():
             
     Returns:
         s (float|np.ndarray): The signal expression.
     """
-    from numpy import sin, cos, exp
-    return m0 * sin(fa) * exp(-te / t2s) * \
-           (1.0 - exp(-tr / t1)) / (1.0 - cos(fa) * exp(-tr / t1))
+    return eta_m0 * m0 * sin(fa * eta_fa) * exp(-te / t2s) * \
+           (1.0 - exp(-tr / t1)) / (1.0 - cos(fa * eta_fa) * exp(-tr / t1))
 
 
 # ======================================================================
@@ -219,18 +235,17 @@ def ernst_calc(
         >>> ernst_calc(None, 30.0, 42)
         (101.05626250025875, 'T1', 'ms')
     """
-    from numpy import exp, log, cos, arccos
     if t1 and tr:
-        fa = arccos(exp(-tr / t1))
+        fa = np.arccos(np.exp(-tr / t1))
         fa = np.rad2deg(fa)
         val, name, units = fa, 'FA', 'deg'
     elif tr and fa:
         fa = np.deg2rad(fa)
-        t1 = -tr / log(cos(fa))
+        t1 = -tr / np.log(np.cos(fa))
         val, name, units = t1, 'T1', 'ms'
     elif t1 and fa:
         fa = np.deg2rad(fa)
-        tr = -t1 * log(cos(fa))
+        tr = -t1 * np.log(np.cos(fa))
         val, name, units = tr, 'TR', 'ms'
     else:
         val = name = units = None

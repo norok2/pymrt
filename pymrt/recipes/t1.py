@@ -142,7 +142,7 @@ def mp2rage_rho_to_t1(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This affects the precision of the estimation.
-        **acq_params_kws (dict): The acquisition parameters.
+        **params_kws (dict): The acquisition parameters.
             This should match the signature of: `mp2rage.acq_to_seq_params`.
 
     Returns:
@@ -158,7 +158,7 @@ def mp2rage_rho_to_t1(
         for k, v in params_kws.items():
             pass
         # todo: split acq_params and seq_params
-        seq_pars = mp2rage.acq_to_seq_params(**acq_params_kws)[0]
+        seq_pars = mp2rage.acq_to_seq_params(**params_kws)[0]
         rho = mp2rage.rho(t1=t1, **seq_pars)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
@@ -301,8 +301,6 @@ def dual_flash(
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
-    from numpy import log, sin, cos
-
     if eta_fa_arr is None:
         eta_fa_arr = 1
     if approx:
@@ -322,17 +320,17 @@ def dual_flash(
         if approx == 'short_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * tr_ratio * (
-                    (sin(fa1) * cos(fa2) * arr2 -
-                     cos(fa1) * sin(fa2) * arr1) /
-                    ((sin(fa1) * cos(fa2) - sin(fa1)) * arr2 +
-                     (1 - cos(fa1)) * sin(fa2) * tr_ratio * arr1))
+                    (np.sin(fa1) * np.cos(fa2) * arr2 -
+                     np.cos(fa1) * np.sin(fa2) * arr1) /
+                    ((np.sin(fa1) * np.cos(fa2) - np.sin(fa1)) * arr2 +
+                     (1 - np.cos(fa1)) * np.sin(fa2) * tr_ratio * arr1))
         else:
             with np.errstate(divide='ignore', invalid='ignore'):
-                t1_arr = -tr / log(
-                    (sin(fa1) * arr2 -
-                     sin(fa2) * arr1) /
-                    (sin(fa1) * cos(fa2) * arr2 -
-                     cos(fa1) * sin(fa2) * arr1))
+                t1_arr = -tr / np.log(
+                    (np.sin(fa1) * arr2 -
+                     np.sin(fa2) * arr1) /
+                    (np.sin(fa1) * np.cos(fa2) * arr2 -
+                     np.cos(fa1) * np.sin(fa2) * arr1))
 
     else:
         if approx == 'short_tr' and same_fa:

@@ -300,8 +300,8 @@ def auto_thresholds(
 
     Args:
         arr (np.ndarray):
-        method ():
-        kws ():
+        method (str):
+        kws (dict|None): Keyword parameters for the selected method.
 
     Returns:
 
@@ -309,7 +309,7 @@ def auto_thresholds(
     if method:
         method = method.lower()
     modes = (
-        'otsu', 'relative', 'percentile', 'hist_peak', 'inv_hist_peak',
+        'otsu', 'relative', 'percentile', 'hist_peaks', 'inv_hist_peaks',
         'hist_peak_edges')
     if kws is None:
         kws = dict()
@@ -319,9 +319,9 @@ def auto_thresholds(
         thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'percentile':
         thresholds = threshold_relative(arr, **dict(kws))
-    elif method == 'hist_peak':
+    elif method == 'hist_peaks':
         thresholds = threshold_relative(arr, **dict(kws))
-    elif method == 'inv_hist_peak':
+    elif method == 'inv_hist_peaks':
         thresholds = threshold_inv_hist_peaks(arr, **dict(kws))
     elif method == 'hist_peak_edges':
         thresholds = threshold_hist_peak_edges(arr, **dict(kws))

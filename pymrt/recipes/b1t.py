@@ -154,8 +154,6 @@ def dual_flash(
     See Also:
 
     """
-    from numpy import exp, sqrt, arccos
-
     if approx:
         approx = approx.lower()
 
@@ -180,7 +178,7 @@ def dual_flash(
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (arr1 / arr2)
                 fa_arr = (
-                    (fa_arr + sgn * sqrt(
+                    (fa_arr + sgn * np.sqrt(
                         (fa_arr - 2) ** 2 +
                         6 * (fa_arr - 1) * (tr / t1_arr) +
                         2 * (1 - fa_arr) * (tr / t1_arr) ** 2)) /
@@ -190,11 +188,11 @@ def dual_flash(
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (arr1 / arr2)
                 fa_arr = (
-                    (fa_arr + sgn * sqrt(
+                    (fa_arr + sgn * np.sqrt(
                         fa_arr ** 2
-                        + 2 * (fa_arr - 1) * exp(-tr / t1_arr)
-                        + 2 * (fa_arr - 1) * exp(-tr / t1_arr) ** 2)) /
-                    (2 * (fa_arr - 1) * exp(-tr / t1_arr)))
+                        + 2 * (fa_arr - 1) * np.exp(-tr / t1_arr)
+                        + 2 * (fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
+                    (2 * (fa_arr - 1) * np.exp(-tr / t1_arr)))
 
     # same-angle method (variable tr)
     elif same_fa:
@@ -208,17 +206,19 @@ def dual_flash(
         elif t1_arr:
             with np.errstate(divide='ignore', invalid='ignore'):
                 fa_arr = (
-                    (arr2 * exp(tr2 / t1_arr) - arr1 * exp(tr1 / t1_arr) +
-                     (arr1 - arr2) * exp((tr1 + tr2) / t1_arr)) /
+                    (arr2 * np.exp(tr2 / t1_arr) -
+                     arr1 * np.exp(tr1 / t1_arr) +
+                     (arr1 - arr2) * np.exp((tr1 + tr2) / t1_arr)) /
                     (arr2 - arr1 +
-                     arr1 * exp(tr2 / t1_arr) - arr2 * exp(tr1 / t1_arr)))
+                     arr1 * np.exp(tr2 / t1_arr) -
+                     arr2 * np.exp(tr1 / t1_arr)))
 
     else:
         warnings.warn(
             'Unsupported fa1, fa2, tr1, tr2 combination. Fallback to 1.')
         fa_arr = np.ones_like(arr1) * fa
 
-    fa_arr = np.real(arccos(fa_arr))
+    fa_arr = np.real(np.arccos(fa_arr))
 
     result = {
         'fa': np.rad2deg(fa_arr),
