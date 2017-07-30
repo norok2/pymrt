@@ -162,11 +162,44 @@ def threshold_percentile(
             Values must be in the [0, 1] range.
 
     Returns:
-        result (tuple[float]): the calculated threshold.
+        result (tuple[float]): the calculated thresholds.
     """
     values = mrt.utils.auto_repeat(values, 1)
     values = tuple(100.0 * value for value in values)
-    return np.percentile(arr, values)
+    return tuple(np.percentile(arr, values))
+
+
+# ======================================================================
+def threshold_mean_std(
+        arr,
+        std_steps=(-2, -1, 0, 1, 2),
+        mean_steps=1):
+    """
+    Calculate threshold from mean and standard deviations.
+
+    This is the threshold value at which X% (= value) of the data is smaller
+    than the threshold.
+
+    Args:
+        arr (np.ndarray): The input array.
+        mean_steps (iterable[int|float]): The mean multiplication step(s).
+            This is usually set to 1.
+        std_steps (iterable[int|float]): The percentile value(s).
+            Values must be in the [0, 1] range.
+
+    Returns:
+        result (tuple[float]): the calculated thresholds.
+    """
+    mean = np.mean(arr)
+    std = np.std(arr)
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    mean_steps = mrt.utils.auto_repeat(mean_steps, 1)
+    std_steps = mrt.utils.auto_repeat(std_steps, 1)
+    return tuple(
+        mean * mean_step + std * std_step
+        for mean_step, std_step in itertools.product(mean_steps, std_steps)
+        if min_val <= mean * mean_step + std * std_step <= max_val)
 
 
 # ======================================================================
@@ -179,8 +212,8 @@ def threshold_hist_peaks(
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|None): The number of bins for the histogram.
-            If None, this is dete
+        bins (int|str): The number of bins for the histogram.
+            If str, this is determined using `utils.auto_bins()`.
         depth (int|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
@@ -188,7 +221,7 @@ def threshold_hist_peaks(
             If None, this is the determined using the number of bins.
 
     Returns:
-        threshold (float): the calculated threshold.
+        result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
         bins = mrt.utils.auto_bin(arr, bins)
@@ -202,7 +235,7 @@ def threshold_hist_peaks(
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     peaks = sp.signal.find_peaks_cwt(hist, widths)
-    return bin_centers[peaks]
+    return tuple(bin_centers[peaks])
 
 
 # ======================================================================
@@ -218,8 +251,8 @@ def threshold_inv_hist_peaks(
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|None): The number of bins for the histogram.
-            If None, this is dete
+        bins (int|str): The number of bins for the histogram.
+            If str, this is determined using `utils.auto_bins()`.
         depth (int|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
@@ -227,7 +260,7 @@ def threshold_inv_hist_peaks(
             If None, this is the determined using the number of bins.
 
     Returns:
-        threshold (float): the calculated threshold.
+        result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
         bins = mrt.utils.auto_bin(arr, bins)
@@ -241,7 +274,7 @@ def threshold_inv_hist_peaks(
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
-    return bin_centers[peaks]
+    return tuple(bin_centers[peaks])
 
 
 # ======================================================================
@@ -257,8 +290,8 @@ def threshold_hist_peak_edges(
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|None): The number of bins for the histogram.
-            If None, this is dete
+        bins (int|str): The number of bins for the histogram.
+            If str, this is determined using `utils.auto_bins()`.
         depth (int|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
@@ -266,7 +299,7 @@ def threshold_hist_peak_edges(
             If None, this is the determined using the number of bins.
 
     Returns:
-        threshold (float): the calculated threshold.
+        result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
         bins = mrt.utils.auto_bin(arr, bins)
@@ -287,7 +320,7 @@ def threshold_hist_peak_edges(
             if peaks[0] < inv_peaks[0] else
             itertools.zip_longest(inv_peaks, peaks))
         if x))
-    return bin_centers[peak_edges]
+    return tuple(bin_centers[peak_edges])
 
 
 # ======================================================================
@@ -300,35 +333,48 @@ def auto_thresholds(
 
     Args:
         arr (np.ndarray):
-        method (str):
+        method (str): The threshold method.
+            Available methods:
+             - 'otsu': the Otsu foreground/background separation method.
+             - 'relative': thresholds values relative to the array range.
+             - 'percentile': thresholds values from percentile distribution.
+             - 'hist_peaks': uses histogram peaks as thresholds.
+             - 'inv_hist_peaks': uses inverted histogram peaks as thresholds.
+             - 'hist_peak_edges': uses histogram peak edges as thresholds.
         kws (dict|None): Keyword parameters for the selected method.
 
     Returns:
+        thresholds (tuple[float]): The threshold(s).
 
+    Raises:
+        ValueError: If `method` is unknown.
     """
     if method:
         method = method.lower()
-    modes = (
-        'otsu', 'relative', 'percentile', 'hist_peaks', 'inv_hist_peaks',
-        'hist_peak_edges')
+    methods = (
+        'otsu', 'relative', 'percentile', 'mean_std',
+        'hist_peaks', 'inv_hist_peaks', 'hist_peak_edges')
     if kws is None:
         kws = dict()
     if method == 'otsu':
-        thresholds = (threshold_otsu(arr, **dict(kws)),)
+        thresholds = threshold_otsu(arr, **dict(kws))
     elif method == 'relative':
         thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'percentile':
-        thresholds = threshold_relative(arr, **dict(kws))
+        thresholds = threshold_percentile(arr, **dict(kws))
+    elif method == 'mean_std':
+        thresholds = threshold_mean_std(arr, **dict(kws))
     elif method == 'hist_peaks':
-        thresholds = threshold_relative(arr, **dict(kws))
+        thresholds = threshold_hist_peaks(arr, **dict(kws))
     elif method == 'inv_hist_peaks':
         thresholds = threshold_inv_hist_peaks(arr, **dict(kws))
     elif method == 'hist_peak_edges':
         thresholds = threshold_hist_peak_edges(arr, **dict(kws))
-    else:  # if mode not in modes:
+    else:  # if method not in methods:
         raise ValueError(
-            'valid modes are: {modes}'
-            ' (given: {mode})'.format_map(locals()))
+            'valid methods are: {} (given: {})'.format(methods, method))
+    # ensures that the result is iterable
+    thresholds = tuple(mrt.utils.auto_repeat(thresholds, 1))
     return thresholds
 
 
@@ -375,7 +421,7 @@ def label_thresholds(
             Accepted values are: ['>', '<', '>=', '<=']
 
     Returns:
-        label (np.ndarray[int]): Labels for values
+        label (np.ndarray[int]): Labels for each threshold region.
     """
     label = np.zeros_like(arr, dtype=int)
     for threshold in thresholds:
@@ -469,8 +515,8 @@ def auto_mask(
 
     Args:
         arr (np.ndarray): Input array for the masking.
-        threshold (int|float|str): Value for the threshold.
-            If str, the threshold is estimated using `thresholding()` with
+        threshold (int|float|str): Value/method for the threshold.
+            If str, the threshold is estimated using `auto_thresholds()` with
             its `mode` parameter set to `threshold`.
         threshold_kws (dict|None): Keyword parameters for `thresholding()`.
         comparison (str): A string representing the numeric relationship

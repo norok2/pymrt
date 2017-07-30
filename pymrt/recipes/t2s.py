@@ -32,7 +32,7 @@ from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
 from pymrt.recipes import generic
-from pymrt.recipes import qa
+from pymrt.recipes import quality
 from pymrt.recipes.generic import (
     func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_leasq,
     fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo)
@@ -47,7 +47,7 @@ def fit_monoexp(
         noise_mean=0):
     # todo: fix for rician bias
     if noise_mean is None:
-        snr_val, signal_peak, noise_mean, noise_std = qa.rician_percentile(arr)
+        snr_val, signal_peak, noise_mean, noise_std = quality.rician_percentile(arr)
     arr -= noise_mean
 
     if mode == 'auto':
