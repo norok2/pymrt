@@ -406,7 +406,7 @@ qsm_tkd = db0_to_chi
 # ======================================================================
 def _test(use_cache=True):
     import pymrt.utils
-    import os
+    import os  # Miscellaneous operating system interfaces
     base_dir = mrt.utils.realpath('~/hd1/TEMP')
     filepath = os.path.join(base_dir, 'tau_arr.npz')
 

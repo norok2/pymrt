@@ -26,6 +26,7 @@ import scipy.optimize  # SciPy: Optimization and root finding
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+import pymrt.segmentation
 
 from pymrt import INFO, DIRS
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -209,7 +210,8 @@ def fix_phase_interval(arr):
         array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
                 1.34639685,  2.24399475,  3.14159265])
         >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
-        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,
+        3.14159265])
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
@@ -250,6 +252,24 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     else:
         cx_arr = mag_arr.astype(float)
     return cx_arr
+
+
+# ======================================================================
+def fix_noise_mean(arr):
+    """
+    Fix magnitude level to remove the mean of the Rician noise.
+
+    The noise of the resulting data should now have zero mean and be
+    approximately Gaussian.
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    noise_mask = arr < mrt.segmentation.threshold_otsu(arr)
+    return arr - np.mean(arr[noise_mask])
 
 
 # ======================================================================
@@ -298,7 +318,7 @@ def fit_exp_loglin(
             If None, all will be used.
         poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
-        variant (str): Specify a variant of the algorithm.
+        variant (str|None): Specify a variant of the algorithm.
             A valid Python expression is expected and used as keyword argument
             of the `numpy.polyfit()` function.
             Most notably can be used to specify (global) data weighting, e.g.:
@@ -409,7 +429,7 @@ def fit_exp_leasq(
         init = [1] * num_params
 
     p_arr = voxel_curve_fit(
-        y_arr, x_arr, func_exp_decay, init, method='curve_fit_parallel',
+        y_arr, x_arr, func_exp_decay, init, method='curve_fit_parallel_map',
         method_kws=dict(method=optim))
 
     shape = p_arr.shape[:axis]
@@ -614,7 +634,8 @@ def fit_exp_tau_diff(
             The number of points must match the last shape size of arr.
         tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
-        differentiate (callable): The numerical differentiation function to use.
+        differentiate (callable): The numerical differentiation function to
+        use.
             Must accept an `axis=-1` keyword argument, which defines the
             dimension over which integration is done.
         combine (callable): The combination method to use.
@@ -650,7 +671,8 @@ def fit_exp_tau_arlo(
         tis_mask=None,
         window_size=2):
     """
-    Exponential decay constant fit using 'Auto-Regression on Linear Operations'.
+    Exponential decay constant fit using 'Auto-Regression on Linear
+    Operations'.
 
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
     
@@ -731,6 +753,47 @@ def fit_exp_tau_arlo(
 
 
 # ======================================================================
+def fit_exp_tau_loglin(
+        arr,
+        tis,
+        tis_mask=None,
+        exp_factor=0,
+        zero_cutoff=np.spacing(1)):
+    """
+    Fit exponential decay to data using the log-linear method.
+
+    Args:
+        arr (np.ndarray): The input array in arb.units.
+            The sampling time T_i varies in the last dimension.
+        tis (iterable): The sampling times T_i in time units.
+            The number of points must match the last shape size of arr.
+        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        poly_deg (int): The degree of the polynomial to fit.
+            For monoexponential fits, use num=1.
+        variant (str): Specify a variant of the algorithm.
+            A valid Python expression is expected and used as keyword argument
+            of the `numpy.polyfit()` function.
+            Most notably can be used to specify (global) data weighting, e.g.:
+            `w=1/np.sqrt(x_arr)`.
+        full (bool): Calculate additional information on the fit performance.
+            If True, more information is given.
+            If False, only the optimized parameters are returned.
+        exp_factor (float|None):
+        zero_cutoff (float|None): The threshold value for masking zero values.
+
+    Returns:
+        tau_arr (np.ndarray): The exponential time constant in time units.
+            Units are determined by the units of `tis`.
+    """
+    results = fit_exp_loglin(
+        arr, tis, tis_mask, poly_deg=1,
+        variant=None, full=False, exp_factor=0, zero_cutoff=np.spacing(1))
+
+    return results['tau']
+
+
+# ======================================================================
 def fit_exp_tau(
         arr,
         tis,
@@ -766,7 +829,8 @@ def _curve_fit(args):
     The resulting parameters and their covariance are set to NaN.
 
     Args:
-        args (list): Positional parameters passed to `curve_fit`.
+        args (list): Positional parameters.
+            These are passed to `scipy.optimize.curve_fit()`.
 
     Returns:
         p_val (np.ndarray): Optimized parameters.
@@ -774,6 +838,8 @@ def _curve_fit(args):
             The diagonals provide the variance of the parameter estimate
     """
     from scipy.optimize import OptimizeWarning
+
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
@@ -844,7 +910,7 @@ def voxel_curve_fit(
     # p_arr = np.zeros((num_voxels, num_params))
     if isinstance(fit_params, int):
         num_params = fit_params
-        fit_params = (1,) * num_params
+        fit_params = (1.0,) * num_params
         p_arr = np.ones((num_voxels, num_params))
     elif isinstance(fit_params, np.ndarray):
         num_params = fit_params.shape[axis]
@@ -852,7 +918,7 @@ def voxel_curve_fit(
         fit_params = tuple(np.mean(p_arr, axis=0) if len(shape) > 1 else p_arr)
     else:
         num_params = len(fit_params)
-        p_arr = np.tile(fit_params, num_voxels)
+        p_arr = np.tile(fit_params, num_voxels).astype(float)
 
     p_arr = p_arr.reshape((num_voxels, num_params))
 
@@ -866,7 +932,7 @@ def voxel_curve_fit(
 
     if not method:
         if fit_func:
-            method = 'curve_fit_parallel'
+            method = 'curve_fit_parallel_map'
         elif fit_params:
             method = 'poly'
 
@@ -881,9 +947,12 @@ def voxel_curve_fit(
                 fit_func, x_arr, y_i_arr, p_i_arr, **method_kws)
             p_arr[i] = tmp[0]
 
-    elif method == 'curve_fit_legacy':
-        num_proc = method_kws['num_proc'] \
-            if 'num_proc' in method_kws else multiprocessing.cpu_count()
+    elif method == 'curve_fit_parallel':
+        if 'num_proc' in method_kws:
+            num_proc = method_kws['num_proc']
+            method_kws.pop('num_proc')
+        else:
+            num_proc = multiprocessing.cpu_count()
         pool = multiprocessing.Pool()
         mp_results = []
         for i in range(num_voxels):
@@ -901,13 +970,18 @@ def voxel_curve_fit(
             else:
                 p_arr[i] = p_val
 
-    elif method == 'curve_fit_parallel':
+    elif method == 'curve_fit_parallel_map':
         num_proc = method_kws['num_proc'] \
             if 'num_proc' in method_kws else multiprocessing.cpu_count() + 1
         chunksize = method_kws['chunksize'] \
             if 'chunksize' in method_kws else 2 * multiprocessing.cpu_count()
+        bounds = method_kws['bounds'] \
+            if 'bounds' in method_kws else (-np.inf, np.inf)
+        method = method_kws['method'] \
+            if 'method' in method_kws else None
         iter_voxels = [
-            (fit_func, x_arr, y_arr[i] if len(shape) > 1 else y_arr, p_arr[i])
+            (fit_func, x_arr, y_arr[i] if len(shape) > 1 else y_arr, p_arr[i],
+             None, False, True, bounds, method)
             for i in range(num_voxels)]
         pool = multiprocessing.Pool(num_proc)
         for i, res in enumerate(pool.imap(_curve_fit, iter_voxels, chunksize)):

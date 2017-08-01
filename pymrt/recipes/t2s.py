@@ -35,7 +35,8 @@ from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
     func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_leasq,
-    fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo)
+    fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
+    fit_exp_tau_loglin)
 
 
 # ======================================================================

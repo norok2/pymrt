@@ -4,7 +4,7 @@
 FLASH pulse sequence library.
 
 Calculate the analytical expression of the FLASH pulse sequence signal and
-other quantities related to the FLASH pu
+other related quantities.
 """
 
 # ======================================================================
@@ -14,7 +14,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
+import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
 # import time  # Time access and conversions
@@ -31,6 +31,7 @@ from __future__ import (
 # import warnings  # Warning control
 # import unittest  # Unit testing framework
 import doctest  # Test interactive Python examples
+import pickle  # Python object serialization
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -56,11 +57,12 @@ import pymrt as mrt
 # import pymrt.modules.plot as pmp
 
 # :: Local Imports
-from numpy import sin, cos, exp
-# from sympy import sin, cos, exp
+from sympy import pi, exp, sin, cos, tan
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
+from pymrt import DIRS
+from pymrt.config import CFG
 
 
 # ======================================================================
@@ -83,23 +85,37 @@ def signal(
         e^{-\\frac{T_E}{T_2^*}}
         \\frac{1 - e^{-\\frac{T_R}{T_1}}}
         {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
-    
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive (spin density) efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the transmit (flip angle) efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
     Args:
-        m0 (float|np.ndarray): The bulk magnetization M0 in arb.units.
+        m0 (int|float|np.ndarray): The bulk magnetization M0 in arb.units.
             This includes both spin density and all additional experimental
             factors (coil contribution, electronics calibration, etc.).
-        fa (float|np.ndarray): The flip angle in rad.
-        tr (float|np.ndarray): The repetition time in time units.
+        fa (int|float|np.ndarray): The flip angle in rad.
+        tr (int|float|np.ndarray): The repetition time in time units.
             Units must be the same as `t1`.
-        t1 (float|np.ndarray): The longitudinal relaxation time in time units.
+        t1 (int|float|np.ndarray): The longitudinal relaxation in time units.
             Units must be the same as `tr`.
-        te (float|np.ndarray): The echo time in time units.
+        te (int|float|np.ndarray): The echo time in time units.
             Units must be the same as `t2s`.
-        t2s (float|np.ndarray): The transverse relaxation time in time units.
+        t2s (int|float|np.ndarray): The transverse relaxation in time units.
             Units must be the same as `te`.
-        eta_fa ():
-        eta_m0 ():
-            
+        eta_fa (int|float|np.ndarray): The flip angle efficiency in #.
+            This is proportional to the coil transmit field :math:`B_1^+`.
+        eta_m0 (int|float|np.ndarray): The spin density efficiency in #.
+            This is proportional to the coil receive field :math:`B_1^-`.
+
     Returns:
         s (float|np.ndarray): The signal expression.
     """
@@ -108,15 +124,163 @@ def signal(
 
 
 # ======================================================================
+def _eq_expr(*eqs, expr=lambda x: x):
+    return sym.Eq(expr([eq.lhs for eq in eqs]), expr([eq.rhs for eq in eqs]))
+
+
+# ======================================================================
+def _simplify_cos(expr):
+    return sym.FU['TR5'](expr.expand().trigsimp()).ratsimp()
+
+
+# ======================================================================
+def _prepare_multi_flash(use_cache=CFG['use_cache']):
+    """Solve the combination of FLASH images analytically."""
+
+    cache_filepath = os.path.join(DIRS['cache'], 'multi_flash.cache')
+    if not os.path.isfile(cache_filepath) or not use_cache:
+        s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0 = sym.symbols(
+            's m0 fa tr t1 te t2s eta_fa eta_m0')
+        s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
+            's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3')
+        n = sym.symbols('n')
+        eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
+        eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
+        eq_2 = eq.subs({s: s2, fa: fa2, tr: tr2})
+        eq_3 = eq.subs({s: s3, fa: fa3, tr: tr3})
+
+        def ratio_expr(x):
+            return x[0] / x[1]
+            # return x[0] * x[1] / (x[0] + x[1])
+
+        eq_r21 = _eq_expr(eq_2, eq_1, expr=ratio_expr).expand().trigsimp()
+        eq_r31 = _eq_expr(eq_3, eq_1, expr=ratio_expr).expand().trigsimp()
+
+        # tr1, tr2, tr3 << t1 approximation
+        # double fa, tr_ratio
+        print('\n', ': Double FA, Short TR')
+        double_fa_short_tr = {
+            fa1: fa, fa2: 2 * fa, fa3: fa,
+            tr1: tr, tr2: tr, tr3: n * tr}
+
+        eq_ar21_ = eq_r21.subs(double_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar21_ = eq_ar21_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
+
+        eq_ar31_ = eq_r31.subs(double_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar31_ = eq_ar31_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
+
+        print(eq_ar21_)
+        print(eq_ar31_)
+        # double_fa_short_tr_result = sym.solve(
+        #     (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+        # for j, exprs in enumerate(double_fa_short_tr_result):
+        #     print('SOLUTION: ', j + 1)
+        #     for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
+        #         print(name)
+        #         print(expr)
+
+        # tr1, tr2, tr3 << t1 approximation
+        # half fa, tr_ratio
+        print('\n', ': Half FA, Short TR')
+        half_fa_short_tr = {
+            fa1: fa, fa2: 2 * fa, fa3: 2 * fa,
+            tr1: tr, tr2: tr, tr3: n * tr}
+
+        eq_ar21_ = eq_r21.subs(half_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar21_ = eq_ar21_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
+
+        eq_ar31_ = eq_r31.subs(half_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar31_ = eq_ar31_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
+
+        print(eq_ar21_)
+        print(eq_ar31_)
+        # half_fa_short_tr_result = sym.solve(
+        #     (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+        # for j, exprs in enumerate(half_fa_short_tr_result):
+        #     print()
+        #     print('solution: ', j + 1)
+        #     for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
+        #         print(name)
+        #         print(expr)
+
+        # tr1, tr2, tr3 << t1 approximation
+        # fa1, fa2, fa3 ~ 0 approximation
+        print('\n', ': Small FA, Short TR')
+        eq_ar21_ = eq_r21.copy()
+        for tr_ in tr1, tr2, tr3:
+            eq_ar21_ = eq_ar21_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        for fa_ in fa1, fa2, fa3:
+            for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+                eq_ar21_ = eq_ar21_.subs(
+                    fa_expr,
+                    fa_expr.series(eta_fa * fa_, n=3).removeO())
+
+        eq_ar31_ = eq_r31.copy()
+        for tr_ in tr1, tr2, tr3:
+            eq_ar31_ = eq_ar31_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        for fa_ in fa1, fa2, fa3:
+            for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+                eq_ar31_ = eq_ar31_.subs(
+                    fa_expr,
+                    fa_expr.series(eta_fa * fa_, n=3).removeO())
+
+        print(eq_ar21_)
+        print(eq_ar31_)
+        small_fa_short_tr_result = sym.solve(
+            (eq_ar21_, eq_ar31_), (t1, eta_fa))
+        for j, exprs in enumerate(small_fa_short_tr_result):
+            print()
+            print('solution: ', j + 1)
+            for name, expr in zip(('t1', 'eta_fa'), exprs):
+                print(name)
+                print(expr)
+
+        # quit()
+        # pickles = ()
+        # with open(cache_filepath, 'wb') as cache_file:
+        #     pickle.dump(pickles, cache_file)
+    else:
+        with open(cache_filepath, 'rb') as cache_file:
+            pickles = pickle.load(cache_file)
+    # result = np.vectorize(sym.lambdify(*pickles))
+    # return result
+
+
+# ======================================================================
+# :: defines the mp2rage signal expression
+_rho = _prepare_multi_flash()
+
+
+# ======================================================================
 def rotation(
         angle=sym.Symbol('a'),
         axes=(0, 1),
         num_dim=3):
     rot_mat = sym.eye(num_dim)
-    rot_mat[axes[0], axes[0]] = sym.cos(angle)
-    rot_mat[axes[1], axes[1]] = sym.cos(angle)
-    rot_mat[axes[0], axes[1]] = -sym.sin(angle)
-    rot_mat[axes[1], axes[0]] = sym.sin(angle)
+    rot_mat[axes[0], axes[0]] = cos(angle)
+    rot_mat[axes[1], axes[1]] = cos(angle)
+    rot_mat[axes[0], axes[1]] = -sin(angle)
+    rot_mat[axes[1], axes[0]] = sin(angle)
     return rot_mat
 
 
@@ -139,11 +303,11 @@ def evolution(
         resonance_offset=0,
         equilibrium_magnetization=sym.Symbol('M_eq')):
     decay = rotation(resonance_offset, (0, 1))
-    decay[0:2, 0:2] *= sym.exp(-duration * relaxation_transverse)
-    decay[-1, -1] *= sym.exp(-duration * relaxation_longitudinal)
+    decay[0:2, 0:2] *= exp(-duration * relaxation_transverse)
+    decay[-1, -1] *= exp(-duration * relaxation_longitudinal)
     recovery = sym.Matrix(
         [0, 0, equilibrium_magnetization *
-         (1 - sym.exp(-duration * relaxation_longitudinal))])
+         (1 - exp(-duration * relaxation_longitudinal))])
     excitation = rotation(flip_angle, rotation_plane)
     final_magnetization = decay * excitation * initial_magnetization + recovery
     return final_magnetization, excitation

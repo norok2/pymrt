@@ -11,143 +11,520 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+# import os  # Miscellaneous operating system interfaces
 # import itertools  # Functions creating iterators for efficient looping
 import warnings  # Warning control
 import collections  # Container datatypes
+# import pickle  # Python object serialization
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+# import sympy as sym  # SymPy (symbolic CAS library)
+
 
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+import pymrt.segmentation
 
-from pymrt.recipes import t1
+from pymrt.recipes.generic import fix_noise_mean, voxel_curve_fit
+from pymrt.recipes import t1, b1t
+
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 
 
-# # ======================================================================
-# def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
-#     """Solve the MP2RAGE rho expression analytically."""
-#
-#     cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
-#     if not os.path.isfile(cache_filepath) or not use_cache:
-#         m0, mz_ss = sym.symbols('m0 mz_ss')
-#         n_gre, tr_gre = sym.symbols('n_gre tr_gre')
-#         fa1, fa2 = sym.symbols('fa1 fa2')
-#         ta, tb, tc = sym.symbols('ta tb tc')
-#         fa_p, eta_p = sym.symbols('fa_p eta_p')
-#         t1, eta_fa = sym.symbols('t1 eta_fa')
-#
-#         eqn_mz_ss = sym.Eq(
-#             mz_ss,
-#             _mz_0rf(
-#                 _mz_nrf(
-#                     _mz_0rf(
-#                         _mz_nrf(
-#                             _mz_0rf(
-#                                 _mz_i(mz_ss, fa_p, eta_p),
-#                                 t1, ta, m0),
-#                             t1, n_gre, tr_gre, fa1, m0, eta_fa),
-#                         t1, tb, m0),
-#                     t1, n_gre, tr_gre, fa2, m0, eta_fa),
-#                 t1, tc, m0))
-#         mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
-#
-#         # convenient exponentials
-#         e1 = exp(-tr_gre / t1)
-#         ea = exp(-ta / t1)
-#         # eb = exp(-tb / t1)
-#         ec = exp(-tc / t1)
-#
-#         # rho for TI1 image (omitted factor: b1r * e2 * m0)
-#         gre_ti1 = sin(fa1 * eta_fa) * (
-#             (_mz_i(mz_ss, fa_p, eta_p) / m0 * ea +
-#              (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
-#                 (1 - e1) * (1 - (cos(fa1* eta_fa) * e1) ** (n_gre / 2 - 1)) /
-#                 (1 - cos(fa1 * eta_fa) * e1)))
-#
-#         # rho for TI2 image (omitted factor: b1r * e2 * m0)
-#         gre_ti2 = sin(fa2 * eta_fa) * (
-#             ((mz_ss / m0) - (1 - ec)) /
-#             (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre / 2)) -
-#             (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (-n_gre / 2) - 1) /
-#             (1 - cos(fa2 * eta_fa) * e1))
-#
-#         # T1 map as a function of steady state rho
-#         s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
-#         s = s.subs(mz_ss, mz_ss_)
-#
-#         pickles = (
-#             (n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa), s)
-#         with open(cache_filepath, 'wb') as cache_file:
-#             pickle.dump(pickles, cache_file)
-#     else:
-#         with open(cache_filepath, 'rb') as cache_file:
-#             pickles = pickle.load(cache_file)
-#     result = np.vectorize(sym.lambdify(*pickles))
-#     return result
-#
-#
-# # ======================================================================
-# # :: defines the mp2rage signal expression
-# _rho = _prepare_rho_mp2rage()
+# ======================================================================
+def _flash_signal_fit(
+        fa_tr,
+        eta_fa,
+        t1,
+        xi):
+    """
+    FLASH signal (no TE dependency) to use with `scipi.optimize.curve_fit()`.
+
+    Args:
+        fa_tr (np.ndarray): The independent variables.
+            The shape of the array is (2, N), where N is the number of signals
+            to fit. Upon assignment, must expand to: `fa, tr = fa_tr` and
+            `fa` are the flip angles in radians, and `tr` is the repetition
+            times in time units (matching those of `t1`).
+        eta_fa (float): The flip angle efficiency in #.
+        t1 (float): The longitudinal relaxation in time units.
+            The units match those of `tr`.
+        xi (float): The amplitude factor in arb.units.
+            Contains information on the spin density `m0`, the coil
+            sensitivity (proportional to `b1r`) and units transformation
+            factors.
+
+    Returns:
+        s_arr (np.ndarray): The signal array in arb.units.
+            The shape of the array is (N), where N is the number of signals
+            to fit.
+    """
+    fa, tr = fa_tr
+    return xi * np.sin(fa * eta_fa) * (1.0 - np.exp(-tr / t1)) / \
+           (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1))
 
 
 # ======================================================================
-def multi_flash(
-        arrs,
-        flip_angles,
-        repetition_times,):
+def triple_special1(
+        arr1,
+        arr2,
+        arr3,
+        fa,
+        tr,
+        n_tr=2,
+        sign=1,
+        prepare=fix_noise_mean):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
-    In particular, the following are obtained:
-     - T1: the longitudinal relaxation time
-     - FA_eff: the flip-angle efficiency (proportional to B1+)
-     - M0: the (apparent) spin density (modulated by B1-)
+    The (fa, tr) combinations required are:
+     - arr1: (    fa,        tr)
+     - arr2: (2 * fa,        tr)
+     - arr3: (    fa, n_tr * tr)
+
+    Assumes that the `tr` (and `n_tr * tr`) is much smaller compared to `t1`.
+
+    Given the following expression for the FLASH signal:
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+        
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the flip angle efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    The obtained FLASH signal parameters are :math:`T_1`,
+    :math:`\\eta_\\alpha` and
+    :math:`\\xi = \\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
 
     This is a closed-form solution.
 
     Args:
-        arrs ():
-        flip_angles ():
-        repetition_times ():
-        calc_fa_eff ():
-        calc_t1 ():
-        calc_m0 ():
+        arr1 (np.ndarray): The input array for the first FLASH signal.
+            The flip angle must be `fa` and the repetition time `tr`.
+        arr2 (np.ndarray): The input array for the second FLASH signal.
+            The flip angle must be `2 * fa` and the repetition time `tr`.
+        arr3 (np.ndarray): The input array for the third FLASH signal.
+            The flip angle must be `fa` and the repetition time `n * tr`.
+        fa (int|float): The base flip angle in deg.
+            This is the flip angle for `arr1` and `arr3`, while the flip
+            angle for `arr2` must be `2 * fa`.
+        tr (int|float): The base repetition time in time units.
+            This is the repetition time for `arr1` and `arr2`, while the
+            repetition time for `arr3` must be `n * tr`.
+        n_tr (int|float): The repetition times ratio in #.
+            This is the repetition times ratio, obtained dividing the
+            repetition time of `arr3` by the repetition time of `arr1`.
+        sign (int|float): Select one of the two solution for the equations.
+            Must be either +1 or -1.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray
 
     Returns:
-
+        result (tuple[np.ndarray]): The tuple
+            contains:
+             - t1_arr (np.ndarray): The longitudinal relaxation in time units.
+               The units of `t1_arr` are defined by the units of `tr`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
+             - xi_arr (np.ndarray): The signal factor in arb. units.
+               This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
     """
-    assert(len(arrs) == len(flip_angles) == len(repetition_times))
-    warnings.warn('Not implemented yet')
+    fa = np.deg2rad(fa)
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+    arr3 = prepare(arr3) if prepare else arr3.astype(float)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        eta_fa_arr = (n_tr * arr2 * arr3 - n_tr * arr1 * arr2 - sign *
+                      np.sqrt(
+                          arr2 * (
+                              n_tr ** 2 * arr1 ** 2 * arr2 -
+                              2.0 * n_tr ** 2 * arr1 ** 2 * arr3 +
+                              n_tr ** 2 * arr2 * arr3 ** 2 +
+                              2.0 * n_tr * arr1 ** 2 * arr3 -
+                              2.0 * n_tr * arr1 * arr2 * arr3 +
+                              2.0 * n_tr * arr1 * arr3 ** 2 -
+                              2.0 * n_tr * arr2 * arr3 ** 2 -
+                              2.0 * arr1 * arr3 ** 2 +
+                              2.0 * arr2 * arr3 ** 2))) / (
+                         2 * arr3 * (
+                             n_tr * arr1 - n_tr * arr2 - arr1 + arr2))
+        eta_fa_arr = np.real(np.arccos(eta_fa_arr))
+
+        t1_arr = n_tr * tr * (arr1 - arr3) * (
+            n_tr * arr2 * (arr1 - arr3) *
+            (n_tr * arr1 - n_tr * arr2 - arr1 + arr2) +
+            arr2 * (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) +
+            sign * (n_tr - 1.0) * (arr1 - arr2) * np.sqrt(
+                arr2 * (
+                    n_tr ** 2 * arr1 ** 2 * arr2 -
+                    2.0 * n_tr ** 2 * arr1 ** 2 * arr3 +
+                    n_tr ** 2 * arr2 * arr3 ** 2 +
+                    2.0 * n_tr * arr1 ** 2 * arr3 -
+                    2.0 * n_tr * arr1 * arr2 * arr3 +
+                    2.0 * n_tr * arr1 * arr3 ** 2 -
+                    2.0 * n_tr * arr2 * arr3 ** 2 -
+                    2.0 * arr1 * arr3 ** 2 +
+                    2.0 * arr2 * arr3 ** 2))) / (
+                     (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) *
+                     (3.0 * n_tr * arr1 * arr2 +
+                      2.0 * n_tr * arr1 * arr3 -
+                      4.0 * n_tr * arr2 * arr3 -
+                      2.0 * arr1 * arr3 + arr2 * arr3))
+
+        xi_arr = arr3 / (
+            np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-n_tr * tr / t1_arr)) /
+            (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-n_tr * tr / t1_arr)))
+    return t1_arr, eta_fa_arr, xi_arr
 
 
 # ======================================================================
-def fit_multi_flash(
-        arrs,
-        flip_angles,
-        repetition_times,
-        fit_fa_eff=True,
-        fit_t1=True,
-        fit_m0=True):
+def triple_special2(
+        arr1,
+        arr2,
+        arr3,
+        fa,
+        tr,
+        n_tr=2,
+        sign=1,
+        max_iter=64,
+        threshold=1e-8,
+        prepare=fix_noise_mean):
     """
+    Calculate the parameters of the FLASH signal at fixed echo time.
+
+    The (fa, tr) combinations required are:
+     - arr1: (    fa,        tr)
+     - arr2: (2 * fa,        tr)
+     - arr3: (2 * fa, n_tr * tr)
+
+    Assumes that the `tr` (and `n_tr * tr`) is much smaller compared to `t1`.
+
+    Given the following expression for the FLASH signal:
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the flip angle efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    The obtained FLASH signal parameters are :math:`T_1`,
+    :math:`\\eta_\\alpha` and
+    :math:`\\xi = \\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+
+    Assumes that the `tr` (and `n * tr`) is much smaller compared to `t1`.
+
+    This is an iterative solution.
+
+    Args:
+        arr1 (np.ndarray): The input array for the first FLASH signal.
+            The flip angle must be `fa` and the repetition time `tr`.
+        arr2 (np.ndarray): The input array for the second FLASH signal.
+            The flip angle must be `2 * fa` and the repetition time `tr`.
+        arr3 (np.ndarray): The input array for the third FLASH signal.
+            The flip angle must be `2 * fa` and the repetition time `n * tr`.
+        fa (int|float): The base flip angle in deg.
+            This is the flip angle for `arr1`, while the flip
+            angle for `arr2` and `arr3` must be `2 * fa`.
+        tr (int|float): The base repetition time in time units.
+            This is the repetition time for `arr1` and `arr2`, while the
+            repetition time for `arr3` must be `n * tr`.
+        n_tr (int|float): The repetition times ratio in #.
+            This is the repetition times ratio, obtained dividing the
+            repetition time of `arr3` by the repetition time of `arr1`.
+        sign (int|float): Select one of the two solution for the equations.
+            Must be either +1 or -1.
+        max_iter (int): Maximum number of iterations.
+            If `threshold` > 0, the algorithm may stop earlier.
+        threshold (float): Threshold for next iteration.
+            If the next iteration globally modifies the sensitivity by less
+            than `threshold`, the algorithm stops.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+             - t1_arr (np.ndarray): The longitudinal relaxation in time units.
+               The units of `t1_arr` are defined by the units of `tr`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
+             - xi_arr (np.ndarray): The signal factor in arb. units.
+               This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+    """
+    fa = np.deg2rad(fa)
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+    arr3 = prepare(arr3) if prepare else arr3.astype(float)
+    fa1, fa2, fa3 = fa, 2 * fa, 2 * fa
+    tr1, tr2, tr3 = tr, tr, n_tr * tr
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        t1_arr = np.ones_like(arr1) * tr
+        eta_fa_arr = np.ones_like(arr1)
+        mask = np.ones_like(arr1, dtype=bool)
+        mask *= arr1 >= mrt.segmentation.threshold_otsu(arr1)
+        mask *= arr2 >= mrt.segmentation.threshold_otsu(arr2)
+        mask *= arr3 >= mrt.segmentation.threshold_otsu(arr3)
+        print('Mask: {:.0%}'.format(np.sum(mask) / mask.size))
+        for i in range(max_iter):
+            t1_last = t1_arr.copy() if threshold > 0 else 0
+            eta_fa_last = eta_fa_arr.copy() if threshold > 0 else 0
+            t1_arr = t1.dual_flash(
+                arr3, arr2, fa3, fa2, tr3, tr2, eta_fa_arr, approx='short_tr')
+            eta_fa_arr = b1t.dual_flash(
+                arr1, arr2, fa1, fa2, tr1, tr2, t1_arr, approx='short_tr')
+            print('Mean eta_fa: {}'.format(np.nanmean(eta_fa_arr)))
+            if threshold > 0:
+                delta = np.nansum(
+                    np.abs(t1_arr[mask] - t1_last[mask]) +
+                    np.abs(eta_fa_arr[mask] - eta_fa_last[mask]))
+                if delta < threshold:
+                    break
+                else:
+                    print('iter: {}, delta: {}'.format(i, delta))
+
+        arrs = arr1, arr2, arr3
+        fas = fa1, fa2, fa3
+        trs = tr1, tr2, tr3
+        xi_arr = np.zeros_like(arr1, dtype=float)
+        for arr, fa, tr in zip(arrs, fas, trs):
+            xi_arr += arr / (
+                np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
+                (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
+        xi_arr /= 3
+
+    return t1_arr, eta_fa_arr, xi_arr
+
+
+# ======================================================================
+def triple(
+        arr1,
+        arr2,
+        arr3,
+        fa1,
+        fa2,
+        fa3,
+        tr1,
+        tr2,
+        tr3,
+        sign=1,
+        prepare=fix_noise_mean):
+    """
+    Calculate the parameters of the FLASH signal at fixed echo time.
+
+    Assumes that the following approximations are valid:
+     - `tr` (`tr1`, `tr2`, `tr3`) is much smaller compared to `t1`;
+     - `fa` (`fa1, `fa2`, `fa3`) is close to zero.
+
+    Given the following expression for the FLASH signal:
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the flip angle efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    The obtained FLASH signal parameters are :math:`T_1`,
+    :math:`\\eta_\\alpha` and :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+
+    Requires that the combination of flip angles and repetition times to be
+    unique (not necessarily that all flip angles and all repetition times are
+    different).
+
+    This is a closed-form solution.
+
+    Args:
+        arr1 (np.ndarray): The input array for the first FLASH signal.
+        arr2 (np.ndarray): The input array for the second FLASH signal.
+        arr3 (np.ndarray): The input array for the third FLASH signal.
+        fa1 (int|float): The first flip angle in deg.
+        fa2 (int|float): The second flip angle in deg.
+        fa3 (int|float): The third flip angle in deg.
+        tr1 (int|float): The first repetition time in time units.
+        tr2 (int|float): The first repetition time in time units.
+        tr3 (int|float): The first repetition time in time units.
+        sign (int): Select one of the two solutions for the equations.
+            Must be either +1 or -1.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+             - t1_arr (np.ndarray): The longitudinal relaxation in time units.
+               The units of `t1_arr` are defined by the units of `tr`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
+             - xi_arr (np.ndarray): The signal factor in arb. units.
+               This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+    """
+    fa1 = np.deg2rad(fa1)
+    fa2 = np.deg2rad(fa2)
+    fa3 = np.deg2rad(fa3)
+    arr1 = (prepare(arr1) if prepare else arr1).astype(np.double)
+    arr2 = (prepare(arr2) if prepare else arr2).astype(np.double)
+    arr3 = (prepare(arr3) if prepare else arr3).astype(np.double)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        t1_arr = tr1 * tr2 * tr3 * (
+            (fa2 ** 2 - fa1 ** 2) * fa3 * arr1 * arr2 + arr3 * (
+                (fa1 * fa3 ** 2 - fa1 * fa2 ** 2) * arr2 +
+                (fa1 ** 2 * fa2 - fa2 * fa3 ** 2) * arr1)) / (
+                     ((fa2 ** 2 * fa3 * arr1 * arr2 -
+                       fa1 * fa2 ** 2 * arr2 * arr3) * tr1 +
+                      (fa1 ** 2 * fa2 * arr1 * arr3 -
+                       fa1 ** 2 * fa3 * arr1 * arr2) * tr2) * tr3 +
+                     (fa1 * fa3 ** 2 * arr2 -
+                      fa2 * fa3 ** 2 * arr1) * arr3 * tr1 * tr2)
+
+        eta_fa_arr = (
+            fa1 * fa3 * arr1 * arr3 * tr2 * tr3 -
+            fa1 * fa2 * arr1 * arr2 * tr2 * tr3 -
+            fa2 * fa3 * arr2 * arr3 * tr1 * tr3 +
+            fa1 * fa2 * arr1 * arr2 * tr1 * tr3 +
+            fa2 * fa3 * arr2 * arr3 * tr1 * tr2 -
+            fa1 * fa3 * arr1 * arr3 * tr1 * tr2)
+        eta_fa_arr = sign * np.sqrt(2) * np.sqrt(
+            (fa1 ** 2 * fa2 * arr1 * arr3 * tr2 * tr3) / eta_fa_arr -
+            (fa1 ** 2 * fa3 * arr1 * arr2 * tr2 * tr3) / eta_fa_arr -
+            (fa1 * fa2 ** 2 * arr2 * arr3 * tr1 * tr3) / eta_fa_arr +
+            (fa2 ** 2 * fa3 * arr1 * arr2 * tr1 * tr3) / eta_fa_arr +
+            (fa1 * fa3 ** 2 * arr2 * arr3 * tr1 * tr2) / eta_fa_arr -
+            (fa2 * fa3 ** 2 * arr1 * arr3 * tr1 * tr2) / eta_fa_arr) / (
+                         np.sqrt(fa1) * np.sqrt(fa2) * np.sqrt(fa3))
+
+        arrs = arr1, arr2, arr3
+        fas = fa1, fa2, fa3
+        trs = tr1, tr2, tr3
+        xi_arr = np.zeros_like(arr1, dtype=float)
+        for arr, fa, tr in zip(arrs, fas, trs):
+            xi_arr += arr / (
+                np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
+                (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
+        xi_arr /= 3
+
+    return t1_arr, eta_fa_arr, xi_arr
+
+
+# ======================================================================
+def fit_multipolyfit(
+        arrs,
+        fas,
+        trs,
+        prepare=fix_noise_mean,
+        full=False):
+    """
+    Fit the parameters of the FLASH signal at fixed echo time.
 
     This is an iterative optimization fit.
 
     Args:
-        arrs ():
-        flip_angles ():
-        repetition_times ():
-        fit_fa_eff ():
-        fit_t1 ():
-        fit_m0 ():
+        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (iterable[int|float]): The flip angles in deg.
+        trs (iterable[int|float]): The repetition times in time units.
+
 
     Returns:
 
     """
-    assert(len(arrs) == len(flip_angles) == len(repetition_times))
-    warnings.warn('Not implemented yet')
+    assert (len(arrs) == len(fas) == len(trs))
+    fas = [np.deg2rad(fa) for fa in fas]
+    arrs = [prepare(arr) if prepare else arr.astype(float) for arr in arrs]
+
+    raise NotImplementedError
+
+
+# ======================================================================
+def fit_nonlinear(
+        arrs,
+        fas,
+        trs,
+        prepare=fix_noise_mean,
+        optim='trf',
+        init=(1.0, 1000.0, 1000.0),
+        bounds=((0.0, 10.0, 1.0), (2.0, 4500.0, 1e10)),
+        full=False):
+    """
+    Fit the parameters of the FLASH signal at fixed echo time.
+
+    This is an iterative optimization fit.
+
+    Args:
+        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (iterable[int|float]): The flip angles in deg.
+        trs (iterable[int|float]): The repetition times in time units.
+
+
+    Returns:
+
+    """
+    assert (len(arrs) == len(fas) == len(trs))
+    fas = [np.deg2rad(fa) for fa in fas]
+    arrs = [prepare(arr) if prepare else arr.astype(float) for arr in arrs]
+
+    axis = -1
+    y_arr = np.array(np.stack(arrs, axis))
+    x_arr = np.stack(
+        (np.array(fas), np.array(trs)), 0).astype(float)
+
+    num_params = 3
+
+    if not init:
+        init = [1] * num_params
+
+    p_arr = voxel_curve_fit(
+        y_arr, x_arr, _flash_signal_fit, init,
+        method='curve_fit_parallel_map',
+        method_kws=dict(method=optim, bounds=bounds))
+
+    shape = p_arr.shape[:axis]
+    p_arrs = [arr.reshape(shape) for arr in np.split(p_arr, num_params, axis)]
+
+    names = 'eta_fa', 't1', 'xi'
+    results = collections.OrderedDict(
+        tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))
+
+    if full:
+        warnings.warn('E: Not implemented yet!')
+
+    # return results
+    return p_arrs

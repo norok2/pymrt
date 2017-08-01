@@ -22,6 +22,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
+from pymrt.recipes.generic import fix_noise_mean
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -31,8 +32,8 @@ import pymrt.utils
 def afi(
         arr1,
         arr2,
-        tr_ratio,
-        nominal_fa):
+        n_tr,
+        fa):
     """
     Calculate the flip angle efficiency from Actual Flip Angle (AFI) data.
 
@@ -45,7 +46,7 @@ def afi(
     :math:`s_2` is `arr2` acquired with :math:`T_{R,2}`,
     :math:`n = \\frac{T_{R,2}}{T_{R,1}}` and  :math:`r = \\frac{s_2}{s_1}`
 
-    (assumeing :math:`T_{R,1}<T_{R,2}`)
+    (assuming :math:`T_{R,1}<T_{R,2}`)
 
     This is a closed-form solution.
 
@@ -53,20 +54,17 @@ def afi(
     90°, otherwise a flip angle efficiency above 1 cannot be measured.
 
     Args:
-        arr1 (np.ndarray): The input array with T_{R,1} in arb.units.
-        arr2 (np.ndarray): The input array with T_{R,2} in arb.units.
-        tr_ratio (np.ndarray): The n = T_{R,2}/T_{R,1} ratio in #.
-        nominal_fa (int|float): Nominal flip angle in deg.
-        b1t_reference (int|float): The B1t reference factor.
-            This must be in units of magnetic field.
-            Determines the units of `b1t` in the `results`.
-        zero_cutoff (float|None): The threshold value for masking zero values.
+        arr1 (np.ndarray): The first input array in arb.units.
+            Contains the signal with :math:`T_{R,1}`.
+        arr2 (np.ndarray): The second input array in arb.units.
+            Contains the signal with :math:`T_{R,2}`.
+        n_tr (int|float): The repetition times ratio in #.
+            This is defined as :math:`n = \\frac{T_{R,2}}{T_{R,1}}`.
+        fa (int|float): The flip angle in deg.
 
     Returns:
-        results (dict): The calculated information.
-            It contains:
-             - `fa`: the measured flip angle :math:`\\alpha` in deg.
-             - `eta`: the flip angle efficiency factor :math:`\\eta_\\alpha`.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+            This is the :math:`\\eta_\\alpha` factor.
 
     See Also:
         - Yarnykh, V.L., 2007. Actual flip-angle imaging in the pulsed steady
@@ -74,17 +72,13 @@ def afi(
           transmitted radiofrequency field. Magn. Reson. Med. 57, 192–200.
           doi:10.1002/mrm.21120
     """
+    fa = np.deg2rad(fa)
     with np.errstate(divide='ignore', invalid='ignore'):
-        fa_arr = arr2 / arr1
-        fa_arr = (fa_arr * tr_ratio - 1) / (tr_ratio - fa_arr)
+        eta_fa_arr = arr2 / arr1
+        eta_fa_arr = (eta_fa_arr * n_tr - 1) / (n_tr - eta_fa_arr)
 
-    fa_arr = np.real(np.arccos(fa_arr))
-
-    result = {
-        'fa': np.rad2deg(fa_arr),
-        'eta': fa_arr / np.deg2rad(nominal_fa)}
-
-    return result
+    eta_fa_arr = np.real(np.arccos(eta_fa_arr))
+    return eta_fa_arr / fa
 
 
 # ======================================================================
@@ -96,7 +90,9 @@ def dual_flash(
         tr1,
         tr2,
         t1_arr=None,
-        approx=None):
+        approx=None,
+        sign=1,
+        prepare=fix_noise_mean):
     """
     Calculate the flip angle efficiency from two FLASH acquisitions.
 
@@ -144,15 +140,14 @@ def dual_flash(
             Accepted values:
              - `long_tr`: tr1, tr2 >> max(T1) => exp(-tr/t1) = 0
              - `short_tr`: tr1, tr2 << min(T1) => exp(-tr/t1) = 1 - tr/t1
+        sign (int): Select one of the two solutions for the equations.
+            Must be either +1 or -1.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray
 
     Returns:
-        results (dict): The calculated information.
-            It contains:
-             - `fa`: the measured flip angle :math:`\\alpha` in deg.
-             - `eta`: the flip angle efficiency factor :math:`\\eta_\\alpha`.
-
-    See Also:
-
+        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+            This is the :math:`\\eta_\\alpha` factor.
     """
     if approx:
         approx = approx.lower()
@@ -162,50 +157,46 @@ def dual_flash(
 
     tr = tr1
     fa = fa1
-    tr_ratio = tr2 / tr1
-    fa_ratio = fa2 / fa1
+    n_tr = tr2 / tr1  # the repetition times ratio
+    m_fa = fa2 / fa1  # the flip angles ratio
     same_tr = np.isclose(tr1, tr2)
     same_fa = np.isclose(fa1, fa2)
-    double_fa = np.isclose(2, fa_ratio)
+    double_fa = np.isclose(2, m_fa)
 
     # double angle methods
-    if double_fa and same_tr:  # no approximation
-        if approx == 'long_tr':
-            with np.errstate(divide='ignore', invalid='ignore'):
-                fa_arr = arr2 / arr1 / 2
-        elif approx == 'short_tr' and t1_arr:
-            sgn = 1  # choose between the two separate solutions
-            with np.errstate(divide='ignore', invalid='ignore'):
-                fa_arr = (arr1 / arr2)
-                fa_arr = (
-                    (fa_arr + sgn * np.sqrt(
-                        (fa_arr - 2) ** 2 +
-                        6 * (fa_arr - 1) * (tr / t1_arr) +
-                        2 * (1 - fa_arr) * (tr / t1_arr) ** 2)) /
-                    (2 * (1 - fa_arr) * (1 + tr / t1_arr)))
-        elif t1_arr:
-            sgn = 1  # choose between the two separate solutions
-            with np.errstate(divide='ignore', invalid='ignore'):
-                fa_arr = (arr1 / arr2)
-                fa_arr = (
-                    (fa_arr + sgn * np.sqrt(
-                        fa_arr ** 2
-                        + 2 * (fa_arr - 1) * np.exp(-tr / t1_arr)
-                        + 2 * (fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
-                    (2 * (fa_arr - 1) * np.exp(-tr / t1_arr)))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if double_fa and same_tr:  # no approximation
+            if approx == 'long_tr':
+                eta_fa_arr = arr2 / arr1 / 2
+            elif approx == 'short_tr' and t1_arr is not None:
+                sign = 1  # choose between the two separate solutions
+                eta_fa_arr = (arr1 / arr2)
+                eta_fa_arr = (
+                    (eta_fa_arr + sign * np.sqrt(
+                        (eta_fa_arr - 2) ** 2 +
+                        6 * (eta_fa_arr - 1) * (tr / t1_arr) +
+                        2 * (1 - eta_fa_arr) * (tr / t1_arr) ** 2)) /
+                    (2 * (1 - eta_fa_arr) * (1 + tr / t1_arr)))
+            elif t1_arr is not None:
+                sign = 1  # choose between the two separate solutions
+                eta_fa_arr = (arr1 / arr2)
+                eta_fa_arr = (
+                    (eta_fa_arr + sign * np.sqrt(
+                        eta_fa_arr ** 2
+                        + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
+                        + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
+                    (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
 
-    # same-angle method (variable tr)
-    elif same_fa:
-        if approx == 'short_tr':
-            with np.errstate(divide='ignore', invalid='ignore'):
-                fa_arr = (arr1 / arr2)
-                fa_arr = (
-                    (1 - tr_ratio * fa_arr) /
-                    (tr_ratio * (fa_arr - 1) * (tr / t1_arr) +
-                     1 - tr_ratio * fa_arr))
-        elif t1_arr:
-            with np.errstate(divide='ignore', invalid='ignore'):
-                fa_arr = (
+        # same-angle method (variable tr)
+        elif same_fa:
+            if approx == 'short_tr':
+                eta_fa_arr = (arr1 / arr2)
+                eta_fa_arr = (
+                    (1 - n_tr * eta_fa_arr) /
+                    (n_tr * (eta_fa_arr - 1) * (tr / t1_arr) +
+                     1 - n_tr * eta_fa_arr))
+            elif t1_arr:
+                eta_fa_arr = (
                     (arr2 * np.exp(tr2 / t1_arr) -
                      arr1 * np.exp(tr1 / t1_arr) +
                      (arr1 - arr2) * np.exp((tr1 + tr2) / t1_arr)) /
@@ -213,18 +204,13 @@ def dual_flash(
                      arr1 * np.exp(tr2 / t1_arr) -
                      arr2 * np.exp(tr1 / t1_arr)))
 
-    else:
-        warnings.warn(
-            'Unsupported fa1, fa2, tr1, tr2 combination. Fallback to 1.')
-        fa_arr = np.ones_like(arr1) * fa
+        else:
+            warnings.warn(
+                'Unsupported fa1, fa2, tr1, tr2 combination. Fallback to 1.')
+            eta_fa_arr = np.ones_like(arr1) * fa
 
-    fa_arr = np.real(np.arccos(fa_arr))
-
-    result = {
-        'fa': np.rad2deg(fa_arr),
-        'eta': fa_arr / np.rad2deg(fa)}
-
-    return result
+    eta_fa_arr = np.real(np.arccos(eta_fa_arr))
+    return eta_fa_arr / fa
 
 
 # ======================================================================
@@ -312,6 +298,7 @@ def mu2rage(
         rho_arr (np.ndarray): The input array.
 
     """
+    # todo: implement correctly
     from pymrt.sequences import mp2rage
     eta_fa = np.linspace(
         eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
@@ -333,15 +320,4 @@ def mu2rage(
         rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
 
     eta_fa_arr = np.interp(rho_arr, rho, eta_fa)
-    result = {
-        'fa': eta_fa_arr * fa1,
-        'eta': eta_fa_arr}
-    return result
-
-
-# ======================================================================
-def multi_flash(
-        arrs,
-        flip_angles,
-        repetition_times):
-    warnings.warn('Not implemented yet')
+    return eta_fa_arr
