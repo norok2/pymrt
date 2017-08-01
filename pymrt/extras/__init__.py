@@ -1,4 +1,4 @@
-import os
+import os  # Miscellaneous operating system interfaces
 
 __all__ = [
     os.path.splitext(filename)[0]

@@ -200,9 +200,9 @@ def elapsed(
     Returns:
         None.
     """
-    import datetime
-    import inspect
-    import os
+    import datetime  # Basic date and time types
+    import inspect  # Inspect live objects
+    import os  # Miscellaneous operating system interfaces
 
     if name is None:
         outer_frame = inspect.getouterframes(inspect.currentframe())[1]
