@@ -103,7 +103,30 @@ def _cnr(
     Returns:
         _snr (float): The Signal-to-Noise Ratio (SNR).
     """
-    return (contrast_val / np.std(noise_arr))
+    return contrast_val / np.std(noise_arr)
+
+
+# ======================================================================
+def _pcnr(
+        signal_arr,
+        noise_arr):
+    """
+    Define the peak Contrast-to-Noise Ratio (pCNR).
+
+    .. math::
+        \\mathrm{CNR}\\equiv\\frac{\\max(s) - \\min(s)}{P_n}
+
+    where :math:`s` is the signal, :math:`n` is the noise,
+    :math:`P` denotes the power.
+
+    Args:
+        contrast_val (float): The contrast value.
+        noise_arr (np.ndarray): The array containing the noise.
+
+    Returns:
+        _snr (float): The Signal-to-Noise Ratio (SNR).
+    """
+    return np.ptp(signal_arr) / np.std(noise_arr)
 
 
 # ======================================================================
@@ -833,6 +856,58 @@ def cnr(
     signal_arr, noise_arr = signal_noise(arr, sn_method, **sn_kws)
     signal_arrs = separate_signals(signal_arr, ss_method, **ss_kws)
     return _cnr(contrast(signal_arrs), noise_arr)
+
+
+# ======================================================================
+def pcnr(
+        arr,
+        method='otsu',
+        *args,
+        **kwargs):
+    """
+    Calculate the peak Contrast-to-Noise Ratio (pCNR).
+
+    .. math::
+        \\mathrm{CNR}\\equiv\\frac{\\max(s) - \\min(s)}{P_n}
+
+    where :math:`s` is the signal, :math:`n` is the noise,
+    :math:`P` denotes the power.
+    The approximation is based on the specified method.
+
+    Args:
+        arr (np.ndarray): The input array.
+        method (str|callable): The signal/noise estimation method.
+            See `signal_noise()` for more details.
+        *args: Positional arguments passed to `method()`.
+        **kwargs: Keyword arguments passed to `method()`.
+
+    Returns:
+        result (float): The peak Signal-to-Noise Ratio (pSNR).
+
+    Examples:
+        >>> arr = np.array((1, 2, 100, 100, 100, 101, 1, 2))
+        >>> val = pcnr(arr)
+        >>> round(val)
+        2.0
+        >>> arr = np.array((1, 2, 11, 10, 10, 10, 1, 2))
+        >>> val = pcnr(arr, 'otsu')
+        >>> round(val)
+        2.0
+        >>> arr = np.array((1, 2, 10, 15, 10, 10, 1, 2))
+        >>> val = pcnr(arr, 'relative', (0.75, 0.25))
+        >>> round(val)
+        0.0
+        >>> arr = np.array((1, 2, 10, 10, 10, 10, 1, 2))
+        >>> val = pcnr(arr, 'percentile', 0.5)
+        >>> round(val)
+        0.0
+        >>> arr = np.array((1, 2, 9, 11, 10, 10, 1, 2))
+        >>> val = pcnr(arr, 'thresholds', 'inv_hist_peaks')
+        >>> round(val)
+        4.0
+    """
+    signal_arr, noise_arr = signal_noise(arr, method, *args, **kwargs)
+    return _pcnr(signal_arr, noise_arr)
 
 
 # ======================================================================
