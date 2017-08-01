@@ -34,6 +34,7 @@ from pymrt import msg, dbg
 from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
+    fix_noise_mean,
     func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_leasq,
     fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
     fit_exp_tau_loglin)
@@ -44,34 +45,64 @@ def fit_monoexp(
         arr,
         echo_times,
         echo_times_mask=None,
-        mode='auto',
-        noise_mean=0):
-    # todo: fix for rician bias
-    if noise_mean is None:
-        snr_val, signal_peak, noise_mean, noise_std = quality.rician_percentile(arr)
-    arr -= noise_mean
+        method='quadr',
+        prepare=fix_noise_mean):
+    """
+    Calculate the mono-exponential fit for T2* data.
 
-    if mode == 'auto':
+    Args:
+        arr (np.ndarray): The input array in arb.units.
+            The echo time must vary in the last dimension and must match the
+            length of `echo_times`.
+        echo_times (iterable): The echo times in time units.
+            The number of points must match the last shape size of arr.
+        echo_times_mask (iterable[bool]|None): Determine the echo times to use.
+            If None, all will be used.
+        method (str): Determine the fitting method to use.
+            Available options are:
+             - 'auto': determine an optimal method by inspecting the data.
+             - 'loglin': use a log-linear fit, fast but inaccurate and fragile.
+             - 'leasq': use non-linear least square fit, slow but accurate.
+             - 'diff': closed-form solution using the differential properties
+               of the exponential, very fast but inaccurate.
+             - 'quad': closed-form solution using the quadrature properties
+               of the exponential, very fast and moderately accurate.
+             - 'arlo': closed-form solution using the `Auto-Regression on
+               Linear Operations (ARLO)` method (similar to 'quad'),
+               very fast and accurate.
+             - 'quadr': closed-form solution using the quadrature properties
+               of the exponential and optimal noise regression,
+               very fast and very accurate (extends both 'quad' and 'arlo').
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
+
+    Returns:
+        t2s_arr (np.ndarray): The output array.
+    """
+    methods = ('auto', 'loglin', 'leasq', 'diff', 'quad', 'arlo', 'quadr')
+
+    # data pre-whitening
+    arr = prepare(arr) if prepare else arr.astype(float)
+
+    if method == 'auto':
         t2s_arr = fit_exp_tau(arr, echo_times, echo_times_mask)
-    elif mode == 'loglin':
-        t2s_arr = fit_exp_loglin(
-            arr, echo_times, echo_times_mask,
-            variant='w=1/np.sqrt(x_arr)')['tau']
-    elif mode == 'leasq':
+    elif method == 'loglin':
+        t2s_arr = fit_exp_tau_loglin(arr, echo_times, echo_times_mask)
+    elif method == 'leasq':
         t2s_arr = fit_exp_leasq(arr, echo_times, echo_times_mask)['tau']
-    elif mode == 'quad':
+    elif method == 'quad':
         t2s_arr = fit_exp_tau_quad(arr, echo_times, echo_times_mask)
-    elif mode == 'diff':
+    elif method == 'diff':
         t2s_arr = fit_exp_tau_diff(arr, echo_times, echo_times_mask)
-    elif mode == 'quadr':
+    elif method == 'quadr':
         t2s_arr = fit_exp_tau_quadr(arr, echo_times, echo_times_mask)
-    elif mode == 'arlo':
+    elif method == 'arlo':
         t2s_arr = fit_exp_tau_arlo(arr, echo_times, echo_times_mask)
     else:
-        warnings.warn(
-            'Unknonw mode `{mode}`. Fallback to `auto`'.format_map(locals()))
-        t2s_arr = fit_monoexp(
-            arr, echo_times, echo_times_mask, 'auto', noise_mean)
+        raise ValueError(
+            'valid methods are: {} (given: {})'.format(methods, method))
     return t2s_arr
 
 

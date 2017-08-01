@@ -268,7 +268,7 @@ def fix_noise_mean(arr):
     Returns:
         arr (np.ndarray): The output array.
     """
-    noise_mask = arr < mrt.segmentation.threshold_otsu(arr)
+    noise_mask = arr < mrt.segmentation.threshold_otsu(arr) / 2
     return arr - np.mean(arr[noise_mask])
 
 
@@ -326,7 +326,9 @@ def fit_exp_loglin(
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
-        exp_factor (float|None):
+        exp_factor (float|None): The data pre-whitening factor.
+            A value different from zero, may improve numerical stability
+            for very large or very small data.
         zero_cutoff (float|None): The threshold value for masking zero values.
 
     Returns:
@@ -451,7 +453,7 @@ def fit_exp_tau_quad(
         integrate=sp.integrate.simps,
         combine=np.nanmedian):
     """
-    Exponential decay constant fit using integral properties.
+    Mono-exponential decay fit using integral properties.
     
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
     
@@ -515,7 +517,7 @@ def fit_exp_tau_quadr(
         integrate=sp.integrate.simps,
         window_size=None):
     """
-    Exponential decay constant fit using integral properties (revisited).
+    Mono-exponential decay fit using integral properties (revisited).
     
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
     
@@ -524,23 +526,29 @@ def fit_exp_tau_quadr(
     
     The integral is estimated numerically.
     
-    The value of j is determined by the `window size` parameters.
-    All valid combination of i and j are calculated and combined together,
-    using the formula:
+    The value of `j` is determined by the `window size` parameters.
+    All valid combination of i and j are calculated (from the number of
+    support points).
+
+    The partial terms are combined together using the formula:
     
     :math:`\\tau = \\frac{s_{ss} + s_{ds}}{s_{dd} + s_{ds}}`
 
     with:
-        - :math:`s_{ss} = \sum_{i=0}^{N-W} s_i^2`
-        - :math:`s_{sd} = \sum_{i=0}^{N-W} s_i d_i`
-        - :math:`s_{dd} = \sum_{i=0}^{N-W} d_i^2`
+        - :math:`s_{ss} = \sum_j \sum_{i=0}^{N-j} s_i^2`
+        - :math:`s_{sd} = \sum_j \sum_{i=0}^{N-j} s_i d_i`
+        - :math:`s_{dd} = \sum_j \sum_{i=0}^{N-j} d_i^2`
     
     where:
         - :math:`t_i` are the sampling points;
         - :math:`\Delta t_i` is the sampling point spacing (must be constant);
         - :math:`s_i` are the numerical integrals over the window size;
         - :math:`d_i` are the signal extrema over the window size;
-        - :math:`j` is the numerical window size.
+        - :math:`j` is the numerical window size;
+        - :math:`N` is the number of sampling points.
+
+    The value of the window size `j` can be fixed, and the method reduces
+    to the `Auto-Regression on Linear Operations (ARLO)` method.
     
     This is a closed-form solution.
     
@@ -559,6 +567,17 @@ def fit_exp_tau_quadr(
     Returns:
         tau_arr (np.ndarray): The exponential time constant in time units.
             Units are determined by the units of `tis`.
+
+    Notes:
+        This method can be understood as a multi-window extension of the
+        `Auto-Regression on Linear Operations (ARLO)` method.
+
+    References:
+        - Pei, M., Nguyen, T.D., Thimmappa, N.D., Salustri, C., Dong, F.,
+          Cooper, M.A., Li, J., Prince, M.R., Wang, Y., 2015. Algorithm for
+          fast monoexponential fitting based on Auto-Regression on Linear
+          Operations (ARLO) of data. Magn. Reson. Med. 73, 843–850.
+          doi:10.1002/mrm.25137
     """
     axis = -1
 
@@ -610,7 +629,7 @@ def fit_exp_tau_diff(
         differentiate=np.gradient,
         combine=np.nanmedian):
     """
-    Exponential decay constant fit using differential properties.
+    Mono-exponential decay fit using differential properties.
     
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
     
@@ -671,8 +690,7 @@ def fit_exp_tau_arlo(
         tis_mask=None,
         window_size=2):
     """
-    Exponential decay constant fit using 'Auto-Regression on Linear
-    Operations'.
+    Mono-exponential decay fit using 'Auto-Regression on Linear Operations'.
 
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
     
@@ -691,7 +709,10 @@ def fit_exp_tau_arlo(
         - :math:`\Delta t_i` is the sampling point spacing (must be constant);
         - :math:`s_i` are the numerical integrals over the window size;
         - :math:`d_i` are the signal extrema over the window size;
-        - :math:`W` is the wingdsfdow size, 
+        - :math:`W` is the window size;
+        - :math:`N` is the number of sampling points.
+
+    This is a closed-form solution.
 
     Args:
         arr (np.ndarray): The input array in arb.units.
@@ -707,16 +728,18 @@ def fit_exp_tau_arlo(
             Units are determined by the units of `tis`.
 
     Notes:
-        This method is abbreviated as ARLO, and was presented in:
-        
-        Pei, M., Nguyen, T.D., Thimmappa, N.D., Salustri, C., Dong, F., 
-        Cooper, M.A., Li, J., Prince, M.R., Wang, Y., 2014. Algorithm for 
-        fast monoexponential fitting based on Auto-Regression on Linear 
-        Operations (ARLO) of data. Magn. Reson. Med. n/a-n/a. 
-        doi:10.1002/mrm.25137
+        This is an independent implementation of the monoexponential fitting
+        method "Auto-Regression on Linear Operations (ARLO)".
+        However, some of the formulae derived in the original paper,
+        particularly the final one may follow a different notation.
+        This software implements the formula specified in this documentation.
 
-        However, some of the formulae derived in the paper, particularly the
-        final one cannot be exact. Instead, the specified formula is used.
+    References:
+        - Pei, M., Nguyen, T.D., Thimmappa, N.D., Salustri, C., Dong, F.,
+          Cooper, M.A., Li, J., Prince, M.R., Wang, Y., 2015. Algorithm for
+          fast monoexponential fitting based on Auto-Regression on Linear
+          Operations (ARLO) of data. Magn. Reson. Med. 73, 843–850.
+          doi:10.1002/mrm.25137
     """
     axis = -1
 
@@ -757,6 +780,7 @@ def fit_exp_tau_loglin(
         arr,
         tis,
         tis_mask=None,
+        variant='w=1/np.sqrt(x_arr)',
         exp_factor=0,
         zero_cutoff=np.spacing(1)):
     """
@@ -769,17 +793,14 @@ def fit_exp_tau_loglin(
             The number of points must match the last shape size of arr.
         tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
-        poly_deg (int): The degree of the polynomial to fit.
-            For monoexponential fits, use num=1.
         variant (str): Specify a variant of the algorithm.
             A valid Python expression is expected and used as keyword argument
             of the `numpy.polyfit()` function.
             Most notably can be used to specify (global) data weighting, e.g.:
             `w=1/np.sqrt(x_arr)`.
-        full (bool): Calculate additional information on the fit performance.
-            If True, more information is given.
-            If False, only the optimized parameters are returned.
-        exp_factor (float|None):
+        exp_factor (float|None): The data pre-whitening factor.
+            A value different from zero, may improve numerical stability
+            for very large or very small data.
         zero_cutoff (float|None): The threshold value for masking zero values.
 
     Returns:
@@ -788,8 +809,8 @@ def fit_exp_tau_loglin(
     """
     results = fit_exp_loglin(
         arr, tis, tis_mask, poly_deg=1,
-        variant=None, full=False, exp_factor=0, zero_cutoff=np.spacing(1))
-
+        variant=variant, full=False, exp_factor=exp_factor,
+        zero_cutoff=zero_cutoff)
     return results['tau']
 
 
@@ -799,7 +820,7 @@ def fit_exp_tau(
         tis,
         tis_mask=None):
     """
-    Exponential decay constant fit.
+    Mono-exponential decay fit.
     
     The actual algorithm to be used is determined from the data itself.
     
@@ -816,7 +837,7 @@ def fit_exp_tau(
             Units are determined by the units of `tis`.
 
     """
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================

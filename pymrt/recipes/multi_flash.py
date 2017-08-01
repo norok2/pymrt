@@ -30,6 +30,7 @@ import pymrt.segmentation
 from pymrt.recipes.generic import fix_noise_mean, voxel_curve_fit
 from pymrt.recipes import t1, b1t
 
+
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -38,9 +39,9 @@ from pymrt.recipes import t1, b1t
 # ======================================================================
 def _flash_signal_fit(
         fa_tr,
-        eta_fa,
-        t1,
-        xi):
+        t1_,
+        xi,
+        eta_fa):
     """
     FLASH signal (no TE dependency) to use with `scipi.optimize.curve_fit()`.
 
@@ -50,13 +51,13 @@ def _flash_signal_fit(
             to fit. Upon assignment, must expand to: `fa, tr = fa_tr` and
             `fa` are the flip angles in radians, and `tr` is the repetition
             times in time units (matching those of `t1`).
-        eta_fa (float): The flip angle efficiency in #.
-        t1 (float): The longitudinal relaxation in time units.
+        t1_ (float): The longitudinal relaxation in time units.
             The units match those of `tr`.
         xi (float): The amplitude factor in arb.units.
             Contains information on the spin density `m0`, the coil
             sensitivity (proportional to `b1r`) and units transformation
             factors.
+        eta_fa (float): The flip angle efficiency in #.
 
     Returns:
         s_arr (np.ndarray): The signal array in arb.units.
@@ -64,8 +65,8 @@ def _flash_signal_fit(
             to fit.
     """
     fa, tr = fa_tr
-    return xi * np.sin(fa * eta_fa) * (1.0 - np.exp(-tr / t1)) / \
-           (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1))
+    return xi * np.sin(fa * eta_fa) * (1.0 - np.exp(-tr / t1_)) / \
+           (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1_))
 
 
 # ======================================================================
@@ -80,6 +81,9 @@ def triple_special1(
         prepare=fix_noise_mean):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
+
+    Obtains T1, the flip angle efficiency (proportional to the coil transmit
+    field) and the apparent spin density (modulated by coil sensitivity).
 
     The (fa, tr) combinations required are:
      - arr1: (    fa,        tr)
@@ -133,7 +137,9 @@ def triple_special1(
         sign (int|float): Select one of the two solution for the equations.
             Must be either +1 or -1.
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -208,6 +214,9 @@ def triple_special2(
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
+    Obtains T1, the flip angle efficiency (proportional to the coil transmit
+    field) and the apparent spin density (modulated by coil sensitivity).
+
     The (fa, tr) combinations required are:
      - arr1: (    fa,        tr)
      - arr2: (2 * fa,        tr)
@@ -267,7 +276,9 @@ def triple_special2(
             If the next iteration globally modifies the sensitivity by less
             than `threshold`, the algorithm stops.
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -340,6 +351,9 @@ def triple(
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
+    Obtains T1, the flip angle efficiency (proportional to the coil transmit
+    field) and the apparent spin density (modulated by coil sensitivity).
+
     Assumes that the following approximations are valid:
      - `tr` (`tr1`, `tr2`, `tr3`) is much smaller compared to `t1`;
      - `fa` (`fa1, `fa2`, `fa3`) is close to zero.
@@ -386,7 +400,9 @@ def triple(
         sign (int): Select one of the two solutions for the equations.
             Must be either +1 or -1.
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -446,6 +462,117 @@ def triple(
 
 
 # ======================================================================
+def vfa(
+        arrs,
+        fas,
+        trs,
+        eta_fa_arr=None,
+        prepare=fix_noise_mean):
+    """
+    Calculate the parameters of the FLASH signal using variable flip angles.
+
+    Obtains T1 and the apparent spin density (modulated by coil sensitivity).
+
+    Assumes that the flip angles are small (must be below 45°).
+    If the different TR are used for the acquisitions, assumes all TRs << T1.
+
+    Given the following expression for the FLASH signal:
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the flip angle efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    The obtained FLASH signal parameters are :math:`T_1` and
+    :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+
+    This is a closed-form solution.
+
+    Args:
+        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (iterable[int|float]): The flip angles in deg.
+        trs (iterable[int|float]): The repetition times in time units.
+        eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
+            If None, a significant bias may still be present.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+             - t1_arr (np.ndarray): The longitudinal relaxation in time units.
+               The units of `t1_arr` are defined by the units of `tr`.
+             - xi_arr (np.ndarray): The signal factor in arb. units.
+               This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+
+    References:
+        - Helms, G., Dathe, H., Weiskopf, N., Dechent, P., 2011.
+          Identification of signal bias in the variable flip angle method by
+          linear display of the algebraic ernst equation. Magn. Reson. Med.
+          66, 669–677. doi:10.1002/mrm.22849
+    """
+    assert (len(arrs) == len(fas) == len(trs))
+    fas = [np.deg2rad(fa) for fa in fas]
+    arrs = [prepare(arr) if prepare else arr.astype(float) for arr in arrs]
+
+    if eta_fa_arr is None:
+        eta_fa_arr = np.ones(arrs[0].shape, dtype=float)
+
+    index = -1
+    num = len(arrs)
+
+    s_arr = np.stack(arrs, index).astype(float)
+    tau_arr = np.stack([2 * np.tan(fa * eta_fa_arr / 2) for fa in fas], index)
+
+    tr = np.mean(trs)
+    same_tr = all([np.isclose(x, tr) for x in trs])
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if same_tr:
+            t1_arr = \
+                (np.sum(s_arr * tau_arr, index) ** 2 -
+                 num * np.sum(s_arr ** 2 * tau_arr ** 2, index)) / \
+                ((num * np.sum(s_arr ** 2, index) -
+                  np.sum(s_arr * tau_arr, index) *
+                  np.sum(s_arr / tau_arr, index)) * 2)
+            t1_arr = tr / np.log((2 + t1_arr) / (2 - t1_arr))
+        else:
+            # warnings.warn('Using approximation: TR << T1')
+            tr_arr = np.stack(
+                [x * np.ones(arrs[0].shape, dtype=float) for x in trs], index)
+            t1_arr = \
+                ((num * np.sum(s_arr ** 2 / tr_arr, index) -
+                  np.sum(s_arr * tau_arr / tr_arr, index) *
+                  np.sum(s_arr / tau_arr, index)) * 2) / \
+                (np.sum(s_arr * tau_arr / tr_arr, index) ** 2 -
+                 num * np.sum(s_arr ** 2 * tau_arr ** 2 / tr_arr ** 2, index))
+        xi_arr = \
+            (np.sum(s_arr ** 2 * tau_arr ** 2, index) *
+             np.sum(s_arr / tau_arr, index) -
+             np.sum(s_arr * tau_arr, index) *
+             np.sum(s_arr ** 2, index)) / \
+            (num * np.sum(s_arr ** 2 * tau_arr ** 2, index) -
+             np.sum(s_arr * tau_arr, index) ** 2)
+
+    return t1_arr, xi_arr
+
+
+# ======================================================================
 def fit_multipolyfit(
         arrs,
         fas,
@@ -474,17 +601,51 @@ def fit_multipolyfit(
 
 
 # ======================================================================
-def fit_nonlinear(
+def fit_leasq(
         arrs,
         fas,
         trs,
+        t1_arr=None,
+        xi_arr=None,
+        eta_fa_arr=None,
         prepare=fix_noise_mean,
         optim='trf',
-        init=(1.0, 1000.0, 1000.0),
-        bounds=((0.0, 10.0, 1.0), (2.0, 4500.0, 1e10)),
+        init=(1000, 1e4, 1.0),
+        bounds=((10.0, 1e-2, 0.01), (5000.0, 1e10, 1.99)),
         full=False):
     """
     Fit the parameters of the FLASH signal at fixed echo time.
+
+    Obtains T1, the flip angle efficiency (proportional to the coil transmit
+    field) and the apparent spin density (modulated by coil sensitivity).
+
+    No assumptions on the flip angles and the repetition times are expected.
+    However, reasonable coverage of both flip angles is expected and at least
+    three different flip angles and three different repetition times are
+    recommended.
+
+    Given the following expression for the FLASH signal:
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the flip angle efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    The obtained FLASH signal parameters are :math:`T_1` and
+    :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
 
     This is an iterative optimization fit.
 
@@ -495,7 +656,14 @@ def fit_nonlinear(
 
 
     Returns:
-
+        result (tuple[np.ndarray]): The tuple
+            contains:
+             - t1_arr (np.ndarray): The longitudinal relaxation in time units.
+               The units of `t1_arr` are defined by the units of `tr`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
+             - xi_arr (np.ndarray): The signal factor in arb. units.
+               This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
     """
     assert (len(arrs) == len(fas) == len(trs))
     fas = [np.deg2rad(fa) for fa in fas]
@@ -519,9 +687,9 @@ def fit_nonlinear(
     shape = p_arr.shape[:axis]
     p_arrs = [arr.reshape(shape) for arr in np.split(p_arr, num_params, axis)]
 
-    names = 'eta_fa', 't1', 'xi'
-    results = collections.OrderedDict(
-        tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))
+    # names = 't1', 'xi', 'eta_fa'
+    # results = collections.OrderedDict(
+    #     tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))
 
     if full:
         warnings.warn('E: Not implemented yet!')

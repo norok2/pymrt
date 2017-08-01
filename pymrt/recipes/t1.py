@@ -26,9 +26,8 @@ import pymrt as mrt
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 import pymrt.utils
-from pymrt.recipes import generic
 from pymrt.recipes.generic import fix_noise_mean, fix_phase_interval
-
+import pymrt.recipes.multi_flash
 
 # ======================================================================
 def mp2rage_cx_to_rho(
@@ -302,7 +301,9 @@ def dual_flash(
             Accepted values:
              - `short_tr`: assumes tr1, tr2 << min(T1)
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
@@ -362,9 +363,13 @@ def multi_flash(
         fas,
         trs,
         eta_fa_arr=None,
+        method='vfa',
         prepare=fix_noise_mean):
     """
+    Calculate the T1 map using multiple FLASH acquisitions.
 
+    Assumes that the flip angles are small (must be below 45°).
+    If the different TR are used for the acquisitions, assumes all TRs << T1.
 
     Args:
         arrs (iterable[np.ndarray]): The input signal arrays in arb.units
@@ -372,10 +377,24 @@ def multi_flash(
         trs (iterable[int|float]): The repetition times in time units.
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
             If None, a significant bias may still be present.
+        method (str): Determine the fitting method to use.
+            Available options are:
+             - 'auto': determine an optimal method by inspecting the data.
+             - 'vfa': use the variable fli-angle method (closed form solution),
+               very fast and accurate but very sensitive to flip angle
+               efficiency (or B1+).
+             - 'leasq': use non-linear least square fit, slow but accurate,
+               and requires many acquisitions to be accurate.
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
+        t1_arr (float|np.ndarray): The calculated T1 map.
+
+    See Also:
+        recipes.multi_flash.vfa()
 
     References:
         - Helms, G., Dathe, H., Weiskopf, N., Dechent, P., 2011.
@@ -383,48 +402,15 @@ def multi_flash(
           linear display of the algebraic ernst equation. Magn. Reson. Med.
           66, 669–677. doi:10.1002/mrm.22849
     """
-    assert (len(arrs) == len(fas) == len(trs))
-    fas = [np.deg2rad(fa) for fa in fas]
-    arrs = [prepare(arr) if prepare else arr.astype(float) for arr in arrs]
+    methods = ('vfa', 'leasq')
 
-    if eta_fa_arr is None:
-        eta_fa_arr = np.ones(arrs[0].shape, dtype=float)
-
-    index = -1
-    num = len(arrs)
-
-    s_arr = np.stack(arrs, index).astype(float)
-    tau_arr = np.stack([2 * np.tan(fa * eta_fa_arr / 2) for fa in fas], index)
-
-    tr = np.mean(trs)
-    same_tr = all([np.isclose(x, tr) for x in trs])
-
-    with np.errstate(divide='ignore', invalid='ignore'):
-        if same_tr:
-            t1_arr = \
-                (np.sum(s_arr * tau_arr, index) ** 2 -
-                 num * np.sum(s_arr ** 2 * tau_arr ** 2, index)) / \
-                ((num * np.sum(s_arr ** 2, index) -
-                  np.sum(s_arr * tau_arr, index) *
-                  np.sum(s_arr / tau_arr, index)) * 2)
-            t1_arr = tr / np.log((2 + t1_arr) / (2 - t1_arr))
-        else:
-            warnings.warn('Using approximation: TR << T1')
-            tr_arr = np.stack(
-                [x * np.ones(arrs[0].shape, dtype=float) for x in trs],
-                index)
-            t1_arr = \
-                ((num * np.sum(s_arr ** 2 / tr_arr, index) -
-                  np.sum(s_arr * tau_arr / tr_arr, index) *
-                  np.sum(s_arr / tau_arr, index)) * 2) / \
-                (np.sum(s_arr * tau_arr / tr_arr, index) ** 2 -
-                 num * np.sum(s_arr ** 2 * tau_arr ** 2 / tr_arr ** 2, index))
-        xi_arr = \
-            (np.sum(s_arr ** 2 * tau_arr ** 2, index) *
-             np.sum(s_arr / tau_arr, index) -
-             np.sum(s_arr * tau_arr, index) *
-             np.sum(s_arr ** 2, index)) / \
-            (num * np.sum(s_arr ** 2 * tau_arr ** 2, index) -
-             np.sum(s_arr * tau_arr, index) ** 2)
-
-    return t1_arr, xi_arr
+    if method == 'vfa':
+        t1_arr, xi_arr = mrt.recipes.multi_flash.vfa(
+            arrs, fas, trs, eta_fa_arr=eta_fa_arr, prepare=prepare)
+    elif method == 'leasq':
+        t1_arr, eta_fa_arr, xi_arr = mrt.recipes.multi_flash.fit_nonlinear(
+            arrs, fas, trs, prepare=prepare)
+    else:
+        raise ValueError(
+            'valid methods are: {} (given: {})'.format(methods, method))
+    return t1_arr

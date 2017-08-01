@@ -143,7 +143,9 @@ def dual_flash(
         sign (int): Select one of the two solutions for the equations.
             Must be either +1 or -1.
         prepare (callable|None): Input array preparation.
-            Must have the signature: f(np.ndarray) -> np.ndarray
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         eta_fa_arr (np.ndarray): The flip angle efficiency in #.
