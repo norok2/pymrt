@@ -80,7 +80,7 @@ def _psnr(
     Returns:
         _snr (float): The peak Signal-to-Noise Ratio (pSNR).
     """
-    return np.ptp(np.stack([signal_arr, noise_arr])) / np.std(noise_arr)
+    return np.ptp(np.concatenate([signal_arr, noise_arr])) / np.std(noise_arr)
 
 
 # ======================================================================
