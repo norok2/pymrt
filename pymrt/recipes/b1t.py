@@ -126,14 +126,14 @@ def dual_flash(
         tr1 (int|float): The first repetition time in time units.
         tr2 (int|float): The second repetition time in time units.
         t1_arr (int|float|np.ndarray|None): The T1 value in time units.
-            If None, one of the following conditions must be met:
-             a. `approx == 'long_tr'`, `tr1 == tr2` and `fa2 == 2 * fa1`.
+            If None, the following conditions must be met:
+             - `approx == 'long_tr'`, `tr1 == tr2` and `fa2 == 2 * fa1`.
             If int or float, one of the following conditions must be met:
-             a. `approx == 'short_tr'`, `tr1 == tr2` and `fa2 == 2 * fa1`.
-             b. `approx == 'short_tr'`, `tr1 != tr2` and `fa1 == fa2`.
+             - `approx == 'short_tr'`, `tr1 == tr2` and `fa2 == 2 * fa1`.
+             - `approx == 'short_tr'`, `tr1 != tr2` and `fa1 == fa2`.
             If np.ndarray, one of the following conditions must be met:
-             a. `tr1 == tr2` and `fa2 == 2 * fa1`.
-             b. `tr1 != tr2` and `fa2 == fa1`.
+             - `tr1 == tr2` and `fa2 == 2 * fa1`.
+             - `tr1 != tr2` and `fa2 == fa1`.
             If np.ndarray, `t1`, `arr1` and `arr2` shapes must match.
             If not None, units must match those of both `tr1` and `tr2`.
         approx (str|None): Determine the approximation to use.

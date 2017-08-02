@@ -312,6 +312,7 @@ def sample2d(
         The figure object containing the plot.
 
     """
+    # todo: transpose/swapaxes/moveaxes/rollaxes
     data_dim = 2
 
     if ax is None:
