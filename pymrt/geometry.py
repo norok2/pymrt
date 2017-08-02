@@ -741,6 +741,108 @@ def nd_prism(
 
 
 # ======================================================================
+def nd_gradient(
+        gen_ranges,
+        dtype=float,
+        generators=np.linspace,
+        generators_kws=None):
+    """
+    Generate N-dimensional gradient data arrays.
+
+    This is useful for generating simulation data patterns.
+
+    Args:
+        gen_ranges (iterable[iterable]): Generator ranges and numbers.
+            An iterable of size 3 iterables: (start, stop, number) where
+            start and stop are the extrema of the range to cover, and number
+            indicate the number of samples.
+        dtype (data-type): Desired output data-type.
+            See `np.ndarray()` for more.
+        generators (callable|iterable[callable]): The range generator(s).
+            A generator must have signature:
+            f(any, any, int, **kws) -> iterable
+            If callable, the same generator is used for all dimensions.
+            If iterable, each generator generate the data corresponding to its
+            position in the iterable, and its length must match the length of
+            `gen_ranges`.
+        generators_kws (dict|iterable[dict|None]|None): Keyword arguments.
+            If None, no arguments are passed to the generator.
+            If dict, the same object is passed to all instances of
+            `generators`.
+            If iterable, each dict (or None) is applied to the corresponding
+            generator in `generators`, and its length must match the length of
+            `generators`.
+
+
+    Returns:
+        arr (np.ndarray): The n-dim gradient array.
+
+    Examples:
+        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)))
+        array([[[ 0., -2.],
+                [ 0.,  2.]],
+        <BLANKLINE>
+               [[ 1., -2.],
+                [ 1.,  2.]]])
+        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)), int)
+        array([[[ 0, -2],
+                [ 0,  2]],
+        <BLANKLINE>
+               [[ 1, -2],
+                [ 1,  2]]])
+        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)), float, np.logspace)
+        array([[[  1.00000000e+00,   1.00000000e-02],
+                [  1.00000000e+00,   1.00000000e+02]],
+        <BLANKLINE>
+               [[  1.00000000e+01,   1.00000000e-02],
+                [  1.00000000e+01,   1.00000000e+02]]])
+        >>> nd_gradient(
+        ...     ((0, 1, 2), (-2, 2, 2)), float, (np.linspace, np.logspace))
+        array([[[  0.00000000e+00,   1.00000000e-02],
+                [  0.00000000e+00,   1.00000000e+02]],
+        <BLANKLINE>
+               [[  1.00000000e+00,   1.00000000e-02],
+                [  1.00000000e+00,   1.00000000e+02]]])
+        >>> nd_gradient(((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, np.linspace)
+        array([[[[ 0, -1, -2],
+                 [ 0, -1,  2]],
+        <BLANKLINE>
+                [[ 0,  0, -2],
+                 [ 0,  0,  2]],
+        <BLANKLINE>
+                [[ 0,  1, -2],
+                 [ 0,  1,  2]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 1, -1, -2],
+                 [ 1, -1,  2]],
+        <BLANKLINE>
+                [[ 1,  0, -2],
+                 [ 1,  0,  2]],
+        <BLANKLINE>
+                [[ 1,  1, -2],
+                 [ 1,  1,  2]]]])
+    """
+    num_gens = len(gen_ranges)
+    generators = mrt.utils.auto_repeat(generators, num_gens, check=True)
+    generators_kws = mrt.utils.auto_repeat(generators_kws, num_gens, check=True)
+
+    base_shape = tuple(num for start, stop, num in gen_ranges)
+    shape = base_shape + (num_gens,)
+
+    arr = np.empty(shape, dtype=dtype)
+    for i, ((start, stop, num), generator, generator_kws) in \
+            enumerate(zip(gen_ranges, generators, generators_kws)):
+        extend = tuple(n for j, n in enumerate(base_shape) if j != i) + (num,)
+        if generator_kws is None:
+            generator_kws = {}
+        gradient = np.array(
+            generator(start, stop, num, **generator_kws), dtype=dtype)
+        arr[..., i] = np.moveaxis(np.broadcast_to(gradient, extend), -1, i)
+    return arr
+
+
+# ======================================================================
 def dirac_delta(
         shape,
         position,
