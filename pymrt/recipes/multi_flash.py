@@ -37,6 +37,37 @@ from pymrt.recipes import t1, b1t
 
 
 # ======================================================================
+def _flash_signal(
+        fa,
+        tr,
+        t1_,
+        xi,
+        eta_fa):
+    """
+    FLASH signal (no TE dependency) to use with `scipi.optimize.curve_fit()`.
+
+    Args:
+        fa (int|float|np.ndarray): The flip angle in rad.
+        tr (int|float|np.ndarray): The repetition time in time units.
+            Units must be the same as `t1`.
+        t1_ (int|float|np.ndarray): The longitudinal relaxation in time units.
+            The units match those of `tr`.
+        xi (int|float|np.ndarray): The amplitude factor in arb.units.
+            Contains information on the spin density `m0`, the coil
+            sensitivity (proportional to `b1r`) and units transformation
+            factors.
+        eta_fa (int|float|np.ndarray): The flip angle efficiency in #.
+
+    Returns:
+        s_arr (np.ndarray): The signal array in arb.units.
+            The shape of the array is (N), where N is the number of signals
+            to fit.
+    """
+    return xi * np.sin(fa * eta_fa) * (1.0 - np.exp(-tr / t1_)) / \
+           (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1_))
+
+
+# ======================================================================
 def _flash_signal_fit(
         fa_tr,
         t1_,
@@ -81,6 +112,8 @@ def triple_special1(
         prepare=fix_noise_mean):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
+
+    This method is not stable and should not be used.
 
     Obtains T1, the flip angle efficiency (proportional to the coil transmit
     field) and the apparent spin density (modulated by coil sensitivity).
@@ -146,10 +179,10 @@ def triple_special1(
             contains:
              - t1_arr (np.ndarray): The longitudinal relaxation in time units.
                The units of `t1_arr` are defined by the units of `tr`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
-               This is proportional to the coil transmit field :math:`B_1^+`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa = np.deg2rad(fa)
     arr1 = prepare(arr1) if prepare else arr1.astype(float)
@@ -196,7 +229,7 @@ def triple_special1(
         xi_arr = arr3 / (
             np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-n_tr * tr / t1_arr)) /
             (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-n_tr * tr / t1_arr)))
-    return t1_arr, eta_fa_arr, xi_arr
+    return t1_arr, xi_arr, eta_fa_arr
 
 
 # ======================================================================
@@ -213,6 +246,8 @@ def triple_special2(
         prepare=fix_noise_mean):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
+
+    This method is not stable and should not be used.
 
     Obtains T1, the flip angle efficiency (proportional to the coil transmit
     field) and the apparent spin density (modulated by coil sensitivity).
@@ -285,10 +320,10 @@ def triple_special2(
             contains:
              - t1_arr (np.ndarray): The longitudinal relaxation in time units.
                The units of `t1_arr` are defined by the units of `tr`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
-               This is proportional to the coil transmit field :math:`B_1^+`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa = np.deg2rad(fa)
     arr1 = prepare(arr1) if prepare else arr1.astype(float)
@@ -332,7 +367,7 @@ def triple_special2(
                 (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
         xi_arr /= 3
 
-    return t1_arr, eta_fa_arr, xi_arr
+    return t1_arr, xi_arr, eta_fa_arr
 
 
 # ======================================================================
@@ -350,6 +385,8 @@ def triple(
         prepare=fix_noise_mean):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
+
+    This method is not stable and should not be used.
 
     Obtains T1, the flip angle efficiency (proportional to the coil transmit
     field) and the apparent spin density (modulated by coil sensitivity).
@@ -409,10 +446,10 @@ def triple(
             contains:
              - t1_arr (np.ndarray): The longitudinal relaxation in time units.
                The units of `t1_arr` are defined by the units of `tr`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
-               This is proportional to the coil transmit field :math:`B_1^+`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
@@ -458,7 +495,7 @@ def triple(
                 (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
         xi_arr /= 3
 
-    return t1_arr, eta_fa_arr, xi_arr
+    return t1_arr, xi_arr, eta_fa_arr
 
 
 # ======================================================================
@@ -660,10 +697,10 @@ def fit_leasq(
             contains:
              - t1_arr (np.ndarray): The longitudinal relaxation in time units.
                The units of `t1_arr` are defined by the units of `tr`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
-               This is proportional to the coil transmit field :math:`B_1^+`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+               This is proportional to the coil transmit field :math:`B_1^+`.
     """
     assert (len(arrs) == len(fas) == len(trs))
     fas = [np.deg2rad(fa) for fa in fas]
@@ -687,6 +724,7 @@ def fit_leasq(
     shape = p_arr.shape[:axis]
     p_arrs = [arr.reshape(shape) for arr in np.split(p_arr, num_params, axis)]
 
+    t1_arr, xi_arr, eta_fa_arr = p_arrs
     # names = 't1', 'xi', 'eta_fa'
     # results = collections.OrderedDict(
     #     tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))
@@ -695,4 +733,4 @@ def fit_leasq(
         warnings.warn('E: Not implemented yet!')
 
     # return results
-    return p_arrs
+    return t1_arr, xi_arr, eta_fa_arr

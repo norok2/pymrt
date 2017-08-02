@@ -256,9 +256,13 @@ def dual_flash(
         prepare=fix_noise_mean):
     """
     Calculate the T1 map from two FLASH acquisitions.
-    
-    Solving for T1 the combination of two FLASH signals
+
+    This method is sensitive to the actual flip angle.
+
+    Solving for T1 using the combination of two FLASH signals
     (where :math:`s_1` is `arr1` and :math:`s_2` is `arr2`).
+
+    If TR is the same:
 
     .. math::
         \\frac{s_1}{s_2} = \\frac{\\sin(\\alpha_1)}{\\sin(
@@ -276,6 +280,9 @@ def dual_flash(
     
     .. math::
         T_1 = -\\frac{T_R}{\\log(X)}
+
+    Note: a similar expression may be derived for different repetition times and
+    identical flip angles, but this produces inaccurate results.
 
     This is a closed-form solution.
 
@@ -346,13 +353,16 @@ def dual_flash(
 
     else:
         if approx == 'short_tr' and same_fa:
+            warnings.warn('This method is not accurate.')
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * n_tr * (
                     np.cos(fa) * (arr2 - arr1) /
                     ((np.cos(fa) - 1) * arr2 +
                      (1 - np.cos(fa)) * n_tr * arr1))
         else:
-            warnings.warn('Unsupported fa1, fa2, tr1, tr2 combination')
+            warnings.warn(
+                'Unsupported fa1, fa2, tr1, tr2 combination for T1.'
+                'Fallback to 1.')
             t1_arr = np.ones_like(arr1)
     return t1_arr
 

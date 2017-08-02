@@ -101,11 +101,14 @@ def dual_flash(
     Most notably, the following cases are covered:
      - `tr1, tr2 >> max(T1)`, `tr1 == tr2` and `fa2 == 2 * fa1`.
      - `tr1, tr2 << min(T1)`, `tr1 == tr2` and `fa2 == 2 * fa1`
-       (an estimated average T1 value must be specified).
+       (T1 must be known).
      - `tr1, tr2 << min(T1)`, `tr1 != tr2` and `fa2 == fa1`
-       (an estimated average T1 value must be specified).
+       (T1 must be known).
      - `tr1 == tr2` and `fa2 == 2 * fa1` (T1 must be known).
      - `tr1 != tr2` and `fa2 == fa1` (T1 must be known).
+
+    This method, unless the `long_tr` approximation is used, requires an
+    accurate T1 map.
 
     This is a closed-form solution.
 
@@ -151,6 +154,7 @@ def dual_flash(
         eta_fa_arr (np.ndarray): The flip angle efficiency in #.
             This is the :math:`\\eta_\\alpha` factor.
     """
+    # todo: try to see if signal ratios can be avoided
     if approx:
         approx = approx.lower()
 
@@ -171,7 +175,7 @@ def dual_flash(
             if approx == 'long_tr':
                 eta_fa_arr = arr2 / arr1 / 2
             elif approx == 'short_tr' and t1_arr is not None:
-                sign = 1  # choose between the two separate solutions
+                warnings.warn('This method is not accurate.')
                 eta_fa_arr = (arr1 / arr2)
                 eta_fa_arr = (
                     (eta_fa_arr + sign * np.sqrt(
@@ -180,7 +184,7 @@ def dual_flash(
                         2 * (1 - eta_fa_arr) * (tr / t1_arr) ** 2)) /
                     (2 * (1 - eta_fa_arr) * (1 + tr / t1_arr)))
             elif t1_arr is not None:
-                sign = 1  # choose between the two separate solutions
+                warnings.warn('This method is not accurate.')
                 eta_fa_arr = (arr1 / arr2)
                 eta_fa_arr = (
                     (eta_fa_arr + sign * np.sqrt(
@@ -188,6 +192,8 @@ def dual_flash(
                         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
                         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
                     (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
+            else:
+                eta_fa_arr = None
 
         # same-angle method (variable tr)
         elif same_fa:
@@ -197,7 +203,7 @@ def dual_flash(
                     (1 - n_tr * eta_fa_arr) /
                     (n_tr * (eta_fa_arr - 1) * (tr / t1_arr) +
                      1 - n_tr * eta_fa_arr))
-            elif t1_arr:
+            elif t1_arr is not None:
                 eta_fa_arr = (
                     (arr2 * np.exp(tr2 / t1_arr) -
                      arr1 * np.exp(tr1 / t1_arr) +
@@ -205,10 +211,13 @@ def dual_flash(
                     (arr2 - arr1 +
                      arr1 * np.exp(tr2 / t1_arr) -
                      arr2 * np.exp(tr1 / t1_arr)))
+            else:
+                eta_fa_arr = None
 
-        else:
+        if eta_fa_arr is None:
             warnings.warn(
-                'Unsupported fa1, fa2, tr1, tr2 combination. Fallback to 1.')
+                'Unsupported fa1, fa2, tr1, tr2 combination for B1T.'
+                'Fallback to 1.')
             eta_fa_arr = np.ones_like(arr1) * fa
 
     eta_fa_arr = np.real(np.arccos(eta_fa_arr))
