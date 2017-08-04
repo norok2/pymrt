@@ -191,14 +191,14 @@ def dual_flash(
                     arr1 ** 2 * np.exp((2 * tr) / t1_arr) +
                     (2 * arr2 * (arr2 - arr1)) * np.exp(tr / t1_arr) +
                     2 * arr2 * (arr2 - arr1)) - arr1 * np.exp(tr / t1_arr)) / \
-                             (2 * arr2 - 2 * arr1)
+                             (2 * (arr2 - arr1))
                 # eta_fa_arr = (arr1 / arr2)
                 # eta_fa_arr = (
                 #     (eta_fa_arr + sign * np.sqrt(
                 #         eta_fa_arr ** 2
                 #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
-                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
-                #     (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
+                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2))
+                #     / (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
             else:
                 eta_fa_arr = None
 
