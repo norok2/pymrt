@@ -23,6 +23,8 @@ import pymrt as mrt
 import pymrt.utils
 
 from pymrt.recipes.generic import fix_noise_mean
+
+
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -169,9 +171,9 @@ def dual_flash(
     same_fa = np.isclose(fa1, fa2)
     double_fa = np.isclose(2, m_fa)
 
-    # double angle methods
     with np.errstate(divide='ignore', invalid='ignore'):
-        if double_fa and same_tr:  # no approximation
+        # double angle methods
+        if double_fa and same_tr:
             if approx == 'long_tr':
                 eta_fa_arr = arr2 / arr1 / 2
             elif approx == 'short_tr' and t1_arr is not None:
@@ -185,13 +187,18 @@ def dual_flash(
                     (2 * (1 - eta_fa_arr) * (1 + tr / t1_arr)))
             elif t1_arr is not None:
                 warnings.warn('This method is not accurate.')
-                eta_fa_arr = (arr1 / arr2)
-                eta_fa_arr = (
-                    (eta_fa_arr + sign * np.sqrt(
-                        eta_fa_arr ** 2
-                        + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
-                        + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
-                    (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
+                eta_fa_arr = (np.sqrt(
+                    arr1 ** 2 * np.exp((2 * tr) / t1_arr) +
+                    (2 * arr2 * (arr2 - arr1)) * np.exp(tr / t1_arr) +
+                    2 * arr2 * (arr2 - arr1)) - arr1 * np.exp(tr / t1_arr)) / \
+                             (2 * arr2 - 2 * arr1)
+                # eta_fa_arr = (arr1 / arr2)
+                # eta_fa_arr = (
+                #     (eta_fa_arr + sign * np.sqrt(
+                #         eta_fa_arr ** 2
+                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
+                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2)) /
+                #     (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
             else:
                 eta_fa_arr = None
 
@@ -238,7 +245,8 @@ def sa2rage_rho_to_eta_fa(
 
     Args:
         rho_arr (float|np.ndarray): Magnitude of the first inversion image.
-        eta_fa_arr (float|np.array|None): Efficiency of the RF pulse excitation.
+        eta_fa_arr (float|np.array|None): Efficiency of the RF pulse
+        excitation.
             This is equivalent to the normalized B1T field.
             Note that this must have the same spatial dimensions as the images
             acquired with MP2RAGE.
@@ -262,6 +270,8 @@ def sa2rage_rho_to_eta_fa(
     """
     # todo: implement correctly
     from pymrt.sequences import mp2rage
+
+
     if t1_arr:
         # todo: implement T1 correction
         raise NotImplementedError('T1 correction is not yet implemented')
@@ -280,7 +290,8 @@ def sa2rage_rho_to_eta_fa(
             t1 = t1[::-1]
         # check that rho values are strictly increasing
         if not np.all(np.diff(rho) > 0):
-            raise ValueError('MP2RAGE look-up table was not properly prepared.')
+            raise ValueError(
+                'MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
         if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
@@ -311,6 +322,8 @@ def mu2rage(
     """
     # todo: implement correctly
     from pymrt.sequences import mp2rage
+
+
     eta_fa = np.linspace(
         eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
     rho = mp2rage.rho(

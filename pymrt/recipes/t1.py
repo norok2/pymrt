@@ -345,11 +345,11 @@ def dual_flash(
                      (1 - np.cos(fa1)) * np.sin(fa2) * n_tr * arr1))
         else:
             with np.errstate(divide='ignore', invalid='ignore'):
-                t1_arr = -tr / np.log(
-                    (np.sin(fa1) * arr2 -
-                     np.sin(fa2) * arr1) /
+                t1_arr = tr / np.log(
                     (np.sin(fa1) * np.cos(fa2) * arr2 -
-                     np.cos(fa1) * np.sin(fa2) * arr1))
+                     np.cos(fa1) * np.sin(fa2) * arr1) /
+                    (np.sin(fa1) * arr2 -
+                     np.sin(fa2) * arr1))
 
     else:
         if approx == 'short_tr' and same_fa:
