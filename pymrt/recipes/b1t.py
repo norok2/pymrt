@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.b1t: relative B1+ (or flip angle efficiency) computation.
@@ -35,7 +35,8 @@ def afi(
         arr1,
         arr2,
         n_tr,
-        fa):
+        fa,
+        prepare=fix_noise_mean):
     """
     Calculate the flip angle efficiency from Actual Flip Angle (AFI) data.
 
@@ -63,12 +64,16 @@ def afi(
         n_tr (int|float): The repetition times ratio in #.
             This is defined as :math:`n = \\frac{T_{R,2}}{T_{R,1}}`.
         fa (int|float): The flip angle in deg.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
 
     Returns:
         eta_fa_arr (np.ndarray): The flip angle efficiency in #.
             This is the :math:`\\eta_\\alpha` factor.
 
-    See Also:
+    References:
         - Yarnykh, V.L., 2007. Actual flip-angle imaging in the pulsed steady
           state: A method for rapid three-dimensional mapping of the
           transmitted radiofrequency field. Magn. Reson. Med. 57, 192–200.
@@ -84,7 +89,71 @@ def afi(
 
 
 # ======================================================================
-def dual_flash(
+def double_rare(
+        arr1,
+        arr2,
+        fa,
+        sign=1,
+        prepare=fix_noise_mean):
+    """
+    Calculate the flip angle efficiency from two RARE acquisitions.
+
+    The flip angle is obtained by solving:
+
+    .. math::
+        \\cos(\\alpha) = \\frac{r\\pm\\sqrt{r^2 + 8}}{4}
+
+    where :math:`s_1` is `arr1` acquired with flip angle :math:`\\alpha`,
+    :math:`s_2` is `arr2` acquired with flip angle :math:`2\\alpha`,
+    and  :math:`r = \\frac{s_2}{s_1}`
+
+    Assumes long :math:`T_R` regime: :math:`T_R > 5 * T_1`.
+
+    This is a closed-form solution.
+
+    Args:
+        arr1 (np.ndarray): The first input array in arb.units.
+            Contains the signal with flip angle `fa`.
+        arr2 (np.ndarray): The second input array in arb.units.
+            Contains the signal with flip angle `2 * fa`.
+        fa (int|float): The flip angle in deg.
+            This is the flip angle of the first acquisition.
+
+        sign (int): Select one of the two solutions for the equations.
+            Must be either +1 or -1.
+        prepare (callable|None): Input array preparation.
+            Must have the signature: f(np.ndarray) -> np.ndarray.
+            Useful for data pre-whitening, including for example the
+            correction of magnitude data from Rician mean bias.
+
+    Returns:
+        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+            This is the :math:`\\eta_\\alpha` factor.
+
+    Notes:
+        The same information can be obtained with two MPRAGE-like acquisition
+        where the magnetization preparation plays the role of the initial
+        exicitation in the RARE pulse sequence (assumes long :math:`T_R`
+        regime - for :math:`T_{R,\mathrm{seq}}`, not for
+        :math:`T_{R,\mathrm{GRE}}`).
+
+    References:
+        - Sled, J.G., Pike, G.B., 2000. Correction for B1 and B0 variations
+          in quantitative T2 measurements using MRI. Magn. Reson. Med. 43,
+          589–593.
+          doi:10.1002/(SICI)1522-2594(200004)43:4<589::AID-MRM14>3.0.CO;2-2
+    """
+    fa = np.deg2rad(fa)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        eta_fa_arr = arr2 / arr1
+        eta_fa_arr = (eta_fa_arr + sign * np.sqrt(eta_fa_arr ** 2 + 8)) / 4
+
+    eta_fa_arr = np.real(np.arccos(eta_fa_arr))
+    return eta_fa_arr / fa
+
+
+# ======================================================================
+def double_flash(
         arr1,
         arr2,
         fa1,
@@ -232,7 +301,7 @@ def dual_flash(
 
 
 # ======================================================================
-def sa2rage_rho_to_eta_fa(
+def mp2rage_rho_to_eta_fa(
         rho_arr,
         t1_arr=None,
         eta_fa_values_range=(0.1, 2),
@@ -299,6 +368,57 @@ def sa2rage_rho_to_eta_fa(
 
         t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr
+
+
+# ======================================================================
+def sa2rage(
+        rho_arr,
+        fa1,
+        fa2,
+        tr_gre,
+        n_gre,
+        t1=2000,
+        eta_fa_values_range=(0.01, 2.0),
+        eta_fa_num=512):
+    """
+    Calculate the flip angle efficiency from a MU2RAGE acquisitions.
+
+    MU2RAGE: Magnetization Unprepared 2 RApid Gradient Echo
+
+    Args:
+        rho_arr (np.ndarray): The input array.
+
+
+    References:
+        - Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R., Marques,
+          J.P., 2012. SA2RAGE: A new sequence for fast B1+-mapping. Magnetic
+          Resonance Medicine 67, 1609–1619. doi:10.1002/mrm.23145
+    """
+    # todo: implement correctly
+    from pymrt.sequences import mp2rage
+
+
+    eta_fa = np.linspace(
+        eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
+    rho = mp2rage.rho(
+        t1, n_gre, tr_gre, 0, 0, 0, fa1, fa2, 0, eta_fa)
+    # remove non-bijective branches
+    bijective_slice = mrt.utils.bijective_part(rho)
+    eta_fa = eta_fa[bijective_slice]
+    rho = rho[bijective_slice]
+    if rho[0] > rho[-1]:
+        rho = rho[::-1]
+        eta_fa = eta_fa[::-1]
+    # check that rho values are strictly increasing
+    if not np.all(np.diff(rho) > 0):
+        raise ValueError('MP2RAGE look-up table was not properly prepared.')
+
+    # fix values range for rho
+    if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+
+    eta_fa_arr = np.interp(rho_arr, rho, eta_fa)
+    return eta_fa_arr
 
 
 # ======================================================================

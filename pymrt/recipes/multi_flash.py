@@ -343,9 +343,9 @@ def triple_special2(
         for i in range(max_iter):
             t1_last = t1_arr.copy() if threshold > 0 else 0
             eta_fa_last = eta_fa_arr.copy() if threshold > 0 else 0
-            t1_arr = t1.dual_flash(
+            t1_arr = t1.double_flash(
                 arr3, arr2, fa3, fa2, tr3, tr2, eta_fa_arr, approx='short_tr')
-            eta_fa_arr = b1t.dual_flash(
+            eta_fa_arr = b1t.double_flash(
                 arr1, arr2, fa1, fa2, tr1, tr2, t1_arr, approx='short_tr')
             print('Mean eta_fa: {}'.format(np.nanmean(eta_fa_arr)))
             if threshold > 0:
