@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.t1r: T1_rho spin-lock longitudinal relaxation computation.

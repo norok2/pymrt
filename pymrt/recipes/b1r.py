@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.b1t: relative B1- (or coil sensitivity) computation.

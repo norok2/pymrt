@@ -48,8 +48,6 @@ from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
-
-
 # ======================================================================
 # :: Custom defined constants
 
@@ -1244,8 +1242,10 @@ def split_ext(
             If `ext` is not None or empty, it has no effect.
 
     Returns:
-        root (str): The filepath without the extension.
-        ext (str): The extension including the separator.
+        result (tuple): The tuple
+            contains:
+             - root (str): The filepath without the extension.
+             - ext (str): The extension including the separator.
 
     Examples:
         >>> split_ext('test.txt', '.txt')
@@ -1314,9 +1314,11 @@ def split_path(
             Refer to `split_ext()` for more details.
 
     Returns:
-        root (str): The filepath without the last item.
-        base (str): The file name without the extension.
-        ext (str): The extension including the separator.
+        result (tuple): The tuple
+            contains:
+             - root (str): The filepath without the last item.
+             - base (str): The file name without the extension.
+             - ext (str): The extension including the separator.
 
     Examples:
         >>> split_path('/path/to/file.txt')
@@ -1478,8 +1480,6 @@ def compact_num_str(
         >>> compact_num_str(100.042, 9)
         '100.04200'
     """
-    
-
 
     try:
         # this is to simplify formatting (and accepting even strings)
@@ -2413,6 +2413,7 @@ def ravel_clean(
             arr = arr[arr != val]
     return arr
 
+
 # ======================================================================
 def dftn(arr):
     """
@@ -3345,7 +3346,8 @@ def gaussian_nd(
     xx = grid_coord(shape, origin)
     kernel = np.exp(
         -(
-        sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(xx, sigmas)])))
+            sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in
+                 zip(xx, sigmas)])))
     if normalize:
         kernel /= np.sum(kernel)
     return kernel

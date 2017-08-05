@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 PyMRT - Python Magnetic Resonance Tools: data analysis for quantitative MRI.

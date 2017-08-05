@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 PyMRT: voxel-by-voxel correlation analysis for MRI data.
@@ -284,7 +284,7 @@ def register_fsl(
         in_filepath (str): Path to input file.
         ref_filepath (str): Path to reference file.
         out_filepath (str): Path to output file.
-        ref_mask_filepath (str): Path to mask for the reference file.
+        ref_mask_filepath (str|None): Path to mask for the reference file.
         affine_prefix (str): Prefix to be used when generating affine filename.
         flirt_kwargs (dict|None): Keyword arguments passed to `flirt`.
             Keyword arguments from this dictionary are passed directly to

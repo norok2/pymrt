@@ -1,12 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.naming: naming for datasets with limited support to metadata information.
+pymrt.naming: naming utilities for data sets.
 """
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -22,6 +22,8 @@ import doctest  # Test interactive Python examples
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+
+from pymrt import msg
 
 # from dcmpi.lib.common import D_NUM_DIGITS
 D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
@@ -226,7 +228,8 @@ def info_to_filepath(
         file_ext=mrt.utils.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
-    filename = mrt.utils.change_ext(info_to_str(info, sep, kv_sep), file_ext, '')
+    filename = mrt.utils.change_ext(info_to_str(info, sep, kv_sep), file_ext,
+                                    '')
     return os.path.join(
         dirpath, + mrt.utils.add_extsep(file_ext))
 
@@ -368,7 +371,8 @@ def parse_filename(
         idx_begin_name = 0
         idx_end_name = len(tokens)
         # check if contains scan ID
-        info['num'] = mrt.utils.auto_convert(get_param_val(tokens[0], SERIES_NUM_ID))
+        info['num'] = mrt.utils.auto_convert(
+            get_param_val(tokens[0], SERIES_NUM_ID))
         idx_begin_name += (1 if info['num'] is not None else 0)
         # check if contains Sequential Number
         info['seq'] = None
@@ -379,7 +383,8 @@ def parse_filename(
                     break
         idx_end_name -= (1 if info['seq'] is not None else 0)
         # check if contains Image type
-        info['type'] = tokens[-1] if idx_end_name - idx_begin_name > 1 else None
+        info['type'] = (
+            tokens[-1] if idx_end_name - idx_begin_name > 1 else None)
         idx_end_name -= (1 if info['type'] is not None else 0)
         # determine series name
         info['name'] = i_sep.join(tokens[idx_begin_name:idx_end_name])
@@ -485,7 +490,8 @@ def parse_series_name(
         else:
             param_id = re.findall('^[a-zA-Z\-]*', token)[0]
             param_val = get_param_val(token, param_id)
-        params[param_id] = mrt.utils.auto_convert(param_val) if param_val else None
+        params[param_id] = mrt.utils.auto_convert(
+            param_val) if param_val else None
     return base, params
 
 
@@ -639,7 +645,8 @@ def combine_filename(
     filename = prefix
     for name in filenames:
         filename += 2 * INFO_SEP + \
-                    mrt.utils.change_ext(os.path.basename(name), '', mrt.utils.EXT['niz'])
+                    mrt.utils.change_ext(os.path.basename(name), '',
+                                         mrt.utils.EXT['niz'])
     return filename
 
 
