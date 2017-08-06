@@ -1105,8 +1105,8 @@ def zoom(
 def reshape(
         arr,
         new_shape,
-        aspect,
-        interp_order=1,
+        aspect=None,
+        interp_order=0,
         extra_dim=True,
         fill_dim=True):
     """
@@ -1118,10 +1118,10 @@ def reshape(
     Args:
         arr (np.ndarray): The input array.
         new_shape (tuple[int|None]): New dimensions of the array.
-        aspect (callable|iterable[callable]): Zoom shape manipulation.
+        aspect (callable|iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
             This is passed to `pymrt.geometry.shape2zoom()`.
-        interp_order (int): Order of the spline interpolation.
+        interp_order (int|None): Order of the spline interpolation.
             0: nearest. Accepted range: [0, 5].
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
@@ -1165,7 +1165,7 @@ def resample(
         arr = sp.ndimage.zoom(arr, resampling, order=0)
     else:  # downsampling
         print((1.0 / resampling) / 2 - 0.5)
-        arr = sp.ndimage.gaussian_filter(arr, (1.0 / resampling) / 2 - 0.5)
+        arr = sp.ndimage.uniform_filter(arr, (1.0 / resampling) / 2)
         arr = sp.ndimage.zoom(arr, resampling, order=0)
     return arr
 

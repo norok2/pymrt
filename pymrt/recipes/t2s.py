@@ -34,7 +34,7 @@ from pymrt import msg, dbg
 from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
-    fix_noise_mean,
+    fix_magnitude_bias,
     func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_leasq,
     fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
     fit_exp_tau_loglin)
@@ -46,7 +46,7 @@ def fit_monoexp(
         echo_times,
         echo_times_mask=None,
         method='quadr',
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the mono-exponential fit for T2* data.
 

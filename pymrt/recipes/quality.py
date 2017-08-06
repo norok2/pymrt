@@ -196,9 +196,12 @@ def signal_noise_multi_acq(
 
 
 # ======================================================================
-def signal_noise_otsu(arr):
+def signal_noise_background_peaks(arr):
     """
-    Separate signal from noise using the Otsu threshold.
+    Separate signal from noise using optimal peak thresholding.
+
+    Uses the first inverted peak after the the first peak of the data
+    histogram.
 
     Args:
         arr (np.ndarray): The input array.
@@ -209,9 +212,44 @@ def signal_noise_otsu(arr):
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    signal_mask = arr > mrt.segmentation.threshold_otsu(arr)
+    threshold = mrt.segmentation.threshold_background_peaks(arr)
+    signal_mask = arr > threshold
     signal_arr = arr[signal_mask]
     noise_arr = arr[~signal_mask]
+    return signal_arr, noise_arr
+
+
+# ======================================================================
+def signal_noise_otsu(
+        arr,
+        corrections=(1.0, 0.2)):
+    """
+    Separate signal from noise using the Otsu threshold.
+
+    Args:
+        arr (np.ndarray): The input array.
+        corrections (int|float|iterable[int|float]: The correction factors.
+            If value is 1, no correction is performed.
+            If int or float, the Otsu threshold is corrected (multiplied)
+            by the corresponding factor before thresholding.
+            If iterable, the first correction is used to estimate the signal,
+            while the second correction is used to estimate the noise.
+            At most two values are accepted.
+            When the two values are not identical some values may be ignored
+            or counted both in signal and in noise.
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+                - signal_arr: The signal array.
+                - noise_arr: The noise array.
+    """
+    corrections = mrt.utils.auto_repeat(corrections, 2, check=True)
+    otsu = mrt.segmentation.threshold_otsu(arr)
+    signal_mask = arr > otsu * corrections[0]
+    noise_mask = arr <= otsu * corrections[1]
+    signal_arr = arr[signal_mask]
+    noise_arr = arr[noise_mask]
     return signal_arr, noise_arr
 
 
@@ -231,7 +269,9 @@ def signal_noise_relative(
             If iterable, values above the first percentile threshold are
             considered signals, while values below the second percentile
             threshold are considered noise.
-            Other values are ignored.
+            At most two values are accepted.
+            When the two values are not identical some values may be ignored
+            or counted both in signal and in noise.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -269,6 +309,8 @@ def signal_noise_percentile(
             considered signals, while values below the second percentile
             threshold are considered noise.
             At most two values are accepted.
+            When the two values are not identical some values may be ignored
+            or counted both in signal and in noise.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -293,7 +335,7 @@ def signal_noise_percentile(
 def signal_noise_mean_std(
         arr,
         mean_factor=1,
-        std_factor=2,
+        std_factor=1,
         symmetric=False):
     """
     Separate signal from noise using a threshold combining mean and std.dev.
@@ -319,10 +361,12 @@ def signal_noise_mean_std(
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    signal_mask = arr > np.mean(arr) * mean_factor - np.std(arr) * std_factor
+    mu = np.nanmean(arr)
+    sigma = np.nanstd(arr)
+    signal_mask = arr > (mu * mean_factor - sigma * std_factor)
     if symmetric:
         signal_mask *= (
-            arr < np.mean(arr) * mean_factor + np.std(arr) * std_factor)
+            arr < (mu * mean_factor + sigma * std_factor))
     signal_arr = arr[signal_mask]
     noise_arr = arr[~signal_mask]
     return signal_arr, noise_arr
@@ -510,20 +554,32 @@ def psnr_multi_acq(
 
 
 # ======================================================================
-def signal_noise(arr, method, *args, **kwargs):
+def signal_noise(
+        arr,
+        method='auto',
+        *args,
+        **kwargs):
     """
     Separate signal from noise.
 
     Args:
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
-            If str, available methods are (recommended: 'otsu'):
+            If str, available methods are:
+             - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
+             - 'optim': Uses an optimal data-driven method for given data.
              - 'otsu': Uses `signal_noise_otsu()`.
+                Only works for positive values.
              - 'relative': Uses `signal_noise_relative()`.
+                Only works for positive values.
              - 'percentile': Uses `signal_noise_percentile()`.
+                Only works for positive values.
              - 'mean_std': Uses `signal_noise_mean_std()`.
+                Only works for positive values.
              - 'thresholds': Uses `signal_noise_thresholds()`.
+                Only works for positive values.
              - 'denoise': Uses `signal_noise_denoise()`.
+                Useful when no noise calibration region is present.
             If callable, the signature must be:
             f(np.ndarray, *args, **kwargs) -> (np.ndarray, np.ndarray)
             where the input array is `arr` and the two returned arrays are:
@@ -539,10 +595,18 @@ def signal_noise(arr, method, *args, **kwargs):
         ValueError: If `method` is unknown.
     """
     methods = (
+        'auto',
         'otsu', 'relative', 'percentile', 'mean_std', 'thresholds',
-        'denoise')
+        'bg_peaks', 'denoise')
     method = method.lower()
-    if method == 'otsu':
+    if method == 'auto':
+        if np.all(arr) >= 0.0:
+            method = signal_noise_background_peaks
+        else:
+            method = signal_noise_denoise
+    elif method == 'bg_peaks':
+        method = signal_noise_background_peaks
+    elif method == 'otsu':
         method = signal_noise_otsu
     elif method == 'relative':
         method = signal_noise_relative
@@ -563,7 +627,7 @@ def signal_noise(arr, method, *args, **kwargs):
 # ======================================================================
 def snr(
         arr,
-        method='otsu',
+        method='auto',
         *args,
         **kwargs):
     """
@@ -616,7 +680,7 @@ def snr(
 # ======================================================================
 def psnr(
         arr,
-        method='otsu',
+        method='auto',
         *args,
         **kwargs):
     """

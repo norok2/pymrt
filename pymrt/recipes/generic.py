@@ -247,29 +247,50 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     if phs_arr is not None:
         if fix_phase:
             phs_arr = fix_phase_interval(phs_arr)
-        cx_arr = mrt.utils.polar2complex(mag_arr.astype(float),
-                                         phs_arr.astype(float))
+        cx_arr = mrt.utils.polar2complex(
+            mag_arr.astype(float), phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)
     return cx_arr
 
 
 # ======================================================================
-def fix_noise_mean(arr):
+def fix_magnitude_bias(
+        arr,
+        positive=False):
     """
-    Fix magnitude level to remove the mean of the Rician noise.
+    Fix magnitude level to remove the bias associated with Rician noise.
 
-    The noise of the resulting data should now have zero mean and be
-    approximately Gaussian.
+    The background noise region is estimated from histogram peaks.
+
+    The noise of the resulting data is still definite positive, but much
+    closer to a Gaussian distribution, and the magnitude bias is now
+    reduced.
 
     Args:
         arr (np.ndarray): The input array.
+        positive (bool): Force result to be positive.
+            If True, the new signal magnitude is given by:
+            :math:`s' = \\sqrt{|s^2 - \\sigma^2|}`
+            Otherwise, uses the sign of the argument of the square root.
+            :math:`s' = sgn({s^2 - \\sigma^2})\\sqrt{|s^2 - \\sigma^2|}`
 
     Returns:
         arr (np.ndarray): The output array.
+
+    References:
+        - Gudbjartsson, H., Patz, S., 1995. The Rician Distribution of Noisy
+          MRI Data. Magn Reson Med 34, 910–914.
     """
-    noise_mask = arr < mrt.segmentation.threshold_otsu(arr) / 2
-    return arr - np.mean(arr[noise_mask])
+    threshold = mrt.segmentation.threshold_background_peaks(arr)
+    noise_mask = arr < threshold
+    noise_std = np.std(arr[noise_mask]) * (np.sqrt(2.0 / (4 - np.pi)))
+    arr = arr ** 2 - noise_std ** 2
+    if positive:
+        arr = np.sqrt(np.abs(arr))
+    else:
+        arr = np.sign(arr) * np.sqrt(np.abs(arr))
+    return arr
 
 
 # ======================================================================

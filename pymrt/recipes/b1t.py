@@ -22,7 +22,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
-from pymrt.recipes.generic import fix_noise_mean
+from pymrt.recipes.generic import fix_magnitude_bias
 
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -36,7 +36,7 @@ def afi(
         arr2,
         n_tr,
         fa,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the flip angle efficiency from Actual Flip Angle (AFI) data.
 
@@ -79,6 +79,9 @@ def afi(
           transmitted radiofrequency field. Magn. Reson. Med. 57, 192–200.
           doi:10.1002/mrm.21120
     """
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+
     fa = np.deg2rad(fa)
     with np.errstate(divide='ignore', invalid='ignore'):
         eta_fa_arr = arr2 / arr1
@@ -94,7 +97,7 @@ def double_rare(
         arr2,
         fa,
         sign=1,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the flip angle efficiency from two RARE acquisitions.
 
@@ -143,6 +146,9 @@ def double_rare(
           589–593.
           doi:10.1002/(SICI)1522-2594(200004)43:4<589::AID-MRM14>3.0.CO;2-2
     """
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+
     fa = np.deg2rad(fa)
     with np.errstate(divide='ignore', invalid='ignore'):
         eta_fa_arr = arr2 / arr1
@@ -163,7 +169,7 @@ def double_flash(
         t1_arr=None,
         approx=None,
         sign=1,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the flip angle efficiency from two FLASH acquisitions.
 
@@ -225,6 +231,9 @@ def double_flash(
         eta_fa_arr (np.ndarray): The flip angle efficiency in #.
             This is the :math:`\\eta_\\alpha` factor.
     """
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+
     # todo: try to see if signal ratios can be avoided
     if approx:
         approx = approx.lower()

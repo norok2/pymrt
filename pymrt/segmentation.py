@@ -231,10 +231,11 @@ def threshold_hist_peaks(
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if depth is None:
-        depth = int(bins / 16)
+        depth = int(bins / 64)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
-    peaks = sp.signal.find_peaks_cwt(hist, widths)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        peaks = sp.signal.find_peaks_cwt(hist, widths)
     return tuple(bin_centers[peaks])
 
 
@@ -270,10 +271,11 @@ def threshold_inv_hist_peaks(
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if depth is None:
-        depth = int(bins / 16)
+        depth = int(bins / 64)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
-    peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
     return tuple(bin_centers[peaks])
 
 
@@ -309,11 +311,12 @@ def threshold_hist_peak_edges(
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if depth is None:
-        depth = int(bins / 16)
+        depth = int(bins / 64)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
-    peaks = sp.signal.find_peaks_cwt(hist, widths)
-    inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        peaks = sp.signal.find_peaks_cwt(hist, widths)
+        inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
     peak_edges = mrt.utils.midval(np.ndarray(
         x for x in itertools.chain.from_iterable(
             itertools.zip_longest(peaks, inv_peaks)
@@ -321,6 +324,29 @@ def threshold_hist_peak_edges(
             itertools.zip_longest(inv_peaks, peaks))
         if x))
     return tuple(bin_centers[peak_edges])
+
+
+def threshold_background_peaks(arr):
+    """
+    Calculate the background threshold from a histogram peaks analysis.
+
+    Assuming that the background is the first peak of the histogram, the
+    background threshold is estimated as the minimum of:
+     - twice the first peak minus half the minumum value of the array.
+     - the first inverted peak after the first peak.
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        threshold (float): The threshold value.
+    """
+    hist_peaks = np.array(threshold_hist_peaks(arr))
+    inv_hist_peaks = np.array(threshold_inv_hist_peaks(arr))
+    threshold = min(
+        inv_hist_peaks[inv_hist_peaks > hist_peaks[0]][0],
+        2 * hist_peaks[0] - np.min(arr) / 2)
+    return threshold
 
 
 # ======================================================================
@@ -332,9 +358,10 @@ def auto_thresholds(
     Calculate a thresholding value based on the specified method.
 
     Args:
-        arr (np.ndarray):
+        arr (np.ndarray): The input array.
         method (str): The threshold method.
             Available methods:
+             - 'bg_peaks': a histogram foreground/background separation method.
              - 'otsu': the Otsu foreground/background separation method.
              - 'relative': thresholds values relative to the array range.
              - 'percentile': thresholds values from percentile distribution.

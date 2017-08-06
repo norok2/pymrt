@@ -26,7 +26,7 @@ import pymrt as mrt
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 import pymrt.utils
-from pymrt.recipes.generic import fix_noise_mean, fix_phase_interval
+from pymrt.recipes.generic import fix_magnitude_bias, fix_phase_interval
 import pymrt.recipes.multi_flash
 
 # ======================================================================
@@ -253,7 +253,7 @@ def double_flash(
         tr2,
         eta_fa_arr=None,
         approx=None,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the T1 map from two FLASH acquisitions.
 
@@ -374,7 +374,7 @@ def multi_flash(
         trs,
         eta_fa_arr=None,
         method='vfa',
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the T1 map using multiple FLASH acquisitions.
 

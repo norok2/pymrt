@@ -593,7 +593,7 @@ def multi_replace(
 
 
 # ======================================================================
-def common_substr_2(
+def common_subseq_2(
         seq1,
         seq2,
         sorting=None):
@@ -614,13 +614,13 @@ def common_substr_2(
         commons (list[iterable]): The longest common subsequence(s).
 
     Examples:
-        >>> common_substr_2('academy', 'abracadabra')
+        >>> common_subseq_2('academy','abracadabra')
         ['acad']
-        >>> common_substr_2('los angeles', 'lossless')
+        >>> common_subseq_2('los angeles','lossless')
         ['los', 'les']
-        >>> common_substr_2('los angeles', 'lossless', lambda x: x)
+        >>> common_subseq_2('los angeles','lossless',lambda x: x)
         ['les', 'los']
-        >>> common_substr_2((1, 2, 3, 4, 5), (0, 1, 2))
+        >>> common_subseq_2((1, 2, 3, 4, 5),(0, 1, 2))
         [(1, 2)]
     """
     # note: [[0] * (len(seq2) + 1)] * (len(seq1) + 1) will not work!
@@ -645,7 +645,7 @@ def common_substr_2(
 
 
 # ======================================================================
-def common_substr(
+def common_subseq(
         seqs,
         sorting=None):
     """
@@ -663,24 +663,24 @@ def common_substr(
         commons (list[iterable]): The longest common subsequence(s).
 
     Examples:
-        >>> common_substr(['academy', 'abracadabra', 'cadet'])
+        >>> common_subseq(['academy', 'abracadabra', 'cadet'])
         ['cad']
-        >>> common_substr(['los angeles', 'lossless', 'les alos'])
+        >>> common_subseq(['los angeles', 'lossless', 'les alos'])
         ['los', 'les']
-        >>> common_substr(['los angeles', 'lossless', 'les alos', 'losles'])
+        >>> common_subseq(['los angeles', 'lossless', 'les alos', 'losles'])
         ['los', 'les']
-        >>> common_substr(['los angeles', 'lossless', 'dolos'])
+        >>> common_subseq(['los angeles', 'lossless', 'dolos'])
         ['los']
-        >>> common_substr([(1, 2, 3, 4, 5), (1, 2, 3), (0, 1, 2)])
+        >>> common_subseq([(1, 2, 3, 4, 5), (1, 2, 3), (0, 1, 2)])
         [(1, 2)]
     """
     commons = [seqs[0]]
     for text in seqs[1:]:
         tmps = []
         for common in commons:
-            tmp = common_substr_2(common, text, sorting)
+            tmp = common_subseq_2(common, text, sorting)
             if len(tmps) == 0 or len(tmp[0]) == len(tmps[0]):
-                tmps.extend(common_substr_2(common, text, sorting))
+                tmps.extend(common_subseq_2(common, text, sorting))
         commons = tmps
     return commons
 

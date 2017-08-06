@@ -27,7 +27,7 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.segmentation
 
-from pymrt.recipes.generic import fix_noise_mean, voxel_curve_fit
+from pymrt.recipes.generic import fix_magnitude_bias, voxel_curve_fit
 from pymrt.recipes import t1, b1t
 
 
@@ -109,7 +109,7 @@ def triple_special1(
         tr,
         n_tr=2,
         sign=1,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -243,7 +243,7 @@ def triple_special2(
         sign=1,
         max_iter=64,
         threshold=1e-8,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -382,7 +382,7 @@ def triple(
         tr2,
         tr3,
         sign=1,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -504,7 +504,7 @@ def vfa(
         fas,
         trs,
         eta_fa_arr=None,
-        prepare=fix_noise_mean):
+        prepare=fix_magnitude_bias):
     """
     Calculate the parameters of the FLASH signal using variable flip angles.
 
@@ -614,7 +614,7 @@ def fit_multipolyfit(
         arrs,
         fas,
         trs,
-        prepare=fix_noise_mean,
+        prepare=fix_magnitude_bias,
         full=False):
     """
     Fit the parameters of the FLASH signal at fixed echo time.
@@ -645,7 +645,7 @@ def fit_leasq(
         t1_arr=None,
         xi_arr=None,
         eta_fa_arr=None,
-        prepare=fix_noise_mean,
+        prepare=fix_magnitude_bias,
         optim='trf',
         init=(1000, 1e4, 1.0),
         bounds=((10.0, 1e-2, 0.01), (5000.0, 1e10, 1.99)),
