@@ -147,6 +147,23 @@ def threshold_rayleigh(
 
 
 # ======================================================================
+def threshold_elbow_cum_hist(
+        arr,
+        on_error=0.0,
+        reverse=False):
+    """
+    Find the item that separates
+
+    Args:
+        arr (np.ndarray):
+
+    Returns:
+
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def threshold_otsu(
         arr,
         bins='sqrt'):

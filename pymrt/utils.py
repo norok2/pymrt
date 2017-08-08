@@ -374,8 +374,8 @@ def optimal_ratio(
         >>> [optimal_ratio(i, max) for i in range(n1, n2)]
         [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
         >>> [optimal_ratio(i, min) for i in range(n1, n2)]
-        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2), (47,
-        1)]
+        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2),\
+ (47, 1)]
     """
     ratios = []
     if is_prime(num):
@@ -506,7 +506,6 @@ def pseudo_ratio(x, y):
     .. math::
         \\frac{1}{\\frac{x}{y}+\\frac{y}{x}} = \\frac{xy}{x^2+y^2}
 
-
     Args:
         x (int|float|np.ndarray): First input value.
         y (int|float|np.ndarray): Second input value.
@@ -559,8 +558,8 @@ def gen_pseudo_ratio(*items):
         >>> np.isclose(gen_pseudo_ratio(*items1), gen_pseudo_ratio(*items2))
         True
         >>> items = list(range(2, 10))
-        >>> np.isclose(gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[
-        ::-1]))
+        >>> np.isclose(
+        ...     gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[::-1]))
         True
     """
     return 1 / np.sum(x / y for x, y in itertools.permutations(items, 2))
@@ -1361,8 +1360,8 @@ def join_path(*args):
         'file.tar.gz'
         >>> join_path('path/to', 'file', '')
         'path/to/file'
-        >>> paths = ['/path/to/file.txt', '/path/to/file.tar.gz',
-        'file.tar.gz']
+        >>> paths = [
+        ...     '/path/to/file.txt', '/path/to/file.tar.gz', 'file.tar.gz']
         >>> all([path == join_path(*split_path(path)) for path in paths])
         True
     """
@@ -2083,103 +2082,74 @@ def bijective_part(arr, invert=False):
         max_cut if max_cut < len(arr) - 1 else None)
 
 
-# ======================================================================
-def sgnlog(
-        x,
-        base=np.e):
+# =====================================================================
+def is_increasing(
+        items,
+        strict=True):
     """
-    Signed logarithm of x: log(abs(x) * sign(x)
+    Check if items are increasing.
 
     Args:
-        x (float|ndarray): The input value(s)
+        items (iterable): The items to check.
+        strict (bool): Check for strict monotonicity.
+            If True, consecutive items cannot be equal.
+            Otherwise they can be also equal.
 
     Returns:
-        The signed logarithm
+        result (bool): True if items are increasing, False otherwise.
 
     Examples:
-        >>> sgnlog(-100, 10)
-        -2.0
-        >>> sgnlog(-64, 2)
-        -6.0
-        >>> sgnlog(100, 2)
-        6.6438561897747253
+        >>> is_increasing([-20, -2, 1, 3, 5, 7, 8, 9])
+        True
+        >>> is_increasing([1, 3, 5, 7, 8, 9, 9, 10, 400])
+        False
+        >>> is_increasing([1, 3, 5, 7, 8, 9, 9, 10, 400], False)
+        True
+        >>> is_increasing([-20, -2, 1, 3, 5, 7, 8, 9])
+        True
+        >>> is_increasing([-2, -2, 1, 30, 5, 7, 8, 9])
+        False
     """
-    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
-
-
-# ======================================================================
-def sgnlogspace(
-        start,
-        stop,
-        num=50,
-        endpoint=True,
-        base=10.0):
-    """
-    Logarithmically spaced samples between signed start and stop endpoints.
-
-    Args:
-        start (float): The starting value of the sequence.
-        stop (float): The end value of the sequence.
-        num (int): Number of samples to generate. Must be non-negative.
-        endpoint (bool): The value of 'stop' is the last sample.
-        base (float): The base of the log space. Must be non-negative.
-
-    Returns:
-        samples (ndarray): equally spaced samples on a log scale.
-
-    Examples:
-        >>> sgnlogspace(-10, 10, 3)
-        array([-10. ,   0.1,  10. ])
-        >>> sgnlogspace(-100, -1, 3)
-        array([-100.,  -10.,   -1.])
-        >>> sgnlogspace(-10, 10, 6)
-        array([-10. ,  -1. ,  -0.1,   0.1,   1. ,  10. ])
-        >>> sgnlogspace(-10, 10, 5)
-        array([-10. ,  -0.1,   0.1,   1. ,  10. ])
-        >>> sgnlogspace(2, 10, 4)
-        array([  2.        ,   3.41995189,   5.84803548,  10.        ])
-    """
-    if not is_same_sign((start, stop)):
-        bounds = (
-            (start, -(np.exp(-np.log(np.abs(start))))),
-            ((np.exp(-np.log(np.abs(stop)))), stop))
-        args_bounds = tuple(
-            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
-            for arg_bounds in bounds)
-        args_num = (num // 2, num - num // 2)
-        args_sign = (np.sign(start), np.sign(stop))
-        args_endpoint = True, endpoint
-        logspaces = tuple(
-            np.logspace(*(arg_bounds + (arg_num, arg_endpoint, base))) \
-            * arg_sign
-            for arg_bounds, arg_sign, arg_num, arg_endpoint
-            in zip(args_bounds, args_sign, args_num, args_endpoint))
-        samples = np.concatenate(logspaces)
+    if strict:
+        result = all(x < y for x, y in zip(items, items[1:]))
     else:
-        sign = np.sign(start)
-        logspace_bound = \
-            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
-        samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
-    return samples
+        result = all(x <= y for x, y in zip(items, items[1:]))
+    return result
 
 
-# ======================================================================
-def minmax(arr):
+# =====================================================================
+def is_decreasing(
+        items,
+        strict=True):
     """
-    Calculate the minimum and maximum of an array: (min, max).
+    Check if items are decreasing.
 
     Args:
-        arr (np.ndarray): The input array.
+        items (iterable): The items to check.
+        strict (bool): Check for strict monotonicity.
+            If True, consecutive items cannot be equal.
+            Otherwise they can be also equal.
 
     Returns:
-        min (float): the minimum value of the array
-        max (float): the maximum value of the array
+        result (bool): True if items are decreasing, False otherwise.
 
     Examples:
-        >>> minmax(np.arange(10))
-        (0, 9)
+        >>> is_decreasing([312, 54, 53, 7, 3, -5, -100])
+        True
+        >>> is_decreasing([312, 53, 53, 7, 3, -5, -100])
+        False
+        >>> is_decreasing([312, 53, 53, 7, 3, -5, -100], False)
+        True
+        >>> is_decreasing([312, 54, 53, 7, 3, -5, -100])
+        True
+        >>> is_decreasing([312, 5, 53, 7, 3, -5, -100])
+        False
     """
-    return np.min(arr), np.max(arr)
+    if strict:
+        result = all(x > y for x, y in zip(items, items[1:]))
+    else:
+        result = all(x >= y for x, y in zip(items, items[1:]))
+    return result
 
 
 # ======================================================================
@@ -2334,6 +2304,106 @@ def midval(arr):
         array([ 0.5,  1.5,  2.5,  3.5])
     """
     return (arr[1:] - arr[:-1]) / 2.0 + arr[:-1]
+
+
+# ======================================================================
+def sgnlog(
+        x,
+        base=np.e):
+    """
+    Signed logarithm of x: log(abs(x) * sign(x)
+
+    Args:
+        x (float|ndarray): The input value(s)
+        base (float): The base of the logarithm.
+
+    Returns:
+        The signed logarithm
+
+    Examples:
+        >>> sgnlog(-100, 10)
+        -2.0
+        >>> sgnlog(-64, 2)
+        -6.0
+        >>> sgnlog(100, 2)
+        6.6438561897747253
+    """
+    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
+
+
+# ======================================================================
+def sgnlogspace(
+        start,
+        stop,
+        num=50,
+        endpoint=True,
+        base=10.0):
+    """
+    Logarithmically spaced samples between signed start and stop endpoints.
+
+    Args:
+        start (float): The starting value of the sequence.
+        stop (float): The end value of the sequence.
+        num (int): Number of samples to generate. Must be non-negative.
+        endpoint (bool): The value of 'stop' is the last sample.
+        base (float): The base of the log space. Must be non-negative.
+
+    Returns:
+        samples (ndarray): equally spaced samples on a log scale.
+
+    Examples:
+        >>> sgnlogspace(-10, 10, 3)
+        array([-10. ,   0.1,  10. ])
+        >>> sgnlogspace(-100, -1, 3)
+        array([-100.,  -10.,   -1.])
+        >>> sgnlogspace(-10, 10, 6)
+        array([-10. ,  -1. ,  -0.1,   0.1,   1. ,  10. ])
+        >>> sgnlogspace(-10, 10, 5)
+        array([-10. ,  -0.1,   0.1,   1. ,  10. ])
+        >>> sgnlogspace(2, 10, 4)
+        array([  2.        ,   3.41995189,   5.84803548,  10.        ])
+    """
+    if not is_same_sign((start, stop)):
+        bounds = (
+            (start, -(np.exp(-np.log(np.abs(start))))),
+            ((np.exp(-np.log(np.abs(stop)))), stop))
+        args_bounds = tuple(
+            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
+            for arg_bounds in bounds)
+        args_num = (num // 2, num - num // 2)
+        args_sign = (np.sign(start), np.sign(stop))
+        args_endpoint = True, endpoint
+        logspaces = tuple(
+            np.logspace(*(arg_bounds + (arg_num, arg_endpoint, base))) \
+            * arg_sign
+            for arg_bounds, arg_sign, arg_num, arg_endpoint
+            in zip(args_bounds, args_sign, args_num, args_endpoint))
+        samples = np.concatenate(logspaces)
+    else:
+        sign = np.sign(start)
+        logspace_bound = \
+            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
+        samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
+    return samples
+
+
+# ======================================================================
+def minmax(arr):
+    """
+    Calculate the minimum and maximum of an array: (min, max).
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        min (float): the minimum value of the array
+        max (float): the maximum value of the array
+
+    Examples:
+        >>> minmax(np.arange(10))
+        (0, 9)
+    """
+    return np.min(arr), np.max(arr)
 
 
 # ======================================================================
@@ -3855,18 +3925,176 @@ def filter_cx(
     if not filter_kws:
         filter_kws = {}
     if mode == 'cartesian':
-        re_arr = filter_func(arr.real, *filter_args, **filter_kws)
-        im_arr = filter_func(arr.imag, *filter_args, **filter_kws)
-        arr = re_arr + 1j * im_arr
+        arr = (
+            filter_func(arr.real, *filter_args, **filter_kws) +
+            1j * filter_func(arr.imag, *filter_args, **filter_kws))
     elif mode == 'polar':
-        mag_arr = filter_func(np.abs(arr), *filter_args, **filter_kws)
-        phs_arr = filter_func(np.angle(arr), *filter_args, **filter_kws)
-        arr = mag_arr * np.exp(1j * phs_arr)
+        arr = (
+            filter_func(np.abs(arr), *filter_args, **filter_kws) *
+            np.exp(
+                1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
     else:
         warnings.warn(
             'Mode `{}` not known'.format(mode) + ' Using default.')
         arr = filter_cx(arr, filter_func, filter_args, filter_kws)
     return arr
+
+
+# ======================================================================
+def marginal_sep_elbow(items):
+    """
+    Determine the marginal separation using the elbow method.
+
+    Graphically, this is displayed as an elbow in the plot.
+    Mathematically, this is defined as the first item whose (signed) global
+    slope is smaller than the (signed) local slope.
+
+    Args:
+        items (iterable): The collection of items to inspect.
+            The input must be already sorted non-negative values.
+
+    Returns:
+        index (int): The position of the marginal separation value.
+            If the marginal separation is not found, returns -1.
+
+    Examples:
+        >>> items = (100, 90, 70, 60, 50, 30, 20, 5, 4, 3, 2, 1)
+        >>> marginal_sep_elbow(items)
+        8
+        >>> items = (100, 90, 70, 60, 50, 30, 20, 5)
+        >>> marginal_sep_elbow(items)
+        -1
+    """
+    if is_increasing(items):
+        sign = -1
+    elif is_decreasing(items):
+        sign = 1
+    else:
+        sign = None
+    if sign:
+        index = -1
+        for i_, item in enumerate(items[1:]):
+            i = i_ + 1
+            local_slope = item - items[i_]
+            global_slope = item - items[0] / i
+            if sign * global_slope < sign * local_slope:
+                index = i
+                break
+    else:
+        index = -1
+    return index
+
+
+# ======================================================================
+def marginal_sep_quad(items):
+    """
+    Determine the marginal separation using the quadrature method.
+
+    Mathematically, this is defined as the first item whose value is smaller
+    than the sum of the differences of all following items.
+
+    Args:
+        items (iterable): The collection of items to inspect.
+            The input must be already sorted non-negative values.
+
+    Returns:
+        index (int): The position of the marginal separation value.
+            If the marginal separation is not found, returns -1.
+
+    Examples:
+        >>> items = (100, 90, 70, 50, 30, 20, 5, 2, 1)
+        >>> marginal_sep_quad(items)
+        5
+    """
+    if is_increasing(items):
+        sign = -1
+    elif is_decreasing(items):
+        sign = 1
+    else:
+        sign = None
+    if sign:
+        index = np.where(
+            items[:-1] + sign * np.cumsum(np.diff(items)[::-1]) < 0)[0]
+        index = int(index[0]) + 1 if len(index) > 0 else -1
+    else:
+        index = -1
+    return index
+
+
+# ======================================================================
+def marginal_sep_quad_weight(items):
+    """
+    Determine the marginal separation using the weighted quadrature.
+
+    Mathematically, this is defined as the first item whose value is smaller
+    than the sum of the differences of all following items weighted by the
+    number of items already considered.
+
+    Args:
+        items (iterable): The collection of items to inspect.
+            The input must be already sorted non-negative values.
+
+    Returns:
+        index (int): The position of the marginal separation value.
+            If the marginal separation is not found, returns -1.
+
+    Examples:
+        >>> items = (100, 90, 70, 50, 30, 20, 5, 2, 1)
+        >>> marginal_sep_quad_weight(items)
+        7
+    """
+    if is_increasing(items):
+        sign = -1
+    elif is_decreasing(items):
+        sign = 1
+    else:
+        sign = None
+    if sign:
+        index = np.where(
+            items[:-1] + sign * np.cumsum(np.diff(items)[::-1]) /
+            np.arange(1, len(items)) < 0)[0]
+        index = index[0] + 1 if len(index) else -1
+    else:
+        index = -1
+    return index
+
+
+# ======================================================================
+def marginal_sep_quad_inv_weight(items):
+    """
+    Determine the marginal separation using the inverse weighted quadrature.
+
+    Mathematically, this is defined as the first item whose value is smaller
+    than the sum of the differences of all following items weighted by the
+    number of items to be considered.
+
+    Args:
+        items (iterable): The collection of items to inspect.
+            The input must be already sorted non-negative values.
+
+    Returns:
+        index (int): The position of the marginal separation value.
+            If the marginal separation is not found, returns -1.
+
+    Examples:
+        >>> items = (100, 90, 70, 50, 30, 20, 5, 2, 1)
+        >>> marginal_sep_quad_inv_weight(items)
+        7
+    """
+    if is_increasing(items):
+        sign = -1
+    elif is_decreasing(items):
+        sign = 1
+    else:
+        sign = None
+    if sign:
+        index = np.where(
+            items[:-1] + sign * np.cumsum(np.diff(items)[::-1]) /
+            np.arange(len(items), 1, -1) < 0)[0]
+        index = index[0] + 1 if len(index) else -1
+    else:
+        index = -1
+    return index
 
 
 # ======================================================================
