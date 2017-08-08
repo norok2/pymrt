@@ -257,7 +257,7 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
 # ======================================================================
 def fix_magnitude_bias(
         arr,
-        positive=False):
+        positive=True):
     """
     Fix magnitude level to remove the bias associated with Rician noise.
 
@@ -282,10 +282,16 @@ def fix_magnitude_bias(
         - Gudbjartsson, H., Patz, S., 1995. The Rician Distribution of Noisy
           MRI Data. Magn Reson Med 34, 910–914.
     """
-    threshold = mrt.segmentation.threshold_background_peaks(arr)
+    arr = arr.astype(float)
+    threshold = mrt.segmentation.threshold_otsu(arr) / 4
     noise_mask = arr < threshold
-    noise_std = np.std(arr[noise_mask]) * (np.sqrt(2.0 / (4 - np.pi)))
-    arr = arr ** 2 - noise_std ** 2
+    if np.sum(noise_mask) > 0:
+        sigma = np.std(arr[noise_mask]) * (np.sqrt(2.0 / (4 - np.pi)))
+    else:
+        # estimate sigma from mu assuming min(arr) = mu(noise)
+        sigma = np.min(arr)
+
+    arr = arr ** 2 - sigma ** 2
     if positive:
         arr = np.sqrt(np.abs(arr))
     else:

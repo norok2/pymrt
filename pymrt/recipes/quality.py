@@ -29,6 +29,7 @@ import scipy.special  # SciPy: Special functions
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+import pymrt.geometry
 import pymrt.segmentation
 
 from pymrt import INFO, DIRS
@@ -196,7 +197,46 @@ def signal_noise_multi_acq(
 
 
 # ======================================================================
-def signal_noise_background_peaks(arr):
+def signal_noise_calib_region(
+        arr,
+        signal_region=None,
+        noise_region=None,
+        region_shape='cuboid'):
+    """
+    Separate signal from noise a calibration region.
+
+    Use a n-dim superellipsis or cuboid as calibration regions for signal
+    and noise estimation.
+
+
+    Args:
+        arr (np.ndarray): The input array.
+        region:
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+                - signal_arr: The signal array.
+                - noise_arr: The noise array.
+
+    """
+    if not signal_region:
+        raise NotImplementedError
+    if not noise_region:
+        raise NotImplementedError
+    s_semisizes, s_position = mrt.geometry.extrema_to_semisizes_position(
+        *signal_region, num=arr.ndim)
+    signal_arr = arr[
+        mrt.geometry.nd_cuboid(arr.shape, s_semisizes, s_position)]
+    n_semisizes, n_position = mrt.geometry.extrema_to_semisizes_position(
+        *noise_region, num=arr.ndim)
+    noise_arr = arr[
+        mrt.geometry.nd_cuboid(arr.shape, n_semisizes, n_position)]
+    return signal_arr, noise_arr
+
+
+# ======================================================================
+def signal_noise_optim(arr):
     """
     Separate signal from noise using optimal peak thresholding.
 
@@ -212,7 +252,7 @@ def signal_noise_background_peaks(arr):
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    threshold = mrt.segmentation.threshold_background_peaks(arr)
+    threshold = mrt.segmentation.threshold_optim(arr)
     signal_mask = arr > threshold
     signal_arr = arr[signal_mask]
     noise_arr = arr[~signal_mask]
@@ -334,26 +374,26 @@ def signal_noise_percentile(
 # ======================================================================
 def signal_noise_mean_std(
         arr,
-        mean_factor=1,
-        std_factor=1,
-        symmetric=False):
+        std_steps=(-1, -2),
+        mean_steps=1,
+        separate=True):
     """
     Separate signal from noise using a threshold combining mean and std.dev.
 
-    Thresholds are calculated as:
-    :math:`K_{+,-} = k_\\mu * \\mu \\pm k_\\sigma * \\sigma`
+    Thresholds are calculated using `segmentation.threshold_mean_std()`.
 
     Signal/noise values interval depend on the `symmetric` parameter.
 
     Args:
         arr (np.ndarray): The input array.
-        mean_factor (int|float): The mean multiplication factor.
+        std_steps (iterable[int|float]): The st.dev. multiplication step(s).
+            These are usually values between -2 and 2.
+        mean_steps (iterable[int|float]): The mean multiplication step(s).
             This is usually set to 1.
-        std_factor (int|float): The standard deviation multiplication factor.
-            This is usually set to a number between 1 and 2.
         symmetric (bool): Use symmetric thresholds.
-            If symmetric, signal values are inside the [K-,K+] range.
-            Otherwise, signal values are above K-.
+            If True, signal values are between the smallest and the largest
+            thresholds.
+            Otherwise, only the smallest threshold is used.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -361,14 +401,13 @@ def signal_noise_mean_std(
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    mu = np.nanmean(arr)
-    sigma = np.nanstd(arr)
-    signal_mask = arr > (mu * mean_factor - sigma * std_factor)
-    if symmetric:
-        signal_mask *= (
-            arr < (mu * mean_factor + sigma * std_factor))
+    thresholds = sorted(
+        mrt.segmentation.threshold_mean_std(arr, std_steps, mean_steps),
+        reverse=True)
+    signal_mask = arr > thresholds[0]
+    noise_mask = arr <= thresholds[-1]
     signal_arr = arr[signal_mask]
-    noise_arr = arr[~signal_mask]
+    noise_arr = arr[noise_mask]
     return signal_arr, noise_arr
 
 
@@ -567,7 +606,7 @@ def signal_noise(
         method (str): The signal/noise estimation method.
             If str, available methods are:
              - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
-             - 'optim': Uses an optimal data-driven method for given data.
+             - 'optim': Uses an optimal data-driven method based on st.dev.
              - 'otsu': Uses `signal_noise_otsu()`.
                 Only works for positive values.
              - 'relative': Uses `signal_noise_relative()`.
@@ -601,11 +640,11 @@ def signal_noise(
     method = method.lower()
     if method == 'auto':
         if np.all(arr) >= 0.0:
-            method = signal_noise_background_peaks
+            method = signal_noise_optim
         else:
             method = signal_noise_denoise
-    elif method == 'bg_peaks':
-        method = signal_noise_background_peaks
+    elif method == 'optim':
+        method = signal_noise_optim
     elif method == 'otsu':
         method = signal_noise_otsu
     elif method == 'relative':

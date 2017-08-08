@@ -61,6 +61,91 @@ from pymrt import msg, dbg
 
 # TODO: implement other types of segmentations?
 
+
+# ======================================================================
+def threshold_optim(arr, interval=None):
+    """
+    Calculate the optimal background threshold.
+
+    Assuming that the background is the first peak of the histogram, the
+    background threshold is estimated as the minimum of:
+     - twice the first peak minus half the minumum value of the array.
+     - the first inverted peak after the first peak.
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        threshold (float): The threshold value.
+    """
+    hist_peaks = np.array(threshold_hist_peaks(arr))
+    inv_hist_peaks = np.array(threshold_inv_hist_peaks(arr))
+    threshold = min(
+        inv_hist_peaks[inv_hist_peaks > hist_peaks[0]][0],
+        2 * hist_peaks[0] - np.min(arr) / 2)
+    return threshold
+
+
+# ======================================================================
+def threshold_rayleigh(
+        arr,
+        num=64,
+        chunks=16,
+        tol=1e-1):
+    """
+    Calculate the optimal background threshold for Rayleigh noise.
+
+    Rayleigh noise is a special case of Rician noise generating from
+    zero-mean Gaussian noise.
+
+    Uses the relationship between the mean :math:`\\mu_n` and the standard
+    deviation :math:`\\sigma_n` of the distribution from the standard
+    deviation :math:`\\sigma_G` of the generating Gaussian distribution:
+
+    .. math::
+        \\frac{\\mu_n}{\\sigma_n} =
+        \\frac{\\sigma_G\\sqrt{\\frac{\\pi}{2}}}
+        {\\sigma_G\\sqrt{\\frac{4 - \\pi}{2}}} =
+        \\sqrt{\\frac{\\pi}{4 - \\pi}}
+
+    Args:
+        arr (np.ndarray): The input array.
+        num (int): The number of value levels.
+            This specifies the number of value levels in each chunk.
+        chunks (int): The number of chunks for value levels.
+            Divide the values range into the specified number of chunks
+            and search for the the matching threshold sequentially.
+            If the threshold is found in an earlier chunk, subsequent chunks
+            do not need to be evaluated.
+        tol (float): The tolerance for closeness.
+
+    Returns:
+        threshold (float): The threshold value.
+    """
+    mu_sigma_ratio = np.sqrt(np.pi / (4 - np.pi))
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    threshold = min_val
+    found = False
+    diff = 0
+    for j in range(chunks):
+        min_chunk = min_val + (max_val - min_val) * j / chunks
+        max_chunk = min_val + (max_val - min_val) * (j + 1) / chunks
+        for i, threshold in enumerate(np.linspace(min_chunk, max_chunk), num):
+            mask = arr <= threshold
+            last_diff = diff
+            n_arr = arr[mask]
+            mu_n, sigma_n = np.nanmean(n_arr), np.nanstd(n_arr)
+            if sigma_n > 0:
+                diff = (mu_n / sigma_n) - mu_sigma_ratio
+                if diff * last_diff < 0 or np.abs(diff) < tol:
+                    found = True
+                    break
+        if found:
+            break
+    return threshold
+
+
 # ======================================================================
 def threshold_otsu(
         arr,
@@ -123,6 +208,32 @@ def threshold_otsu(
 
 
 # ======================================================================
+def threshold_otsu_bidim(
+        arr,
+        bins='sqrt'):
+    """
+    Optimal foreground/background threshold value based on 2D Otsu's method.
+
+    Args:
+        arr (np.ndrarray): The input array.
+        bins (int|str|None): Number of bins used to calculate histogram.
+            If str or None, this is automatically calculated from the data
+            using `utils.auto_bin()` with `method` set to `bins` if str,
+            and using the default `utils.auto_bin()` method if set to None.
+
+    Returns:
+        threshold (float): The threshold value.
+
+    References:
+        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
+          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
+          62–66. doi:10.1109/TSMC.1979.4310076
+    """
+    # todo: extend to multiple classes
+    raise NotImplementedError
+
+
+# ======================================================================
 def threshold_relative(
         arr,
         values=0.5):
@@ -182,16 +293,17 @@ def threshold_mean_std(
 
     Args:
         arr (np.ndarray): The input array.
+        std_steps (iterable[int|float]): The st.dev. multiplication step(s).
+            These are usually values between -2 and 2.
         mean_steps (iterable[int|float]): The mean multiplication step(s).
             This is usually set to 1.
-        std_steps (iterable[int|float]): The percentile value(s).
-            Values must be in the [0, 1] range.
+
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
-    mean = np.mean(arr)
-    std = np.std(arr)
+    mean = np.nanmean(arr)
+    std = np.nanstd(arr)
     min_val = np.min(arr)
     max_val = np.max(arr)
     mean_steps = mrt.utils.auto_repeat(mean_steps, 1)
@@ -206,19 +318,21 @@ def threshold_mean_std(
 def threshold_hist_peaks(
         arr,
         bins='sqrt',
-        depth=None):
+        depth='rice'):
     """
     Calculate threshold from the peaks in the histogram.
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|str): The number of bins for the histogram.
+        bins (int|str|None): The number of bins for the histogram.
             If str, this is determined using `utils.auto_bins()`.
-        depth (int|None): The peak finding depth.
+            If None, the default method in `utils.auto_bins()` is used.
+        depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If None, this is the determined using the number of bins.
+            If str, this is determined using `utils.auto_bins()`.
+            If None, the default method in `utils.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -230,8 +344,10 @@ def threshold_hist_peaks(
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
-    if depth is None:
-        depth = int(bins / 64)
+    if isinstance(depth, str):
+        depth = mrt.utils.auto_bin(arr, depth)
+    elif bins is None:
+        depth = mrt.utils.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -243,7 +359,7 @@ def threshold_hist_peaks(
 def threshold_inv_hist_peaks(
         arr,
         bins='sqrt',
-        depth=None):
+        depth='rice'):
     """
     Calculate threshold from the peaks in the inverted histogram.
 
@@ -252,13 +368,15 @@ def threshold_inv_hist_peaks(
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|str): The number of bins for the histogram.
+        bins (int|str|None): The number of bins for the histogram.
             If str, this is determined using `utils.auto_bins()`.
-        depth (int|None): The peak finding depth.
+            If None, the default method in `utils.auto_bins()` is used.
+        depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If None, this is the determined using the number of bins.
+            If str, this is determined using `utils.auto_bins()`.
+            If None, the default method in `utils.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -270,8 +388,10 @@ def threshold_inv_hist_peaks(
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
-    if depth is None:
-        depth = int(bins / 64)
+    if isinstance(depth, str):
+        depth = mrt.utils.auto_bin(arr, depth)
+    elif bins is None:
+        depth = mrt.utils.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -283,7 +403,7 @@ def threshold_inv_hist_peaks(
 def threshold_hist_peak_edges(
         arr,
         bins='sqrt',
-        depth=None):
+        depth='rice'):
     """
     Calculate threshold from the peak edges in the histogram.
 
@@ -292,13 +412,15 @@ def threshold_hist_peak_edges(
 
     Args:
         arr (np.ndarray): The input array.
-        bins (int|str): The number of bins for the histogram.
+        bins (int|str|None): The number of bins for the histogram.
             If str, this is determined using `utils.auto_bins()`.
-        depth (int|None): The peak finding depth.
+            If None, the default method in `utils.auto_bins()` is used.
+        depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If None, this is the determined using the number of bins.
+            If str, this is determined using `utils.auto_bins()`.
+            If None, the default method in `utils.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -310,23 +432,65 @@ def threshold_hist_peak_edges(
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = mrt.utils.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
-    if depth is None:
-        depth = int(bins / 64)
+    if isinstance(depth, str):
+        depth = mrt.utils.auto_bin(arr, depth)
+    elif bins is None:
+        depth = mrt.utils.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
         peaks = sp.signal.find_peaks_cwt(hist, widths)
-        inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
-    peak_edges = mrt.utils.midval(np.ndarray(
-        x for x in itertools.chain.from_iterable(
-            itertools.zip_longest(peaks, inv_peaks)
-            if peaks[0] < inv_peaks[0] else
-            itertools.zip_longest(inv_peaks, peaks))
-        if x))
+    peak_edges = mrt.utils.midval(peaks)
     return tuple(bin_centers[peak_edges])
 
 
-def threshold_background_peaks(arr):
+# ======================================================================
+def threshold_inv_hist_peak_edges(
+        arr,
+        bins='sqrt',
+        depth='rice'):
+    """
+    Calculate threshold from the peak edges in the histogram.
+
+    The peak edges are defined as the mid-values of the peaks and the
+    inverse peaks.
+
+    Args:
+        arr (np.ndarray): The input array.
+        bins (int|str|None): The number of bins for the histogram.
+            If str, this is determined using `utils.auto_bins()`.
+            If None, the default method in `utils.auto_bins()` is used.
+        depth (int|str|None): The peak finding depth.
+            This parameter determines the peak finding rate in rapidly varying
+            ("noisy") histograms.
+            Smaller values correspond to more peaks being found.
+            If str, this is determined using `utils.auto_bins()`.
+            If None, the default method in `utils.auto_bins()` is used.
+
+    Returns:
+        result (tuple[float]): the calculated thresholds.
+    """
+    if isinstance(bins, str):
+        bins = mrt.utils.auto_bin(arr, bins)
+    elif bins is None:
+        bins = mrt.utils.auto_bin(arr)
+    hist, bin_edges = np.histogram(arr, bins)
+    bin_centers = mrt.utils.midval(bin_edges)
+    # depth determines the dynamic smoothing of the histogram
+    if isinstance(depth, str):
+        depth = mrt.utils.auto_bin(arr, depth)
+    elif bins is None:
+        depth = mrt.utils.auto_bin(arr)
+    # at least 1 width value is required
+    widths = np.arange(1, max(2, depth))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
+    inv_peak_edges = mrt.utils.midval(inv_peaks)
+    return tuple(bin_centers[inv_peak_edges])
+
+
+# ======================================================================
+def threshold_twice_first_peak(arr, interval=None):
     """
     Calculate the background threshold from a histogram peaks analysis.
 
@@ -368,6 +532,8 @@ def auto_thresholds(
              - 'hist_peaks': uses histogram peaks as thresholds.
              - 'inv_hist_peaks': uses inverted histogram peaks as thresholds.
              - 'hist_peak_edges': uses histogram peak edges as thresholds.
+             - 'inv_hist_peak_edges': uses inverted histogram peak edges as
+               thresholds.
         kws (dict|None): Keyword parameters for the selected method.
 
     Returns:
@@ -385,6 +551,8 @@ def auto_thresholds(
         kws = dict()
     if method == 'otsu':
         thresholds = threshold_otsu(arr, **dict(kws))
+    elif method == 'optim':
+        thresholds = threshold_optim(arr, **dict(kws))
     elif method == 'relative':
         thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'percentile':
@@ -397,6 +565,8 @@ def auto_thresholds(
         thresholds = threshold_inv_hist_peaks(arr, **dict(kws))
     elif method == 'hist_peak_edges':
         thresholds = threshold_hist_peak_edges(arr, **dict(kws))
+    elif method == 'inv_hist_peak_edges':
+        thresholds = threshold_inv_hist_peak_edges(arr, **dict(kws))
     else:  # if method not in methods:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))

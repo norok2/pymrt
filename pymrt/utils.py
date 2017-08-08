@@ -2487,18 +2487,20 @@ def coord(
         
     Examples:
         >>> coord((5, 5))
-        [2, 2]
+        (2, 2)
         >>> coord((4, 4))
-        [2, 2]
+        (2, 2)
+        >>> coord((5, 5), 3, False)
+        (3, 3)
     """
     position = auto_repeat(position, len(shape), check=True)
     if is_relative:
         if use_int:
-            position = [int(scale(x, (0, dim)))
-                        for x, dim in zip(position, shape)]
+            position = tuple(
+                int(scale(x, (0, dim))) for x, dim in zip(position, shape))
         else:
-            position = [scale(x, (0, dim - 1))
-                        for x, dim in zip(position, shape)]
+            position = tuple(
+                scale(x, (0, dim - 1)) for x, dim in zip(position, shape))
     elif any([not isinstance(x, int) for x in position]) and use_int:
         raise TypeError('Absolute origin must be integer.')
     return position
