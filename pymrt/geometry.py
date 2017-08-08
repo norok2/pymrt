@@ -54,15 +54,16 @@ from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
 
+# todo: support for iterable relative position/size in nd_cuboid, etc.
+
 # ======================================================================
-def pos_rel2abs(shape, rel_position=0.5):
+def rel2abs(shape, size=0.5):
     """
-    Calculate the absolute position from a relative position for a given shape.
+    Calculate the absolute size from a relative size for a given shape.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        rel_position (float|tuple[float]): Relative position (to the lowest
-        edge).
+        size (float|tuple[float]): Relative position (to the lowest edge).
             Each element of the tuple should be in the range [0, 1].
 
     Returns:
@@ -71,30 +72,30 @@ def pos_rel2abs(shape, rel_position=0.5):
             where dim is the corresponding dimension of the shape.
 
     Examples:
-        >>> pos_rel2abs((100, 100, 101, 101), (0.0, 1.0, 0.0, 1.0))
+        >>> rel2abs((100, 100, 101, 101), (0.0, 1.0, 0.0, 1.0))
         (0.0, 99.0, 0.0, 100.0)
-        >>> pos_rel2abs((100, 99, 101))
+        >>> rel2abs((100, 99, 101))
         (49.5, 49.0, 50.0)
-        >>> pos_rel2abs((100, 200, 50, 99, 37), (0.0, 1.0, 0.2, 0.3, 0.4))
+        >>> rel2abs((100, 200, 50, 99, 37), (0.0, 1.0, 0.2, 0.3, 0.4))
         (0.0, 199.0, 9.8, 29.4, 14.4)
-        >>> pos_rel2abs((100, 100, 100), (1.0, 10.0, -1.0))
+        >>> rel2abs((100, 100, 100), (1.0, 10.0, -1.0))
         (99.0, 990.0, -99.0)
         >>> shape = (100, 100, 100, 100, 100)
-        >>> pos_abs2rel(shape, pos_rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
+        >>> abs2rel(shape, rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
         (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    rel_position = mrt.utils.auto_repeat(rel_position, len(shape), check=True)
-    return tuple((s - 1.0) * p for p, s in zip(rel_position, shape))
+    size = mrt.utils.auto_repeat(size, len(shape), check=True)
+    return tuple((s - 1.0) * p for p, s in zip(size, shape))
 
 
 # ======================================================================
-def pos_abs2rel(shape, abs_position=0):
+def abs2rel(shape, position=0):
     """
-    Calculate the relative position from an absolute position for a given shape.
+    Calculate the relative size from an absolute size for a given shape.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        abs_position (float|tuple[float]): Absolute position inside the shape.
+        position (float|tuple[float]): Absolute position inside the shape.
             Each element of the tuple should be in the range [0, dim - 1],
             where dim is the corresponding dimension of the shape.
 
@@ -103,20 +104,20 @@ def pos_abs2rel(shape, abs_position=0):
             Each element of the tuple should be in the range [0, 1].
 
     Examples:
-        >>> pos_abs2rel((100, 100, 101, 99), (0, 100, 100, 100))
+        >>> abs2rel((100, 100, 101, 99), (0, 100, 100, 100))
         (0.0, 1.0101010101010102, 1.0, 1.0204081632653061)
-        >>> pos_abs2rel((100, 99, 101))
+        >>> abs2rel((100, 99, 101))
         (0.0, 0.0, 0.0)
-        >>> pos_abs2rel((412, 200, 37), (30, 33, 11.7))
+        >>> abs2rel((412, 200, 37), (30, 33, 11.7))
         (0.072992700729927, 0.1658291457286432, 0.32499999999999996)
-        >>> pos_abs2rel((100, 100, 100), (250, 10, -30))
+        >>> abs2rel((100, 100, 100), (250, 10, -30))
         (2.525252525252525, 0.10101010101010101, -0.30303030303030304)
         >>> shape = (100, 100, 100, 100, 100)
-        >>> pos_abs2rel(shape, pos_rel2abs(shape, (0, 25, 50, 75, 100)))
+        >>> abs2rel(shape, rel2abs(shape, (0, 25, 50, 75, 100)))
         (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    abs_position = mrt.utils.auto_repeat(abs_position, len(shape), check=True)
-    return tuple(p / (s - 1.0) for p, s in zip(abs_position, shape))
+    position = mrt.utils.auto_repeat(position, len(shape), check=True)
+    return tuple(p / (s - 1.0) for p, s in zip(position, shape))
 
 
 # ======================================================================
@@ -147,180 +148,193 @@ def render(
 # ======================================================================
 def square(
         shape,
-        position,
-        side):
+        side,
+        position=0.5):
     """
     Generate a mask whose shape is a square.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         side (float): The side of the square in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> square(4, 0.5, 2)
+        >>> square(4, 2)
         array([[False, False, False, False],
                [False,  True,  True, False],
                [False,  True,  True, False],
                [False, False, False, False]], dtype=bool)
-        >>> square(5, 0.5, 3)
+        >>> square(5, 3)
         array([[False, False, False, False, False],
                [False,  True,  True,  True, False],
                [False,  True,  True,  True, False],
                [False,  True,  True,  True, False],
                [False, False, False, False, False]], dtype=bool)
     """
-    return nd_cuboid(shape, position, side / 2.0, 2)
+    return nd_cuboid(
+        shape, side / 2.0, position, 2,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def rectangle(
         shape,
-        position,
-        semisides):
+        semisides,
+        position=0.5):
     """
     Generate a mask whose shape is a rectangle.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the rectangle in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
-    >>> rectangle(6, 0.5, (2, 1))
+    >>> rectangle(6, (2, 1))
     array([[False, False, False, False, False, False],
            [False, False,  True,  True, False, False],
            [False, False,  True,  True, False, False],
            [False, False,  True,  True, False, False],
            [False, False,  True,  True, False, False],
            [False, False, False, False, False, False]], dtype=bool)
-    >>> rectangle(5, 0.5, (2, 1))
+    >>> rectangle(5, (2, 1))
     array([[False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
            [False,  True,  True,  True, False]], dtype=bool)
-    >>> rectangle(4, 0, (1, 0.5))
+    >>> rectangle(4, (1, 0.5), 0)
     array([[ True, False, False, False],
            [ True, False, False, False],
            [False, False, False, False],
            [False, False, False, False]], dtype=bool)
-    >>> rectangle(4, 0, (2, 1))
+    >>> rectangle(4, (2, 1), 0)
     array([[ True,  True, False, False],
            [ True,  True, False, False],
            [ True,  True, False, False],
            [False, False, False, False]], dtype=bool)
     """
-    return nd_cuboid(shape, position, semisides, 2)
+    return nd_cuboid(
+        shape, semisides, position, 2,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def rhombus(
         shape,
-        position,
-        semidiagonals):
+        semidiagonals,
+        position=0.5):
     """
     Generate a mask whose shape is a rhombus.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> rhombus(5, 0.5, 2)
+        >>> rhombus(5, 2)
         array([[False, False,  True, False, False],
                [False,  True,  True,  True, False],
                [ True,  True,  True,  True,  True],
                [False,  True,  True,  True, False],
                [False, False,  True, False, False]], dtype=bool)
-        >>> rhombus(5, 0.5, (2, 1))
+        >>> rhombus(5, (2, 1))
         array([[False, False,  True, False, False],
                [False, False,  True, False, False],
                [False,  True,  True,  True, False],
                [False, False,  True, False, False],
                [False, False,  True, False, False]], dtype=bool)
     """
-    return nd_superellipsoid(shape, position, semidiagonals, 1.0, 2)
+    return nd_superellipsoid(
+        shape, semidiagonals, 1.0, position, 2,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def circle(
         shape,
-        position,
-        radius):
+        radius,
+        position=0.5):
     """
     Generate a mask whose shape is a circle.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         radius (float): The radius of the circle in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> circle(5, 0.5, 1)
+        >>> circle(5, 1)
         array([[False, False, False, False, False],
                [False, False,  True, False, False],
                [False,  True,  True,  True, False],
                [False, False,  True, False, False],
                [False, False, False, False, False]], dtype=bool)
-        >>> circle(6, 0.5, 2)
+        >>> circle(6, 2)
         array([[False, False, False, False, False, False],
                [False, False,  True,  True, False, False],
                [False,  True,  True,  True,  True, False],
                [False,  True,  True,  True,  True, False],
                [False, False,  True,  True, False, False],
                [False, False, False, False, False, False]], dtype=bool)
-        >>> circle(4, 0, 2)
+        >>> circle(4, 2, 0)
         array([[ True,  True,  True, False],
                [ True,  True, False, False],
                [ True, False, False, False],
                [False, False, False, False]], dtype=bool)
     """
-    return nd_superellipsoid(shape, position, radius, 2.0, 2)
+    return nd_superellipsoid(
+        shape, radius, 2.0, position, 2,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def ellipsis(
         shape,
-        position,
-        semiaxes):
+        semiaxes,
+        position=0.5):
     """
     Generate a mask whose shape is an ellipsis.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> ellipsis(6, 0.5, (2, 3))
+        >>> ellipsis(6, (2, 3))
         array([[False, False, False, False, False, False],
                [False,  True,  True,  True,  True, False],
                [ True,  True,  True,  True,  True,  True],
                [ True,  True,  True,  True,  True,  True],
                [False,  True,  True,  True,  True, False],
                [False, False, False, False, False, False]], dtype=bool)
-        >>> ellipsis(6, 0, (5, 3))
+        >>> ellipsis(6, (5, 3), 0)
         array([[ True,  True,  True,  True, False, False],
                [ True,  True,  True, False, False, False],
                [ True,  True,  True, False, False, False],
@@ -328,28 +342,31 @@ def ellipsis(
                [ True,  True, False, False, False, False],
                [ True, False, False, False, False, False]], dtype=bool)
     """
-    return nd_superellipsoid(shape, position, semiaxes, 2.0, 2)
+    return nd_superellipsoid(
+        shape, semiaxes, 2.0, position, 2,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def cube(
         shape,
-        position,
-        side):
+        side,
+        position=0.5):
     """
     Generate a mask whose shape is a cube.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         side (float): The side of the cube in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> cube(4, 0.5, 2)
+        >>> cube(4, 2)
         array([[[False, False, False, False],
                 [False, False, False, False],
                 [False, False, False, False],
@@ -370,28 +387,31 @@ def cube(
                 [False, False, False, False],
                 [False, False, False, False]]], dtype=bool)
     """
-    return nd_cuboid(shape, position, side / 2.0, 3)
+    return nd_cuboid(
+        shape, side / 2.0, position, 3,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def cuboid(
         shape,
-        position,
-        semisides):
+        semisides,
+        position=0.5):
     """
     Generate a mask whose shape is a cuboid.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semisides (tuple[float]): The semisides of the cuboid in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> cuboid((3, 4, 6), 0.5, (0.5, 2, 1))
+        >>> cuboid((3, 4, 6), (0.5, 2, 1))
         array([[[False, False, False, False, False, False],
                 [False, False, False, False, False, False],
                 [False, False, False, False, False, False],
@@ -407,28 +427,31 @@ def cuboid(
                 [False, False, False, False, False, False],
                 [False, False, False, False, False, False]]], dtype=bool)
     """
-    return nd_cuboid(shape, position, semisides, 3)
+    return nd_cuboid(
+        shape, semisides, position, 3,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def rhomboid(
         shape,
-        position,
-        semidiagonals):
+        semidiagonals,
+        position=0.5):
     """
     Generate a mask whose shape is a rhomboid.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> rhomboid((3, 5, 7), 0.5, (1, 1, 2))
+        >>> rhomboid((3, 5, 7), (1, 1, 2))
         array([[[False, False, False, False, False, False, False],
                 [False, False, False, False, False, False, False],
                 [False, False, False,  True, False, False, False],
@@ -445,30 +468,34 @@ def rhomboid(
                 [False, False, False, False, False, False, False],
                 [False, False, False,  True, False, False, False],
                 [False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False]]], dtype=bool)
+                [False, False, False, False, False, False, False]]],\
+ dtype=bool)
     """
-    return nd_superellipsoid(shape, position, semidiagonals, 1.0, 3)
+    return nd_superellipsoid(
+        shape, semidiagonals, 1.0, position, 3,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def sphere(
         shape,
-        position,
-        radius):
+        radius,
+        position=0.5):
     """
     Generate a mask whose shape is a sphere.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         radius (float): The radius of the sphere in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> sphere(3, 0.5, 1)
+        >>> sphere(3, 1)
         array([[[False, False, False],
                 [False,  True, False],
                 [False, False, False]],
@@ -480,7 +507,7 @@ def sphere(
                [[False, False, False],
                 [False,  True, False],
                 [False, False, False]]], dtype=bool)
-        >>> sphere(5, 0.5, 2)
+        >>> sphere(5, 2)
         array([[[False, False, False, False, False],
                 [False, False, False, False, False],
                 [False, False,  True, False, False],
@@ -511,28 +538,31 @@ def sphere(
                 [False, False, False, False, False],
                 [False, False, False, False, False]]], dtype=bool)
     """
-    return nd_superellipsoid(shape, position, radius, 2.0, 3)
+    return nd_superellipsoid(
+        shape, radius, 2.0, position, 3,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def ellipsoid(
         shape,
-        position,
-        semiaxes):
+        semiaxes,
+        position=0.5):
     """
     Generate a mask whose shape is an ellipsoid.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> ellipsoid(5, 0.5, (1., 2., 1.5))
+        >>> ellipsoid(5, (1., 2., 1.5))
         array([[[False, False, False, False, False],
                 [False, False, False, False, False],
                 [False, False, False, False, False],
@@ -563,32 +593,35 @@ def ellipsoid(
                 [False, False, False, False, False],
                 [False, False, False, False, False]]], dtype=bool)
     """
-    return nd_superellipsoid(shape, position, semiaxes, 2.0, 3)
+    return nd_superellipsoid(
+        shape, semiaxes, 2.0, position, 3,
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def cylinder(
         shape,
-        position,
         height,
         radius,
-        axis=-1):
+        axis=-1,
+        position=0.5):
     """
     Generate a mask whose shape is a cylinder.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
         height (float): The height of the cylinder in px.
         radius (float): The radius of the cylinder in px.
         axis (int): Orientation of the cylinder in the N-dim space.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
 
     Examples:
-        >>> cylinder(4, 0.5, 2, 2, 0)
+        >>> cylinder(4, 2, 2, 0)
         array([[[False, False, False, False],
                 [False, False, False, False],
                 [False, False, False, False],
@@ -617,82 +650,135 @@ def cylinder(
         dim for i, dim in enumerate(shape) if axis % n_dim != i)
     base_position = tuple(
         dim for i, dim in enumerate(position) if axis % n_dim != i)
-    base = circle(base_shape, base_position, radius)
+    base = circle(base_shape, radius, base_position)
     # use n-dim function
-    return nd_prism(base, shape[axis], axis, position[axis], height)
+    return nd_prism(
+        base, shape[axis], axis, height, position[axis],
+        rel_position=True, rel_sizes=False)
 
 
 # ======================================================================
 def nd_cuboid(
         shape,
-        position,
-        semisides,
-        n_dim=None):
+        semisizes=0.5,
+        position=0.5,
+        n_dim=None,
+        rel_position=True,
+        rel_sizes=True):
     """
     Generate a mask whose shape is an N-dim cuboid.
-    The cartesian equations are: sum[abs(x_n/a_n)^inf] < 1.0
+
+    The cartesian equations are:
+
+    .. math::
+        \\sum[\\abs(\\frac{x_n}{a_n})^{\\inf}] < 1.0
+
+    where :math:`n` runs through the dims, :math:`x` are the cartesian
+    coordinate, :math:`a` are the semi-sizes (semi-axes) and
+    :math:`\\inf` is infinity.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
-        semisides (float|tuple[float]): The N-dim cuboid semisides in px.
+        semisizes (float|iterable[float]): The N-dim cuboid semisides sizes.
+            The values interpretation depend on `rel_sizes`.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
         n_dim (int|None): The number of dimensions.
             If None, the number of dims is guessed from the other parameters.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+        rel_sizes (bool): Interpret sizes as relative values.
+            If True, `semisizes` values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.max_iter_len((shape, position, semisides))
+        n_dim = mrt.utils.max_iter_len((shape, position, semisizes))
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
-    semisides = mrt.utils.auto_repeat(semisides, n_dim, check=True)
-    xx = mrt.utils.grid_coord(shape, position, use_int=False)
+    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
+    # fix relative units
+    if not rel_position:
+        position = abs2rel(shape, position)
+    if rel_sizes:
+        semisizes = rel2abs(shape, semisizes)
+    position = mrt.utils.grid_coord(shape, position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
-    for x_i, semiside in zip(xx, semisides):
-        mask *= (np.abs(x_i) <= semiside)
+    for x_i, semisize in zip(position, semisizes):
+        mask *= (np.abs(x_i) <= semisize)
     return mask
 
 
 # ======================================================================
 def nd_superellipsoid(
         shape,
-        position,
-        semiaxes,
-        indexes,
-        n_dim=None):
+        semisizes=0.5,
+        indexes=2,
+        position=0.5,
+        n_dim=None,
+        rel_position=True,
+        rel_sizes=True):
     """
     Generate a mask whose shape is an N-dim superellipsoid.
-    The cartesian equations are: sum[abs(x_n/a_n)^k] < 1.0
+
+    The cartesian equations are:
+
+    .. math::
+        \\sum[\\abs(\\frac{x_n}{a_n})^{k_n}] < 1.0
+
+    where :math:`n` runs through the dims, :math:`x` are the cartesian
+    coordinate, :math:`a` are the semi-sizes (semi-axes) and
+    :math:`k` are the indexes.
+
+    When the index is 2, an ellipsis is generated.
 
     Args:
         shape (int|iterable[int]): The shape of the mask in px.
-        position (float|tuple[float]): Relative position (to the lowest edge).
-            Values are in the range [0, 1].
-        semiaxes (float|tuple[float]): The N-dim superellipsoid axes in px.
+        semisizes (float|iterable[float]): The N-dim superellipsoid axes sizes.
+            The values interpretation depend on `rel_sizes`.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
         indexes (float|tuple[float]): The exponent of the summed terms.
+            If 2, generates n-dim ellipsoids.
         n_dim (int|None): The number of dimensions.
             If None, the number of dims is guessed from the other parameters.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+        rel_sizes (bool): Interpret sizes as relative values.
+            If True, `semisizes` values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.max_iter_len((shape, position, semiaxes, indexes))
-
+        n_dim = mrt.utils.max_iter_len((shape, position, semisizes, indexes))
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
-    semiaxes = mrt.utils.auto_repeat(semiaxes, n_dim, check=True)
+    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
     indexes = mrt.utils.auto_repeat(indexes, n_dim, check=True)
-
-    xx = mrt.utils.grid_coord(shape, position, use_int=False)
+    # get correct position
+    if not rel_position:
+        position = abs2rel(shape, position)
+    if rel_sizes:
+        semisizes = rel2abs(shape, semisizes)
+    position = mrt.utils.grid_coord(shape, position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
-    for x_i, semiaxis, index in zip(xx, semiaxes, indexes):
+    for x_i, semiaxis, index in zip(position, semisizes, indexes):
         mask += (np.abs(x_i / semiaxis) ** index)
     mask = mask <= 1.0
     return mask
@@ -701,21 +787,33 @@ def nd_superellipsoid(
 # ======================================================================
 def nd_prism(
         base,
-        extra_shape,
-        axis,
-        position,
-        height):
+        extra_dim,
+        axis=-1,
+        size=0.5,
+        position=0.5,
+        rel_position=True,
+        rel_sizes=True):
     """
     Generate a mask whose shape is a N-dim prism.
 
     Args:
         base (np.ndarray): Base (N-1)-dim mask to stack as prism.
-        extra_shape (int): Size of the new dimension to be added.
+        extra_dim (int): Size of the new dimension to be added.
         axis (int): Orientation of the prism in the N-dim space.
-        position (float): Relative position (to the lowest edge).
+        size (float): The size of the prism height.
+            The values interpretation depend on `rel_size`.
+        position (float): The relative position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
             This setting only affects the extra shape dimension.
-            Values are in the range [0, 1].
-        height (float): The height of the prism.
+        rel_position (bool): Interpret positions as relative value.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+        rel_sizes (bool): Interpret sizes as relative value.
+            If True, `size` values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
@@ -724,20 +822,74 @@ def nd_prism(
     if axis > n_dim:
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
-    x_0 = mrt.utils.grid_coord((extra_shape,), (position,), use_int=False)[0]
-    # create the extra mask (height)
-    extra_mask = np.abs(x_0) <= (height / 2.0)
+    # get correct position
+    if not rel_position:
+        position = abs2rel((extra_dim,), position)
+    if rel_sizes:
+        size = rel2abs((extra_dim,), size)
+    position = mrt.utils.grid_coord(
+            (extra_dim,), (position,), use_int=False)[0]
+    extra_mask = np.abs(position) <= (size / 2.0)
     # calculate mask shape
     shape = (
-        base.shape[:axis] + (extra_shape,) + base.shape[axis:])
+        base.shape[:axis] + (extra_dim,) + base.shape[axis:])
     # create indefinite prism
     mask = np.zeros(shape, dtype=bool)
-    for i in range(extra_shape):
+    for i in range(extra_dim):
         if extra_mask[i]:
             index = [slice(None)] * n_dim
             index[axis] = i
             mask[tuple(index)] = base
     return mask
+
+
+# ======================================================================
+def extrema_to_semisizes_position(minima, maxima, num=None):
+    """
+
+    Args:
+        minima (float|iterable[float]): The minimum extrema.
+            These are the lower bound of the object.
+            If both `minima` and `maxima` are iterable, their length must
+            match.
+        maxima (float|iterable[float]): The maximum extrema.
+            These are the upper bound of the object.
+            If both `minima` and `maxima` are iterable, their length must
+            match.
+        num (int|None): The number of extrema.
+            If None, it is guessed from the `minima` and/or `maxima`.
+            If int, must match the length of `minima` and/or `maxima`
+            (if they are iterable).
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - semisizes (iterable[float]): The N-dim cuboid semisides sizes.
+             - position (iterable[float]): The position of the center.
+               Values are relative to the lowest edge.
+
+    Examples:
+        >>> extrema_to_semisizes_position(0.1, 0.5)
+        ([0.2], [0.3])
+        >>> extrema_to_semisizes_position(0.2, 0.5)
+        ([0.15], [0.35])
+        >>> extrema_to_semisizes_position(0.2, 0.5, 2)
+        ([0.15, 0.15], [0.35, 0.35])
+        >>> extrema_to_semisizes_position((0.2, 0.1), 0.5)
+        ([0.15, 0.2], [0.35, 0.3])
+        >>> extrema_to_semisizes_position((0.1, 0.2), (0.9, 0.5))
+        ([0.4, 0.15], [0.5, 0.35])
+    """
+    if not num:
+        num = mrt.utils.max_iter_len((minima, maxima, num))
+    # check compatibility of given parameters
+    minima = mrt.utils.auto_repeat(minima, num, check=True)
+    maxima = mrt.utils.auto_repeat(maxima, num, check=True)
+    semisizes, position = [], []
+    for min_val, max_val in zip(minima, maxima):
+        semisizes.append((max_val - min_val) / 2.0)
+        position.append((max_val + min_val) / 2.0)
+    return semisizes, position
 
 
 # ======================================================================
@@ -825,7 +977,8 @@ def nd_gradient(
     """
     num_gens = len(gen_ranges)
     generators = mrt.utils.auto_repeat(generators, num_gens, check=True)
-    generators_kws = mrt.utils.auto_repeat(generators_kws, num_gens, check=True)
+    generators_kws = mrt.utils.auto_repeat(generators_kws, num_gens,
+                                           check=True)
 
     base_shape = tuple(num for start, stop, num in gen_ranges)
     shape = base_shape + (num_gens,)
@@ -1020,7 +1173,8 @@ def zoom_prepare(
     Prepare the zoom and shape tuples to allow for non-homogeneous shapes.
 
     Args:
-        zoom_factors (float|tuple[float]): The zoom factors for each directions.
+        zoom_factors (float|tuple[float]): The zoom factors for each
+        directions.
         shape (int|iterable[int]): The shape of the array to operate with.
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
@@ -1148,7 +1302,8 @@ def resample(
 
     This assumes linearity in the down-sampled dimensions.
     This means that the signal from a larger sample is proportional to the
-    (weighted) sum of the signals from smaller samples with overlapping support.
+    (weighted) sum of the signals from smaller samples with overlapping
+    support.
 
     Args:
         arr (np.ndarray): The input array.
@@ -1356,7 +1511,7 @@ def affine_transform(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(linear, origin + shift)
     arr = sp.ndimage.affine_transform(arr, linear, offset, *args, **kwargs)
     return arr
@@ -1613,7 +1768,7 @@ def auto_rotate(
         kwargs = {}
     rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = origin - np.dot(rot_matrix, origin)
     rotated = sp.ndimage.affine_transform(
         arr, rot_matrix, offset, *args, **kwargs)
@@ -1668,7 +1823,7 @@ def auto_shift(
     if kwargs is None:
         kwargs = {}
     if origin is None:
-        origin = pos_rel2abs(arr.shape, (0.5,) * arr.ndim)
+        origin = rel2abs(arr.shape, (0.5,) * arr.ndim)
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     offset = com - origin
     shifted = sp.ndimage.affine_transform(
@@ -1730,7 +1885,7 @@ def realign(
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
     rot_matrix = rotation_axes(arr, labels, index, True)
     if origin is None:
-        origin = np.array(pos_rel2abs(arr.shape, (0.5,) * arr.ndim))
+        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
     offset = com - np.dot(rot_matrix, origin)
     aligned = sp.ndimage.affine_transform(
         arr, rot_matrix, offset, *args, **kwargs)
