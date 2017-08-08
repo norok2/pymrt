@@ -31,10 +31,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-
-
-# import pymrt.utils
-# import pymrt.computation as pmc
+import pymrt.segmentation
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
@@ -60,7 +57,7 @@ def sum_of_squares(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    return arr
+    return arr + 1
 
 
 # ======================================================================
@@ -151,8 +148,8 @@ def block_adaptive(
         for j in range(num_coils):
             coil_cov[..., i, j] = arr[..., i] * arr[..., j].conj()
 
-    # if block is not 0, smooth the coil covariance
-    if block > 0:
+    # if block is larger than 1, smooth the coil covariance
+    if block > 1:
         for i in range(num_coils):
             for j in range(num_coils):
                 coil_cov[..., i, j] = mrt.utils.filter_cx(
@@ -278,6 +275,97 @@ def block_adaptive_iter(
                 break
     sens = np.swapaxes(sens, -1, coil_axis)
     return sens
+
+
+# ======================================================================
+def compress_svd(
+        arr,
+        k_svd='elbow',
+        coil_axis=-1):
+    """
+    Compress the coil data to the SVD principal components.
+
+    This is useful both as a denoise method and for reducing the complexity
+    of the problem and the memory usage.
+
+    Args:
+        arr (np.ndarray): The input array.
+        k_svd (int|float|str): The number of SVD principal components.
+            If int, the exact number is given. It must not exceed the size
+            of the `coil_axis` dimension.
+            If float, the number is interpreted as relative to the size of
+            the `coil_axis` dimension, and values must be in the
+            [0.1, 1] interval.
+            If str, the number is automatically estimated from the magnitude
+            of the eigenvalues using a specific method.
+            Avaliable methods include:
+             - 'elbow': use `utils.marginal_sep_elbow()`.
+             - 'quad': use `utils.marginal_sep_quad()`.
+             - 'quad_weight': use `utils.marginal_sep_quad_weight()`.
+             - 'quad_inv_weight': use `utils.marginal_sep_quad_inv_weight()`.
+             - 'otsu': use `segmentation.threshold_otsu()`.
+             - 'X%': set the threshold at 'X' percent of the largest eigenval.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+    """
+    coil_axis = coil_axis % arr.ndim
+    shape = arr.shape
+    num_coils = shape[coil_axis]
+    arr = np.swapaxes(arr, coil_axis, -1)
+    base_shape = arr.shape[:-1]
+
+    arr = arr.reshape((-1, num_coils))
+    eigvals, right_eigvects = sp.linalg.eig(
+        np.dot(arr.conj().transpose(), arr))
+    eig_sort = np.argsort(eigvals)[::-1]
+
+    if isinstance(k_svd, int):
+        assert (0 < k_svd <= num_coils)
+    elif isinstance(k_svd, float):
+        k_svd = int(num_coils * min(max(k_svd, 0.1), 1.0))
+    elif isinstance(k_svd, str):
+        eig_sorted = eigvals[eig_sort] / np.max(eigvals)
+        k_svd = k_svd.lower()
+        if k_svd == 'elbow':
+            k_svd = mrt.utils.marginal_sep_elbow(
+                np.abs(eig_sorted / eig_sorted[0]))
+        elif k_svd == 'quad':
+            k_svd = mrt.utils.marginal_sep_quad(
+                np.abs(eig_sorted / eig_sorted[0]))
+        elif k_svd == 'quad_weight':
+            k_svd = mrt.utils.marginal_sep_quad_weight(
+                np.abs(eig_sorted / eig_sorted[0]))
+        elif k_svd == 'quad_inv_weight':
+            k_svd = mrt.utils.marginal_sep_quad_inv_weight(
+                np.abs(eig_sorted / eig_sorted[0]))
+        elif k_svd == 'otsu':
+            k_svd = mrt.segmentation.threshold_otsu(eigvals)
+            k_svd = np.where(eig_sorted < k_svd)[0]
+            k_svd = k_svd[0] if len(k_svd) else num_coils
+        elif k_svd.endswith('%') and (100.0 > float(k_svd[:-1]) >= 0.0):
+            k_svd = np.abs(eig_sorted[0]) * float(k_svd[:-1]) / 100.0
+            k_svd = np.where(np.abs(eig_sorted) < k_svd)[0]
+            k_svd = k_svd[0] if len(k_svd) else num_coils
+        else:
+            warnings.warn(
+                '`{}`: unknown method for `k_svd` determination'.format(k_svd))
+            k_svd = num_coils
+        if not 0 < k_svd <= num_coils:
+            k_svd = num_coils
+
+    print(sorted(np.abs(eigvals) / np.max(np.abs(eigvals)), reverse=True))
+    print(right_eigvects.shape)
+    print(k_svd)
+    quit()
+
+    arr = np.dot(arr[:, :], right_eigvects[:, eig_sort][:, :k_svd])
+
+    arr = arr.reshape(base_shape + (k_svd,))
+    arr = np.swapaxes(arr, -1, coil_axis)
+    return arr
 
 
 # ======================================================================
@@ -463,14 +551,60 @@ def ref_adaptive(
 def sensitivity(
         arr,
         method='block_adaptive_iter',
-        coil_axis=-1):
+        coil_axis=-1,
+        split_axis=0):
+    """
+
+    Args:
+        arr:
+        method (str|None): The coil sensitivity method.
+            It None, uses
+            Available options are:
+             - 'sum_of_squares': use `sum_of_squares()`;
+             - 'adaptive': use `adaptive()`;
+             - 'block_adaptive': use `block_adaptive()`;
+             - 'block_adaptive_iter': use `block_adaptive_iter()`;
+             - 'virtual_reference': use `virtual_reference()`.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        split_axis (int|None): The split dimension.
+            If int, indicates the dimension of `arr` along which the
+            algorithm is sequentially applied, to reduce memory usage.
+            If None, the algorithm is applied to the whole `arr` at once.
+
+    Returns:
+
+    """
+    methods = (
+        'sum_of_squares', 'adaptive', 'block_adaptive', 'block_adaptive_iter',
+        'virtual_reference')
     if method:
         method = method.lower()
-    methods = (
-        'sum_of_squares', 'block_adaptive_iter', 'adaptive', 'block_adaptive',
-        'virtual_reference')
+    else:
+        method = 'sum_of_squares'
     if method in methods:
-        sens = exec(method)(arr, coil_axis=coil_axis)
+        if method == 'sum_of_squares':
+            method = sum_of_squares
+        elif method == 'adaptive':
+            method = adaptive
+        elif method == 'block_adaptive':
+            method = block_adaptive
+        elif method == 'block_adaptive_iter':
+            method = block_adaptive_iter
+        elif method == 'virtual_reference':
+            method = virtual_reference
+        if split_axis is not None:
+            shape = arr.shape
+            sens = np.zeros(shape, dtype=complex)
+            arr = np.swapaxes(arr, split_axis, 0)
+            sens = np.swapaxes(sens, split_axis, 0)
+            for i in range(shape[split_axis]):
+                print(i)
+                sens[i, ...] = method(arr[i, ...], coil_axis=coil_axis)
+            arr = np.swapaxes(arr, 0, split_axis)
+            sens = np.swapaxes(sens, 0, split_axis)
+        else:
+            sens = method(arr, coil_axis=coil_axis)
     else:
         warnings.warn(
             'Sensitivity estimation method `{}` not known'.format(method) +
@@ -483,32 +617,75 @@ def sensitivity(
 def combine(
         arr,
         sens,
+        k_svd='quad_weight',
         norm=False,
-        coil_axis=-1):
+        coil_axis=-1,
+        split_axis=0):
     """
     Calculate the coil combination array from multiple coil elements.
 
-    The coil sensitivity is specified as parameter.
+    The coil sensitivity is specified as a parameter.
+    An optional SVD preprocessing step can be used to reduce computational
+    complexity and improve the SNR.
 
     Args:
         arr (np.ndarray): The input array.
-        sens (np.ndarray|str): The coil sensitivity.
+        sens (np.ndarray|str|None): The coil sensitivity.
             If `np.ndarray`, its shape must match with `arr`.
             If `str`, the sensitivity is calculated using `sensitivity()`.
+            if None, the default method of `sensitivity()` is used.
+        k_svd (int|float|str|None): The number of SVD principal components.
+            If int, float or str, see `compress_svd()` for more information.
+            If None, no SVD preprocessing is performed.
         norm (bool): Normalize using coil sensitivity magnitude.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        split_axis (int|None): The split dimension.
+            If int, indicates the dimension of `arr` along which the
+            algorithm is sequentially applied, to reduce memory usage.
+            If None, the algorithm is applied to the whole `arr` at once.
 
     Returns:
         arr (np.ndarray): The combined array.
     """
+    if k_svd is not None:
+        arr = compress_svd(arr, k_svd, coil_axis)
+
+    if sens is None:
+        sens = 'sum_of_squares'
     if isinstance(sens, str):
-        sens = sensitivity(arr, sens)
+        sens = sensitivity(arr, sens, coil_axis, split_axis)
     assert (arr.shape == sens.shape)
-    arr = np.sum(sens.conj() * arr, coil_axis)
+
+    if split_axis is not None:
+        shape = arr.shape
+        cx_arr = np.zeros(
+            tuple(d for i, d in enumerate(shape) if i != coil_axis % arr.ndim),
+            dtype=complex)
+        cx_arr = np.swapaxes(cx_arr, split_axis, 0)
+        arr = np.swapaxes(arr, split_axis, 0)
+        sens = np.swapaxes(sens, split_axis, 0)
+
+        split_coil_axis = coil_axis % arr.ndim - 1
+        for i in range(shape[split_axis]):
+            cx_arr[i, ...] = np.sum(
+                sens[i, ...].conj() * arr[i, ...], split_coil_axis)
+        cx_arr = np.swapaxes(cx_arr, 0, split_axis)
+        arr = np.swapaxes(arr, 0, split_axis)
+        sens = np.swapaxes(sens, 0, split_axis)
+    else:
+        cx_arr = np.sum(sens.conj() * arr, coil_axis)
+
     if norm:
         epsilon = np.finfo(np.float).eps
-        arr /= (np.sum(np.abs(sens) ** 2, coil_axis) + epsilon)
+        cx_arr /= (np.sum(np.abs(sens) ** 2, coil_axis) + epsilon)
+    del sens
+
+    if not np.iscomplex(cx_arr.all()):
+        print('Extra phase')
+        arr = cx_arr * np.exp(1j * np.mean(np.angle(arr), coil_axis))
+    else:
+        arr = cx_arr
     return arr
 
 
