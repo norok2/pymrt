@@ -108,7 +108,10 @@ def double_rare(
 
     where :math:`s_1` is `arr1` acquired with flip angle :math:`\\alpha`,
     :math:`s_2` is `arr2` acquired with flip angle :math:`2\\alpha`,
-    and  :math:`r = \\frac{s_2}{s_1}`
+    and  :math:`r = \\frac{s_2}{s_1}`.
+
+    The sign of the equation is `+` if the right-hand side expression is <= 1,
+    Otherwise, the `-` sign must be chosen.
 
     Assumes long :math:`T_R` regime: :math:`T_R > 5 * T_1`.
 
@@ -121,7 +124,6 @@ def double_rare(
             Contains the signal with flip angle `2 * fa`.
         fa (int|float): The flip angle in deg.
             This is the flip angle of the first acquisition.
-
         sign (int): Select one of the two solutions for the equations.
             Must be either +1 or -1.
         prepare (callable|None): Input array preparation.
@@ -153,6 +155,8 @@ def double_rare(
     with np.errstate(divide='ignore', invalid='ignore'):
         eta_fa_arr = arr2 / arr1
         eta_fa_arr = (eta_fa_arr + sign * np.sqrt(eta_fa_arr ** 2 + 8)) / 4
+        # eta_fa_arr_ = (eta_fa_arr - sign * np.sqrt(eta_fa_arr ** 2 + 8)) / 4
+        # eta_fa_arr[eta_fa_arr > 1] = eta_fa_arr_[eta_fa_arr > 1]
 
     eta_fa_arr = np.real(np.arccos(eta_fa_arr))
     return eta_fa_arr / fa
