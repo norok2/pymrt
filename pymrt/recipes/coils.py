@@ -64,14 +64,12 @@ def sum_of_squares(
 # ======================================================================
 def smooth_sum_of_squares(
         arr,
-        block=1,
+        block=3,
         coil_axis=-1):
     """
     Coil sensitivity for the 'smooth_sum_of_squares' combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    Use the smoothed input as coil sensitivity.
 
     Args:
         arr (np.ndarray): The input array.
@@ -88,8 +86,16 @@ def smooth_sum_of_squares(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    return mrt.utils.filter_cx(
-        arr, sp.ndimage.gaussian_filter, (), dict(sigma=block))
+    coil_axis = coil_axis % arr.ndim
+    arr = np.swapaxes(arr, coil_axis, -1)
+    if isinstance(block, int):
+        block = (block,) * (arr.ndim - 1) + (0,)
+    else:
+        assert (len(block) + 1 == arr.ndim)
+    arr = mrt.utils.filter_cx(
+        arr, sp.ndimage.uniform_filter, (), dict(size=block))
+    arr = np.swapaxes(arr, -1, coil_axis)
+    return arr
 
 
 # ======================================================================
@@ -273,7 +279,7 @@ def block_adaptive_iter(
     arr = np.swapaxes(arr, coil_axis, -1)
     base_shape = arr.shape[:-1]
     if isinstance(block, int):
-        block = (block,) * (arr.ndim - 1) + (1,)
+        block = (block,) * (arr.ndim - 1) + (0,)
     else:
         assert (len(block) + 1 == arr.ndim)
 
