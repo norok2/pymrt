@@ -27,6 +27,9 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
+# import scipy.sparse  # SciPy: Sparse Matrices
+import scipy.linalg  # Scipy: Linear Algebra
+
 
 # :: Local Imports
 import pymrt as mrt
@@ -101,8 +104,8 @@ def smooth_sum_of_squares(
 # ======================================================================
 def adaptive(
         arr,
-        max_iter=8,
-        threshold=1e-6,
+        max_iter=16,
+        threshold=1e-7,
         coil_axis=-1):
     """
     Coil sensitivity for the 'adaptive' combination method.
@@ -136,8 +139,8 @@ def adaptive(
 def block_adaptive(
         arr,
         block=5,
-        max_iter=8,
-        threshold=1e-6,
+        max_iter=16,
+        threshold=1e-7,
         coil_axis=-1):
     """
     Coil sensitivity for the 'block_adaptive' combination method.
@@ -228,7 +231,7 @@ def block_adaptive_iter(
         arr,
         block=5,
         max_iter=16,
-        threshold=1e-7,
+        threshold=1e-8,
         coil_axis=-1):
     """
     Coil sensitivity for the 'block_adaptive_iter' combination method.
@@ -338,7 +341,7 @@ def compress_svd(
             [0.1, 1] interval.
             If str, the number is automatically estimated from the magnitude
             of the eigenvalues using a specific method.
-            Avaliable methods include:
+            Available methods include:
              - 'elbow': use `utils.marginal_sep_elbow()`.
              - 'quad': use `utils.marginal_sep_quad()`.
              - 'quad_weight': use `utils.marginal_sep_quad_weight()`.
@@ -358,8 +361,17 @@ def compress_svd(
     base_shape = arr.shape[:-1]
 
     arr = arr.reshape((-1, num_coils))
-    eigvals, right_eigvects = sp.linalg.eig(
-        np.dot(arr.conj().transpose(), arr))
+
+    # left_eigvects, eigvals, right_eigvects = sp.linalg.svd(
+    #         arr, full_matrices=False, compute_uv=True)
+
+    # : memory-friendly version of:
+    #   square_arr = np.dot(arr.conj().transpose(), arr)
+    square_arr = np.zeros((num_coils, num_coils), dtype=complex)
+    for i in range(num_coils):
+        square_arr[i, :] = np.dot(arr[:, i].conj(), arr)
+
+    eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(eigvals)[::-1]
 
     if isinstance(k_svd, int):
@@ -396,7 +408,12 @@ def compress_svd(
         if not 0 < k_svd <= num_coils:
             k_svd = num_coils
 
-    arr = np.dot(arr[:, :], right_eigvects[:, eig_sort][:, :k_svd])
+    # arr = np.dot(
+    #     left_eigvects[eig_sort, :],
+    #     np.dot(
+    #         np.diag(eigvals[eig_sort]),
+    #         right_eigvects[:, eig_sort][:, :k_svd]))
+    arr = np.dot(arr, right_eigvects[:, eig_sort][:, :k_svd])
 
     arr = arr.reshape(base_shape + (k_svd,))
     arr = np.swapaxes(arr, -1, coil_axis)
@@ -586,6 +603,7 @@ def ref_adaptive(
 def sensitivity(
         arr,
         method='block_adaptive_iter',
+        method_kws=None,
         coil_axis=-1,
         split_axis=0):
     """
@@ -593,7 +611,7 @@ def sensitivity(
     Args:
         arr:
         method (str|None): The coil sensitivity method.
-            It None, uses
+            Is str, uses the specified method.
             Available options are:
              - 'sum_of_squares': use `sum_of_squares()`;
              - 'smooth_sum_of_squares': use `smooth_sum_of_squares()`
@@ -601,8 +619,11 @@ def sensitivity(
              - 'block_adaptive': use `block_adaptive()`;
              - 'block_adaptive_iter': use `block_adaptive_iter()`;
              - 'virtual_reference': use `virtual_reference()`.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
+            If None, only `coil_axis` is passed to method.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+            This is passed to `method`.
         split_axis (int|None): The split dimension.
             If int, indicates the dimension of `arr` along which the
             algorithm is sequentially applied, to reduce memory usage.
@@ -615,10 +636,9 @@ def sensitivity(
         'sum_of_squares', 'smooth_sum_of_squares',
         'adaptive', 'block_adaptive', 'block_adaptive_iter',
         'virtual_reference')
-    if method:
-        method = method.lower()
-    else:
-        method = 'sum_of_squares'
+    method = method.lower() if method else 'block_adaptive_iter'
+    if method_kws is None:
+        method_kws = dict()
     if method in methods:
         if method == 'sum_of_squares':
             method = sum_of_squares
@@ -638,16 +658,17 @@ def sensitivity(
             arr = np.swapaxes(arr, split_axis, 0)
             sens = np.swapaxes(sens, split_axis, 0)
             for i in range(shape[split_axis]):
-                sens[i, ...] = method(arr[i, ...], coil_axis=coil_axis)
+                sens[i, ...] = method(
+                    arr[i, ...], coil_axis=coil_axis, **method_kws)
             arr = np.swapaxes(arr, 0, split_axis)
             sens = np.swapaxes(sens, 0, split_axis)
         else:
-            sens = method(arr, coil_axis=coil_axis)
+            sens = method(arr, coil_axis=coil_axis, **method_kws)
     else:
         warnings.warn(
             'Sensitivity estimation method `{}` not known'.format(method) +
             ' Using default.')
-        sens = sensitivity(arr, coil_axis=coil_axis)
+        sens = sensitivity(arr, coil_axis=coil_axis, **method_kws)
     return sens
 
 
@@ -690,9 +711,9 @@ def combine(
         arr = compress_svd(arr, k_svd, coil_axis)
 
     if sens is None:
-        sens = 'sum_of_squares'
+        sens = 'block_adaptive_iter'
     if isinstance(sens, str):
-        sens = sensitivity(arr, sens, coil_axis, split_axis)
+        sens = sensitivity(arr, sens, None, coil_axis, split_axis)
     assert (arr.shape == sens.shape)
 
     if split_axis is not None:

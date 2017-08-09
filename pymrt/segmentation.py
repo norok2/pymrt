@@ -63,194 +63,6 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def threshold_optim(arr, interval=None):
-    """
-    Calculate the optimal background threshold.
-
-    Assuming that the background is the first peak of the histogram, the
-    background threshold is estimated as the minimum of:
-     - twice the first peak minus half the minumum value of the array.
-     - the first inverted peak after the first peak.
-
-    Args:
-        arr (np.ndarray): The input array.
-
-    Returns:
-        threshold (float): The threshold value.
-    """
-    hist_peaks = np.array(threshold_hist_peaks(arr))
-    inv_hist_peaks = np.array(threshold_inv_hist_peaks(arr))
-    threshold = min(
-        inv_hist_peaks[inv_hist_peaks > hist_peaks[0]][0],
-        2 * hist_peaks[0] - np.min(arr) / 2)
-    return threshold
-
-
-# ======================================================================
-def threshold_rayleigh(
-        arr,
-        num=64,
-        chunks=16,
-        tol=1e-1):
-    """
-    Calculate the optimal background threshold for Rayleigh noise.
-
-    Rayleigh noise is a special case of Rician noise generating from
-    zero-mean Gaussian noise.
-
-    Uses the relationship between the mean :math:`\\mu_n` and the standard
-    deviation :math:`\\sigma_n` of the distribution from the standard
-    deviation :math:`\\sigma_G` of the generating Gaussian distribution:
-
-    .. math::
-        \\frac{\\mu_n}{\\sigma_n} =
-        \\frac{\\sigma_G\\sqrt{\\frac{\\pi}{2}}}
-        {\\sigma_G\\sqrt{\\frac{4 - \\pi}{2}}} =
-        \\sqrt{\\frac{\\pi}{4 - \\pi}}
-
-    Args:
-        arr (np.ndarray): The input array.
-        num (int): The number of value levels.
-            This specifies the number of value levels in each chunk.
-        chunks (int): The number of chunks for value levels.
-            Divide the values range into the specified number of chunks
-            and search for the the matching threshold sequentially.
-            If the threshold is found in an earlier chunk, subsequent chunks
-            do not need to be evaluated.
-        tol (float): The tolerance for closeness.
-
-    Returns:
-        threshold (float): The threshold value.
-    """
-    mu_sigma_ratio = np.sqrt(np.pi / (4 - np.pi))
-    min_val = np.min(arr)
-    max_val = np.max(arr)
-    threshold = min_val
-    found = False
-    diff = 0
-    for j in range(chunks):
-        min_chunk = min_val + (max_val - min_val) * j / chunks
-        max_chunk = min_val + (max_val - min_val) * (j + 1) / chunks
-        for i, threshold in enumerate(np.linspace(min_chunk, max_chunk), num):
-            mask = arr <= threshold
-            last_diff = diff
-            n_arr = arr[mask]
-            mu_n, sigma_n = np.nanmean(n_arr), np.nanstd(n_arr)
-            if sigma_n > 0:
-                diff = (mu_n / sigma_n) - mu_sigma_ratio
-                if diff * last_diff < 0 or np.abs(diff) < tol:
-                    found = True
-                    break
-        if found:
-            break
-    return threshold
-
-
-# ======================================================================
-def threshold_elbow_cum_hist(
-        arr,
-        on_error=0.0,
-        reverse=False):
-    """
-    Find the item that separates
-
-    Args:
-        arr (np.ndarray):
-
-    Returns:
-
-    """
-    raise NotImplementedError
-
-
-# ======================================================================
-def threshold_otsu(
-        arr,
-        bins='sqrt'):
-    """
-    Optimal foreground/background threshold value based on Otsu's method.
-
-    Args:
-        arr (np.ndrarray): The input array.
-        bins (int|str|None): Number of bins used to calculate histogram.
-            If str or None, this is automatically calculated from the data
-            using `utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `utils.auto_bin()` method if set to None.
-
-    Returns:
-        threshold (float): The threshold value.
-
-    Raises:
-        ValueError: If `arr` only contains a single value.
-
-    Examples:
-        >>> num = 1000
-        >>> x = np.linspace(-10, 10, num)
-        >>> arr = np.sin(x) ** 2
-        >>> threshold = threshold_otsu(arr)
-        >>> round(threshold, 1)
-        0.5
-
-    References:
-        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
-          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
-          62–66. doi:10.1109/TSMC.1979.4310076
-    """
-    # todo: extend to multiple classes
-    # Check if flat-valued array
-    if arr.min() == arr.max():
-        raise ValueError('The array contains a single value.')
-
-    if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
-    elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
-
-    hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
-    hist = hist.astype(float)
-
-    # class probabilities for all possible thresholds
-    weight1 = np.cumsum(hist)
-    weight2 = np.cumsum(hist[::-1])[::-1]
-    # class means for all possible thresholds
-    mean1 = np.cumsum(hist * bin_centers) / weight1
-    mean2 = (np.cumsum((hist * bin_centers)[::-1]) / weight2[::-1])[::-1]
-    # calculate the variance for all possible thresholds
-    variance12 = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
-
-    i_max_variance = np.argmax(variance12)
-    threshold = bin_centers[:-1][i_max_variance]
-    return threshold
-
-
-# ======================================================================
-def threshold_otsu_bidim(
-        arr,
-        bins='sqrt'):
-    """
-    Optimal foreground/background threshold value based on 2D Otsu's method.
-
-    Args:
-        arr (np.ndrarray): The input array.
-        bins (int|str|None): Number of bins used to calculate histogram.
-            If str or None, this is automatically calculated from the data
-            using `utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `utils.auto_bin()` method if set to None.
-
-    Returns:
-        threshold (float): The threshold value.
-
-    References:
-        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
-          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
-          62–66. doi:10.1109/TSMC.1979.4310076
-    """
-    # todo: extend to multiple classes
-    raise NotImplementedError
-
-
-# ======================================================================
 def threshold_relative(
         arr,
         values=0.5):
@@ -329,6 +141,93 @@ def threshold_mean_std(
         mean * mean_step + std * std_step
         for mean_step, std_step in itertools.product(mean_steps, std_steps)
         if min_val <= mean * mean_step + std * std_step <= max_val)
+
+
+# ======================================================================
+def threshold_otsu(
+        arr,
+        bins='sqrt'):
+    """
+    Optimal foreground/background threshold value based on Otsu's method.
+
+    Args:
+        arr (np.ndrarray): The input array.
+        bins (int|str|None): Number of bins used to calculate histogram.
+            If str or None, this is automatically calculated from the data
+            using `utils.auto_bin()` with `method` set to `bins` if str,
+            and using the default `utils.auto_bin()` method if set to None.
+
+    Returns:
+        threshold (float): The threshold value.
+
+    Raises:
+        ValueError: If `arr` only contains a single value.
+
+    Examples:
+        >>> num = 1000
+        >>> x = np.linspace(-10, 10, num)
+        >>> arr = np.sin(x) ** 2
+        >>> threshold = threshold_otsu(arr)
+        >>> round(threshold, 1)
+        0.5
+
+    References:
+        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
+          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
+          62–66. doi:10.1109/TSMC.1979.4310076
+    """
+    # todo: extend to multiple classes
+    # Check if flat-valued array
+    if arr.min() == arr.max():
+        raise ValueError('The array contains a single value.')
+
+    if isinstance(bins, str):
+        bins = mrt.utils.auto_bin(arr, bins)
+    elif bins is None:
+        bins = mrt.utils.auto_bin(arr)
+
+    hist, bin_edges = np.histogram(arr, bins)
+    bin_centers = mrt.utils.midval(bin_edges)
+    hist = hist.astype(float)
+
+    # class probabilities for all possible thresholds
+    weight1 = np.cumsum(hist)
+    weight2 = np.cumsum(hist[::-1])[::-1]
+    # class means for all possible thresholds
+    mean1 = np.cumsum(hist * bin_centers) / weight1
+    mean2 = (np.cumsum((hist * bin_centers)[::-1]) / weight2[::-1])[::-1]
+    # calculate the variance for all possible thresholds
+    variance12 = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
+
+    i_max_variance = np.argmax(variance12)
+    threshold = bin_centers[:-1][i_max_variance]
+    return threshold
+
+
+# ======================================================================
+def threshold_otsu2(
+        arr,
+        bins='sqrt'):
+    """
+    Optimal foreground/background threshold value based on 2D Otsu's method.
+
+    Args:
+        arr (np.ndrarray): The input array.
+        bins (int|str|None): Number of bins used to calculate histogram.
+            If str or None, this is automatically calculated from the data
+            using `utils.auto_bin()` with `method` set to `bins` if str,
+            and using the default `utils.auto_bin()` method if set to None.
+
+    Returns:
+        threshold (float): The threshold value.
+
+    References:
+        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
+          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
+          62–66. doi:10.1109/TSMC.1979.4310076
+    """
+    # todo: extend to multiple classes
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -507,9 +406,110 @@ def threshold_inv_hist_peak_edges(
 
 
 # ======================================================================
-def threshold_twice_first_peak(arr, interval=None):
+def threshold_twice_first_peak(arr):
     """
     Calculate the background threshold from a histogram peaks analysis.
+
+    Assuming that the background is the first peak of the histogram, the
+    background threshold is estimated as the minimum of:
+     - twice the first peak minus half the minumum value of the array.
+     - the first inverted peak after the first peak.
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        threshold (float): The threshold value.
+    """
+    hist_peaks = np.array(threshold_hist_peaks(arr))
+    inv_hist_peaks = np.array(threshold_inv_hist_peaks(arr))
+    threshold = min(
+        inv_hist_peaks[inv_hist_peaks > hist_peaks[0]][0],
+        2 * hist_peaks[0] - np.min(arr) / 2)
+    return threshold
+
+
+# ======================================================================
+def threshold_cum_hist_elbow(
+        arr,
+        on_error=0.0,
+        reverse=False):
+    """
+    Find the item that separates
+
+    Args:
+        arr (np.ndarray):
+
+    Returns:
+
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def threshold_rayleigh(
+        arr,
+        num=64,
+        chunks=16,
+        tol=1e-1):
+    """
+    Calculate the optimal background threshold for Rayleigh noise.
+
+    Rayleigh noise is a special case of Rician noise generating from
+    zero-mean Gaussian noise.
+
+    Uses the relationship between the mean :math:`\\mu_n` and the standard
+    deviation :math:`\\sigma_n` of the distribution from the standard
+    deviation :math:`\\sigma_G` of the generating Gaussian distribution:
+
+    .. math::
+        \\frac{\\mu_n}{\\sigma_n} =
+        \\frac{\\sigma_G\\sqrt{\\frac{\\pi}{2}}}
+        {\\sigma_G\\sqrt{\\frac{4 - \\pi}{2}}} =
+        \\sqrt{\\frac{\\pi}{4 - \\pi}}
+
+    Args:
+        arr (np.ndarray): The input array.
+        num (int): The number of value levels.
+            This specifies the number of value levels in each chunk.
+        chunks (int): The number of chunks for value levels.
+            Divide the values range into the specified number of chunks
+            and search for the the matching threshold sequentially.
+            If the threshold is found in an earlier chunk, subsequent chunks
+            do not need to be evaluated.
+        tol (float): The tolerance for closeness.
+
+    Returns:
+        threshold (float): The threshold value.
+    """
+    mu_sigma_ratio = np.sqrt(np.pi / (4 - np.pi))
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    threshold = min_val
+    found = False
+    diff = 0
+    for j in range(chunks):
+        min_chunk = min_val + (max_val - min_val) * j / chunks
+        max_chunk = min_val + (max_val - min_val) * (j + 1) / chunks
+        for i, threshold in enumerate(np.linspace(min_chunk, max_chunk), num):
+            mask = arr <= threshold
+            last_diff = diff
+            n_arr = arr[mask]
+            mu_n, sigma_n = np.nanmean(n_arr), np.nanstd(n_arr)
+            if sigma_n > 0:
+                diff = (mu_n / sigma_n) - mu_sigma_ratio
+                if diff * last_diff < 0 or np.abs(diff) < tol:
+                    found = True
+                    break
+        if found:
+            break
+    return threshold
+
+
+# ======================================================================
+def threshold_optim(arr, interval=None):
+    """
+    Calculate the optimal background threshold.
 
     Assuming that the background is the first peak of the histogram, the
     background threshold is estimated as the minimum of:
@@ -541,16 +541,20 @@ def auto_thresholds(
     Args:
         arr (np.ndarray): The input array.
         method (str): The threshold method.
-            Available methods:
-             - 'bg_peaks': a histogram foreground/background separation method.
-             - 'otsu': the Otsu foreground/background separation method.
-             - 'relative': thresholds values relative to the array range.
-             - 'percentile': thresholds values from percentile distribution.
-             - 'hist_peaks': uses histogram peaks as thresholds.
-             - 'inv_hist_peaks': uses inverted histogram peaks as thresholds.
-             - 'hist_peak_edges': uses histogram peak edges as thresholds.
-             - 'inv_hist_peak_edges': uses inverted histogram peak edges as
-               thresholds.
+            Available methods are:
+             - 'relative': use `threshold_relative()`.
+             - 'percentile': use `threshold_percentile()`.
+             - 'mean_std': use `threshold_mean_std()`.
+             - 'otsu': use `threshold_otsu()`.
+             - 'otsu2': use `threshold_otsu2()`.
+             - 'hist_peaks': use `threshold_hist_peaks()`.
+             - 'inv_hist_peaks': use `threshold_inv_hist_peaks()`.
+             - 'hist_peak_edges': use `threshold_hist_peak_edges()`.
+             - 'inv_hist_peak_edges': use `threshold_inv_hist_peak_edges()`.
+             - 'twice_first_peak': use `threshold_twice_first_peak()`.
+             - 'cum_hist_elbow': use `threshold_cum_hist_elbow()`.
+             - 'rayleigh': use `threshold_rayleigh()`.
+             - 'optim': use `threshold_optim()`.
         kws (dict|None): Keyword parameters for the selected method.
 
     Returns:
@@ -562,20 +566,26 @@ def auto_thresholds(
     if method:
         method = method.lower()
     methods = (
-        'otsu', 'relative', 'percentile', 'mean_std',
-        'hist_peaks', 'inv_hist_peaks', 'hist_peak_edges')
+        'relative', 'percentile', 'mean_std',
+        'otsu', 'otsu2',
+        'hist_peaks', 'inv_hist_peaks',
+        'hist_peak_edges', 'inv_hist_peak_edges',
+        'twice_first_peak',
+        # 'cum_hist_elbow', 'cum_hist_quad',
+        # 'cum_hist_quad_weight', 'cum_hist_quad_inv_weight',
+        'rayleigh', 'optim')
     if kws is None:
         kws = dict()
-    if method == 'otsu':
-        thresholds = threshold_otsu(arr, **dict(kws))
-    elif method == 'optim':
-        thresholds = threshold_optim(arr, **dict(kws))
-    elif method == 'relative':
+    if method == 'relative':
         thresholds = threshold_relative(arr, **dict(kws))
     elif method == 'percentile':
         thresholds = threshold_percentile(arr, **dict(kws))
     elif method == 'mean_std':
         thresholds = threshold_mean_std(arr, **dict(kws))
+    elif method == 'otsu':
+        thresholds = threshold_otsu(arr, **dict(kws))
+    elif method == 'otsu2':
+        thresholds = threshold_otsu2(arr, **dict(kws))
     elif method == 'hist_peaks':
         thresholds = threshold_hist_peaks(arr, **dict(kws))
     elif method == 'inv_hist_peaks':
@@ -584,6 +594,14 @@ def auto_thresholds(
         thresholds = threshold_hist_peak_edges(arr, **dict(kws))
     elif method == 'inv_hist_peak_edges':
         thresholds = threshold_inv_hist_peak_edges(arr, **dict(kws))
+    elif method == 'twice_first_peak':
+        thresholds = threshold_twice_first_peak(arr, **dict(kws))
+    elif method == 'cum_hist_elbow':
+        thresholds = threshold_cum_hist_elbow(arr, **dict(kws))
+    elif method == 'rayleigh':
+        thresholds = threshold_rayleigh(arr, **dict(kws))
+    elif method == 'optim':
+        thresholds = threshold_optim(arr, **dict(kws))
     else:  # if method not in methods:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
