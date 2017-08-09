@@ -33,6 +33,7 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.segmentation
 
+
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
@@ -57,7 +58,38 @@ def sum_of_squares(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    return arr + 1
+    return arr
+
+
+# ======================================================================
+def smooth_sum_of_squares(
+        arr,
+        block=1,
+        coil_axis=-1):
+    """
+    Coil sensitivity for the 'smooth_sum_of_squares' combination method.
+
+    Note: the input itself is used as sensitivity. Therefore, this function
+    actually returns the same array used for input, and the `coil_axis`
+    parameter is left unused.
+
+    Args:
+        arr (np.ndarray): The input array.
+        block (int|float|iterable[int|float]): The size of the block in px.
+            Used for smoothing the coil covariance.
+            If int or float, the block is isotropic in all non-coil dimensions.
+            If iterable, each size is applied to the corresponding dimension
+            and its size must match the number of non-coil dimensions.
+            If set to 0, no smoothing is performed and the algorithm
+            reduces to non-block adaptive.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+    """
+    return mrt.utils.filter_cx(
+        arr, sp.ndimage.gaussian_filter, (), dict(sigma=block))
 
 
 # ======================================================================
@@ -91,7 +123,7 @@ def adaptive(
           682–690. doi:10.1002/(SICI)1522-2594(
           200005)43:5<682::AID-MRM10>3.0.CO;2-G
     """
-    return block_adaptive(arr, 1, max_iter, threshold, coil_axis)
+    return block_adaptive(arr, 0, max_iter, threshold, coil_axis)
 
 
 # ======================================================================
@@ -108,7 +140,7 @@ def block_adaptive(
         arr (np.ndarray): The input array.
         block (int|float|iterable[int|float]): The size of the block in px.
             Used for smoothing the coil covariance.
-            If int or float, the block is isotropic all non-coil dimensions.
+            If int or float, the block is isotropic in all non-coil dimensions.
             If iterable, each size is applied to the corresponding dimension
             and its size must match the number of non-coil dimensions.
             If set to 0, no smoothing is performed and the algorithm
@@ -143,13 +175,13 @@ def block_adaptive(
     base_shape = arr.shape[:-1]
 
     # calculate the coil covariance
-    coil_cov = np.zeros(base_shape + (num_coils,) * 2, dtype=np.complex)
+    coil_cov = np.zeros(base_shape + (num_coils,) * 2, dtype=complex)
     for i in range(num_coils):
         for j in range(num_coils):
             coil_cov[..., i, j] = arr[..., i] * arr[..., j].conj()
 
     # if block is larger than 1, smooth the coil covariance
-    if block > 1:
+    if block > 0:
         for i in range(num_coils):
             for j in range(num_coils):
                 coil_cov[..., i, j] = mrt.utils.filter_cx(
@@ -158,7 +190,7 @@ def block_adaptive(
 
     # calculate the principal eigenvector of the coil covariance
     # using the power method (pointwise through all spatial dimensions)
-    sens = np.zeros(base_shape + (num_coils,), dtype=np.complex)
+    sens = np.zeros(base_shape + (num_coils,), dtype=complex)
     for i in itertools.product(*[range(k) for k in base_shape]):
         ii = tuple(j for j in i if i != slice(None)) + (slice(None),)
         iii = tuple(j for j in i if i != slice(None)) + (slice(None),) * 2
@@ -202,7 +234,7 @@ def block_adaptive_iter(
         arr (np.ndarray): The input array.
         block (int|float|iterable[int|float]): The size of the block in px.
             Used for smoothing the coil covariance.
-            If int or float, the block is isotropic all non-coil dimensions.
+            If int or float, the block is isotropic in all non-coil dimensions.
             If iterable, each size is applied to the corresponding dimension
             and its size must match the number of non-coil dimensions.
             If set to 0, no smoothing is performed and the algorithm
@@ -248,31 +280,33 @@ def block_adaptive_iter(
     epsilon = np.finfo(np.float).eps
     no_coil_axes = tuple(range(0, arr.ndim - 1))
 
-    sens = np.zeros_like(arr, dtype=np.complex)
+    sens = np.zeros_like(arr, dtype=complex)
 
-    mean_coil = np.sum(arr, no_coil_axes)
-    mean_coil /= np.linalg.norm(mean_coil)
-    rho = np.einsum('...i,i', arr, mean_coil.conj())
-
-    for i in range(max_iter):
-        last_rho = rho.copy() if threshold > 0 else rho
-        sens_b = mrt.utils.filter_cx(
-            arr * rho[..., None].conj(),
-            sp.ndimage.uniform_filter, (), dict(size=block))
-        sens = sens_b / (
-            np.sqrt(np.sum(sens_b * sens_b.conj(), -1)) + epsilon)[..., None]
-        rho = np.sum(arr * np.conj(sens), -1)
-        mean_coil = np.sum(sens * rho[..., None], no_coil_axes)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mean_coil = np.sum(arr, no_coil_axes)
         mean_coil /= np.linalg.norm(mean_coil)
+        rho = np.einsum('...i,i', arr, mean_coil.conj())
 
-        extra_phase = np.einsum('...i,i', sens, mean_coil.conj())
-        extra_phase /= (np.abs(extra_phase) + epsilon)
-        rho *= extra_phase
-        sens *= extra_phase[..., None].conj()
-        if threshold > 0:
-            delta = (np.linalg.norm(rho - last_rho) / np.linalg.norm(rho))
-            if delta < threshold:
-                break
+        for i in range(max_iter):
+            last_rho = rho.copy() if threshold > 0 else rho
+            sens_b = mrt.utils.filter_cx(
+                arr * rho[..., None].conj(),
+                sp.ndimage.uniform_filter, (), dict(size=block))
+            sens = sens_b / (
+                np.sqrt(np.sum(sens_b * sens_b.conj(), -1))
+                + epsilon)[..., None]
+            rho = np.sum(arr * np.conj(sens), -1)
+            mean_coil = np.sum(sens * rho[..., None], no_coil_axes)
+            mean_coil /= np.linalg.norm(mean_coil)
+
+            extra_phase = np.einsum('...i,i', sens, mean_coil.conj())
+            extra_phase /= (np.abs(extra_phase) + epsilon)
+            rho *= extra_phase
+            sens *= extra_phase[..., None].conj()
+            if threshold > 0:
+                delta = (np.linalg.norm(rho - last_rho) / np.linalg.norm(rho))
+                if delta < threshold:
+                    break
     sens = np.swapaxes(sens, -1, coil_axis)
     return sens
 
@@ -280,7 +314,7 @@ def block_adaptive_iter(
 # ======================================================================
 def compress_svd(
         arr,
-        k_svd='elbow',
+        k_svd='quad_weight',
         coil_axis=-1):
     """
     Compress the coil data to the SVD principal components.
@@ -355,11 +389,6 @@ def compress_svd(
             k_svd = num_coils
         if not 0 < k_svd <= num_coils:
             k_svd = num_coils
-
-    print(sorted(np.abs(eigvals) / np.max(np.abs(eigvals)), reverse=True))
-    print(right_eigvects.shape)
-    print(k_svd)
-    quit()
 
     arr = np.dot(arr[:, :], right_eigvects[:, eig_sort][:, :k_svd])
 
@@ -561,6 +590,7 @@ def sensitivity(
             It None, uses
             Available options are:
              - 'sum_of_squares': use `sum_of_squares()`;
+             - 'smooth_sum_of_squares': use `smooth_sum_of_squares()`
              - 'adaptive': use `adaptive()`;
              - 'block_adaptive': use `block_adaptive()`;
              - 'block_adaptive_iter': use `block_adaptive_iter()`;
@@ -576,7 +606,8 @@ def sensitivity(
 
     """
     methods = (
-        'sum_of_squares', 'adaptive', 'block_adaptive', 'block_adaptive_iter',
+        'sum_of_squares', 'smooth_sum_of_squares',
+        'adaptive', 'block_adaptive', 'block_adaptive_iter',
         'virtual_reference')
     if method:
         method = method.lower()
@@ -585,6 +616,8 @@ def sensitivity(
     if method in methods:
         if method == 'sum_of_squares':
             method = sum_of_squares
+        elif method == 'smooth_sum_of_squares':
+            method = smooth_sum_of_squares
         elif method == 'adaptive':
             method = adaptive
         elif method == 'block_adaptive':
@@ -599,7 +632,6 @@ def sensitivity(
             arr = np.swapaxes(arr, split_axis, 0)
             sens = np.swapaxes(sens, split_axis, 0)
             for i in range(shape[split_axis]):
-                print(i)
                 sens[i, ...] = method(arr[i, ...], coil_axis=coil_axis)
             arr = np.swapaxes(arr, 0, split_axis)
             sens = np.swapaxes(sens, 0, split_axis)
@@ -633,7 +665,7 @@ def combine(
         sens (np.ndarray|str|None): The coil sensitivity.
             If `np.ndarray`, its shape must match with `arr`.
             If `str`, the sensitivity is calculated using `sensitivity()`.
-            if None, the default method of `sensitivity()` is used.
+            If None, the default method of `sensitivity()` is used.
         k_svd (int|float|str|None): The number of SVD principal components.
             If int, float or str, see `compress_svd()` for more information.
             If None, no SVD preprocessing is performed.
@@ -682,8 +714,7 @@ def combine(
     del sens
 
     if not np.iscomplex(cx_arr.all()):
-        print('Extra phase')
-        arr = cx_arr * np.exp(1j * np.mean(np.angle(arr), coil_axis))
+        arr = cx_arr * np.exp(1j * np.angle(np.sum(arr, coil_axis)))
     else:
         arr = cx_arr
     return arr
