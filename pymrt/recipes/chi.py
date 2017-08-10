@@ -233,7 +233,7 @@ def db0_to_chi(
         chi_arr (np.ndarray): The magnetic susceptibility in ppb.
     """
     if mask_arr is not None:
-        db0_arr[~mask_arr] = 0.0
+        db0_arr *= mask_arr
     dk = dipole_kernel(
         db0_arr.shape, b0_direction=b0_direction, theta=theta, phi=phi)
     # threshold the zeros of the dipole kernel
@@ -289,8 +289,8 @@ def qsm_sharp(
     sphere_dirac_k = mrt.utils.dftn(
         mrt.geometry.dirac_delta(dphs_arr.shape, 0.5, 1) - sphere)
     mask = np.abs(sphere_dirac_k) > threshold
+    sphere_dirac_k *= mask
     sphere_dirac_k[mask] = 1 / sphere_dirac_k[mask]
-    sphere_dirac_k[~mask] = 0
 
     dphs_arr = mask_arr * \
                (dphs_arr - mrt.utils.idftn(

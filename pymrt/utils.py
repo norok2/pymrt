@@ -4286,8 +4286,8 @@ def rel_err(
     else:
         div = arr1
     mask = (div != 0.0)
+    arr *= mask
     arr[mask] = arr[mask] / div[mask]
-    arr[~mask] = 0.0
     return arr
 
 
