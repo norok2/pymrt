@@ -324,6 +324,7 @@ def block_adaptive_iter(
 def compress_svd(
         arr,
         k_svd='quad_weight',
+        fourier=False,
         coil_axis=-1):
     """
     Compress the coil data to the SVD principal components.
@@ -348,6 +349,11 @@ def compress_svd(
              - 'quad_inv_weight': use `utils.marginal_sep_quad_inv_weight()`.
              - 'otsu': use `segmentation.threshold_otsu()`.
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
+        fourier (bool): Use Fourier transformed data.
+            The Discrete Fourier Transform is applied as first step, in order
+            to perform the eigenvector analysis in the k-space, and the
+            Inverse Discrete Fourier Transform is used to convert back the
+            compressed coil data into r-space.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
 
@@ -359,6 +365,9 @@ def compress_svd(
     num_coils = shape[coil_axis]
     arr = np.swapaxes(arr, coil_axis, -1)
     base_shape = arr.shape[:-1]
+
+    if fourier:
+        arr = np.fft.fftn(arr, axes=tuple(range(arr.ndim)))
 
     arr = arr.reshape((-1, num_coils))
 
@@ -416,6 +425,8 @@ def compress_svd(
     arr = np.dot(arr, right_eigvects[:, eig_sort][:, :k_svd])
 
     arr = arr.reshape(base_shape + (k_svd,))
+    if fourier:
+        arr = np.fft.ifftn(arr, axes=tuple(range(arr.ndim)))
     arr = np.swapaxes(arr, -1, coil_axis)
     return arr
 
@@ -677,6 +688,7 @@ def combine(
         arr,
         sens,
         k_svd='quad_weight',
+        fourier=False,
         norm=False,
         coil_axis=-1,
         split_axis=0):
@@ -696,7 +708,9 @@ def combine(
         k_svd (int|float|str|None): The number of SVD principal components.
             If int, float or str, see `compress_svd()` for more information.
             If None, no SVD preprocessing is performed.
-        norm (bool): Normalize using coil sensitivity magnitude.
+        fourier (bool): Use Fourier transformed data.
+            See `compress_svd()` for more details.
+        norm (bool): Normalize using the coil sensitivity magnitude.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
         split_axis (int|None): The split dimension.
@@ -708,7 +722,7 @@ def combine(
         arr (np.ndarray): The combined array.
     """
     if k_svd is not None:
-        arr = compress_svd(arr, k_svd, coil_axis)
+        arr = compress_svd(arr, k_svd, fourier, coil_axis)
 
     if sens is None:
         sens = 'block_adaptive_iter'
