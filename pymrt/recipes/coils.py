@@ -61,7 +61,7 @@ def sum_of_squares(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    return arr
+    return arr.copy()
 
 
 # ======================================================================
@@ -96,7 +96,7 @@ def smooth_sum_of_squares(
     else:
         assert (len(block) + 1 == arr.ndim)
     arr = mrt.utils.filter_cx(
-        arr, sp.ndimage.uniform_filter, (), dict(size=block))
+        arr.copy(), sp.ndimage.uniform_filter, (), dict(size=block))
     arr = np.swapaxes(arr, -1, coil_axis)
     return arr
 
@@ -329,8 +329,11 @@ def compress_svd(
     """
     Compress the coil data to the SVD principal components.
 
-    This is useful both as a denoise method and for reducing the complexity
-    of the problem and the memory usage.
+    Rearranges (diagonalize) the acquired single-channel data into virtual
+    single-channel data sorted by eigenvalue magnitude.
+    If the number of SVD components `k_svd` is smaller than the number of
+    coils, this is useful both as a denoise method and for reducing the
+    complexity of the problem and the memory usage.
 
     Args:
         arr (np.ndarray): The input array.
@@ -354,6 +357,7 @@ def compress_svd(
             to perform the eigenvector analysis in the k-space, and the
             Inverse Discrete Fourier Transform is used to convert back the
             compressed coil data into r-space.
+            This option requires large amount of memory.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
 
@@ -367,7 +371,8 @@ def compress_svd(
     base_shape = arr.shape[:-1]
 
     if fourier:
-        arr = np.fft.fftn(arr, axes=tuple(range(arr.ndim)))
+        for i in range(num_coils):
+            arr[..., i] = np.fft.fftn(arr[..., i])
 
     arr = arr.reshape((-1, num_coils))
 
@@ -426,7 +431,8 @@ def compress_svd(
 
     arr = arr.reshape(base_shape + (k_svd,))
     if fourier:
-        arr = np.fft.ifftn(arr, axes=tuple(range(arr.ndim)))
+        for i in range(k_svd):
+            arr[..., i] = np.fft.ifftn(arr[..., i])
     arr = np.swapaxes(arr, -1, coil_axis)
     return arr
 
