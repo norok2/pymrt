@@ -61,7 +61,8 @@ def sum_of_squares(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    return arr.copy()
+    sens = arr.copy()
+    return sens
 
 
 # ======================================================================
@@ -95,10 +96,10 @@ def smooth_sum_of_squares(
         block = (block,) * (arr.ndim - 1) + (0,)
     else:
         assert (len(block) + 1 == arr.ndim)
-    arr = mrt.utils.filter_cx(
+    sens = mrt.utils.filter_cx(
         arr.copy(), sp.ndimage.uniform_filter, (), dict(size=block))
-    arr = np.swapaxes(arr, -1, coil_axis)
-    return arr
+    sens = np.swapaxes(sens, -1, coil_axis)
+    return sens
 
 
 # ======================================================================
@@ -677,7 +678,6 @@ def sensitivity(
             for i in range(shape[split_axis]):
                 sens[i, ...] = method(
                     arr[i, ...], coil_axis=coil_axis, **method_kws)
-            arr = np.swapaxes(arr, 0, split_axis)
             sens = np.swapaxes(sens, 0, split_axis)
         else:
             sens = method(arr, coil_axis=coil_axis, **method_kws)
