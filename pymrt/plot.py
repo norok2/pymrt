@@ -44,6 +44,7 @@ import numeral  # Support for various integer-to-numeral (and back) conversion
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+import matplotlib.cm
 import matplotlib.gridspec
 import matplotlib.animation as anim  # Matplotlib's animations
 from mpl_toolkits.mplot3d.axes3d import Axes3D
@@ -189,6 +190,7 @@ def quick_3d(array, values_range=None):
         # using Matplotlib
         from skimage import measure
 
+
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
         # zz, xx, yy = array.nonzero()
@@ -207,7 +209,8 @@ def quick_3d(array, values_range=None):
 
 # ======================================================================
 def simple(
-        x_datas, y_datas,
+        x_datas,
+        y_datas,
         title=None,
         labels=(None, None),
         styles=None,
@@ -253,6 +256,151 @@ def simple(
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
     return (x_datas, y_datas), fig
+
+
+# ======================================================================
+def multi(
+        x_arrs,
+        y_arrs,
+        dy_arrs=None,
+        y_lbls=None,
+        dy_lbls=None,
+        x_label=None,
+        y_label=None,
+        twin_indexes=None,
+        shared_axis='y',
+        groups=None,
+        colors=tuple(mpl.cm.Dark2(x) for x in np.linspace(0, 1, 8)),
+        title=None,
+        legend_kws=None,
+        method='errorbars',  # 'errorarea', # 'dotted+solid',
+        more_texts=None,
+        ax=None,
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    method = method.lower()
+    shared_axis = shared_axis.lower()
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+
+    lines = []
+
+    # : prepare for plotting
+    num = len(y_arrs)
+    if isinstance(x_arrs, np.ndarray):
+        x_arrs = mrt.utils.auto_repeat(x_arrs, num, force=True, check=True)
+    elif x_arrs is None:
+        x_arrs = tuple(np.arange(len(y_arr)) for y_arr in y_arrs)
+
+    if dy_arrs is None:
+        dy_arrs = tuple(np.zeros_like(y_arr) for y_arr in y_arrs)
+    y_lbls = ('_nolegend_',) * num if y_lbls is None else y_lbls
+    dy_lbls = ('_nolegend_',) * num if dy_lbls is None else dy_lbls
+    plotters = (x_arrs, y_arrs, dy_arrs, y_lbls, dy_lbls)
+
+    # : set twin axes
+    if shared_axis == 'y':
+        twin_ax = ax.twiny()
+    elif shared_axis == 'x':
+        twin_ax = ax.twinx()
+    else:
+        twin_ax = None
+
+    if isinstance(x_label, str):
+        ax.set_xlabel(x_label)
+    elif x_label:
+        ax.set_xlabel(x_label[0])
+        if shared_axis == 'y':
+            twin_ax.set_xlabel(x_label[1])
+
+    if isinstance(y_label, str):
+        ax.set_ylabel(y_label)
+    elif y_label:
+        ax.set_ylabel(y_label[0])
+        if shared_axis == 'x':
+            twin_ax.set_ylabel(y_label[1])
+
+    if groups:
+        if sum(groups) < num:
+            groups = tuple(groups) + (num - sum(groups),)
+        print(groups)
+        tmp_colors = []
+        for group, color in zip(groups, itertools.cycle(colors)):
+            if callable(color):
+                tmp_color = [color(i) for i in range(group)]
+            elif isinstance(color, str):
+                min_color = 1.0
+                max_color = 0.1
+                delta_color = -0.2
+                tmp_color = [
+                    mpl.cm.get_cmap(color)(x)
+                    for x in np.arange(min_color, max_color, delta_color)]
+            tmp_colors.extend(tmp_color[:group])
+        colors = tmp_colors
+        print(colors)
+
+    colors = itertools.cycle(colors)
+
+    for i, (x_arr, y_arr, dy_arr, y_lbl, dy_lbl) in enumerate(zip(*plotters)):
+        _ax = twin_ax if i in twin_indexes else ax
+
+        color = next(colors)
+
+        if '+' in method:
+            y_ls, dy_ls = method.split('+')
+            lines.extend(
+                _ax.plot(
+                    x_arr, y_arr, linestyle=y_ls, color=color,
+                    label=y_lbl))
+            lines.extend(
+                _ax.plot(
+                    x_arr, dy_arr, linestyle=dy_ls, color=color,
+                    label=dy_lbl))
+
+        elif method == 'errorbars':
+            _ax.errorbar(
+                x_arr, y_arr, dy_arr, color=color, label=y_lbl)
+            lines.extend(
+                _ax.plot([], [], color=color, label=y_lbl))
+
+        elif method == 'errorarea':
+            lines.extend(
+                _ax.plot(
+                    x_arr, y_arr, color=color, label=y_lbl))
+            _ax.fill_between(
+                x_arr, y_arr - dy_arr, y_arr + dy_arr,
+                color=color, alpha=0.25, label=dy_lbl)
+            lines.extend(
+                _ax.plot([], [], color=color, alpha=0.25, label=dy_lbl))
+
+    if legend_kws is not None:
+        ax.legend(handles=lines, **dict(legend_kws))
+
+    # setup title and labels
+    if title:
+        ax.set_title(title.format_map(locals()))
+
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+
+    # save figure to file
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+
+    return (x_arrs, y_arrs), fig
 
 
 # ======================================================================
@@ -387,6 +535,8 @@ def sample2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
+
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -394,7 +544,8 @@ def sample2d(
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
-                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
+                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
+                             rotation=90)
             else:
                 cbar.set_label(cbar_txt)
 
@@ -622,6 +773,8 @@ def sample3d_view2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
+
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -629,7 +782,8 @@ def sample3d_view2d(
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
-                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
+                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
+                             rotation=90)
             else:
                 cbar.set_label(cbar_txt)
 
@@ -789,7 +943,8 @@ def sample2d_anim(
                 transform=ax.transAxes)
         if size_info != 0.0:
             res = resolution[1]
-            size_info_size = round(abs(size_info) * (sample.shape[1] * res), -1)
+            size_info_size = round(abs(size_info) * (sample.shape[1] * res),
+                                   -1)
             size_info_str = '{} {}'.format(size_info_size, 'mm')
             size_info_px = size_info_size / res
             ax.text(
@@ -1073,7 +1228,8 @@ def histogram1d_list(
     data = []
     for i, array in enumerate(arrays):
         hist, bin_edges = np.histogram(
-            array, bins=bins, range=hist_interval, density=(scale == 'density'))
+            array, bins=bins, range=hist_interval,
+            density=(scale == 'density'))
         # adjust scale
         hist = hist.astype(float)
         if scale in ('linear', 'density'):
@@ -1172,7 +1328,8 @@ def histogram2d(
             If a tuple of float is given, the values outside of the (min, max)
             interval are not considered, and it is assumed identical for both
             axes.
-            Otherwise, if a tuple of tuple of float is given, the first tuple of
+            Otherwise, if a tuple of tuple of float is given, the first
+            tuple of
             float is interpreted as the (min, max) for the x-axis, and the
             second tuple of float is for the y-axis.
         hist_interval (tuple[float|tuple[float]]): The histogram interval.
@@ -1180,7 +1337,8 @@ def histogram2d(
             of the interval to use for the histogram as percentage of the array
             interval (specified or calculated), and it is assumed identical for
             both axes.
-            Otherwise, if a tuple of tuple of float is given, the first tuple of
+            Otherwise, if a tuple of tuple of float is given, the first
+            tuple of
             float is interpreted as the (min, max) for the x-axis, and the
             second tuple of float is for the y-axis.
         use_separate_interval (bool): Generate 'array_interval' separately.
@@ -1200,9 +1358,11 @@ def histogram2d(
               obtained by setting `np.histogram()` parameter `density=True`.
             - callable (func(float)->float): apply the function to the values.
               The corresponding scale name is then set to `custom`.
-        hist_val_interval (tuple[float]|None): The interval of histogram values.
+        hist_val_interval (tuple[float]|None): The interval of histogram
+        values.
             If None, it is calculated automatically as the (min, max) of the
-            histogram values rounded to the most comprehensive integer interval.
+            histogram values rounded to the most comprehensive integer
+            interval.
         ticks_limit (None): TODO
         interpolation (str): Image display interpolation method.
             See `matplotlib.imshow()` for more details.
@@ -1326,7 +1486,8 @@ def histogram2d(
         stats_dict = mrt.utils.calc_stats(
             arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *mrt.utils.format_value_error(stats_dict['avg'], stats_dict['std'], 3))
+            *mrt.utils.format_value_error(stats_dict['avg'], stats_dict['std'],
+                                          3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',
@@ -1394,10 +1555,10 @@ def bar_chart(
     Returns:
 
     """
-    #todo: polish code and documentation
-    #todo: add support for orientation
-    #todo: add support for stacked bars
-    #todo: add support for variable bar_width
+    # todo: polish code and documentation
+    # todo: add support for orientation
+    # todo: add support for stacked bars
+    # todo: add support for variable bar_width
 
     # create a new figure
     if ax is None:
@@ -1526,7 +1687,8 @@ def subplots(
 
     pads = list(mrt.utils.auto_repeat(pads, 2, False, True))
     label_pads = list(mrt.utils.auto_repeat(label_pads, 2, False, True))
-    figsize_factors = list(mrt.utils.auto_repeat(figsize_factors, 2, False, True))
+    figsize_factors = list(
+        mrt.utils.auto_repeat(figsize_factors, 2, False, True))
 
     # fix row/col labels
     if row_labels is None:
