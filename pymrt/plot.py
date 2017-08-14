@@ -76,6 +76,49 @@ PLOT_LINESTYLES = ('-', '--', '-.', ':')
 # TODO: make a plot with possibility to adjust params
 
 
+# ======================================================================
+def _color_series(
+        name,
+        num=8,
+        asym=0.3,
+        min_=None,
+        max_=None):
+    """
+    Generate a color series from a Matplotlib Colormap.
+
+    Args:
+        name (str): Name of the colormap.
+        num (int): Number of colors in the series.
+        asym (float): Asymmetry factor.
+            Determines which portion of the colormap is used.
+            Use 0 for no asymmetry, 1 for right asymmetry and -1 for left
+            asymmetry.
+            Must be in the [-1, 1] range.
+            This is only used if `min_` and/or `max_` are None.
+        min_ (float): Minimum of the colormap range.
+            If None, this is automatically calculated from `asym` parameter.
+            Must be in the [0, 1] range and must be larger than `max_`.
+        max_ (float): Maximum of the colormap range.
+            If None, this is automatically calculated from `asym` parameter.
+            Must be in the [0, 1] range and must be smaller than `min_`.
+
+    Returns:
+        result (list): The generated colors.
+    """
+    if max_ is None:
+        if asym >= 0:
+            max_ = (num * (1 + asym)) / (num * (np.abs(asym) + 1.0) + 1.0)
+        else:
+            max_ = num / (num * (np.abs(asym) + 1.0) + 1.0)
+    if min_ is None:
+        if asym >= 0:
+            min_ = (1.0 + asym * num) / (num * (np.abs(asym) + 1.0) + 1.0)
+        else:
+            min_ = 1.0 / (num * (np.abs(asym) + 1.0) + 1.0)
+    return [mpl.cm.get_cmap(name)(x) for x in np.linspace(min_, max_, num)]
+
+
+# ======================================================================
 def explore(array):
     """
     Generate a visualization of an ND-array.
@@ -190,7 +233,6 @@ def quick_3d(array, values_range=None):
         # using Matplotlib
         from skimage import measure
 
-
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
         # zz, xx, yy = array.nonzero()
@@ -280,6 +322,34 @@ def multi(
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
+    """
+    Plot multiple curves including optional errorbars and twin axes.
+
+    Args:
+        x_arrs ():
+        y_arrs ():
+        dy_arrs ():
+        y_lbls ():
+        dy_lbls ():
+        x_label ():
+        y_label ():
+        twin_indexes ():
+        shared_axis ():
+        groups ():
+        colors ():
+        title ():
+        legend_kws ():
+        method ():
+        more_texts ():
+        ax ():
+        save_filepath ():
+        save_kws ():
+        force ():
+        verbose ():
+
+    Returns:
+
+    """
     method = method.lower()
     shared_axis = shared_axis.lower()
 
@@ -329,21 +399,18 @@ def multi(
     if groups:
         if sum(groups) < num:
             groups = tuple(groups) + (num - sum(groups),)
-        print(groups)
+
+        num = max(groups)
         tmp_colors = []
         for group, color in zip(groups, itertools.cycle(colors)):
             if callable(color):
                 tmp_color = [color(i) for i in range(group)]
             elif isinstance(color, str):
-                min_color = 1.0
-                max_color = 0.1
-                delta_color = -0.2
-                tmp_color = [
-                    mpl.cm.get_cmap(color)(x)
-                    for x in np.arange(min_color, max_color, delta_color)]
+                tmp_color = _color_series(color, num)
+            else:
+                tmp_color = color
             tmp_colors.extend(tmp_color[:group])
         colors = tmp_colors
-        print(colors)
 
     colors = itertools.cycle(colors)
 
@@ -535,7 +602,6 @@ def sample2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -773,7 +839,6 @@ def sample3d_view2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)

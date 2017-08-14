@@ -113,9 +113,13 @@ def msg(
             except ImportError:
                 blessed = None
 
-        if blessed:
-            text = str(text)
+        try:
             t = blessed.Terminal()
+        except ValueError:
+            t = None
+
+        if blessed and t:
+            text = str(text)
             if not fmt:
                 if VERB_LVL['low'] < verb_threshold <= VERB_LVL['medium']:
                     e = t.cyan

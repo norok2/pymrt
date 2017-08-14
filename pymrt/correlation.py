@@ -208,7 +208,8 @@ def _compute_affine_fsl(
     """
     if mrt.utils.check_redo([in_filepath, ref_filepath], [aff_filepath],
                             force):
-        msg('Affine: {}'.format(os.path.basename(aff_filepath)))
+        msg('Affine: {}'.format(os.path.basename(aff_filepath)),
+            verbose, D_VERB_LVL)
         ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_args = {
             'in': in_filepath,
@@ -251,7 +252,8 @@ def _apply_affine_fsl(
     if mrt.utils.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
             force):
-        msg('Regstr: {}'.format(os.path.basename(out_filepath)))
+        msg('Regstr: {}'.format(os.path.basename(out_filepath)),
+            verbose, D_VERB_LVL)
         ext_cmd = EXT_CMD['fsl/5.0/flirt']
         cmd_options = {
             'in': in_filepath,
