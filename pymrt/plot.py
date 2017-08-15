@@ -301,6 +301,34 @@ def simple(
 
 
 # ======================================================================
+def empty(
+        ax=None,
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+
+    ax.axis('off')
+    ax.set_aspect(1)
+
+    # save figure to file
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+
+    return (x_arrs, y_arrs), fig
+
+
+# ======================================================================
 def multi(
         x_arrs,
         y_arrs,
@@ -359,7 +387,7 @@ def multi(
     else:
         fig = plt.gcf()
 
-    lines = []
+    handles = []
 
     # : prepare for plotting
     num = len(y_arrs)
@@ -421,11 +449,11 @@ def multi(
 
         if '+' in method:
             y_ls, dy_ls = method.split('+')
-            lines.extend(
+            handles.extend(
                 _ax.plot(
                     x_arr, y_arr, linestyle=y_ls, color=color,
                     label=y_lbl))
-            lines.extend(
+            handles.extend(
                 _ax.plot(
                     x_arr, dy_arr, linestyle=dy_ls, color=color,
                     label=dy_lbl))
@@ -433,21 +461,21 @@ def multi(
         elif method == 'errorbars':
             _ax.errorbar(
                 x_arr, y_arr, dy_arr, color=color, label=y_lbl)
-            lines.extend(
+            handles.extend(
                 _ax.plot([], [], color=color, label=y_lbl))
 
         elif method == 'errorarea':
-            lines.extend(
+            handles.extend(
                 _ax.plot(
                     x_arr, y_arr, color=color, label=y_lbl))
             _ax.fill_between(
                 x_arr, y_arr - dy_arr, y_arr + dy_arr,
                 color=color, alpha=0.25, label=dy_lbl)
-            lines.extend(
+            handles.extend(
                 _ax.plot([], [], color=color, alpha=0.25, label=dy_lbl))
 
     if legend_kws is not None:
-        ax.legend(handles=lines, **dict(legend_kws))
+        ax.legend(handles=handles, **dict(legend_kws))
 
     # setup title and labels
     if title:
@@ -467,7 +495,133 @@ def multi(
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
 
-    return (x_arrs, y_arrs), fig
+    return handles, fig
+
+
+# ======================================================================
+def legend(
+        y_lbls=None,
+        dy_lbls=None,
+        groups=None,
+        colors=tuple(mpl.cm.Dark2(x) for x in np.linspace(0, 1, 8)),
+        legend_kws=None,
+        method='errorbars',  # 'errorarea', # 'dotted+solid',
+        more_texts=None,
+        ax=None,
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    """
+    Plot multiple curves including optional errorbars and twin axes.
+
+    Args:
+        y_lbls ():
+        dy_lbls ():
+        x_label ():
+        y_label ():
+        twin_indexes ():
+        shared_axis ():
+        groups ():
+        colors ():
+        title ():
+        legend_kws ():
+        method ():
+        more_texts ():
+        ax ():
+        save_filepath ():
+        save_kws ():
+        force ():
+        verbose ():
+
+    Returns:
+
+    """
+    method = method.lower()
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+
+    handles = []
+
+    # : prepare for plotting
+    num = len(y_lbls)
+    x_arrs = y_arrs = dy_arrs = [() for _ in range(num)]
+    dy_lbls = ('_nolegend_',) * num if dy_lbls is None else dy_lbls
+    plotters = (x_arrs, y_arrs, dy_arrs, y_lbls, dy_lbls)
+
+    if groups:
+        if sum(groups) < num:
+            groups = tuple(groups) + (num - sum(groups),)
+
+        num = max(groups)
+        tmp_colors = []
+        for group, color in zip(groups, itertools.cycle(colors)):
+            if callable(color):
+                tmp_color = [color(i) for i in range(group)]
+            elif isinstance(color, str):
+                tmp_color = _color_series(color, num)
+            else:
+                tmp_color = color
+            tmp_colors.extend(tmp_color[:group])
+        colors = tmp_colors
+
+    colors = itertools.cycle(colors)
+
+    for i, (x_arr, y_arr, dy_arr, y_lbl, dy_lbl) in enumerate(zip(*plotters)):
+        color = next(colors)
+
+        if '+' in method:
+            y_ls, dy_ls = method.split('+')
+            handles.extend(
+                ax.plot(
+                    x_arr, y_arr, linestyle=y_ls, color=color,
+                    label=y_lbl))
+            handles.extend(
+                ax.plot(
+                    x_arr, dy_arr, linestyle=dy_ls, color=color,
+                    label=dy_lbl))
+
+        elif method == 'errorbars':
+            ax.errorbar(
+                x_arr, y_arr, dy_arr, color=color, label=y_lbl)
+            handles.extend(
+                ax.plot([], [], color=color, label=y_lbl))
+
+        elif method == 'errorarea':
+            handles.extend(
+                ax.plot(
+                    x_arr, y_arr, color=color, label=y_lbl))
+            ax.fill_between(
+                x_arr, y_arr - dy_arr, y_arr + dy_arr,
+                color=color, alpha=0.25, label=dy_lbl)
+            handles.extend(
+                ax.plot([], [], color=color, alpha=0.25, label=dy_lbl))
+
+    if legend_kws is not None:
+        ax.legend(handles=handles, **dict(legend_kws))
+
+    ax.axis('off')
+    ax.set_aspect(1)
+
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+
+    # save figure to file
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+
+    return handles
 
 
 # ======================================================================
@@ -1676,14 +1830,15 @@ def subplots(
         num_col=None,
         aspect_ratio=None,
         width_height=None,
-        figsize_factors=3,
-        pads=2.0,
+        size_factors=3,
+        pads=0.03,
         swap_filling=False,
         title=None,
         subplot_title_fmt='({letter}) {t}',
         row_labels=None,
         col_labels=None,
-        label_pads=0.3,
+        label_pads=0.03,
+        legend_kws=None,
         more_texts=None,
         save_filepath=None,
         save_kws=None,
@@ -1752,8 +1907,8 @@ def subplots(
 
     pads = list(mrt.utils.auto_repeat(pads, 2, False, True))
     label_pads = list(mrt.utils.auto_repeat(label_pads, 2, False, True))
-    figsize_factors = list(
-        mrt.utils.auto_repeat(figsize_factors, 2, False, True))
+    size_factors = list(
+        mrt.utils.auto_repeat(size_factors, 2, False, True))
 
     # fix row/col labels
     if row_labels is None:
@@ -1766,20 +1921,31 @@ def subplots(
     assert (num_col == len(col_labels))
 
     # generate plot
-    figsizes = [
-        factor * sum(items)
-        for factor, items, pad in zip(figsize_factors, (rows, cols), pads)]
+    label_pads = [k * x for k, x in zip(size_factors, label_pads)]
+    pads = [k * x for k, x in zip(size_factors, pads)]
+
+    fig_sizes = [
+        (k * sum(items) + pad * (len(items) - 1) + label_pad)
+        for k, items, pad, label_pad
+        in zip(size_factors, (rows, cols), pads, label_pads)]
+
+    label_pads = [x / k for k, x in zip(size_factors, label_pads)]
+    pads = [k * x for k, x in zip(fig_sizes, pads)]
 
     # fig, axs = plt.subplots(
     #     nrows=num_row, ncols=num_col,
     #     gridspec_kw={'width_ratios': cols, 'height_ratios': rows},
-    #     figsize=figsizes[::-1])
+    #     figsize=fig_sizes[::-1])
 
-    fig = plt.figure(figsize=figsizes[::-1])
-    label_pads = [
-        label_pad / figsize
-        for label_pad, figsize in zip(label_pads, figsizes)]
+    legend_pad = 0
+    if legend_kws is not None:
+        legend_pad = legend_kws.pop('pad') if 'pad' in legend_kws else 0
+        legend_row = legend_kws.pop('row') if 'row' in legend_kws else None
+        legend_col = legend_kws.pop('col') if 'col' in legend_kws else None
+        if legend_row is not None and legend_col is not None:
+            legend_pad = 0
 
+    fig = plt.figure(figsize=fig_sizes[::-1])
     gs = mpl.gridspec.GridSpec(
         num_row, num_col, width_ratios=cols, height_ratios=rows)
 
@@ -1815,7 +1981,8 @@ def subplots(
                 fig.text(
                     mrt.utils.scale(
                         (j * 2 + 1) / (num_col * 2),
-                        out_interval=(label_pads[0], 1.0 - label_pads[0] / 5)),
+                        out_interval=(
+                            label_pads[0], 1.0 - legend_pad)),
                     1.0 - label_pads[1] / 2,
                     col_label, rotation=0,
                     fontweight='bold', fontsize='large',
@@ -1826,10 +1993,20 @@ def subplots(
                 label_pads[0] / 2,
                 mrt.utils.scale(
                     1.0 - (i * 2 + 1) / (num_row * 2),
-                    out_interval=(label_pads[1] / 5, 1.0 - label_pads[1])),
+                    out_interval=(0, 1.0 - label_pads[1])),
                 row_label, rotation=90,
                 fontweight='bold', fontsize='large',
                 horizontalalignment='left', verticalalignment='center')
+
+    if legend_kws is not None:
+        if 'handles' in legend_kws and 'labels' not in legend_kws:
+            legend_kws['labels'] = tuple(
+                h.get_label() for h in legend_kws['handles'])
+        if legend_row is not None and legend_col is not None:
+            axs[legend_row, legend_col].legend(**dict(legend_kws))
+            legend_pad = 0
+        else:
+            fig.legend(**dict(legend_kws))
 
     # include additional text
     if more_texts is not None:
@@ -1839,189 +2016,14 @@ def subplots(
     # save figure to file
     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout(
-            rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
+            rect=[
+                0.0 + label_pads[0], 0.0,
+                1.0 - legend_pad, 1.0 - label_pads[1]],
             pad=1.0, h_pad=pads[0], w_pad=pads[1])
         if save_kws is None:
             save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
+        fig.savefig(
+            save_filepath, **dict(save_kws))
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
     return fig
-
-# # ======================================================================
-# def subplots(
-#         plots,
-#         rows=None,
-#         cols=None,
-#         num_row=None,
-#         num_col=None,
-#         aspect_ratio=None,
-#         width_height=None,
-#         figsize_factors=3,
-#         pads=2.0,
-#         swap_filling=False,
-#         title=None,
-#         subplot_title_fmt='({letter}) {t}',
-#         row_labels=None,
-#         col_labels=None,
-#         label_pos=(0, 0),
-#         more_texts=None,
-#         save_filepath=None,
-#         save_kws=None,
-#         force=False,
-#         verbose=D_VERB_LVL):
-#     """
-#
-#     Args:
-#         plots ():
-#         rows ():
-#         cols ():
-#         num_row ():
-#         num_col ():
-#         aspect_ratio ():
-#         width_height ():
-#         swap_filling ():
-#         title ():
-#         row_labels ():
-#         col_labels ():
-#         row_label_width ():
-#         col_label_width ():
-#         border_top ():
-#         border_left ():
-#         tight_layout_kws ():
-#         save_filepath ():
-#         savefig_args ():
-#         savefig_kwargs ():
-#         force ():
-#         verbose ():
-#
-#     Returns:
-#
-#     """
-#     num_plots = len(plots)
-#
-#     # determine rows and cols if not specified
-#     if rows is None and cols is None:
-#         if num_row is None and num_col is None:
-#             if isinstance(aspect_ratio, float):
-#                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
-#             elif isinstance(aspect_ratio, str):
-#                 if 'exact' in aspect_ratio:
-#                     num_col, num_row = mrt.utils.optimal_ratio(num_plots)
-#                     if 'portrait' in aspect_ratio:
-#                         num_row, num_col = num_col, num_row
-#                 if aspect_ratio == 'portrait':
-#                     num_row = np.ceil(np.sqrt(num_plots))
-#             else:  # plot_aspect == 'landscape'
-#                 num_row = int(np.floor(np.sqrt(num_plots)))
-#
-#         if num_row is None and num_col > 0:
-#             num_row = int(np.ceil(num_plots / num_col))
-#         if num_row > 0 and num_col is None:
-#             num_col = int(np.ceil(num_plots / num_row))
-#
-#         if width_height is None:
-#             width, height = 1, 1
-#         else:
-#             width, height = width_height
-#         rows = [height,] * num_row
-#         cols = [width,] * num_col
-#     else:
-#         rows = [pad_labels[0]] + list(rows)
-#         cols = [pad_labels[1]] + list(cols)
-#         num_row = len(rows)
-#         num_col = len(cols)
-#     assert (num_row * num_col >= num_plots)
-#
-#     pads = mrt.utils.auto_repeat(pads, 2, False, True)
-#     figsize_factors = mrt.utils.auto_repeat(figsize_factors, 2, False, True)
-#
-#     # fix row/col labels
-#     row_labels = mrt.utils.auto_repeat(None, num_row) \
-#         if row_labels is None else [None] + list(row_labels)
-#     col_labels = mrt.utils.auto_repeat(None, num_col) \
-#         if col_labels is None else [None] + list(row_labels)
-#     assert (num_row + 1 == len(row_labels))
-#     assert (num_col + 1 == len(col_labels))
-#
-#     # generate plot
-#     figsizes = [
-#         factor * sum(items)
-#         for factor, items, pad in zip(figsize_factors, (rows, cols), pads)]
-#     fig = plt.figure(figsize=figsizes[::-1])
-#
-#     gs = mpl.gridspec.GridSpec(
-#         num_row, num_col + 1, width_ratios=cols, height_ratios=rows)
-#
-#     axs = [plt.subplot(gs[n]) for n in range((num_row) * (num_col))]
-#     axs = np.array(axs).reshape((num_row, num_col))
-#
-#     def is_label(row, col, shape, pos):
-#         if pos in ('nw', 'tl', 'northwest', 'topleft'):
-#             return row == 0 or col == 0
-#         elif pos in ('ne', 'tr', 'northeast', 'topright'):
-#             return row == 0 or col == shape[1]
-#         elif pos in ('se', 'br', 'southwest', 'bottomleft'):
-#             return row == shape[0] or col == 0
-#         elif pos in ('se', 'br', 'northeast', 'bottomright'):
-#             return row == shape[0] or col == shape[1]
-#
-#
-#     for i, row_label in enumerate(row_labels):
-#         for j, col_label in enumerate(col_labels):
-#             if not swap_filling:
-#                 n_plot = i * num_col + j
-#             else:
-#                 n_plot = j * num_row + i
-#
-#             plot_func, plot_args, plot_kwargs = plots[n_plot]
-#             plot_kwargs['ax'] = axs[i, j]
-#             if subplot_title_fmt:
-#                 t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
-#                 number = n_plot + 1
-#                 if roman_numbers:  # todo: switch to numerals?
-#                     roman_lowercase = roman_numbers.toRoman(number)
-#                     roman_uppercase = roman_numbers.toRoman(number)
-#                     roman = roman_uppercase
-#                 letter_lowercase = string.ascii_lowercase[n_plot]
-#                 letter_uppercase = string.ascii_uppercase[n_plot]
-#                 letter = letter_lowercase
-#                 plot_kwargs['title'] = subplot_title_fmt.format_map(locals())
-#             plot_func(*tuple(plot_args), **(plot_kwargs))
-#
-#             if col_label and is_label(i, j, axs.shape, label_pos):
-#                 fig.text(
-#                     mrt.utils.scale(
-#                         (j * 2 + 1) / (num_col * 2),
-#                         out_interval=(label_pads[0], 1.0)),
-#                     1.0 - label_pads[1] / 2,
-#                     col_label, rotation=0,
-#                     fontweight='bold', fontsize='large',
-#                     horizontalalignment='center', verticalalignment='top')
-#
-#         if row_label:
-#             fig.text(
-#                 label_pads[0] / 2,
-#                 mrt.utils.scale(
-#                     1.0 - (i * 2 + 1) / (num_row * 2),
-#                     out_interval=(0, 1.0 - label_pads[1])),
-#                 row_label, rotation=90,
-#                 fontweight='bold', fontsize='large',
-#                 horizontalalignment='left', verticalalignment='center')
-#
-#     # include additional text
-#     if more_texts is not None:
-#         for text_kws in more_texts:
-#             fig.text(**dict(text_kws))
-#
-#     # save figure to file
-#     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
-#         fig.tight_layout(
-#             rect=[0.0 + label_pads[0], 0.0, 1.0, 1.0 - label_pads[1]],
-#             pad=1.0, h_pad=pads[0], w_pad=pads[1])
-#         if save_kws is None:
-#             save_kws = {}
-#         fig.savefig(save_filepath, **dict(save_kws))
-#         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-#         plt.close(fig)
-#     return fig
