@@ -1873,6 +1873,9 @@ def subplots(
 
     """
     num_plots = len(plots)
+    if num_plots == 0:
+        warnings.warn('Nothing to plot.')
+        return
 
     # determine rows and cols if not specified
     if rows is None and cols is None:
@@ -2012,7 +2015,6 @@ def subplots(
     if more_texts is not None:
         for text_kws in more_texts:
             fig.text(**dict(text_kws))
-
     # save figure to file
     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout(
