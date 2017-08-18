@@ -409,6 +409,7 @@ def fit_exp_curve_fit(
         optim='lm',
         init=None,
         full=False,
+        num_proc=0,
         exp_factor=0,
         zero_cutoff=np.spacing(1)):
     """
@@ -430,6 +431,9 @@ def fit_exp_curve_fit(
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
+        num_proc (int): The number of multiprocessing workers.
+            If 1, the execution is sequential.
+            If 0, the number of workers is determined automatically.
         exp_factor (float|None):
         zero_cutoff (float|None): The threshold value for masking zero values.
 
@@ -457,9 +461,16 @@ def fit_exp_curve_fit(
     if not init:
         init = [1] * num_params
 
+    method_kws = dict(method=optim)
+    if num_proc > 1:
+        method = 'curve_fit_parallel'
+        method_kws['num_proc'] = num_proc
+    else:
+        method = 'curve_fit_sequential'
+
     p_arr = voxel_curve_fit(
-        y_arr, x_arr, func_exp_decay, init, method='curve_fit_parallel_map',
-        method_kws=dict(method=optim))
+        y_arr, x_arr, func_exp_decay, init,
+        method=method, method_kws=method_kws)
 
     shape = p_arr.shape[:axis]
     p_arrs = [arr.reshape(shape) for arr in np.split(p_arr, num_params, axis)]
@@ -532,7 +543,8 @@ def fit_exp_tau_quad(
                 y_arr[..., i:i + j + 1], x_arr[i:i + j + 1], axis=axis)
             d_arr[..., n] = y_arr[..., i] - y_arr[..., i + j]
             n += 1
-    tau_arr = s_arr / d_arr
+    with np.errstate(divide='ignore', invalid='ignore'):
+        tau_arr = s_arr / d_arr
     return combine(tau_arr, axis=axis)
 
 
@@ -643,7 +655,8 @@ def fit_exp_tau_quadr(
     sum_ss = np.nansum(s_arr * s_arr, axis=axis)
     sum_sd = np.nansum(s_arr * d_arr, axis=axis)
     sum_dd = np.nansum(d_arr * d_arr, axis=axis)
-    tau_arr = (sum_ss + sum_sd) / (sum_sd + sum_dd)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        tau_arr = (sum_ss + sum_sd) / (sum_sd + sum_dd)
 
     return tau_arr
 
@@ -703,9 +716,10 @@ def fit_exp_tau_diff(
 
     assert (x_arr.size == y_arr.shape[axis])
 
-    dy_arr = differentiate(y_arr, axis=axis)
-    dx_arr = differentiate(x_arr, axis=axis)
-    tau_arr = -y_arr * dx_arr / dy_arr
+    with np.errstate(divide='ignore', invalid='ignore'):
+        dy_arr = differentiate(y_arr, axis=axis)
+        dx_arr = differentiate(x_arr, axis=axis)
+        tau_arr = -y_arr * dx_arr / dy_arr
 
     return combine(tau_arr, axis=axis)
 
@@ -796,9 +810,10 @@ def fit_exp_tau_arlo(
     sum_ss = np.nansum(s_arr * s_arr, axis=axis)
     sum_sd = np.nansum(s_arr * d_arr, axis=axis)
     sum_dd = np.nansum(d_arr * d_arr, axis=axis)
-    tau_arr = (dti / window_size) \
-              * (sum_ss + dti / window_size * sum_sd) \
-              / (sum_dd + dti / window_size * sum_sd)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        tau_arr = (dti / window_size) \
+                  * (sum_ss + dti / window_size * sum_sd) \
+                  / (sum_dd + dti / window_size * sum_sd)
     return tau_arr
 
 
@@ -885,15 +900,12 @@ def _curve_fit(args):
         p_cov (np.ndarray): The covariance of the optimized parameters.
             The diagonals provide the variance of the parameter estimate
     """
-    from scipy.optimize import OptimizeWarning
-
-
     try:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
-            warnings.simplefilter('error', OptimizeWarning)
+            warnings.simplefilter('error', sp.optimize.OptimizeWarning)
             p_val, p_cov = sp.optimize.curve_fit(*args)
-    except (RuntimeError, ValueError, OptimizeWarning):
+    except (RuntimeError, ValueError, sp.optimize.OptimizeWarning):
         err_val = np.nan
         # number of fitting parameters
         num_params = len(args[3])
@@ -991,9 +1003,13 @@ def voxel_curve_fit(
         for i in range(num_voxels):
             y_i_arr = y_arr[i] if len(shape) > 1 else y_arr
             p_i_arr = p_arr[i]
-            tmp = sp.optimize.curve_fit(
-                fit_func, x_arr, y_i_arr, p_i_arr, **method_kws)
-            p_arr[i] = tmp[0]
+            try:
+                tmp = sp.optimize.curve_fit(
+                    fit_func, x_arr, y_i_arr, p_i_arr, **method_kws)
+            except RuntimeError:
+                p_arr[i] = p_i_arr
+            else:
+                p_arr[i] = tmp[0]
 
     elif method == 'curve_fit_parallel':
         if 'num_proc' in method_kws:
