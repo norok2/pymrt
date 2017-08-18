@@ -26,7 +26,8 @@ import pymrt as mrt
 # from pymrt import elapsed, print_elapsed
 # from pymrt import msg, dbg
 import pymrt.utils
-from pymrt.recipes.generic import fix_magnitude_bias, fix_phase_interval
+from pymrt.recipes.generic import (
+    fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate)
 import pymrt.recipes.multi_flash
 
 # ======================================================================
@@ -178,6 +179,9 @@ def mp2rage_rho_to_t1(
             rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
 
         t1_arr = np.interp(rho_arr, rho, t1)
+
+    if inverted:
+        t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr
 
 
@@ -193,6 +197,7 @@ def mp2rage_t1(
         t1_num=512,
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
+        inverted=False,
         **acq_param_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
@@ -227,6 +232,8 @@ def mp2rage_t1(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This affects the precision of the estimation.
+        inverted (bool): Invert results to convert times to rates.
+            Assumes that units of time is ms and units of rates is Hz.
         **acq_param_kws (dict): The acquisition parameters.
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
@@ -253,6 +260,7 @@ def double_flash(
         tr2,
         eta_fa_arr=None,
         approx=None,
+        inverted=False,
         prepare=fix_magnitude_bias):
     """
     Calculate the T1 map from two FLASH acquisitions.
@@ -307,6 +315,8 @@ def double_flash(
         approx (str|None): Determine the approximation to use.
             Accepted values:
              - `short_tr`: assumes tr1, tr2 << min(T1)
+        inverted (bool): Invert results to convert times to rates.
+            Assumes that units of time is ms and units of rates is Hz.
         prepare (callable|None): Input array preparation.
             Must have the signature: f(np.ndarray) -> np.ndarray.
             Useful for data pre-whitening, including for example the
@@ -364,6 +374,9 @@ def double_flash(
                 'Unsupported fa1, fa2, tr1, tr2 combination for T1.'
                 'Fallback to 1.')
             t1_arr = np.ones_like(arr1)
+
+    if inverted:
+        t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr
 
 
@@ -374,6 +387,7 @@ def multi_flash(
         trs,
         eta_fa_arr=None,
         method='vfa',
+        inverted=False,
         prepare=fix_magnitude_bias):
     """
     Calculate the T1 map using multiple FLASH acquisitions.
@@ -395,6 +409,8 @@ def multi_flash(
                efficiency (or B1+).
              - 'leasq': use non-linear least square fit, slow but accurate,
                and requires many acquisitions to be accurate.
+        inverted (bool): Invert results to convert times to rates.
+            Assumes that units of time is ms and units of rates is Hz.
         prepare (callable|None): Input array preparation.
             Must have the signature: f(np.ndarray) -> np.ndarray.
             Useful for data pre-whitening, including for example the
@@ -423,4 +439,6 @@ def multi_flash(
     else:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
+    if inverted:
+        t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr

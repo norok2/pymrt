@@ -402,7 +402,7 @@ def fit_exp_loglin(
 
 
 # ======================================================================
-def fit_exp_leasq(
+def fit_exp_curve_fit(
         arr,
         tis,
         tis_mask=None,
