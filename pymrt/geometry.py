@@ -34,6 +34,7 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import itertools  # Functions creating iterators for efficient looping
+import functools  # Higher-order functions and operations on callable objects
 import warnings  # Warning control
 import random  # Generate pseudo-random numbers
 import doctest  # Test interactive Python examples
@@ -133,7 +134,8 @@ def render(
         fill (tuple[bool|int|float]): Values to render the mask with.
             The first value is used for inside the mask.
             The second value is used for outside the mask.
-        dtype (np.dtype): Desired output data-type.
+        dtype (data-type): Desired output data-type.
+            See `np.ndarray()` for more.
 
     Returns:
         img (np.ndarray):
@@ -828,7 +830,7 @@ def nd_prism(
     if rel_sizes:
         size = rel2abs((extra_dim,), size)
     position = mrt.utils.grid_coord(
-            (extra_dim,), (position,), use_int=False)[0]
+        (extra_dim,), (position,), use_int=False)[0]
     extra_mask = np.abs(position) <= (size / 2.0)
     # calculate mask shape
     shape = (
@@ -1034,6 +1036,49 @@ def dirac_delta(
 
 
 # ======================================================================
+def apply_mask(
+        arr,
+        mask,
+        borders=None,
+        background=0.0):
+    """
+    Apply a mask to an array.
+
+    Note: this will not produced a masked array `numpy.ma` object.
+
+    Args:
+        arr (np.ndarray): The input array.
+        mask (np.ndarray): The mask array.
+        background (int|float): The value used for masked-out pixels.
+        borders (int|float|tuple[int|float]|None): The border size(s).
+            If None, the border is not modified.
+            Otherwise, a border is added to the masked array.
+            If int, this is in units of pixels.
+            If float, this is proportional to the initial array shape.
+            If int or float, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
+            If 'use_longest' is True, use the longest dimension for the
+            calculations.
+
+    Returns:
+        arr (np.ndarray): The output array.
+            Values outside of the mask are set to background.
+            Array shape may have changed (depending on `borders`).
+
+    See Also:
+        frame()
+    """
+    mask = mask.astype(bool)
+    arr[~mask] = background
+    if borders is not None:
+        container = sp.ndimage.find_objects(mask.astype(int))[0]
+        if container:
+            arr = arr[container]
+        arr = frame(arr, borders, background)
+    return arr
+
+
+# ======================================================================
 def frame(
         arr,
         borders=0.05,
@@ -1044,7 +1089,7 @@ def frame(
 
     Args:
         arr (np.ndarray): The input array.
-        borders (int|float|tuple[int|float]): The border size(s).
+        borders (int|float|iterable[int|float]): The border size(s).
             If int, this is in units of pixels.
             If float, this is proportional to the initial array shape.
             If int or float, uses the same value for all dimensions.
@@ -1121,46 +1166,55 @@ def reframe(
 
 
 # ======================================================================
-def apply_mask(
-        arr,
-        mask,
-        borders=None,
-        background=0.0):
+def multi_reframe(
+        arrs,
+        new_shape=None,
+        background=0.0,
+        dtype=None):
     """
-    Apply a mask to an array.
+    Reframe arrays (by adding border) to match the same shape.
 
-    Note: this will not produced a `numpy.ma` object.
+    Note that:
+        - uses 'reframe' under the hood
+        - the sampling / resolution / voxel size will NOT change
+        - the support space / field-of-view will change
 
     Args:
-        arr (np.ndarray): The input array.
-        mask (np.ndarray): The mask array.
-        background (int|float): The value used for masked-out pixels.
-        borders (int|float|tuple[int|float]|None): The border size(s).
-            If None, the border is not modified.
-            Otherwise, a border is added to the masked array.
-            If int, this is in units of pixels.
-            If float, this is proportional to the initial array shape.
-            If int or float, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
-            If 'use_longest' is True, use the longest dimension for the
-            calculations.
+        arrs (iterable[np.ndarray]): The input arrays.
+        new_shape (iterable[int]): The new base shape of the arrays.
+        background (int|float|complex): The background value for the frame.
+        dtype (data-type): Desired output data-type.
+            If None, its guessed from dtype of arrs.
+            See `np.ndarray()` for more.
 
     Returns:
-        arr (np.ndarray): The output array.
-            Values outside of the mask are set to background.
-            Array shape may have changed (depending on `borders`).
-
-    See Also:
-        frame()
+        result (np.ndarray): The output array.
+            It contains all reframed arrays from `arrs`, through the last dim.
+            The shape of this array is `new_shape` + `len(arrs)`.
     """
-    mask = mask.astype(bool)
-    arr[~mask] = background
-    if borders is not None:
-        container = sp.ndimage.find_objects(mask.astype(int))[0]
-        if container:
-            arr = arr[container]
-        arr = frame(arr, borders, background)
-    return arr
+    # calculate new shape
+    if new_shape is None:
+        shapes = [arr.shape for arr in arrs]
+        new_shape = [1] * max([len(shape) for shape in shapes])
+        shape_arr = np.ones((len(shapes), len(new_shape))).astype(np.int)
+        for i, shape in enumerate(shapes):
+            shape_arr[i, :len(shape)] = np.array(shape)
+        new_shape = tuple(
+            max(*list(shape_arr[:, i]))
+            for i in range(len(new_shape)))
+
+    if dtype is None:
+        # dtype = functools.reduce(
+        #     (lambda x, y: np.promote_types(x, y.dtype)), arrs)
+        dtype = bool
+        for arr in arrs:
+            dtype = np.promote_types(dtype, arr.dtype)
+
+    result = np.array(new_shape + (len(arrs),), dtype=dtype)
+    for i, arr in enumerate(arrs):
+        # ratio should not be kept: keep_ratio_method=None
+        result[..., i] = reframe(arr, new_shape, background=background)
+    return result
 
 
 # ======================================================================
@@ -1228,7 +1282,8 @@ def shape2zoom(
 def zoom(
         arr,
         factors,
-        interp_order=1,
+        window=None,
+        interp_order=0,
         extra_dim=True,
         fill_dim=True):
     """
@@ -1236,7 +1291,18 @@ def zoom(
 
     Args:
         arr (np.ndarray): The input array.
-        factors (float|iterable[float]): The zoom factor along the axes.
+        factors (int|float|iterable[int|float]): The zoom factor(s).
+            If int or float, uses isotropic factor along all axes.
+            If iterable, its size must match the number of dims of `arr`.
+            Values larger than 1 increase `arr` size along the axis.
+            Values smaller than 1 decrease `arr` size along the axis.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from the `zoom`
+            parameter.
         interp_order (int): Order of the spline interpolation.
             0: nearest. Accepted range: [0, 5].
         extra_dim (bool): Force extra dimensions in the zoom parameters.
@@ -1246,35 +1312,41 @@ def zoom(
         result (np.ndarray): The output array.
 
     See Also:
-        pymrt.geometry.reshape(), pymrt.geometry.resample()
+        geometry.zoom
     """
     factors, shape = zoom_prepare(factors, arr.shape, extra_dim, fill_dim)
+    if window is None:
+        window = [round(1.0 / (2.0 * x)) for x in factors]
+    arr = sp.ndimage.uniform_filter(arr, window)
     arr = sp.ndimage.zoom(
         arr.reshape(shape), factors, order=interp_order)
-    # aff_transform = np.diag(1.0 / np.array(factors[:3] + [1.0]))
     return arr
 
 
 # ======================================================================
-def reshape(
+def resample(
         arr,
         new_shape,
         aspect=None,
+        window=None,
         interp_order=0,
         extra_dim=True,
         fill_dim=True):
     """
     Reshape the array to a new shape (different resolution / pixel size).
 
-    Warning: uses `scipy.ndimage.zoom` internally!
-    For downsampling applications, this might not be appropriate.
-
     Args:
         arr (np.ndarray): The input array.
-        new_shape (tuple[int|None]): New dimensions of the array.
+        new_shape (iterable[int|None]): New dimensions of the array.
         aspect (callable|iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
             This is passed to `pymrt.geometry.shape2zoom()`.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from `new_shape`.
         interp_order (int|None): Order of the spline interpolation.
             0: nearest. Accepted range: [0, 5].
         extra_dim (bool): Force extra dimensions in the zoom parameters.
@@ -1284,45 +1356,89 @@ def reshape(
         arr (np.ndarray): The output array.
 
     See Also:
-        pymrt.geometry.zoom(), pymrt.geometry.resample()
+        geometry.zoom
     """
     factors = shape2zoom(arr.shape, new_shape, aspect)
-    factors, shape = zoom_prepare(factors, arr.shape, extra_dim, fill_dim)
-    arr = sp.ndimage.zoom(
-        arr.reshape(shape), factors, order=interp_order)
+    factors, shape = zoom_prepare(
+        factors, arr.shape, extra_dim, fill_dim)
+    arr = zoom(arr, factors, window=window, interp_order=interp_order)
     return arr
 
 
 # ======================================================================
-def resample(
-        arr,
-        resampling):
+def multi_resample(
+        arrs,
+        new_shape=None,
+        lossless=False,
+        window=None,
+        interp_order=0,
+        extra_dim=True,
+        fill_dim=True,
+        dtype=None):
     """
-    Resample the array with different (different resolution / pixel size).
+    Resample arrays to match the same shape.
 
-    This assumes linearity in the down-sampled dimensions.
-    This means that the signal from a larger sample is proportional to the
-    (weighted) sum of the signals from smaller samples with overlapping
-    support.
+    Note that:
+        - uses 'geometry.resample()' internally;
+        - the sampling / resolution / voxel size will change;
+        - the support space / field-of-view will NOT change.
 
     Args:
-        arr (np.ndarray): The input array.
-        resampling (float): Resampling factor.
+        arrs (iterable[np.ndarray]): The input arrays,
+        new_shape (iterable[int]): The new base shape of the arrays.
+        lossless (bool): allow for lossy resampling.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from `new_shape`.
+        interp_order (int|None): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
+        dtype (data-type): Desired output data-type.
+            If None, its guessed from dtype of arrs.
+            See `np.ndarray()` for more.
 
     Returns:
-        arr (np.ndarray): The output array.
-
-    See Also:
-        pymrt.geometry.zoom(), pymrt.geometry.reshape()
+        result (np.ndarray): The output array.
+            It contains all reshaped arrays from `arrs`, through the last dim.
+            The shape of this array is `new_shape` + `len(arrs)`.
     """
-    # todo: implement anisotropic resampling
-    if resampling >= 1.0:
-        arr = sp.ndimage.zoom(arr, resampling, order=0)
-    else:  # downsampling
-        print((1.0 / resampling) / 2 - 0.5)
-        arr = sp.ndimage.uniform_filter(arr, (1.0 / resampling) / 2)
-        arr = sp.ndimage.zoom(arr, resampling, order=0)
-    return arr
+    # calculate new shape
+    if new_shape is None:
+        shapes = [arr.shape for arr in arrs]
+        new_shape = [1] * max([len(shape) for shape in shapes])
+        shape_arr = np.ones((len(shapes), len(new_shape))).astype(np.int)
+        for i, shape in enumerate(shapes):
+            shape_arr[i, :len(shape)] = np.array(shape)
+        combiner = mrt.utils.lcm if lossless else max
+        new_shape = tuple(
+            combiner(*list(shape_arr[:, i]))
+            for i in range(len(new_shape)))
+    else:
+        new_shape = tuple(new_shape)
+
+    # resample images
+    if lossless:
+        interp_order = 0
+        window = None
+
+    if dtype is None:
+        # dtype = functools.reduce(
+        #     (lambda x, y: np.promote_types(x, y.dtype)), arrs)
+        dtype = bool
+        for arr in arrs:
+            dtype = np.promote_types(dtype, arr.dtype)
+
+    result = np.array(new_shape + (len(arrs),), dtype=dtype)
+    for i, arr in enumerate(arrs):
+        # ratio should not be kept: keep_ratio_method=None
+        result[..., i] = resample(
+            arr, new_shape, aspect=None, window=window,
+            interp_order=interp_order, extra_dim=extra_dim, fill_dim=fill_dim)
+    return result
 
 
 # ======================================================================

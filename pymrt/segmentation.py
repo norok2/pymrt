@@ -611,7 +611,7 @@ def auto_thresholds(
 
 
 # ======================================================================
-def _threshold(
+def threshold_to_mask(
         arr,
         threshold,
         comparison='>'):
@@ -657,7 +657,7 @@ def label_thresholds(
     """
     label = np.zeros_like(arr, dtype=int)
     for threshold in thresholds:
-        mask = _threshold(arr, threshold, comparison)
+        mask = threshold_to_mask(arr, threshold, comparison)
         label += mask.astype(int)
     return label
 
@@ -728,6 +728,44 @@ def label_nested_structures(
 
 
 # ======================================================================
+def clip_range(
+        arr,
+        interval,
+        out_values=None):
+    """
+    Set values outside the specified interval to constant.
+
+    Similar masking patters could be obtained with `label_thresholds()`
+    or `threshold_to_mask()`.
+
+    Args:
+        arr (np.ndarray): The input array.
+        interval (iterable[int|float]): The values interval.
+            Must contain 2 items: (t1, t2)
+            Values outside this range are set according to `out_values`.
+        out_values (int|float|iterable[int|float]|None): The replacing values.
+            If int or float, values outside the (t1, t2) range are replaced
+            with `out_values`.
+            If iterable, must contain 2 items: (v1, v2), and values below `t1`
+            are replaced with `v1`, while values above `t2` are replaced with
+            `v2`.
+            If None, uses v1 = t1 and v2 = t2: values below `t1` are replaced
+            with `t1`, while values above `t2` are replaced with `t2`.
+
+    Returns:
+        arr (np.ndarray): The clipped array.
+    """
+    t1, t2 = interval
+    if out_values is None:
+        out_values = interval
+    out_values = mrt.utils.auto_repeat(out_values, 2, check=True)
+    v1, v2 = out_values
+    arr[arr < t1] = v1
+    arr[arr > t2] = v2
+    return arr
+
+
+# ======================================================================
 def auto_mask(
         arr,
         threshold='otsu',
@@ -769,7 +807,7 @@ def auto_mask(
         thresholds = auto_thresholds(arr, threshold, threshold_kws)
         index = 0 if len(thresholds) > 1 else len(thresholds) // 2
         threshold = thresholds[index]
-    arr = _threshold(arr, threshold, comparison)
+    arr = threshold_to_mask(arr, threshold, comparison)
 
     if erosion_iter > 0:
         arr = sp.ndimage.binary_erosion(arr, iterations=erosion_iter)

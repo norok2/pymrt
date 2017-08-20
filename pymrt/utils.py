@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.base: generic basic utilities.
+pymrt.utils: generic basic utilities.
 """
 
 # ======================================================================

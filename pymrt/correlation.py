@@ -429,7 +429,7 @@ def calc_mask(
         threshold_kws=None,
         comparison='>',
         smoothing=1.0,
-        erosion_iter=2,
+        erosion_iter=4,
         dilation_iter=2,
         bet_params='-v',
         helper_img_type=None,
@@ -442,7 +442,7 @@ def calc_mask(
 
     | Workflow is:
     * Brain extraction with FSL's BET (if any)
-    * Extract mask using pymrt.geometry algorithm
+    * Extract mask using geometry algorithm
 
     TODO: fix docs!!
 
@@ -499,12 +499,12 @@ def calc_mask(
 
     if bet_params:
         # set optimized version of mask final calculation on BET output
-        threshold = 'twice_first_peak'
-        threshold_kws = None
-        comparison = '>'
-        smoothing = 1.0
-        erosion_iter = 3
-        dilation_iter = 2
+        # threshold = 'twice_first_peak'
+        # threshold_kws = None
+        # comparison = '>'
+        # smoothing = 1.0
+        # erosion_iter = 3
+        # dilation_iter = 2
         # perform BET extraction
         ext_cmd = EXT_CMD['fsl/5.0/bet']
         bet_tmp_filepath = mrt.naming.change_img_type(out_dirpath, 'BRAIN')

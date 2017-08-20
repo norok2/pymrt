@@ -209,7 +209,7 @@ def filter_n_1(
     If the metadata is None, it is automatically calculated.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_filepath (str): Output file path
         func (callable): Filtering function
@@ -246,9 +246,9 @@ def filter_n_m(
     If the metadata is None, it is automatically calculated.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata is taken from the last item.
-        out_filepaths (list[str]): List of output file paths
+        out_filepaths (iterable[str]): List of output file paths
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
             func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
@@ -285,7 +285,7 @@ def filter_n_x(
     The number of output image is not known in advance.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_dirpath (str): Output file path template.
         func (callable): Filtering function
@@ -341,7 +341,7 @@ def simple_filter_n_1(
     filter(in_filepaths) -> out_filepath
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The shape of each array must be identical.
             The metadata is taken from the last item.
         out_filepath (str): Output file path.
@@ -380,7 +380,7 @@ def simple_filter_nn_1(
     filter(in_filepaths) -> out_filepath
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
@@ -415,7 +415,7 @@ def simple_filter_1_m(
     Args:
         in_filepath (str): Input file path
             The metadata information is taken from the input.
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -442,9 +442,9 @@ def simple_filter_n_m(
     filter(in_filepaths) -> out_filepaths
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -480,9 +480,9 @@ def simple_filter_nn_m(
     This is useful when the number of input arrays must be forced.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -561,9 +561,9 @@ def simple_filter_n_x(
     Note that the number of output image is not known in advance.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function.
@@ -589,9 +589,9 @@ def simple_filter_nn_x(
     Note that the number of output image is not known in advance.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(*args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function.
@@ -612,7 +612,7 @@ def stack(
     Join images together.
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
+        in_filepaths (iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
         out_filepath (str): Output file path.
         axis (int): Joining axis of orientation.
@@ -636,13 +636,13 @@ def split(
     Args:
         in_filepath (str): Input file path.
             The metadata information is taken from the input.
-        axis (int): Joining axis of orientation.
-            Must be a valid index for the input shape
         out_dirpath (str): Path to directory where to store results.
         out_filename (str): Output filename (without extension).
+        axis (int): Joining axis of orientation.
+            Must be a valid index for the input shape
 
     Returns:
-        out_filepaths (list[str]): List of output file paths.
+        out_filepaths (iterable[str]): List of output file paths.
     """
     # todo: refactor to use simple_filter_n_y
     if not out_dirpath or not os.path.exists(out_dirpath):
@@ -668,121 +668,34 @@ def split(
 
 
 # ======================================================================
-def zoom(
-        in_filepath,
-        out_filepath,
-        factors,
-        interp_order=1,
-        extra_dim=True,
-        fill_dim=True):
-    """
-    Zoom the image with a specified magnification factor.
-
-    Args:
-        in_filepath (str): Input file path.
-        out_filepath (str): Output file path.
-        factors (float|iterable): The zoom factor along the axes.
-        interp_order (int): Order of the spline interpolation.
-            0: nearest. Accepted range: [0, 5].
-        extra_dim (bool): Force extra dimensions in the zoom parameters.
-        fill_dim (bool): Dimensions not specified are left untouched.
-
-    Returns:    
-        None.
-
-    See Also:
-        pymrt.geometry.reshape()
-    """
-    simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.zoom,
-        factors, interp_order, extra_dim, fill_dim)
-
-
-# ======================================================================
-def reshape(
-        in_filepath,
-        out_filepath,
-        new_shape,
-        aspect=None,
-        interp_order=1,
-        extra_dim=True,
-        fill_dim=True):
-    """
-    Reshape the image to a new shape (different resolution / voxel size).
-
-    Warning: uses `scipy.ndimage.zoom` internally!
-    For downsampling applications, this might not be appropriate.
-
-    Args:
-        in_filepath (str): Input file path.
-        out_filepath (str): Output file path.
-        new_shape (tuple[int|None]): New dimensions of the image.
-        aspect (callable|list[callable]): Zoom shape manipulation.
-            Useful for obtaining specific aspect ratio effects.
-            This is passed to `pymrt.geometry.shape2zoom()`.
-        interp_order (int): Order of the spline interpolation.
-            0: nearest. Accepted range: [0, 5].
-        extra_dim (bool): Force extra dimensions in the zoom parameters.
-        fill_dim (bool): Dimensions not specified are left untouched.
-
-    Returns:
-        None.
-
-    See Also:
-        pymrt.geometry.zoom()
-    """
-    simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.reshape,
-        new_shape, aspect, extra_dim, fill_dim, interp_order)
-
-
-# ======================================================================
-def resample(
-        in_filepath,
-        out_filepath,
-        resampling):
-    """
-    Resample the image to a new shape (different resolution / voxel size).
-
-    This assumes linearity in the down-sampled dimensions.
-    This means that the signal from a larger sample is proportional to the
-    (weighted) sum of the signals from smaller samples with overlapping support.
-
-    Args:
-        in_filepath (str): Input file path.
-        out_filepath (str): Output file path.
-        resampling (float|tuple[float]): Resampling factors.
-
-    Returns:
-        None.
-    """
-    simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.resample, resampling)
-
-
-# ======================================================================
 def frame(
         in_filepath,
         out_filepath,
-        border,
+        borders,
         background=0,
         use_longest=True):
     """
     Add a border frame to the image (same resolution / voxel size)
 
     Args:
-        in_filepath (str): Input file path
-        out_filepath (str): Output file path
-        border (float|tuple[float]): The relative size of the borders
-        background (int|float|complex): The value used for the frame
-        use_longest (bool): Use longest dimension to calculate the border size
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        borders (int|float|iterable[int|float]): The border size(s).
+            If int, this is in units of pixels.
+            If float, this is proportional to the initial array shape.
+            If int or float, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
+            If 'use_longest' is True, use the longest dimension for the
+            calculations.
+        background (int|float): The background value to be used for the frame.
+        use_longest (bool): Use longest dimension to get the border size.
 
     Returns:
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.frame, border, background,
-        use_longest)
+        in_filepath, out_filepath, mrt.geometry.frame,
+        borders, background, use_longest)
 
 
 # ======================================================================
@@ -797,88 +710,30 @@ def reframe(
     Args:
         in_filepath (str): Input file path
         out_filepath (str): Output file path
-        new_shape (tuple[int]): The new shape of the image
-        background (int|float|complex): The value used for the frame
-        use_longest (bool): Use longest dimension to calculate the border size
+        new_shape (int|iterable[int]): The shape of the output array.
+            If int, uses the same value for all dimensions.
+            If iterable, the size must match `arr` dimensions.
+            Additionally, each value of `new_shape` must be greater than or
+            equal to the corresponding dimensions of `arr`.
+        background (int|float): The background value to be used for the frame.
 
     Returns:
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.reframe, new_shape, background)
+        in_filepath, out_filepath, mrt.geometry.reframe,
+        new_shape, background)
 
 
 # ======================================================================
-def common_sampling(
+def multi_reframe(
         in_filepaths,
-        out_filepaths=None,
+        out_filepath,
         new_shape=None,
-        lossless=False,
-        extra_dim=True,
-        fill_dim=True):
+        background=0.0,
+        dtype=None):
     """
-    Resample images sizes and affine transformations to match the same shape.
-
-    Note that:
-        - uses 'reshape' under the hood
-        - the sampling / resolution / voxel size will change
-        - the support space / field-of-view will NOT change
-
-    Args:
-        in_filepaths (list[str]): List of input file paths.
-        out_filepaths (list[str]): List of output file paths.
-        new_shape (tuple[int]): The new shape of the images
-        lossless (bool): allow for lossy resampling
-        extra_dim (bool): Force extra dimensions in the zoom parameters
-        fill_dim (bool): Dimensions not specified are left untouched
-
-    Returns:
-        None
-    """
-
-    def combine_shape(shape_list, lossless=lossless):
-        new_shape = [1] * max([len(shape) for shape in shape_list])
-        shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
-        for i, shape in enumerate(shape_list):
-            shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = mrt.utils.lcm if lossless else max
-        new_shape = [
-            combiner(*list(shape_arr[:, i]))
-            for i in range(len(new_shape))]
-        return tuple(new_shape)
-
-    # calculate new shape
-    if new_shape is None:
-        shape_list = []
-        for in_filepath in in_filepaths:
-            obj = nib.load(in_filepath)
-            shape_list.append(obj.get_data().shape)
-        new_shape = combine_shape(shape_list)
-
-    # reshape images
-    interpolation_order = 0 if lossless else 1
-
-    # when output files are not specified, modify inputs
-    if out_filepaths is None:
-        out_filepaths = in_filepaths
-
-    for in_filepath, out_filepath in zip(in_filepaths, out_filepaths):
-        # ratio should not be kept: keep_ratio_method=None
-        reshape(
-            in_filepath, out_filepath, new_shape, None,
-            interpolation_order,
-            extra_dim, fill_dim)
-    return out_filepaths
-
-
-# ======================================================================
-def common_support(
-        in_filepaths,
-        out_filepaths=None,
-        new_shape=None,
-        background=0):
-    """
-    Reframe images sizes (by adding border) to match the same shape.
+    Reframe arrays (by adding border) to match the same shape.
 
     Note that:
         - uses 'reframe' under the hood
@@ -886,42 +741,158 @@ def common_support(
         - the support space / field-of-view will change
 
     Args:
-        in_filepaths (list[str]): List of input file paths.
-        out_filepaths (list[str]): List of output file paths.
-        new_shape (tuple[int]): The new shape of the images
-        background (int|float|complex): The value used for the frame
+        in_filepaths (iterable[str]): List of input file paths.
+        out_filepath (iterable[str]): The output file path.
+        new_shape (iterable[int]): The new base shape of the arrays.
+        background (int|float|complex): The background value for the frame.
+        dtype (data-type): Desired output data-type.
+            If None, its guessed from dtype of arrs.
+            See `np.ndarray()` for more.
 
     Returns:
         None
     """
+    simple_filter_n_1(
+        in_filepaths, out_filepath,
+        mrt.geometry.multi_reframe,
+        new_shape=new_shape, background=background, dtype=dtype)
 
-    def combine_shape(shape_list):
-        new_shape = [1] * max([len(shape) for shape in shape_list])
-        if any([len(shape) != len(new_shape) for shape in shape_list]):
-            raise IndexError('shape length must match')
-        shape_arr = np.ones((len(shape_list), len(new_shape))).astype(np.int)
-        for i, shape in enumerate(shape_list):
-            shape_arr[i, :len(shape)] = np.array(shape)
-        new_shape = [
-            max(*list(shape_arr[:, i]))
-            for i in range(len(new_shape))]
-        return tuple(new_shape)
 
-    # calculate new shape
-    if new_shape is None:
-        shape_list = []
-        for in_filepath in in_filepaths:
-            obj = nib.load(in_filepath)
-            shape_list.append(obj.get_data().shape)
-        new_shape = combine_shape(shape_list)
+# ======================================================================
+def zoom(
+        in_filepath,
+        out_filepath,
+        factors,
+        window=None,
+        interp_order=0,
+        extra_dim=True,
+        fill_dim=True):
+    """
+    Zoom the image with a specified magnification factor.
 
-    if out_filepaths is None:
-        out_filepaths = in_filepaths
+    Args:
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        factors (int|float|iterable[int|float]): The zoom factor(s).
+            If int or float, uses isotropic factor along all axes.
+            If iterable, its size must match the number of dims of `arr`.
+            Values larger than 1 increase `arr` size along the axis.
+            Values smaller than 1 decrease `arr` size along the axis.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from the `zoom`
+            parameter.
+        interp_order (int): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
 
-    for in_filepath, out_filepath in zip(in_filepaths, out_filepaths):
-        reframe(in_filepath, out_filepath, new_shape, background)
+    Returns:    
+        None.
 
-    return out_filepaths
+    See Also:
+        geometry.resample()
+    """
+    simple_filter_1_1(
+        in_filepath, out_filepath, mrt.geometry.zoom,
+        factors, window, interp_order, extra_dim, fill_dim)
+
+
+# ======================================================================
+def resample(
+        in_filepath,
+        out_filepath,
+        new_shape,
+        aspect=None,
+        window=None,
+        interp_order=0,
+        extra_dim=True,
+        fill_dim=True):
+    """
+    Reshape the image to a new shape (different resolution / voxel size).
+
+    Warning: uses `scipy.ndimage.zoom` internally!
+    For downsampling applications, this might not be appropriate.
+
+    Args:
+        in_filepath (str): Input file path.
+        out_filepath (str): Output file path.
+        new_shape (tuple[int|None]): New dimensions of the array.
+        aspect (callable|iterable[callable]|None): Zoom shape manipulation.
+            Useful for obtaining specific aspect ratio effects.
+            This is passed to `pymrt.geometry.shape2zoom()`.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from `new_shape`.
+        interp_order (int|None): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
+
+    Returns:
+        None.
+
+    See Also:
+        geometry.zoom()
+    """
+    simple_filter_1_1(
+        in_filepath, out_filepath, mrt.geometry.resample,
+        new_shape, aspect, window, extra_dim, fill_dim, interp_order)
+
+
+# ======================================================================
+def multi_resample(
+        in_filepaths,
+        out_filepath,
+        new_shape=None,
+        lossless=False,
+        window=None,
+        interp_order=0,
+        extra_dim=True,
+        fill_dim=True,
+        dtype=None):
+    """
+    Resample arrays to match the same shape.
+
+    Note that:
+        - uses 'geometry.resample()' internally;
+        - the sampling / resolution / voxel size will change;
+        - the support space / field-of-view will NOT change.
+
+    Args:
+        in_filepaths (iterable[str]): List of input file paths.
+        out_filepath (iterable[str]): The output file path.
+        new_shape (iterable[int]): The new shape of the arrays.
+        lossless (bool): allow for lossy resampling.
+        window (int|iterable[int]|None): Uniform pre-filter window size.
+            This is the size of the window for the uniform filter using
+            `sp.ndimage.uniform_filter()`.
+            If iterable, its size must match the number of dims of `arr`.
+            If int, uses an isotropic window with the specified size.
+            If None, the window is calculated automatically from `new_shape`.
+        interp_order (int|None): Order of the spline interpolation.
+            0: nearest. Accepted range: [0, 5].
+        extra_dim (bool): Force extra dimensions in the zoom parameters.
+        fill_dim (bool): Dimensions not specified are left untouched.
+        dtype (data-type): Desired output data-type.
+            If None, its guessed from dtype of arrs.
+            See `np.ndarray()` for more.
+
+    Returns:
+        None
+    """
+    simple_filter_n_1(
+        in_filepaths, out_filepath,
+        mrt.geometry.multi_resample,
+        new_shape=new_shape, lossless=lossless, window=window,
+        interp_order=interp_order, extra_dim=extra_dim, fill_dim=fill_dim,
+        dtype=dtype)
 
 
 # ======================================================================
@@ -953,12 +924,13 @@ def mask_threshold(
         None
 
     See Also:
-        pymrt.segmentation.mask_threshold
+        segmentation.mask_threshold
     """
     kw_params = mrt.utils.set_keyword_parameters(
         mrt.segmentation.mask_threshold, locals())
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.segmentation.mask_threshold, **kw_params)
+        in_filepath, out_filepath, mrt.segmentation.mask_threshold,
+        **kw_params)
 
 
 # ======================================================================
@@ -968,7 +940,7 @@ def find_objects(
         structure=None,
         max_label=0):
     """
-    Extract labels using: pymrt.geometry.find_objects
+    Extract labels using: `geometry.find_objects()`
 
     Args:
         in_filepath (str): The input file path
@@ -978,7 +950,7 @@ def find_objects(
         max_label (int): Limit the number of labels to search through.
 
     See Also:
-        pymrt.geometry.find_objects
+        geometry.find_objects
     """
 
     def _find_objects(array, structure, max_label):
@@ -1010,7 +982,8 @@ def calc_stats(
     Args:
         arr_filepath (str): The image file path.
         mask_filepath (str): The mask file path.
-        *args (tuple): Positional arguments passed to the `calc_stats` function.
+        *args (tuple): Positional arguments passed to the `calc_stats`
+        function.
         **kwargs (dict): Keyword arguments passed to the `calc_stats` function.
 
     Returns
@@ -1022,7 +995,7 @@ def calc_stats(
             - 'sum': summation
 
     See Also:
-        pymrt.base.calc_stats
+        utils.calc_stats
     """
     arr = load(arr_filepath)
     if mask_filepath:
@@ -1062,7 +1035,7 @@ def plot_sample2d(
     """
     Plot a 2D sample image of a ND image.
 
-    Uses the function: pymrt.plot.sample2d
+    Uses the function: `plot.sample2d`.
 
     Args:
         in_filepath (str): The input file path
@@ -1070,7 +1043,7 @@ def plot_sample2d(
         **kwargs (dict): Keyword arguments passed to the plot function.
 
     Returns:
-        The result of `pymrt.plot.sample2d`
+        The result of `plot.sample2d`
 
     See Also:
         pymrt.plot
@@ -1093,7 +1066,7 @@ def plot_sample2d_anim(
     """
     Plot a 2D sample image of a ND image.
 
-    Uses the function: pymrt.plot.sample2d
+    Uses the function: `plot.sample2d()`
 
     Args:
         in_filepath (str): The input file path
@@ -1101,10 +1074,10 @@ def plot_sample2d_anim(
         **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
-        The result of `pymrt.plot.sample2d`
+        The result of `plot.sample2d()`
 
     See Also:
-        pymrt.plot
+        plot
     """
     obj = nib.load(in_filepath)
     arr = obj.get_data()
@@ -1125,7 +1098,7 @@ def plot_histogram1d(
     """
     Plot the 1D histogram of the image using MatPlotLib.
 
-    Uses the function: pymrt.plot.histogram1d
+    Uses the function: `plot.histogram1d()`
 
     Args:
         in_filepath (str): The input file path
@@ -1134,10 +1107,10 @@ def plot_histogram1d(
         **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
-        The result of `pymrt.plot.histogram1d`
+        The result of `plot.histogram1d()`
 
     See Also:
-        pymrt.plot
+        plot
     """
     obj = nib.load(in_filepath)
     arr = obj.get_data().astype(np.double)
@@ -1159,19 +1132,19 @@ def plot_histogram1d_list(
     """
     Plot 1D overlapping histograms of images using MatPlotLib.
 
-    Uses the function: pymrt.plot.histogram1d_list
+    Uses the function: `plot.histogram1d_list()`
 
     Args:
-        in_filepaths (list[str]): The list of input file paths
+        in_filepaths (iterable[str]): The list of input file paths
         mask_filepath (str): The mask file path
         *args (tuple): Positional arguments passed to the plot function
         **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
-        The result of `pymrt.plot.histogram1d_list`
+        The result of `plot.histogram1d_list()`
 
     See Also:
-        pymrt.plot
+        plot
     """
     if mask_filepath:
         obj_mask = nib.load(mask_filepath)
@@ -1198,7 +1171,7 @@ def plot_histogram2d(
     """
     Plot 2D histogram of two arrays with MatPlotLib.
 
-    Uses the function: pymrt.plot.histogram2d
+    Uses the function: `plot.histogram2d()`
 
     Args:
         in1_filepath (str): The first input file path.
@@ -1209,10 +1182,10 @@ def plot_histogram2d(
         **kwargs (dict): Keyword arguments passed to the plot function
 
     Returns:
-        The result of `pymrt.plot.histogram2d`
+        The result of `plot.histogram2d()`
 
     See Also:
-        pymrt.plot.histogram2d
+        plot.histogram2d
     """
     obj1 = nib.load(in1_filepath)
     obj2 = nib.load(in2_filepath)
