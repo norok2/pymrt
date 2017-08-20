@@ -1155,7 +1155,7 @@ def reframe(
         raise IndexError('number of dimensions must match')
     elif any([old > new for old, new in zip(arr.shape, new_shape)]):
         raise ValueError('new shape cannot be smaller than the old one.')
-    result = background * np.ones(new_shape)
+    result = background + np.zeros(new_shape)
     borders = [
         round((new - old) / 2.0) for old, new in zip(arr.shape, new_shape)]
     inner = [
@@ -1175,9 +1175,9 @@ def multi_reframe(
     Reframe arrays (by adding border) to match the same shape.
 
     Note that:
-        - uses 'reframe' under the hood
-        - the sampling / resolution / voxel size will NOT change
-        - the support space / field-of-view will change
+     - uses 'reframe' under the hood
+     - the sampling / resolution / voxel size will NOT change
+     - the support space / field-of-view will change
 
     Args:
         arrs (iterable[np.ndarray]): The input arrays.
@@ -1379,9 +1379,9 @@ def multi_resample(
     Resample arrays to match the same shape.
 
     Note that:
-        - uses 'geometry.resample()' internally;
-        - the sampling / resolution / voxel size will change;
-        - the support space / field-of-view will NOT change.
+     - uses 'geometry.resample()' internally;
+     - the sampling / resolution / voxel size will change;
+     - the support space / field-of-view will NOT change.
 
     Args:
         arrs (iterable[np.ndarray]): The input arrays,
