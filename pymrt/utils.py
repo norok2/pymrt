@@ -12,6 +12,7 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
+import io  # Core tools for working with streams
 import sys  # System-specific parameters and functions
 import math  # Mathematical functions
 import itertools  # Functions creating iterators for efficient looping
@@ -27,6 +28,9 @@ import importlib  # The implementation of import
 import gzip  # Support for gzip files
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
+import struct  # Interpret strings as packed binary data
+import re  # Regular expression operations
+import fnmatch  # Unix filename pattern matching
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -67,6 +71,57 @@ EXT = {
 }
 D_TAB_SIZE = 8
 
+# ======================================================================
+# :: define C types
+
+# : short form (base types used by `struct`)
+_STRUCT_TYPES = (
+    'x',  # pad bytes
+    'c',  # char 1B
+    'b',  # signed char 1B
+    'B',  # unsigned char 1B
+    '?',  # bool 1B
+    'h',  # short int 2B
+    'H',  # unsigned short int 2B
+    'i',  # int 4B
+    'I',  # unsigned int 4B
+    'l',  # long 4B
+    'L',  # unsigned long 4B
+    'q',  # long long 8B
+    'Q',  # unsigned long long 8B
+    'f',  # float 4B
+    'd',  # double 8B
+    's', 'p',  # char[]
+    'P',  # void * (only support mode: '@')
+)
+
+# : data type format conversion for `struct`
+DTYPE_STR = {s: s for s in _STRUCT_TYPES}
+# : define how to interpreted Python types
+DTYPE_STR.update({
+    bool: '?',
+    int: 'i',
+    float: 'f',
+    str: 's',
+})
+# : define how to interpret human-friendly types
+DTYPE_STR.update({
+    'bool': '?',
+    'char': 'b',
+    'uchar': 'B',
+    'short': 'h',
+    'ushort': 'H',
+    'int': 'i',
+    'uint': 'I',
+    'long': 'l',
+    'ulong': 'L',
+    'llong': 'q',
+    'ullong': 'Q',
+    'float': 'f',
+    'double': 'd',
+    'str': 's',
+})
+
 
 # ======================================================================
 def _is_hidden(filepath):
@@ -106,6 +161,61 @@ def _is_special(stats_mode):
                  not stat.S_ISDIR(stats_mode) and \
                  not stat.S_ISLNK(stats_mode)
     return is_special
+
+
+# ======================================================================
+def read_stream(
+        file_obj,
+        dtype,
+        count=1,
+        mode='@',
+        offset=None,
+        whence=io.SEEK_SET):
+    """
+
+    Args:
+        file_obj:
+        dtype:
+        count:
+        mode:
+        offset:
+        whence:
+
+    Returns:
+
+    """
+    if offset is not None:
+        file_obj.seek(offset, whence)
+    fmt = mode + str(count) + DTYPE_STR[dtype]
+    byte_count = struct.calcsize(fmt)
+    return struct.unpack_from(fmt, file_obj.read(byte_count)), byte_count
+
+
+# ======================================================================
+def read_cstr(
+        file_obj,
+        offset=None,
+        whence=io.SEEK_SET):
+    """
+
+    Args:
+        file_obj:
+        offset:
+        whence:
+
+    Returns:
+
+    """
+    if offset is not None:
+        file_obj.seek(offset, whence)
+    buffer = []
+    while True:
+        c = file_obj.read(1).decode('ascii')
+        if c is None or c == '\0':
+            break
+        else:
+            buffer.append(c)
+    return ''.join(buffer)
 
 
 # ======================================================================
@@ -685,6 +795,50 @@ def common_subseq(
 
 
 # ======================================================================
+def safe_filename(
+        text,
+        allowed='a-zA-Z0-9._-',
+        replacing='_',
+        group_consecutive=True):
+    """
+    Return a string containing a safe filename.
+
+    Args:
+        text (str): The input string.
+        allowed (str):  The valid characters.
+            Must comply to Python's regular expression syntax.
+        replacing (str): The replacing text.
+        group_consecutive (str): Group consecutive non-allowed.
+            If True, consecutive non-allowed characters are replaced by a
+            single instance of `replacing`.
+            Otherwise, each character is replaced individually.
+
+    Returns:
+        text (str): The filtered text.
+
+    Examples:
+        >>> safe_filename('pymrt.txt')
+        'pymrt.txt'
+        >>> safe_filename('pymrt+12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+++12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+++12.txt', group_consecutive=False)
+        'pymrt___12.txt'
+        >>> safe_filename('pymrt+12.txt', allowed='a-zA-Z0-9._+-')
+        'pymrt+12.txt'
+        >>> safe_filename('pymrt+12.txt', replacing='-')
+        'pymrt-12.txt'
+    """
+    return re.sub(
+        r'[^{allowed}]{greedy}'.format(
+            allowed=allowed, greedy='+' if group_consecutive else ''),
+        replacing, text)
+
+
+# ======================================================================
 def auto_open(filepath, *args, **kwargs):
     """
     Auto-magically open a compressed file.
@@ -845,6 +999,7 @@ def ndot(
     return prod
 
 
+# ======================================================================
 def commutator(a, b):
     """
     Calculate the commutator of two arrays: [A,B] = AB - BA
@@ -859,6 +1014,7 @@ def commutator(a, b):
     return a.dot(b) - b.dot(a)
 
 
+# ======================================================================
 def anticommutator(a, b):
     """
     Calculate the anticommutator of two arrays: [A,B] = AB + BA
@@ -871,6 +1027,71 @@ def anticommutator(a, b):
         c (np.ndarray): The operation result
     """
     return a.dot(b) + b.dot(a)
+
+
+# ======================================================================
+def iwalk2(
+        base,
+        follow_links=False,
+        follow_mounts=False,
+        allow_special=False,
+        allow_hidden=True,
+        max_depth=-1,
+        on_error=None):
+    """
+    Recursively walk through sub paths of a base directory
+
+    Args:
+        base (str): directory where to operate
+        follow_links (bool): follow links during recursion
+        follow_mounts (bool): follow mount points during recursion
+        allow_special (bool): include special files
+        allow_hidden (bool): include hidden files
+        max_depth (int): maximum depth to reach. Negative for unlimited
+        on_error (callable): function to call on error
+
+    Yields:
+        result (tuple): The tuple
+            contains:
+             - path (str): Path to the next object.
+             - stats (stat_result): File stats information.
+
+    Returns:
+        None.
+    """
+
+    # def _or_not_and(flag, check):
+    #     return flag or not flag and check
+
+    def _or_not_and_not(flag, check):
+        return flag or not flag and not check
+
+    try:
+        for name in os.listdir(base):
+            path = os.path.join(base, name)
+            stats = os.stat(path)
+            mode = stats.st_mode
+            # for some reasons, stat.S_ISLINK and os.path.islink results differ
+            allow = \
+                _or_not_and_not(follow_links, os.path.islink(path)) and \
+                _or_not_and_not(follow_mounts, os.path.ismount(path)) and \
+                _or_not_and_not(allow_special, _is_special(mode)) and \
+                _or_not_and_not(allow_hidden, _is_hidden(path))
+            if allow:
+                yield path, stats
+                if os.path.isdir(path):
+                    if max_depth != 0:
+                        next_level = iwalk2(
+                            path, follow_links, follow_mounts,
+                            allow_special, allow_hidden, max_depth - 1,
+                            on_error)
+                        for next_path, next_stats in next_level:
+                            yield next_path, next_stats
+
+    except OSError as error:
+        if on_error is not None:
+            on_error(error)
+        return
 
 
 # ======================================================================
@@ -895,42 +1116,16 @@ def walk2(
         on_error (callable): function to call on error
 
     Returns:
-        path (str): path to the next object
-        stats (stat_result): structure containing file stats information
+        items (list[tuple]): The list of items.
+            Each item contains the tuple with:
+             - path (str): Path to the next object.
+             - stats (stat_result): File stats information.
     """
-
-    # def _or_not_and(flag, check):
-    #     return flag or not flag and check
-
-    def _or_not_and_not(flag, check):
-        return flag or not flag and not check
-
-    try:
-        for name in os.listdir(base):
-            path = os.path.join(base, name)
-            stats = os.stat(path)
-            mode = stats.st_mode
-            # for some reasons, stat.S_ISLINK and os.path.islink results differ
-            allow = \
-                _or_not_and_not(follow_links, os.path.islink(path)) and \
-                _or_not_and_not(follow_mounts, os.path.ismount(path)) and \
-                _or_not_and_not(allow_special, _is_special(mode)) and \
-                _or_not_and_not(allow_hidden, _is_hidden(path))
-            if allow:
-                yield path, stats
-                if os.path.isdir(path):
-                    if max_depth != 0:
-                        next_level = walk2(
-                            path, follow_links, follow_mounts,
-                            allow_special, allow_hidden, max_depth - 1,
-                            on_error)
-                        for next_path, next_stats in next_level:
-                            yield next_path, next_stats
-
-    except OSError as error:
-        if on_error is not None:
-            on_error(error)
-        return
+    return [item for item in iwalk2(
+        base,
+        follow_links=follow_links, follow_mounts=follow_mounts,
+        allow_special=allow_special, allow_hidden=allow_hidden,
+        max_depth=max_depth, on_error=on_error)]
 
 
 # ======================================================================
@@ -1142,7 +1337,7 @@ def realpath(path):
     """
     new_path = os.path.abspath(os.path.realpath(os.path.expanduser(path)))
     if not os.path.exists(new_path):
-        raise (OSError)
+        raise OSError
     return new_path
 
 
@@ -1150,7 +1345,6 @@ def realpath(path):
 def listdir(
         path,
         file_ext='',
-
         full_path=True,
         is_sorted=True,
         verbose=D_VERB_LVL):
@@ -1187,6 +1381,75 @@ def listdir(
     if is_sorted:
         filepaths = sorted(filepaths)
     return filepaths
+
+
+# ======================================================================
+def iflistdir(
+        dirpath,
+        patterns='*',
+        unix_style=True,
+        re_kws=None,
+        walk_kws=None):
+    """
+    Recursively list the content of a directory matching the pattern(s).
+
+    Args:
+        dirpath (str): The base directory.
+        patterns (str|iterable[str]): The pattern(s) to match.
+            These must be either a Unix-style pattern or a regular expression,
+            depending on the value of `unix_style`.
+        unix_style (bool): Interpret the patterns as Unix-style.
+            This is achieved by using `fnmatch`.
+        re_kws (dict|None): Keyword arguments passed to `re.compile()`.
+        walk_kws (dict|None): Keyword arguments passed to `os.walk()`.
+
+    Yields:
+        filepath (str): The next matched filepath.
+    """
+    if isinstance(patterns, str):
+        patterns = (patterns,)
+    if re_kws is None:
+        re_kws = dict()
+    if walk_kws is None:
+        walk_kws = dict()
+    for pattern in patterns:
+        if unix_style:
+            pattern = fnmatch.translate(pattern)
+        re_obj = re.compile(pattern, **re_kws)
+        for root, dirs, files in os.walk(dirpath, **walk_kws):
+            for base in (dirs + files):
+                filepath = os.path.join(root, base)
+                if re_obj.match(filepath):
+                    yield filepath
+
+
+# ======================================================================
+def flistdir(
+        dirpath,
+        patterns='*',
+        unix_style=True,
+        re_kws=None,
+        walk_kws=None):
+    """
+    Recursively list the content of a directory matching the pattern(s).
+
+    Args:
+        dirpath (str): The base directory.
+        patterns (str|iterable[str]): The pattern(s) to match.
+            These must be either a Unix-style pattern or a regular expression,
+            depending on the value of `unix_style`.
+        unix_style (bool): Interpret the patterns as Unix-style.
+            This is achieved by using `fnmatch`.
+        re_kws (dict|None): Keyword arguments passed to `re.compile()`.
+        walk_kws (dict|None): Keyword arguments passed to `os.walk()`.
+
+    Returns:
+        filepaths (list[str]): The matched filepaths.
+    """
+    return [item for item in iflistdir(
+        dirpath,
+        patterns=patterns, unix_style=unix_style, re_kws=re_kws,
+        walk_kws=walk_kws)]
 
 
 # ======================================================================
@@ -1318,7 +1581,7 @@ def split_path(
             contains:
              - root (str): The filepath without the last item.
              - base (str): The file name without the extension.
-             - ext (str): The extension including the separator.
+             - ext (str): The extension including the extension separator.
 
     Examples:
         >>> split_path('/path/to/file.txt')
@@ -1329,10 +1592,69 @@ def split_path(
         ('', 'file', '.tar.gz')
         >>> split_path('/path/to/file')
         ('/path/to', 'file', '')
+
+    See Also:
+        utils.join_path(), utils.multi_split_path()
     """
     root, base_ext = os.path.split(filepath)
     base, ext = split_ext(base_ext, auto_multi_ext=auto_multi_ext)
     return root, base, ext
+
+
+# ======================================================================
+def multi_split_path(
+        filepath,
+        auto_multi_ext=True):
+    """
+    Split the filepath into (root, base, ext).
+
+    Note that: os.path.sep.join(*dirs, base) + ext == path.
+    (and therfore: ''.join(dirs) + base + ext != path).
+
+    root is everything that preceeds the last path separator.
+    base is everything between the last path separator and the first
+    extension separator.
+    ext is the extension (including the separator).
+
+    Note that this separation is performed only on the string and it is not
+    aware of the filepath actually existing, being a file, a directory,
+    or similar aspects.
+
+    Args:
+        filepath (str): The input filepath.
+        auto_multi_ext (bool): Automatically detect multiple extensions.
+            Refer to `split_ext()` for more details.
+
+    Returns:
+        result (tuple[str]): The parts of the file.
+            If the first char of the filepath is `os.path.sep`, then
+            the first item is set to `os.path.sep`.
+            The first (n - 2) items are subdirectories, the penultimate item
+            is the file name without the extension, the last item is the
+            extension including the extension separator.
+
+    Examples:
+        >>> multi_split_path('/path/to/file.txt')
+        ('/', 'path', 'to', 'file', '.txt')
+        >>> multi_split_path('/path/to/file.tar.gz')
+        ('/', 'path', 'to', 'file', '.tar.gz')
+        >>> multi_split_path('file.tar.gz')
+        ('file', '.tar.gz')
+        >>> multi_split_path('/path/to/file')
+        ('/', 'path', 'to', 'file', '')
+
+    See Also:
+        utils.join_path(), utils.split_path()
+    """
+    root, base_ext = os.path.split(filepath)
+    base, ext = split_ext(base_ext, auto_multi_ext=auto_multi_ext)
+    if root:
+        dirs = root.split(os.path.sep)
+        if dirs[0] == '':
+            dirs[0] = os.path.sep
+    else:
+        dirs = ()
+    return tuple(dirs) + (base, ext)
 
 
 # ======================================================================
@@ -1365,6 +1687,13 @@ def join_path(*args):
         ...     '/path/to/file.txt', '/path/to/file.tar.gz', 'file.tar.gz']
         >>> all([path == join_path(*split_path(path)) for path in paths])
         True
+        >>> paths = [
+        ...     '/path/to/file.txt', '/path/to/file.tar.gz', 'file.tar.gz']
+        >>> all([path == join_path(*multi_split_path(path)) for path in paths])
+        True
+
+    See Also:
+        utils.split_path(), utils.multi_split_path()
     """
     return ((os.path.join(*args[:-1]) if args[:-1] else '') +
             (add_extsep(args[-1]) if args[-1] else ''))
