@@ -13,7 +13,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
+import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
 # import time  # Time access and conversions
@@ -26,6 +26,7 @@ import datetime  # Basic date and time types
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -48,11 +49,15 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt as mrt
-# import pymrt.base
+# import pymrt.utils
 # import pymrt.naming
 # import pymrt.input_output
 # import pymrt.geometry
 # from pymrt.sequences import mp2rage
+
+# from pymrt import INFO, DIRS
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
 
@@ -128,38 +133,43 @@ def _parse_record(record):
 
 
 # ======================================================================
-def read(filepath):
+def read(
+        filepath,
+        encoding='utf8'):
     """
     Read files with JCAMP-DX-like structure.
 
     Args:
         filepath (str): Path to file to parse.
+        encoding (str): The encoding to use.
 
     Returns:
-        ldr_std (dict): Dictionary of the standard Labelled-Data-Records found.
-        ldr_user (dict): Dictionary of User-defined Labelled-Data-Records found.
-        comments (str): Comment lines.
+        result (tuple): The tuple
+            contains:
+             - ldr_std (dict): The standard Labelled-Data-Records.
+             - ldr_custom (dict): The custom-defined Labelled-Data-Records.
+             - comments (str): Comment lines.
     """
-    ldr_sep, ldr_usr_sep, ldr_dict_sep = '##', '$', '='
+    ldr_sep, ldr_custom_sep, ldr_dict_sep = '##', '$', '='
     with open(filepath, 'rb') as in_file:
-        ldr_std, ldr_user = {}, {}
-        data = in_file.read()
+        ldr_std, ldr_custom = {}, {}
+        data = in_file.read().decode(encoding)
         data, comments = _strip_comments(data)
         ldrs = [ldr for ldr in data.split(ldr_sep) if ldr]
         ldr_list = []
         for ldr in ldrs:
-            ldr_name, ldr_val = ldr.split(ldr_dict_sep)
+            ldr_name, ldr_val = ldr.split(ldr_dict_sep, 1)
             ldr_val = _parse_record(ldr_val)
-            if ldr.startswith(ldr_usr_sep):
-                ldr_user[ldr_name.strip(ldr_usr_sep)] = ldr_val
+            if ldr.startswith(ldr_custom_sep):
+                ldr_custom[ldr_name.strip(ldr_custom_sep)] = ldr_val
             else:
                 ldr_std[ldr_name] = ldr_val
             ldr_list.append(ldr)
-    return ldr_std, ldr_user, comments
+    return ldr_std, ldr_custom, comments
 
 
 # ======================================================================
-def test():
+def my_testing():
     """
     Test module functionalities with files provided in the package.
 
@@ -169,10 +179,18 @@ def test():
     Returns:
         None.
     """
-    test_filepath_list = []  # 'test/file1.jcampdx']
+    test_filepath_list = [
+        '//home/raid1/metere/hd3/sandbox/hmri'
+        '/Specimen_170814_1_0_Study_20170814_080054/23/acqp']  #
+    # 'test/file1.jcampdx']
     try:
         for test_filepath in test_filepath_list:
-            read(test_filepath)
+            a, b, c = read(test_filepath)
+            print(a)
+            print(b)
+            print(c)
+            print(b['GO_raw_data_format'])
+
     except Exception as exception:  # This has to catch all exceptions.
         print(exception)
         print('Test not passed.')
@@ -183,8 +201,7 @@ def test():
 # ======================================================================
 if __name__ == '__main__':
     msg(__doc__.strip())
-    # time the tests
-    begin_time = datetime.datetime.now()
-    test()
-    end_time = datetime.datetime.now()
-    print('ExecTime: {}'.format(end_time - begin_time))
+    doctest.testmod()
+
+# ======================================================================
+elapsed(os.path.basename(__file__))
