@@ -35,6 +35,7 @@ import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import hashlib  # Secure hashes and message digests
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -58,6 +59,7 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.naming
 import pymrt.input_output
+from pymrt.extras import jcampdx, bruker, siemens
 
 # from dcmpi.lib.common import ID
 
@@ -356,7 +358,8 @@ def calc_afi(
     """
     y_arr = np.stack(images, -1).astype(float)
 
-    s_arr = mrt.utils.polar2complex(y_arr[..., 0], fix_phase_interval(y_arr[..., 1]))
+    s_arr = mrt.utils.polar2complex(y_arr[..., 0],
+                                    fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
     nominal_fa = params[fa_label]
@@ -508,7 +511,7 @@ def rho_mp2rage(
     inv1_arr = mrt.utils.polar2complex(inv1m_arr, inv1p_arr)
     inv2_arr = mrt.utils.polar2complex(inv2m_arr, inv2p_arr)
     rho_arr = np.real(inv1_arr.conj() * inv2_arr /
-                          (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
+                      (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
         rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
@@ -905,8 +908,9 @@ def sources_generic(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
-                mrt.utils.change_ext(mrt.utils.os.path.basename(data_filepath), '',
-                               mrt.utils.EXT['niz']))
+                mrt.utils.change_ext(mrt.utils.os.path.basename(data_filepath),
+                                     '',
+                                     mrt.utils.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
@@ -1085,7 +1089,8 @@ def compute_generic(
                         img = img.astype(opts['dtype'])
                     if params:
                         for key, val in params.items():
-                            target = mrt.naming.change_param_val(target, key, val)
+                            target = mrt.naming.change_param_val(target, key,
+                                                                 val)
                     if verbose > VERB_LVL['none']:
                         print('Target:\t{}'.format(os.path.basename(target)))
                     mrt.input_output.save(target, img, affine=aff)

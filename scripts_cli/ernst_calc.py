@@ -30,7 +30,7 @@ import argparse  # Argument Parsing
 
 # :: Local Imports
 import pymrt as mrt
-# import pymrt.base
+# import pymrt.utils
 import pymrt.sequences.flash
 # import pymrt.input_output
 # import pymrt.geometry

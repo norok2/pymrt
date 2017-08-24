@@ -75,109 +75,6 @@ PROT = {
     ),
 }
 
-# ======================================================================
-# define short form of native C types (see documentation)
-_STRUCT_TYPES = (
-    'x',  # pad bytes
-    'c',  # char 1B
-    'b',  # signed char 1B
-    'B',  # unsigned char 1B
-    '?',  # bool 1B
-    'h',  # short int 2B
-    'H',  # unsigned short int 2B
-    'i',  # int 4B
-    'I',  # unsigned int 4B
-    'l',  # long 4B
-    'L',  # unsigned long 4B
-    'q',  # long long 8B
-    'Q',  # unsigned long long 8B
-    'f',  # float 4B
-    'd',  # double 8B
-    's', 'p',  # char[]
-    'P',  # void * (only support mode: '@')
-)
-
-_DTYPE_STR = {s: s for s in _STRUCT_TYPES}
-# define how to interpreted Python types
-_DTYPE_STR.update({
-    bool: '?',
-    int: 'i',
-    float: 'f',
-    str: 's',
-})
-# define how to interpret human-friendly types
-_DTYPE_STR.update({
-    'bool': '?',
-    'char': 'b',
-    'uchar': 'B',
-    'short': 'h',
-    'ushort': 'H',
-    'int': 'i',
-    'uint': 'I',
-    'long': 'l',
-    'ulong': 'L',
-    'llong': 'q',
-    'ullong': 'Q',
-    'float': 'f',
-    'double': 'd',
-    'str': 's',
-})
-
-
-# ======================================================================
-def _read_stream(
-        file_stream,
-        dtype,
-        count=1,
-        mode='@',
-        offset=None,
-        whence=io.SEEK_SET):
-    """
-
-    Args:
-        file_stream:
-        dtype:
-        count:
-        mode:
-        offset:
-        whence:
-
-    Returns:
-
-    """
-    if offset is not None:
-        file_stream.seek(offset, whence)
-    fmt = mode + str(count) + _DTYPE_STR[dtype]
-    byte_count = struct.calcsize(fmt)
-    return struct.unpack_from(fmt, file_stream.read(byte_count)), byte_count
-
-
-# ======================================================================
-def _read_cstr(
-        file_stream,
-        offset=None,
-        whence=io.SEEK_SET):
-    """
-
-    Args:
-        file_stream:
-        offset:
-        whence:
-
-    Returns:
-
-    """
-    if offset is not None:
-        file_stream.seek(offset, whence)
-    buffer = []
-    while True:
-        c = file_stream.read(1).decode('ascii')
-        if c is None or c == '\0':
-            break
-        else:
-            buffer.append(c)
-    return ''.join(buffer)
-
 
 # ======================================================================
 def _read_twix(
@@ -201,7 +98,7 @@ def _read_twix(
         mask = 0
     else:
         mask = slice(None)
-    data, byte_count = _read_stream(file_stream, dtype, count, '<', offset)
+    data, byte_count = mrt.utils.read_stream(file_stream, dtype, count, '<', offset)
     return data[mask]
 
 
@@ -318,7 +215,7 @@ def _parse_vb_header(
         num_x_prot):
     raw_header = {}
     for i in range(num_x_prot):
-        key = _read_cstr(file_stream)
+        key = mrt.utils.read_cstr(file_stream)
         size = _read_twix(file_stream, 'int')
         val = file_stream.read(size).decode('ascii')
         raw_header[key] = str(val.strip(' \n\t\0'))
