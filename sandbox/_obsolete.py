@@ -6,13 +6,14 @@ PyMRT: code that is now deprecated but can still be useful for legacy scripts.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
 # import os  # Miscellaneous operating system interfaces
 import sys  # System-specific parameters and functions
+import functools  # Higher-order functions and operations on callable objects
 import doctest  # Test interactive Python examples
 
 # :: External Imports
@@ -262,6 +263,37 @@ def sequence(
 
 
 # ======================================================================
+def accumulate(
+        items,
+        func=lambda x, y: x + y):
+    """
+    Cumulatively apply the specified function to the elements of the list.
+
+    Args:
+        items (iterable): The items to process.
+        func (callable): func(x,y) -> z
+            The function applied cumulatively to the first n items of the list.
+            Defaults to cumulative sum.
+
+    Returns:
+        lst (list): The cumulative list.
+
+    See Also:
+        itertools.accumulate.
+    Examples:
+        >>> accumulate(list(range(5)))
+        [0, 1, 3, 6, 10]
+        >>> accumulate(list(range(5)), lambda x, y: (x + 1) * y)
+        [0, 1, 4, 15, 64]
+        >>> accumulate([1, 2, 3, 4, 5, 6, 7, 8], lambda x, y: x * y)
+        [1, 2, 6, 24, 120, 720, 5040, 40320]
+    """
+    return [
+        functools.reduce(func, list(items)[:i + 1])
+        for i in range(len(items))]
+
+
+# ======================================================================
 def transparent_compression(func):
     def _wrapped():
         from importlib import import_module
@@ -275,12 +307,13 @@ def transparent_compression(func):
                 tmp_fp.read(1)
             except (OSError, IOError, AttributeError, ImportError) as e:
                 if open_module_name is fallback_module_name:
-                    raise(e)
+                    raise (e)
             else:
                 tmp_fp.seek(0)
                 fp = tmp_fp
                 break
         return func(fp=fp)
+
     return _wrapped
 
 
@@ -470,7 +503,8 @@ def calc_averages(
    out_phs_filepath = change_img_type(out_tmp_filepath, TYPE_ID['phs'])
    out_filepath_list = [out_tmp_filepath, out_mag_filepath, out_phs_filepath]
    # perform calculation
-  if mrt.utils.check_redo(filepath_list, out_filepath_list, force) and sum_avg > 1:
+  if mrt.utils.check_redo(filepath_list, out_filepath_list, force) and 
+  sum_avg > 1:
        # stack multiple images together
        # assume every other file is a phase image, starting with magnitude
        img_tuple_list = []
