@@ -18,7 +18,7 @@ from __future__ import(
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
-# import itertools  # Functions creating iterators for efficient looping
+import itertools  # Functions creating iterators for efficient looping
 # import functools  # Higher-order functions and operations on callable objects
 # import argparse  # Parser for command-line options, arguments and sub-command
 # import subprocess  # Subprocess management
@@ -104,7 +104,7 @@ def tabular(labels, rows, label_filters, row_filters, format_dict):
     # separator
     output_str += '\hline\n'
     # write data
-    seps = mrt.utils.accumulate(grouping) if grouping else []
+    seps = itertools.accumulate(grouping) if grouping else []
     for i, row in enumerate(rows):
         for j, col in enumerate(row):
             if row_filters:

@@ -98,7 +98,7 @@ def _read_twix(
         mask = 0
     else:
         mask = slice(None)
-    data, byte_count = mrt.utils.read_stream(file_stream, dtype, count, '<', offset)
+    data = mrt.utils.read_stream(file_stream, dtype, '<', count, offset)
     return data[mask]
 
 

@@ -51,6 +51,11 @@ SEP = {
 NEW_RECO_ID = 'rr'
 SERIES_NUM_ID = 's'
 
+ITYPES_NAMES = (
+    'mag', 'phs', 're', 'im', 'cx', 't1', 't2', 't2s', 'r1', 'r2', 'r2s',
+    'chi')
+ITYPES = {name: name.upper() for name in ITYPES_NAMES}
+
 
 # ======================================================================
 def str_to_key_val(
