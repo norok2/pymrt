@@ -963,7 +963,7 @@ def sources_generic(
             for sources, params in zip(sources_list, params_list):
                 grouping = list(opts['groups']) * \
                            int((len(sources) / sum(opts['groups'])) + 1)
-                seps = mrt.utils.accumulate(grouping) if grouping else []
+                seps = itertools.accumulate(grouping) if grouping else []
                 for i, source in enumerate(sources):
                     grouped_sources.append(source)
                     grouped_params.append(params)

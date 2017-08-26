@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 PyMRT: read/write files with a JCAMP-DX-like structure.
-
-The module is NumPy-aware.
 """
 
 # ======================================================================
@@ -27,6 +25,7 @@ import datetime  # Basic date and time types
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import doctest  # Test interactive Python examples
+import pyparsing as pp  # A Python Parsing Module
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -61,6 +60,8 @@ from pymrt import elapsed, print_elapsed
 from pymrt import msg, dbg
 
 
+#todo: rewrite using pyparsing
+
 # ======================================================================
 def _strip_comments(data, comment_start_str='$$'):
     """
@@ -81,6 +82,7 @@ def _auto_convert(val_str):
     """
     Convert value to numeric if possible, or strip '<' and '>' from strings.
     """
+    val_str = val_str.strip()
     if _has_str_decorator(val_str):
         val = val_str[1:-1]
     else:

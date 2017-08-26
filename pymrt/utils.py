@@ -17,6 +17,7 @@ import sys  # System-specific parameters and functions
 import math  # Mathematical functions
 import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
+import collections  # Container datatypes
 import subprocess  # Subprocess management
 import fractions  # Rational numbers
 import inspect  # Inspect live objects
@@ -31,6 +32,7 @@ import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import struct  # Interpret strings as packed binary data
 import re  # Regular expression operations
 import fnmatch  # Unix filename pattern matching
+import random  # Generate pseudo-random numbers
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -165,47 +167,92 @@ def _is_special(stats_mode):
 
 # ======================================================================
 def read_stream(
-        file_obj,
+        in_file,
         dtype,
-        count=1,
         mode='@',
+        num_blocks=1,
         offset=None,
         whence=io.SEEK_SET):
     """
+    Read data from stream.
 
     Args:
-        file_obj:
-        dtype:
-        count:
-        mode:
-        offset:
-        whence:
+        in_file (str|file): The input file.
+            If str, the file is open for reading (as binary).
+        offset (int|None): The offset where to start reading.
+        dtype (str): The data type to read.
+            Accepted values are:
+             - 'bool': boolean type (same as: '?', 1B)
+             - 'char': signed char type (same as: 'b', 1B)
+             - 'uchar': unsigned char type (same as: 'B', 1B)
+             - 'short': signed short int type (same as: 'h', 2B)
+             - 'ushort': unsigned short int  type (same as: 'H', 2B)
+             - 'int': signed int type (same as: 'i', 4B)
+             - 'uint': unsigned int type (same as: 'I', 4B)
+             - 'long': signed long type (same as: 'l', 4B)
+             - 'ulong': unsigned long type (same as: 'L', 4B)
+             - 'llong': signed long long type (same as: 'q', 8B)
+             - 'ullong': unsigned long long type (same as: 'Q', 8B)
+             - 'float': float type (same as: 'f', 4B)
+             - 'double': double type (same as: 'd', 8B)
+             - 'str': c-str type (same as: 's', 'p')
+            See `struct` module for more information.
+        num_blocks (int): The number of blocks to read.
+        mode (str): Determine the byte order, size and alignment.
+            Accepted values are:
+             - '@': endianness: native,  size: native,   align: native.
+             - '=': endianness:	native,  size: standard, align: none.
+             - '<': endianness:	little,  size: standard, align: none.
+             - '>': endianness:	big,     size: standard, align: none.
+             - '!': endianness:	network, size: standard, align: none.
+        whence (int): Where to reference the offset.
+            Accepted values are:
+             - '0': absolute file positioning.
+             - '1': seek relative to the current position.
+             - '2': seek relative to the file's end.
 
     Returns:
-
+        data (tuple): The data read.
     """
+    if isinstance(in_file, str):
+        file_obj = open(in_file, 'rb')
+    else:
+        file_obj = in_file
     if offset is not None:
         file_obj.seek(offset, whence)
-    fmt = mode + str(count) + DTYPE_STR[dtype]
-    byte_count = struct.calcsize(fmt)
-    return struct.unpack_from(fmt, file_obj.read(byte_count)), byte_count
+    fmt = mode + str(num_blocks) + DTYPE_STR[dtype]
+    read_size = struct.calcsize(fmt)
+    data = struct.unpack_from(fmt, file_obj.read(read_size))
+    if isinstance(in_file, str):
+        file_obj.close()
+    return data
 
 
 # ======================================================================
 def read_cstr(
-        file_obj,
+        in_file,
         offset=None,
         whence=io.SEEK_SET):
     """
+    Read a C-type string from file.
 
     Args:
-        file_obj:
-        offset:
-        whence:
+        in_file (str|file): The input file.
+            If str, the file is open for reading (as binary).
+        offset (int|None): The offset where to start reading.
+        whence (int): Where to reference the offset.
+            Accepted values are:
+             - '0': absolute file positioning.
+             - '1': seek relative to the current position.
+             - '2': seek relative to the file's end.
 
     Returns:
-
+        text (str): The string read.
     """
+    if isinstance(in_file, str):
+        file_obj = open(in_file, 'rb')
+    else:
+        file_obj = in_file
     if offset is not None:
         file_obj.seek(offset, whence)
     buffer = []
@@ -215,7 +262,10 @@ def read_cstr(
             break
         else:
             buffer.append(c)
-    return ''.join(buffer)
+    text = ''.join(buffer)
+    if isinstance(in_file, str):
+        file_obj.close()
+    return text
 
 
 # ======================================================================
@@ -290,6 +340,219 @@ def max_iter_len(items):
         else:
             num = max(len(val), num)
     return num
+
+
+# ======================================================================
+def grouping(
+        items,
+        splits):
+    """
+    Generate a tuple of grouped items.
+
+    Args:
+        items (iterable): The input items.
+        splits (int|iterable[int]): Grouping information.
+            If iterable, each group (except the last) has the number of
+            elements specified.
+            If int, all groups (except the last, which may have less items)
+            has the same number of elements.
+
+    Returns:
+        groups (tuple[iterable]): Grouped items from the source.
+
+    Examples:
+        >>> l = list(range(10))
+        >>> tuple(grouping(l, 4))
+        ([0, 1, 2, 3], [4, 5, 6, 7], [8, 9])
+        >>> tuple(grouping(l, (2, 3)))
+        ([0, 1], [2, 3, 4], [5, 6, 7, 8, 9])
+        >>> tuple(grouping(l, (2, 4, 1)))
+        ([0, 1], [2, 3, 4, 5], [6], [7, 8, 9])
+        >>> tuple(grouping(l, (2, 4, 1, 20)))
+        ([0, 1], [2, 3, 4, 5], [6], [7, 8, 9])
+        >>> tuple(grouping(tuple(l), 2))
+        ((0, 1), (2, 3), (4, 5), (6, 7), (8, 9))
+    """
+    if isinstance(splits, int):
+        splits = auto_repeat(splits, len(items) // splits)
+
+    num_items = len(items)
+    if sum(splits) >= num_items:
+        splits = splits[:-1]
+    index = (0,) + tuple(itertools.accumulate(splits)) + (num_items,)
+    num = len(index) - 1
+    for i in range(num):
+        yield items[index[i]:index[i + 1]]
+
+
+# ======================================================================
+def chunks(
+        items,
+        n,
+        mode=1):
+    """
+    Yield items into approximately N equally sized chunks.
+
+    If the number of items does not allow chunks of the same size,
+
+    Args:
+        items (iterable): The input items.
+        n (int): Approximate number of chunks.
+            The exact number depends on the value of `mode`.
+        mode (int|str): Determine which approximation to use.
+            If str, valid inputs are:
+             - 'upper': at most `n` chunks are generated.
+             - 'lower': at least `n` chunks are genereated.
+             - 'closest': the number of chunks is `n` or `n + 1` depending on
+               which gives the most evenly distributed chunks sizes.
+            If int, valid inputs are:
+             - '+1' has the same behavior as 'upper'.
+             - '-1' has the same behavior as  'lower'.
+             - '0' has the same behavior as  'closest'.
+
+    Returns:
+        groups (tuple[iterable]): Grouped items from the source.
+
+    Examples:
+        >>> l = list(range(10))
+        >>> tuple(chunks(l, 5))
+        ([0, 1], [2, 3], [4, 5], [6, 7], [8, 9])
+        >>> tuple(chunks(l, 2))
+        ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
+        >>> tuple(chunks(l, 3))
+        ([0, 1, 2, 3], [4, 5, 6, 7], [8, 9])
+        >>> tuple(chunks(l, -1))
+        ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],)
+        >>> tuple(chunks(l, 3, -1))
+        ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
+        >>> tuple(chunks(list(range(10)), 3, 0))
+        ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
+    """
+    if mode == 'upper' or mode == +1:
+        approx = math.ceil
+    elif mode == 'lower' or mode == -1:
+        approx = math.floor
+    elif mode == 'closest' or mode == 0:
+        approx = round
+    else:
+        raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
+    split = int(approx(len(items) / n))
+    return grouping(items, split)
+
+
+# ======================================================================
+def partitions(
+        items,
+        k,
+        container=tuple):
+    """
+    Generate all k-partitions for the items.
+
+    Args:
+        items (iterable): The input items.
+        k (int): The number of splitting partitions.
+            Each group has exactly `k` elements.
+        container (callable): The group container.
+
+    Yields:
+        partition (tuple[iterable]]): The grouped items.
+            Each partition contains `k` grouped items from the source.
+
+    Example:
+        >>> tuple(partitions(tuple(range(3)), 2))
+        (((0,), (1, 2)), ((0, 1), (2,)))
+        >>> tuple(partitions(tuple(range(3)), 3))
+        (((0,), (1,), (2,)),)
+        >>> tuple(partitions(tuple(range(4)), 3))
+        (((0,), (1,), (2, 3)), ((0,), (1, 2), (3,)), ((0, 1), (2,), (3,)))
+    """
+    num = len(items)
+    indexes = tuple(
+        (0,) + tuple(index) + (num,)
+        for index in itertools.combinations(range(1, num), k - 1))
+    for index in indexes:
+        yield tuple(
+            container(
+                items[index[i]:index[i + 1]] for i in range(k)))
+
+
+# ======================================================================
+def unique_permutations(
+        items,
+        container=tuple):
+    """
+    Yield unique permutations of items in an efficient way.
+
+    Args:
+        items (iterable): The input items.
+        container (callable)
+
+    Yields:
+        items (iterable): The next unique permutation of the items.
+
+    Examples:
+        >>> list(unique_permutations([0, 0, 0]))
+        [(0, 0, 0)]
+        >>> list(unique_permutations([0, 0, 2]))
+        [(0, 0, 2), (0, 2, 0), (2, 0, 0)]
+        >>> list(unique_permutations([0, 1, 2]))
+        [(0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0)]
+        >>> p1 = sorted(unique_permutations((0, 1, 2, 3, 4)))
+        >>> p2 = sorted(itertools.permutations((0, 1, 2, 3, 4)))
+        >>> p1 == p2
+        True
+
+    References:
+        - Donald Knuth, The Art of Computer Programming, Volume 4, Fascicle
+          2: Generating All Permutations.
+    """
+    indexes = range(len(items) - 1, -1, -1)
+    items = sorted(items)
+    while True:
+        if callable(container):
+            yield container(items)
+        else:
+            yield items.copy()
+
+        for k in indexes[1:]:
+            if items[k] < items[k + 1]:
+                break
+        else:
+            return
+
+        k_val = items[k]
+        for i in indexes:
+            if k_val < items[i]:
+                break
+
+        items[k], items[i] = items[i], items[k]
+        items[k + 1:] = items[-1:k:-1]
+
+
+# ======================================================================
+def unique_partitions(
+        items,
+        k):
+    """
+    Generate all k-partitions for all unique permutations of the items.
+
+    Args:
+        items (iterable): The input items.
+        k (int): The number of splitting partitions.
+            Each group has exactly `k` elements.
+
+    Yields:
+        partitions (tuple[tuple[tuple]]]): The items partitions.
+            More precisely, all partitions of size `num` for each unique
+            permutations of `items`.
+
+    Examples:
+        >>> list(unique_partitions([0, 1], 2))
+        [(((0,), (1,)),), (((1,), (0,)),)]
+
+    """
+    for permutations in unique_permutations(items):
+        yield tuple(partitions(tuple(permutations), k))
 
 
 # ======================================================================
@@ -462,39 +725,171 @@ def factorize(num):
 
 
 # =====================================================================
-def optimal_ratio(
+def factorize_k_all(
         num,
-        condition=None):
+        k=2,
+        sort=None,
+        reverse=False):
     """
-    Find the optimal ratio for arranging elements into a matrix.
+    Find all possible factorizations with k factors.
+
+    Ones are not present, unless because there are not enough factors.
 
     Args:
         num (int): The number of elements to arrange.
-        condition (callable): The optimality condition to use.
-            This is passed as the `key` argument of `sorted`.
+        num_f (int): The number of factors.
+        sort (callable): The sorting function.
+            This is passed to the `key` arguments of `sorted()`.
+        reverse (bool): The sorting direction.
+            This is passed to the `reverse` arguments of `sorted()`.
+            If False, sorting is ascending.
+            Otherwise, sorting is descending.
 
     Returns:
-        num1 (int): The first number (num1 > num2).
-        num2 (int): The second number (num2 < num1).
+        factorizations (tuple[tuple[int]]): The possible factorizations.
+            Each factorization has exactly `k` items.
+            Eventually, `1`s are used to ensure the number of items.
 
     Examples:
-        >>> n1, n2 = 40, 48
-        >>> [optimal_ratio(i) for i in range(n1, n2)]
-        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
-        >>> [optimal_ratio(i, max) for i in range(n1, n2)]
-        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5), (23, 2), (47, 1)]
-        >>> [optimal_ratio(i, min) for i in range(n1, n2)]
-        [(20, 2), (41, 1), (21, 2), (43, 1), (22, 2), (15, 3), (23, 2),\
- (47, 1)]
+        >>> nums = (32, 41, 46, 60)
+        >>> for i in nums:
+        ...     factorize_k_all(i, 2)
+        ((2, 16), (4, 8), (8, 4), (16, 2))
+        ((1, 41), (41, 1))
+        ((2, 23), (23, 2))
+        ((2, 30), (3, 20), (4, 15), (5, 12), (6, 10), (10, 6), (12, 5),\
+ (15, 4), (20, 3), (30, 2))
+        >>> for i in nums:
+        ...     factorize_k_all(i, 3)
+        ((2, 2, 8), (2, 4, 4), (2, 8, 2), (4, 2, 4), (4, 4, 2), (8, 2, 2))
+        ((1, 1, 41), (1, 41, 1), (41, 1, 1))
+        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2, 1))
+        ((2, 2, 15), (2, 3, 10), (2, 5, 6), (2, 6, 5), (2, 10, 3), (2, 15, 2),\
+ (3, 2, 10), (3, 4, 5), (3, 5, 4), (3, 10, 2), (4, 3, 5), (4, 5, 3),\
+ (5, 2, 6), (5, 3, 4), (5, 4, 3), (5, 6, 2), (6, 2, 5), (6, 5, 2),\
+ (10, 2, 3), (10, 3, 2), (15, 2, 2))
     """
-    ratios = []
-    if is_prime(num):
-        return num, 1
-    else:
-        for i in range(2, int(num ** 0.5) + 1):
-            if num % i == 0:
-                ratios.append((num // i, i))
-    return sorted(ratios, key=condition)[0]
+    factors = factorize(num)
+    factors = tuple(factors) + (1,) * (k - len(factors))
+    factorizations = [
+        item
+        for subitems in unique_partitions(factors, k)
+        for item in subitems]
+    factorizations = list(set(factorizations))
+    for i in range(len(factorizations)):
+        factorizations[i] = tuple(
+            functools.reduce(lambda x, y: x * y, j) for j in factorizations[i])
+    return tuple(sorted(set(factorizations), key=sort, reverse=reverse))
+
+
+# =====================================================================
+def factorize_k(
+        num,
+        k=2,
+        randomize=False):
+    factors = factorize(num)
+    if randomize:
+        random.shuffle(factors)
+    factorization = tuple(
+            functools.reduce(lambda x, y: x * y, j) for j in chunks(factors, k))
+    return factorization
+
+# =====================================================================
+def factorize_k_all(
+        num,
+        k=2,
+        sort=None,
+        reverse=False):
+    """
+    Find all possible factorizations of a number with k factors.
+
+    Ones are not present, unless because there are not enough factors.
+
+    Args:
+        num (int): The number of elements to arrange.
+        num_f (int): The number of factors.
+        sort (callable): The sorting function.
+            This is passed to the `key` arguments of `sorted()`.
+        reverse (bool): The sorting direction.
+            This is passed to the `reverse` arguments of `sorted()`.
+            If False, sorting is ascending.
+            Otherwise, sorting is descending.
+
+    Returns:
+        factorizations (tuple[tuple[int]]): The possible factorizations.
+            Each factorization has exactly `k` items.
+            Eventually, `1`s are used to ensure the number of items.
+
+    Examples:
+        >>> nums = (32, 41, 46, 60)
+        >>> for i in nums:
+        ...     factorize_k_all(i, 2)
+        ((2, 16), (4, 8), (8, 4), (16, 2))
+        ((1, 41), (41, 1))
+        ((2, 23), (23, 2))
+        ((2, 30), (3, 20), (4, 15), (5, 12), (6, 10), (10, 6), (12, 5),\
+ (15, 4), (20, 3), (30, 2))
+        >>> for i in nums:
+        ...     factorize_k_all(i, 3)
+        ((2, 2, 8), (2, 4, 4), (2, 8, 2), (4, 2, 4), (4, 4, 2), (8, 2, 2))
+        ((1, 1, 41), (1, 41, 1), (41, 1, 1))
+        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2, 1))
+        ((2, 2, 15), (2, 3, 10), (2, 5, 6), (2, 6, 5), (2, 10, 3), (2, 15, 2),\
+ (3, 2, 10), (3, 4, 5), (3, 5, 4), (3, 10, 2), (4, 3, 5), (4, 5, 3),\
+ (5, 2, 6), (5, 3, 4), (5, 4, 3), (5, 6, 2), (6, 2, 5), (6, 5, 2),\
+ (10, 2, 3), (10, 3, 2), (15, 2, 2))
+    """
+    factors = factorize(num)
+    factors = tuple(factors) + (1,) * (k - len(factors))
+    factorizations = [
+        item
+        for subitems in unique_partitions(factors, k)
+        for item in subitems]
+    factorizations = list(set(factorizations))
+    for i in range(len(factorizations)):
+        factorizations[i] = tuple(
+            functools.reduce(lambda x, y: x * y, j) for j in factorizations[i])
+    return tuple(sorted(set(factorizations), key=sort, reverse=reverse))
+
+
+# =====================================================================
+def optimal_shape(
+        num,
+        dims=2,
+        sort=lambda x: (sum(x), x[::-1]),
+        reverse=False):
+    """
+    Find the optimal shape for arranging n elements into a rank-k tensor.
+
+    Args:
+        num (int): The number of elements to arrange.
+        dims (int): The rank of the tensor.
+        sort (callable): The function defining optimality.
+            The factorization that minimizes (or maximizes)
+            This is passed to the `key` arguments of `sorted()`.
+        reverse (bool): The sorting direction.
+            This is passed to the `reverse` arguments of `sorted()`.
+            If False, sorting is ascending and the minimum of the optimization
+            function is picked.
+            Otherwise, sorting is descending and the maximum of the optimization
+            function is picked.
+
+    Returns:
+        ratios (tuple[int]): The optimal ratio for tensor dims.
+
+    Examples:
+        >>> n1, n2 = 40, 46
+        >>> [optimal_shape(i) for i in range(n1, n2)]
+        [(8, 5), (41, 1), (7, 6), (43, 1), (11, 4), (9, 5)]
+        >>> [optimal_shape(i, sort=max) for i in range(n1, n2)]
+        [(5, 8), (1, 41), (6, 7), (1, 43), (4, 11), (5, 9)]
+        >>> [optimal_shape(i, sort=min) for i in range(n1, n2)]
+        [(2, 20), (1, 41), (2, 21), (1, 43), (2, 22), (3, 15)]
+        >>> [optimal_shape(i, 3) for i in range(n1, n2)]
+        [(5, 4, 2), (41, 1, 1), (7, 3, 2), (43, 1, 1), (11, 2, 2), (5, 3, 3)]
+    """
+    factorizations = factorize_k_all(num, dims)
+    return sorted(factorizations, key=sort, reverse=reverse)[0]
 
 
 # =====================================================================
@@ -550,6 +945,85 @@ def lcm(*nums):
 
 
 # ======================================================================
+def num_align(
+        num,
+        align='pow2',
+        mode=1):
+    """
+    Align a number to a specified value, so as to make it multiple of it.
+
+    This calculated
+
+    Args:
+        num (int): The input number.
+        align (int|str): The number to align to.
+            If int, then calculate a multiple of `align` close to `num`.
+            If str, possible options are:
+             - 'powX' (where X >= 2 must be an int): calculate a power of X
+               that is close to `num`.
+            The exact number being calculated depends on the value of `mode`.
+        mode (int|str): Determine which multiple to convert the number to.
+            If str, valid inputs are:
+             - 'upper': converts to the smallest multiple larger than `num`.
+             - 'lower': converts to the largest multiple smaller than `num`.
+             - 'closest': converts to the multiple closest to `num`.
+            If int, valid inputs are:
+             - '+1' has the same behavior as 'upper'.
+             - '-1' has the same behavior as  'lower'.
+             - '0' has the same behavior as  'closest'.
+
+    Returns:
+        num (int): The aligned number.
+
+    Examples:
+        >>> num_align(432)
+        512
+        >>> num_align(432, mode=-1)
+        256
+        >>> num_align(432, mode=0)
+        512
+        >>> num_align(447, 32, mode=+1)
+        448
+        >>> num_align(447, 32, mode=-1)
+        416
+        >>> num_align(447, 32, mode=0)
+        448
+        >>> num_align(45, 90, mode=0)
+        0
+        >>> num_align(6, 'pow2', mode=0)
+        8
+        >>> num_align(128, 128, mode=1)
+        128
+    """
+    if mode == 'upper' or mode == +1:
+        func = math.ceil
+    elif mode == 'lower' or mode == -1:
+        func = math.floor
+    elif mode == 'closest' or mode == 0:
+        func = round
+    else:
+        raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
+
+    if isinstance(align, str):
+        if align.startswith('pow'):
+            base = int(align[len('pow'):])
+            exp = math.log(num, base)
+            num = int(base ** func(exp))
+        else:
+            raise ValueError('Invalid align `{align}`'.format(align=align))
+
+    elif isinstance(align, int):
+        modulus = num % align
+        num += func(modulus / align) * align - modulus
+
+    else:
+        warnings.warn('Will not align `{num}` to `{align}`.'.format(
+            num=num, align=align))
+
+    return num
+
+
+# ======================================================================
 def merge_dicts(*dicts):
     """
     Merge dictionaries into a new dict (new keys overwrite the old ones).
@@ -575,37 +1049,6 @@ def merge_dicts(*dicts):
     for item in dicts:
         merged.update(item)
     return merged
-
-
-# ======================================================================
-def accumulate(
-        items,
-        func=lambda x, y: x + y):
-    """
-    Cumulatively apply the specified function to the elements of the list.
-
-    Args:
-        items (iterable): The items to process.
-        func (callable): func(x,y) -> z
-            The function applied cumulatively to the first n items of the list.
-            Defaults to cumulative sum.
-
-    Returns:
-        lst (list): The cumulative list.
-
-    See Also:
-        itertools.accumulate.
-    Examples:
-        >>> accumulate(list(range(5)))
-        [0, 1, 3, 6, 10]
-        >>> accumulate(list(range(5)), lambda x, y: (x + 1) * y)
-        [0, 1, 4, 15, 64]
-        >>> accumulate([1, 2, 3, 4, 5, 6, 7, 8], lambda x, y: x * y)
-        [1, 2, 6, 24, 120, 720, 5040, 40320]
-    """
-    return [
-        functools.reduce(func, list(items)[:i + 1])
-        for i in range(len(items))]
 
 
 # =====================================================================
@@ -1269,56 +1712,6 @@ def execute(
                     with open(log_filepath, 'wb') as fileobj:
                         fileobj.write(stream.encode(encoding))
     return ret_code, p_stdout, p_stderr
-
-
-# ======================================================================
-def grouping(
-        items,
-        num_elems):
-    """
-    Generate a list of lists from a source list and grouping specifications
-
-    Args:
-        items (iterable): The source list.
-        num_elems (iterable[int]): number of elements that each group contains.
-
-    Returns:
-        groups (list[list]): Grouped elements from the source list.
-
-    Examples:
-        >>> l = list(range(10))
-        >>> grouping(l, 4)
-        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]]
-        >>> grouping(l, (2, 3))
-        [[0, 1], [2, 3, 4], [5, 6, 7, 8, 9]]
-        >>> grouping(l, (2, 4, 1))
-        [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
-        >>> grouping(l, (2, 4, 1, 20))
-        [[0, 1], [2, 3, 4, 5], [6], [7, 8, 9]]
-    """
-    if isinstance(num_elems, int):
-        num_elems = auto_repeat(num_elems, len(items) // num_elems)
-    group, groups = [], []
-    j = 0
-    count = num_elems[j] if j < len(num_elems) else len(items) + 1
-    for i, item in enumerate(items):
-        if i >= count:
-            loop = True
-            while loop:
-                groups.append(group)
-                group = []
-                j += 1
-                add = num_elems[j] if j < len(num_elems) else len(items) + 1
-                if add < 0:
-                    add = len(items) + 1
-                count += add
-                if add == 0:
-                    loop = True
-                else:
-                    loop = False
-        group.append(item)
-    groups.append(group)
-    return groups
 
 
 # ======================================================================

@@ -205,7 +205,7 @@ def quick_2d(arr, values_range=None):
         img = arr
     else:
         warnings.warn('current array was not 2D, performing brute conversion')
-        img = arr.reshape(mrt.utils.optimal_ratio(arr.size))
+        img = arr.reshape(mrt.utils.optimal_shape(arr.size))
 
     if not values_range:
         values_range = mrt.utils.minmax(img)
@@ -1884,7 +1884,7 @@ def subplots(
                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
             elif isinstance(aspect_ratio, str):
                 if 'exact' in aspect_ratio:
-                    num_col, num_row = mrt.utils.optimal_ratio(num_plots)
+                    num_col, num_row = mrt.utils.optimal_shape(num_plots)
                     if 'portrait' in aspect_ratio:
                         num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
