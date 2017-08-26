@@ -1115,7 +1115,7 @@ def frame(
         else:
             borders = [
                 round(border * dim) for dim, border in zip(arr.shape, borders)]
-    result = background * np.ones(
+    result = background + np.zeros(
         [dim + 2 * border for dim, border in zip(arr.shape, borders)])
     inner = [
         slice(border, border + dim, None)
@@ -1175,9 +1175,9 @@ def multi_reframe(
     Reframe arrays (by adding border) to match the same shape.
 
     Note that:
-     - uses 'reframe' under the hood
-     - the sampling / resolution / voxel size will NOT change
-     - the support space / field-of-view will change
+     - uses 'reframe' under the hood;
+     - the sampling / resolution / voxel size will NOT change;
+     - the support space / field-of-view will change.
 
     Args:
         arrs (iterable[np.ndarray]): The input arrays.
