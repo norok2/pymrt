@@ -591,7 +591,8 @@ def vfa(
         else:
             # warnings.warn('Using approximation: TR << T1')
             tr_arr = np.stack(
-                [x * np.ones(arrs[0].shape, dtype=float) for x in trs], index)
+                [tr + np.zeros(arrs[0].shape, dtype=float) for tr in trs],
+                index)
             t1_arr = \
                 ((num * np.sum(s_arr ** 2 / tr_arr, index) -
                   np.sum(s_arr * tau_arr / tr_arr, index) *
