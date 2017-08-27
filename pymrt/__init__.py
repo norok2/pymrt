@@ -115,7 +115,7 @@ def msg(
 
         try:
             t = blessed.Terminal()
-        except ValueError:
+        except (ValueError, AttributeError):
             t = None
 
         if blessed and t:
