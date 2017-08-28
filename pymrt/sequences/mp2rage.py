@@ -199,26 +199,27 @@ def rho(
         eta_fa,
         bijective=False):
     """
-    Calculate MP2RAGE signal rho from the sequence parameters.
+    Calculate (generalized) MP2RAGE signal rho from the sequence parameters.
+
+    This expression can also be used for SA2RAGE.
 
     This function is NumPy-aware.
 
     Args:
         n_gre (int): Number n of r.f. pulses in each GRE block.
         tr_gre (float): repetition time of GRE pulses in ms.
-        fa1 (float): Flip angle fa1 of the first GRE block in deg.
+        fa1 (float): Flip angle of the first GRE block in deg.
         fa2 (float): Flip angle fa2 of the second GRE block in deg.
-        ta (float): Time TA between preparation pulse and first GRE block in
-        ms.
-        tb (float): Time TB between first and second GRE blocks in ms.
-        tc (float): Time TC after second GRE block in ms.
-        fa_p (float): Flip angle fa_p of the preparation pulse.
+        ta (float): Time between preparation pulse and first GRE block in ms.
+        tb (float): Time between first and second GRE blocks in ms.
+        tc (float): Time after second GRE block in ms.
+        fa_p (float): Flip angle of the preparation pulse in deg.
         eta_p (float): Efficiency of the preparation pulse.
-        t1 (float): T1 time in ms.
+        t1 (float): Longitudinal relaxation time in ms.
         eta_fa (float): Efficiency of the RF excitation in the GRE block.
             Equivalent to B1+ efficiency.
-        bijective (bool): Force the rho to be bijective.
-            Non-bijective parts of rho are masked out (using NaN).
+        bijective (bool): Force the rho expression to be bijective.
+            Non-bijective parts of rho are masked out (set to NaN).
 
     Returns:
         rho (float): rho intensity of the MP2RAGE sequence.

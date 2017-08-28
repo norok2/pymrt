@@ -67,7 +67,7 @@ from pymrt import msg, dbg
 # standard plot resolutions
 D_PLOT_DPI = 72
 # colors and linestyles
-PLOT_COLORS = mpl.rcParams['axes.prop_cycle']
+PLOT_COLORS = tuple(x['color'] for x in mpl.rcParams['axes.prop_cycle'])
 PLOT_LINESTYLES = ('-', '--', '-.', ':')
 
 
@@ -325,7 +325,7 @@ def empty(
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
 
-    return (x_arrs, y_arrs), fig
+    return fig
 
 
 # ======================================================================
@@ -340,7 +340,7 @@ def multi(
         twin_indexes=None,
         shared_axis='y',
         groups=None,
-        colors=tuple(mpl.cm.Dark2(x) for x in np.linspace(0, 1, 8)),
+        colors=PLOT_COLORS,
         title=None,
         legend_kws=None,
         method='errorbars',  # 'errorarea', # 'dotted+solid',
@@ -500,10 +500,10 @@ def multi(
 
 # ======================================================================
 def legend(
-        y_lbls=None,
-        dy_lbls=None,
+        y_labels=None,
+        dy_labels=None,
         groups=None,
-        colors=tuple(mpl.cm.Dark2(x) for x in np.linspace(0, 1, 8)),
+        colors=PLOT_COLORS,
         legend_kws=None,
         method='errorbars',  # 'errorarea', # 'dotted+solid',
         more_texts=None,
@@ -517,7 +517,7 @@ def legend(
 
     Args:
         y_lbls ():
-        dy_lbls ():
+        dy_labels ():
         x_label ():
         y_label ():
         twin_indexes ():
@@ -548,10 +548,10 @@ def legend(
     handles = []
 
     # : prepare for plotting
-    num = len(y_lbls)
+    num = len(y_labels)
     x_arrs = y_arrs = dy_arrs = [() for _ in range(num)]
-    dy_lbls = ('_nolegend_',) * num if dy_lbls is None else dy_lbls
-    plotters = (x_arrs, y_arrs, dy_arrs, y_lbls, dy_lbls)
+    dy_labels = ('_nolegend_',) * num if dy_labels is None else dy_labels
+    plotters = (x_arrs, y_arrs, dy_arrs, y_labels, dy_labels)
 
     if groups:
         if sum(groups) < num:
@@ -1431,8 +1431,7 @@ def histogram1d_list(
         styles = []
         for linestyle in PLOT_LINESTYLES:
             for color in PLOT_COLORS:
-                style = {'linestyle': linestyle}
-                style.update(color)
+                style = dict(linestyle=linestyle, color=color)
                 styles.append(style)
 
     style_cycler = itertools.cycle(styles)
@@ -1748,6 +1747,7 @@ def bar_chart(
         groups,
         x_label=None,
         y_label=None,
+        colors=PLOT_COLORS,
         title=None,
         y_limits=None,
         legend_kws=None,
@@ -1793,7 +1793,7 @@ def bar_chart(
     if not bar_width:
         bar_width = 1 / (num_series + 0.5)
 
-    color_cycler = itertools.cycle(mrt.plot.PLOT_COLORS)
+    colors = itertools.cycle(colors)
     bcs = []
     for j, serie in enumerate(series):
         bar_data = data[serie]
@@ -1803,7 +1803,7 @@ def bar_chart(
             bar_data,
             bar_width,
             yerr=bar_err,
-            color=next(color_cycler)['color'])
+            color=next(colors))
         bcs.append(bc)
     ax.set_xticks(indices + bar_width)
     if groups:

@@ -106,14 +106,22 @@ def double_rare(
     .. math::
         \\cos(\\alpha) = \\frac{r\\pm\\sqrt{r^2 + 8}}{4}
 
-    where :math:`s_1` is `arr1` acquired with flip angle :math:`\\alpha`,
-    :math:`s_2` is `arr2` acquired with flip angle :math:`2\\alpha`,
+    where :math:`s_1` is the signal of the first acquisition (`arr1`)
+    obtained with a preparation flip angle of :math:`\\alpha`,
+    :math:`s_2` is  the signal of the second acquisition (`arr2`)
+    acquired with a preparation flip angle :math:`2\\alpha`,
     and  :math:`r = \\frac{s_2}{s_1}`.
 
-    The sign of the equation is `+` if the right-hand side expression is <= 1,
-    Otherwise, the `-` sign must be chosen.
+    The sign of the equation should be `-` only if the actual flip angle
+    exceeds 90° (180°) in the first (second) acquisition.
 
     Assumes long :math:`T_R` regime: :math:`T_R > 5 * T_1`.
+
+    A nominal flip angle combination of 30°/60° is suggested.
+
+    The method works also for two double-angle MPRAGE where the double angle
+    refers to the flip angle of the magnetization preparation (with
+    identical gradient-redout blocks).
 
     This is a closed-form solution.
 
