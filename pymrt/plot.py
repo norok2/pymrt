@@ -632,6 +632,7 @@ def sample2d(
         title=None,
         array_interval=None,
         ticks_limit=None,
+        interpolation='nearest',
         orientation=None,
         flip_ud=False,
         flip_lr=False,
@@ -743,7 +744,7 @@ def sample2d(
     # plot data
     plot = ax.imshow(
         data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
-        interpolation='none')
+        interpolation=interpolation)
 
     # plot ticks in plotting axes
     if ticks_limit is not None:

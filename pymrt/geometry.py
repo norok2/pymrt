@@ -1049,7 +1049,6 @@ def apply_mask(
     Args:
         arr (np.ndarray): The input array.
         mask (np.ndarray): The mask array.
-        background (int|float): The value used for masked-out pixels.
         borders (int|float|tuple[int|float]|None): The border size(s).
             If None, the border is not modified.
             Otherwise, a border is added to the masked array.
@@ -1059,6 +1058,7 @@ def apply_mask(
             If iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
+        background (int|float): The value used for masked-out pixels.
 
     Returns:
         arr (np.ndarray): The output array.
@@ -1069,6 +1069,7 @@ def apply_mask(
         frame()
     """
     mask = mask.astype(bool)
+    arr = arr.copy()
     arr[~mask] = background
     if borders is not None:
         container = sp.ndimage.find_objects(mask.astype(int))[0]
