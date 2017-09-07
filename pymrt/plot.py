@@ -1705,8 +1705,8 @@ def histogram2d(
         stats_dict = mrt.utils.calc_stats(
             arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *mrt.utils.format_value_error(stats_dict['avg'], stats_dict['std'],
-                                          3))
+            *mrt.utils.format_value_error(
+                stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
             horizontalalignment='center', verticalalignment='top',

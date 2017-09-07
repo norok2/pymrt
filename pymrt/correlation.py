@@ -575,7 +575,7 @@ def calc_correlation(
         mask_filepath=None,
         mask_nan=True,
         mask_inf=True,
-        mask_val_list=None,
+        removes=None,
         val_interval=None,
         trunc=None,
         force=False,
@@ -600,7 +600,7 @@ def calc_correlation(
         Mask NaN values.
     mask_inf : bool (optional)
         Mask Inf values.
-    mask_val_list : list of int or float
+    removes : list of int or float
         List of values to mask.
     val_interval : 2-tuple (optional)
         The (min, max) values range.
@@ -641,16 +641,21 @@ def calc_correlation(
         mask *= (img1 < val_interval[1])
         mask *= (img2 > val_interval[0])
         mask *= (img2 < val_interval[1])
-        if not mask_val_list:
-            mask_val_list = []
+        if not removes:
+            removes = []
+        if mask_nan:
+            if np.nan not in removes:
+                removes.append(np.nan)
+        if mask_inf:
+            for x in (np.inf, -np.inf):
+                if x not in removes:
+                    removes.append(x)
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
-        d_dict = mrt.utils.calc_stats(
-            d_arr, mask_nan, mask_inf, mask_val_list)
+        d_dict = mrt.utils.calc_stats(d_arr, removes)
         # calculate stats of the absolute difference image
         e_arr = np.abs(d_arr)
-        e_dict = mrt.utils.calc_stats(
-            e_arr, mask_nan, mask_inf, mask_val_list)
+        e_dict = mrt.utils.calc_stats(e_arr, removes)
         # calculate Pearson's Correlation Coefficient
         pcc_val, pcc_p_val = \
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
