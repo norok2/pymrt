@@ -42,7 +42,7 @@ def _flash_signal(
         tr,
         t1_,
         xi,
-        eta_fa):
+        eta_fa=1.0):
     """
     FLASH signal (no TE dependency) to use with `scipi.optimize.curve_fit()`.
 
@@ -643,8 +643,6 @@ def fit_leasq(
         arrs,
         fas,
         trs,
-        t1_arr=None,
-        xi_arr=None,
         eta_fa_arr=None,
         prepare=fix_magnitude_bias,
         optim='trf',
@@ -712,20 +710,29 @@ def fit_leasq(
     x_arr = np.stack(
         (np.array(fas), np.array(trs)), 0).astype(float)
 
-    num_params = 3
+    num_params = 3 if eta_fa_arr is None else 2
 
-    if not init:
+    if init is None:
         init = [1] * num_params
+
+    if eta_fa_arr is None:
+        init = init[:num_params]
+        bounds = [part_bounds[:num_params] for part_bounds in bounds]
+
+    method_kws = dict(method=optim, bounds=bounds)
 
     p_arr = voxel_curve_fit(
         y_arr, x_arr, _flash_signal_fit, init,
         method='curve_fit_parallel_map',
-        method_kws=dict(method=optim, bounds=bounds))
+        method_kws=method_kws)
 
     shape = p_arr.shape[:axis]
     p_arrs = [arr.reshape(shape) for arr in np.split(p_arr, num_params, axis)]
 
-    t1_arr, xi_arr, eta_fa_arr = p_arrs
+    if eta_fa_arr is None:
+        t1_arr, xi_arr, eta_fa_arr = p_arrs
+    else:
+        t1_arr, xi_arr = p_arrs
     # names = 't1', 'xi', 'eta_fa'
     # results = collections.OrderedDict(
     #     tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))

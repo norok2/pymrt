@@ -268,6 +268,15 @@ def _apply_affine_fsl(
         mrt.utils.execute(cmd, verbose=verbose)
 
 
+def register_ants(
+        in_filepath,
+        ref_filepath,
+        out_filepath,
+        opts_kws,
+        force=False,
+        verbose=D_VERB_LVL):
+    return
+
 # ======================================================================
 def register_fsl(
         in_filepath,

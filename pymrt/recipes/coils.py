@@ -37,15 +37,16 @@ import pymrt.utils
 import pymrt.segmentation
 
 
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-# from pymrt import elapsed, print_elapsed
-# from pymrt import msg, dbg
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, print_elapsed
+from pymrt import msg, dbg
 
 
 # ======================================================================
 def sum_of_squares(
         arr,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'sum_of_squares' combination method.
 
@@ -57,6 +58,7 @@ def sum_of_squares(
         arr (np.ndarray): The input array.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -69,7 +71,8 @@ def sum_of_squares(
 def smooth_sum_of_squares(
         arr,
         block=3,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'smooth_sum_of_squares' combination method.
 
@@ -86,6 +89,7 @@ def smooth_sum_of_squares(
             reduces to non-block adaptive.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -107,7 +111,8 @@ def adaptive(
         arr,
         max_iter=16,
         threshold=1e-7,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'adaptive' combination method.
 
@@ -123,6 +128,7 @@ def adaptive(
             less than the threshold, the power algorithm stops.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -133,7 +139,7 @@ def adaptive(
           682–690. doi:10.1002/(SICI)1522-2594(
           200005)43:5<682::AID-MRM10>3.0.CO;2-G
     """
-    return block_adaptive(arr, 0, max_iter, threshold, coil_axis)
+    return block_adaptive(arr, 0, max_iter, threshold, coil_axis, verbose)
 
 
 # ======================================================================
@@ -142,7 +148,8 @@ def block_adaptive(
         block=5,
         max_iter=16,
         threshold=1e-7,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'block_adaptive' combination method.
 
@@ -163,6 +170,7 @@ def block_adaptive(
             less than the threshold, the power algorithm stops.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         sens (np.ndarray): The estimated coil sensitivity.
@@ -231,9 +239,10 @@ def block_adaptive(
 def block_adaptive_iter(
         arr,
         block=5,
-        max_iter=16,
+        max_iter=32,
         threshold=1e-8,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'block_adaptive_iter' combination method.
 
@@ -256,6 +265,7 @@ def block_adaptive_iter(
             than `threshold`, the algorithm stops.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -299,11 +309,11 @@ def block_adaptive_iter(
 
         for i in range(max_iter):
             last_rho = rho.copy() if threshold > 0 else rho
-            sens_b = mrt.utils.filter_cx(
+            sens = mrt.utils.filter_cx(
                 arr * rho[..., None].conj(),
                 sp.ndimage.uniform_filter, (), dict(size=block))
-            sens = sens_b / (
-                np.sqrt(np.sum(sens_b * sens_b.conj(), -1))
+            sens /= (
+                np.sqrt(np.sum(sens * sens.conj(), -1))
                 + epsilon)[..., None]
             rho = np.sum(arr * np.conj(sens), -1)
             mean_coil = np.sum(sens * rho[..., None], no_coil_axes)
@@ -315,6 +325,9 @@ def block_adaptive_iter(
             sens *= extra_phase[..., None].conj()
             if threshold > 0:
                 delta = (np.linalg.norm(rho - last_rho) / np.linalg.norm(rho))
+                msg('{}/{}: D={} ({})'.format(
+                    i + 1, max_iter, delta, threshold),
+                    verbose, VERB_LVL['debug'], end=', ', flush=True,)
                 if delta < threshold:
                     break
     sens = np.swapaxes(sens, -1, coil_axis)
@@ -325,7 +338,8 @@ def block_adaptive_iter(
 def compress_svd(
         arr,
         k_svd='quad_weight',
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Compress the coil data to the SVD principal components.
 
@@ -346,6 +360,8 @@ def compress_svd(
             If str, the number is automatically estimated from the magnitude
             of the eigenvalues using a specific method.
             Available methods include:
+             - 'all': use all components.
+             - 'full': same as 'all'.
              - 'elbow': use `utils.marginal_sep_elbow()`.
              - 'quad': use `utils.marginal_sep_quad()`.
              - 'quad_weight': use `utils.marginal_sep_quad_weight()`.
@@ -354,6 +370,7 @@ def compress_svd(
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -378,6 +395,7 @@ def compress_svd(
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(eigvals)[::-1]
 
+    msg('k_svd={}'.format(k_svd), verbose, VERB_LVL['debug'])
     if isinstance(k_svd, int):
         assert (0 < k_svd <= num_coils)
     elif isinstance(k_svd, float):
@@ -411,6 +429,7 @@ def compress_svd(
             k_svd = num_coils
         if not 0 < k_svd <= num_coils:
             k_svd = num_coils
+    msg('k_svd={}'.format(k_svd), verbose, VERB_LVL['medium'])
 
     # arr = np.dot(
     #     left_eigvects[eig_sort, :],
@@ -427,13 +446,15 @@ def compress_svd(
 # ======================================================================
 def block_subspace_fourier(
         arr,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'block_subspace_fourier' combination method.
 
     Args:
         arr:
         coil_axis:
+        verbose (int): Set level of verbosity.
 
     Returns:
 
@@ -448,13 +469,15 @@ def block_subspace_fourier(
 # ======================================================================
 def virtual_reference(
         arr,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'virtual_reference' combination method.
 
     Args:
         arr:
         coil_axis:
+        verbose (int): Set level of verbosity.
 
     Returns:
 
@@ -470,7 +493,8 @@ def virtual_reference(
 def me_conjugate_hermitian(
         arr,
         echo_axis=-2,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
@@ -484,6 +508,7 @@ def me_conjugate_hermitian(
             The dimension of `arr` along which different echoes are stored.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -495,7 +520,8 @@ def me_conjugate_hermitian(
 def me_svd(
         arr,
         echo_axis=-2,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
@@ -520,7 +546,8 @@ def me_svd(
 def me_composer(
         arr,
         echo_axis=-2,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
@@ -545,7 +572,8 @@ def me_composer(
 def ref_snr_optimal(
         arr,
         ref,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
@@ -559,6 +587,7 @@ def ref_snr_optimal(
             The dimension of `arr` along which different echoes are stored.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -575,7 +604,8 @@ def ref_snr_optimal(
 def ref_adaptive(
         arr,
         ref,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
@@ -589,6 +619,7 @@ def ref_adaptive(
             The dimension of `arr` along which different echoes are stored.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
@@ -609,13 +640,15 @@ def sensitivity(
         method='block_adaptive_iter',
         method_kws=None,
         coil_axis=-1,
-        split_axis=0):
+        split_axis=0,
+        verbose=D_VERB_LVL):
     """
+    Estimate the coil sensitivity.
 
     Args:
         arr:
         method (str|None): The coil sensitivity method.
-            Is str, uses the specified method.
+            If str, uses the specified method.
             Available options are:
              - 'sum_of_squares': use `sum_of_squares()`;
              - 'smooth_sum_of_squares': use `smooth_sum_of_squares()`
@@ -632,9 +665,10 @@ def sensitivity(
             If int, indicates the dimension of `arr` along which the
             algorithm is sequentially applied, to reduce memory usage.
             If None, the algorithm is applied to the whole `arr` at once.
+        verbose (int): Set level of verbosity.
 
     Returns:
-
+        sens (arr): The coil sensitivity.
     """
     methods = (
         'sum_of_squares', 'smooth_sum_of_squares',
@@ -645,44 +679,50 @@ def sensitivity(
         method_kws = dict()
     if method in methods:
         if method == 'sum_of_squares':
-            method = sum_of_squares
+            sens_method = sum_of_squares
         elif method == 'smooth_sum_of_squares':
-            method = smooth_sum_of_squares
+            sens_method = smooth_sum_of_squares
         elif method == 'adaptive':
-            method = adaptive
+            sens_method = adaptive
         elif method == 'block_adaptive':
-            method = block_adaptive
+            sens_method = block_adaptive
         elif method == 'block_adaptive_iter':
-            method = block_adaptive_iter
+            sens_method = block_adaptive_iter
         elif method == 'virtual_reference':
-            method = virtual_reference
+            sens_method = virtual_reference
         if split_axis is not None:
             shape = arr.shape
             sens = np.zeros(shape, dtype=complex)
             arr = np.swapaxes(arr, split_axis, 0)
             sens = np.swapaxes(sens, split_axis, 0)
             for i in range(shape[split_axis]):
-                sens[i, ...] = method(
-                    arr[i, ...], coil_axis=coil_axis, **method_kws)
+                msg('{}: {}/{}'.format(method, i + 1, shape[split_axis]),
+                    verbose, VERB_LVL['medium'])
+                sens[i, ...] = sens_method(
+                    arr[i, ...], coil_axis=coil_axis, verbose=verbose,
+                    **method_kws)
             sens = np.swapaxes(sens, 0, split_axis)
         else:
-            sens = method(arr, coil_axis=coil_axis, **method_kws)
+            sens = sens_method(
+                arr, coil_axis=coil_axis, verbose=verbose, **method_kws)
     else:
         warnings.warn(
             'Sensitivity estimation method `{}` not known'.format(method) +
             ' Using default.')
-        sens = sensitivity(arr, coil_axis=coil_axis, **method_kws)
+        sens = sensitivity(
+            arr, coil_axis=coil_axis, verbose=verbose, **method_kws)
     return sens
 
 
 # ======================================================================
 def combine(
         arr,
-        sens,
+        sens=None,
         k_svd='quad_weight',
-        norm=True,
+        norm=False,
         coil_axis=-1,
-        split_axis=0):
+        split_axis=0,
+        verbose=D_VERB_LVL):
     """
     Calculate the coil combination array from multiple coil elements.
 
@@ -706,17 +746,18 @@ def combine(
             If int, indicates the dimension of `arr` along which the
             algorithm is sequentially applied, to reduce memory usage.
             If None, the algorithm is applied to the whole `arr` at once.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The combined array.
     """
     if k_svd is not None:
-        arr = compress_svd(arr, k_svd, fourier, coil_axis)
+        arr = compress_svd(arr, k_svd, coil_axis, verbose)
 
     if sens is None:
         sens = 'block_adaptive_iter'
     if isinstance(sens, str):
-        sens = sensitivity(arr, sens, None, coil_axis, split_axis)
+        sens = sensitivity(arr, sens, None, coil_axis, split_axis, verbose)
     assert (arr.shape == sens.shape)
 
     if split_axis is not None:
@@ -739,11 +780,13 @@ def combine(
         cx_arr = np.sum(sens.conj() * arr, coil_axis)
 
     if norm:
+        msg('Normalizing.', verbose, VERB_LVL['medium'])
         epsilon = np.finfo(np.float).eps
         cx_arr /= (np.sum(np.abs(sens) ** 2, coil_axis) + epsilon)
     del sens
 
-    if not np.iscomplex(cx_arr.all()):
+    if np.isclose(np.mean(np.abs(np.angle(arr))), 0.0, equal_nan=True):
+        msg('Adding sum-of-squares phase.', verbose, VERB_LVL['medium'])
         arr = cx_arr * np.exp(1j * np.angle(np.sum(arr, coil_axis)))
     else:
         arr = cx_arr
@@ -755,7 +798,8 @@ def combine_ref(
         arr,
         ref,
         norm=False,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Calculate the coil combination array from multiple coil elements.
 
@@ -769,6 +813,7 @@ def combine_ref(
         norm (bool): Normalize using coil sensitivity magnitude.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The combined array.
@@ -789,7 +834,8 @@ def combine_me(
         sens,
         norm=False,
         echo_axis=-2,
-        coil_axis=-1):
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
     """
     Calculate the coil combination array from multiple coil elements.
 
@@ -803,6 +849,7 @@ def combine_me(
         norm (bool): Normalize using coil sensitivity magnitude.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
 
     Returns:
         arr (np.ndarray): The combined array.

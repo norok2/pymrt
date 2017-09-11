@@ -1139,8 +1139,8 @@ class PulseExc(object):
                 shape_func = eval('_shape_' + shape)
                 w1_arr = shape_func(num_steps, **shape_kwargs)
             except NameError:
-                msg = '{}: unknown shape. Fall back to rect'.format(shape)
-                warnings.warn(msg)
+                text = '{}: unknown shape. Fall back to rect'.format(shape)
+                warnings.warn(text)
                 w1_arr = np.ones((num_steps,)).astype(complex)
         self = cls(duration, w1_arr, w_c)
         self.shape = shape
@@ -1235,8 +1235,8 @@ class PulseExc(object):
                 p_op_func = eval('_propagator_' + self.propagator_mode)
                 p_op = p_op_func(self, spin_model, *args, **kwargs)
             except NameError:
-                msg = '{}: unknown approximation'.format(self.propagator_mode)
-                warnings.warn(msg)
+                text = '{}: unknown approximation'.format(self.propagator_mode)
+                warnings.warn(text)
                 p_op_list = [
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))

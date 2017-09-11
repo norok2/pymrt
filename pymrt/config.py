@@ -14,7 +14,8 @@ from __future__ import(
 EXT_CMD = {
     'fsl/5.0/flirt': 'fsl5.0-flirt',
     'fsl/5.0/bet': 'fsl5.0-bet',
-    'fsl/5.0/prelude': 'fsl5.0-prelude'
+    'fsl/5.0/prelude': 'fsl5.0-prelude',
+    'ants/ANTS': '',
 }
 
 
