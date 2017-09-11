@@ -21,7 +21,7 @@ import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
 # import argparse  # Parser for command-line options, arguments and subcommands
-# import itertools  # Functions creating iterators for efficient looping
+import itertools  # Functions creating iterators for efficient looping
 # import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
@@ -57,6 +57,7 @@ import pymrt.naming
 import pymrt.input_output
 # import pymrt.geometry
 from pymrt.extras import jcampdx
+from pymrt.recipes import coils
 
 # from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -181,6 +182,8 @@ def _reco_from_fid(
         arr,
         acqp,
         method,
+        # coils_combine_kws=(('split_axis', None),),
+        coils_combine_kws=(),
         verbose=D_VERB_LVL):
     is_cartesian = True
     if is_cartesian:
@@ -189,23 +192,21 @@ def _reco_from_fid(
             load_info['mode'] + mrt.utils.DTYPE_STR[load_info['dtype']])
         block_size = acqp['GO_block_size']
         if block_size == 'continuous':
-            block_size = None
+            block_size = 1
         elif block_size == 'Standard_KBlock_Format':
             block_size = (1024 // dtype_size // 2)
         else:
             block_size = int(block_size)
 
-        # todo: ACQ_phase_factor
-
         # number of images per experiment (e.g. multi-echo)
         num_images = acqp['NI']
         msg('num_images={}'.format(num_images), verbose, VERB_LVL['debug'])
 
-        # inner cycle repetition (before phase-encoding) to be averaged
+        # inner cycle repetition (before phase-encoding) to be combined
         num_accum = acqp['NAE']
         msg('num_accum={}'.format(num_accum), verbose, VERB_LVL['debug'])
 
-        # outer cycle repetition (after phase-encoding) to be averaged
+        # outer cycle repetition (after phase-encoding) to be combined
         num_avg = acqp['NA']
         msg('num_avg={}'.format(num_avg), verbose, VERB_LVL['debug'])
 
@@ -217,18 +218,26 @@ def _reco_from_fid(
         # num_ds = acqp['DS']
         # msg('num_ds={}'.format(num_ds), verbose, VERB_LVL['debug'])
 
+        # phase encoding factor
+        pe_factor = acqp['ACQ_phase_factor']
+        msg('pe_factor={}'.format(pe_factor), verbose, VERB_LVL['debug'])
+
+        acq_shape = acqp['ACQ_size']
+        msg('acq_shape={}'.format(acq_shape), verbose, VERB_LVL['debug'])
+
         base_shape = method['PVM_Matrix']
         msg('base_shape={}'.format(base_shape), verbose, VERB_LVL['debug'])
-        
-        # acq_size = acqp['ACQ_size']
-        # msg('acq_size={}'.format(acq_size), verbose, VERB_LVL['debug'])
+
+        ref_gains = acqp['ACQ_CalibratedRG']
+        msg('ref_gains={}'.format(ref_gains), verbose, VERB_LVL['debug'])
+
+        # number of coils
+        num_coils = len([ref_gain for ref_gain in ref_gains if ref_gain > 0])
+        # num_coils = acq_shape[0] / base_shape[0]
+        msg('num_coils={}'.format(num_coils), verbose, VERB_LVL['debug'])
 
         try:
-            # fix checkerboard phase artifact
-            arr = arr * np.exp(
-                np.pi * np.arange(arr.size).reshape(arr.shape) % 2)
-
-            fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test{n}{o}{s}.nii.gz'
+            # fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test{n}{o}{s}.nii.gz'
             # fid_shape = -1, fid_shape[0], fid_shape[1], fid_shape[2]
             # i = 0
             # for fid_shape in mrt.utils.unique_permutations(fid_shape):
@@ -242,61 +251,93 @@ def _reco_from_fid(
             #             fp.format(n=i, o=order, s=fid_shape), np.abs(arr))
             #         i += 1
 
+            msg('fid_size={}'.format(arr.size), verbose, VERB_LVL['debug'])
             fid_shape = (
-                tuple(((mrt.utils.num_align(base_shape[0], block_size)
-                        if block_size else base_shape[0]),
-                       num_images, num_accum)) +
-                tuple(base_shape[1:]) + (num_avg, num_rep) + (-1,))
+                mrt.utils.num_align(base_shape[0], block_size),
+                num_coils,
+                num_images,
+                mrt.utils.num_align(base_shape[1], pe_factor, 'lower'),
+                acq_shape[2] if len(acq_shape) == 3 else 1,
+                num_avg,
+                num_rep,
+                -1)
+            msg('fid_shape={}'.format(fid_shape), verbose, VERB_LVL['debug'])
 
-            # ro_size = base_shape[0]
-            # pe_size = base_shape[1]
-            # sl_size = base_shape[2]
-            # me_size = num_images
-            # if block_size:
-            #     adc_size = mrt.utils.num_align(ro_size, block_size)
-            # else:
-            #     adc_size = ro_size
-            # fid_shape = (adc_size, me_size, pe_size, sl_size, -1)
-            print(fid_shape)
-
+            coil_axis = -1
+            images_axis = -2
+            rep_axis = -3
+            avg_axis = -4
             arr = arr.reshape(fid_shape, order='F')
-            arr = np.moveaxis(arr, 1, -1)  # for num_images
-            arr = np.moveaxis(arr, 1, -1)  # for num_accum
-            arr = np.squeeze(arr)  # remove singlet dimensions
-            arr = np.delete(arr, slice(base_shape[0], None), 0)
+            arr = np.moveaxis(arr, (1, 2), (coil_axis, images_axis))
+            # remove singleton dimensions
+            arr = np.squeeze(arr)
 
-            print(arr.shape, arr.dtype)
-            print(np.sum(arr.real), np.sum(arr.imag))
+            # remove additional zeros from redout block alignment
+            arr = np.delete(arr, slice(base_shape[0], None), 0)
+            # remove additional zeros from over-slices
+            arr = np.delete(arr, slice(base_shape[2], None), 2)
+
+            # sort and reshape phase encoding steps
+            if pe_factor > 1:
+                msg('arr_shape={}'.format(arr.shape), verbose,
+                    VERB_LVL['debug'])
+                pe_size = arr.shape[1]
+                pe_step = pe_size // pe_factor
+                i = np.argsort(list(itertools.chain(
+                    *[range(j, pe_size, pe_step) for j in range(pe_step)])))
+                tmp_arr = arr[:, i, ...]
+                arr = np.zeros(
+                    tuple(base_shape) + tuple(arr.shape[len(base_shape):]),
+                    dtype=complex)
+                arr[:, :pe_size, ...] = tmp_arr
+
+            # todo: fix phases
+
+            msg('arr_shape={}'.format(arr.shape), verbose, VERB_LVL['debug'])
 
             # perform spatial FFT
+            # warning: incorrect fft shifts result in checkerboard artifact
             ft_axes = tuple(range(len(base_shape)))
             arr = np.fft.ifftshift(
-                np.fft.ifftn(arr, axes=ft_axes), axes=ft_axes)
+                np.fft.ifftn(
+                    np.fft.fftshift(arr, axes=ft_axes),
+                    axes=ft_axes),
+                axes=ft_axes)
 
-            # average  experiments
-            if num_accum > 1:
-                # arr = np.sum(arr, axis=(-2))
-                arr = arr[..., 1]
+            # combine coils
+            if num_coils > 1:
+                if coils_combine_kws is not None:
+                    arr = coils.combine(
+                        arr, verbose=verbose, **dict(coils_combine_kws))
+            if num_avg > 1:
+                arr = np.sum(arr, axis=avg_axis)
+            if num_rep > 1:
+                arr = np.sum(arr, axis=rep_axis)
 
-            # extras = num_images, num_avg, num_accum, num_rep
-            # fid_shape = tuple(fid_shape[::-1]) + (
-            #     (other_size,) if other_size > 1 else ())
-            # arr = arr[::-1].reshape(fid_shape)
-            mrt.input_output.save(fp.format(n='', o='M', s=''), np.abs(arr))
-            mrt.input_output.save(fp.format(n='', o='P', s=''), np.angle(arr))
-            quit()
+                # mrt.input_output.save(fp.format(n='', o='M', s=''), np.abs(
+                # arr))
+                # print('MAG')
+                # mrt.input_output.save(fp.format(n='', o='P', s=''),
+                # np.angle(arr))
+                # print('PHS')
+
         except ValueError:
             fid_shape = mrt.utils.factorize_k(arr.size, 3)
             warning = ('Could not determine correct shape for FID. '
                        'Using `{}`'.format(fid_shape))
             warnings.warn(warning)
+            quit()
             arr = arr.reshape(fid_shape)
     else:
         raise NotImplementedError
     return arr
 
 
-def _reco_from_bin(arr, reco, method):
+def _reco_from_bin(
+        arr,
+        reco,
+        method,
+        verbose=D_VERB_LVL):
     warning = 'This is EXPERIMENTAL!'
     warnings.warn(warning)
 
@@ -351,6 +392,15 @@ def batch_extract(
     Returns:
 
     """
+    text = '\n'.join((
+        'EXPERIMENTAL!', 'Use at your own risk!',
+        'Known issues:',
+        ' - orientation not consistent with method (i.e. 0->RO, 1->PE, 2->SL)',
+        ' - FOV is centered out',
+        ' - voxel size is not set',
+        ''))
+    warnings.warn(text)
+
     if allowed_ext is None:
         allowed_ext = ''
     elif isinstance(allowed_ext, str):
@@ -399,7 +449,7 @@ def batch_extract(
                         [fid_filepath, acqp_filepath, method_filepath],
                         [cx_filepath], force):
                     arr = _load_bin(fid_filepath, **load_info)
-                    arr = _reco_from_fid(arr, acqp, method)
+                    arr = _reco_from_fid(arr, acqp, method, verbose=verbose)
                     mrt.input_output.save(cx_filepath, arr)
                     msg('CX:  {}'.format(os.path.basename(cx_filepath)),
                         verbose, D_VERB_LVL)
@@ -423,7 +473,7 @@ def batch_extract(
                     reco_flag = mrt.naming.ITYPES['mag']
 
                     arr = _load_bin(fid_filepath, **load_info)
-                    arr = _reco_from_fid(arr, acqp, method)
+                    arr = _reco_from_fid(arr, acqp, method, verbose=verbose)
                     mrt.input_output.save(mag_filepath, np.abs(arr))
                     msg('MAG: {}'.format(os.path.basename(mag_filepath)),
                         verbose, D_VERB_LVL)
@@ -448,7 +498,7 @@ def batch_extract(
                         [fid_filepath, acqp_filepath, method_filepath],
                         [re_filepath, im_filepath], force):
                     arr = _load_bin(fid_filepath, **load_info)
-                    arr = _reco_from_fid(arr, acqp, method)
+                    arr = _reco_from_fid(arr, acqp, method, verbose=verbose)
                     mrt.input_output.save(re_filepath, np.abs(arr))
                     msg('RE: {}'.format(os.path.basename(re_filepath)),
                         verbose, D_VERB_LVL)
@@ -457,8 +507,8 @@ def batch_extract(
                         verbose, D_VERB_LVL)
 
         else:
-            warning = 'Voxel data and shapes may be incorrect.'
-            warnings.warn(warning)
+            text = 'Voxel data and shapes may be incorrect.'
+            warnings.warn(text)
             for dseq_filepath, reco_filepath \
                     in zip(dseq_filepaths, reco_filepaths):
                 reco_s, reco, reco_c = jcampdx.read(reco_filepath)
@@ -474,7 +524,7 @@ def batch_extract(
                 if mrt.utils.check_redo(
                         [dseq_filepath, reco_filepath], [cx_filepath], force):
                     arr = _load_bin(dseq_filepath, **load_info)
-                    arr = _reco_from_bin(arr, reco, method)
+                    arr = _reco_from_bin(arr, reco, method, verbose=verbose)
                     mrt.input_output.save(cx_filepath, arr)
                     msg('NIZ: {}'.format(os.path.basename(cx_filepath)),
                         verbose, D_VERB_LVL)
@@ -487,9 +537,10 @@ if __name__ == '__main__':
 
     batch_extract(
         '/home/raid1/metere/hd3/sandbox/hmri'
-        '/Specimen_170814_1_0_Study_20170814_080054/2',
+        '/Specimen_170814_1_0_Study_20170814_080054/',
         custom_reco='mag_phs',
-        force=True)
+        verbose=VERB_LVL['debug'],
+        force=False)
 
 # ======================================================================
 elapsed(os.path.basename(__file__))
