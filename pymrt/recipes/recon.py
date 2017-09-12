@@ -37,7 +37,7 @@ import pymrt.utils
 # import pymrt.computation as pmc
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-# from pymrt import elapsed, print_elapsed
+# from pymrt import elapsed, report
 # from pymrt import msg, dbg
 
 

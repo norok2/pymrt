@@ -22,7 +22,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 import pymrt.utils
@@ -415,7 +415,7 @@ def _test(use_cache=True):
     k2 = dipole_kernel_angle([5, 5, 5], 0.5, 0, 90)
     print(np.sum(np.abs(k1 - k2)))
 
-    print_elapsed()
+    msg(report())
 
 
 _test()

@@ -57,7 +57,8 @@ import pymrt.utils
 import pymrt.geometry
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import elapsed, report
+from pymrt import msg, dbg
 from pymrt.config import EXT_CMD
 
 
@@ -471,4 +472,4 @@ if __name__ == '__main__':
 
     end_time = datetime.datetime.now()
     print('ExecTime: {}'.format(end_time - begin_time))
-    mrt.utils.print_elapsed()
+    msg(report())

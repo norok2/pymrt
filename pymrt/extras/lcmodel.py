@@ -53,7 +53,8 @@ import pymrt.utils
 # import pymrt.input_output
 # import pymrt.geometry
 # from pymrt.sequences import mp2rage
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: Header information
@@ -279,5 +280,5 @@ if __name__ == '__main__':
     print(c['data'].shape, c)
 
     elapsed('test lcmodel i/o')
-    print_elapsed()
+    msg(report())
     print()

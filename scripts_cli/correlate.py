@@ -56,6 +56,7 @@ import pymrt.correlation as pml
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
+from pymrt import elapsed, report
 
 
 # ======================================================================
@@ -159,9 +160,8 @@ def main():
     kws.pop('quiet')
     pml.check_correlation(**kws)
 
-    if args.verbose > VERB_LVL['low']:
-        mrt.utils.elapsed(os.path.basename(__file__))
-        mrt.utils.print_elapsed()
+    elapsed(os.path.basename(__file__))
+    msg(report(), args.verbose, VERB_LVL['medium'])
 
 
 # ======================================================================

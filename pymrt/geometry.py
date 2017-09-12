@@ -51,7 +51,7 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.plot as pmp
 
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 
@@ -2076,4 +2076,4 @@ if __name__ == '__main__':
     doctest.testmod()
     # _self_test_interactive()
     # elapsed('self_test_interactive')
-    # print_elapsed()
+    # msg(report())

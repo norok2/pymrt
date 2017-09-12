@@ -107,4 +107,4 @@ from pymrt.recipes import *
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report

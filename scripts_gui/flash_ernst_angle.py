@@ -42,7 +42,7 @@ import pymrt as mrt
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 
 from pymrt.sequences import flash
 from pymrt.extras import interactive
@@ -261,7 +261,7 @@ def main():
             filtered_interactives, title=TITLE, about=__doc__)
 
     elapsed(os.path.basename(__file__))
-    print_elapsed()
+    msg(report())
 
 
 # ======================================================================

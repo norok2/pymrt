@@ -74,7 +74,7 @@ import pymrt.utils
 from pymrt import INFO, DIRS
 # from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt.config import CFG
 
 from pymrt.constants import GAMMA, GAMMA_BAR
@@ -1484,6 +1484,7 @@ class MtFlash(PulseTrain):
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-    mrt.utils.print_elapsed()
+    elapsed()
+    msg(report())
     # profile.run('test_z_spectrum()', sort=1)
     plt.show()

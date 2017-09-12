@@ -18,7 +18,7 @@ import pymrt.utils
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 
 from pymrt.sequences.matrix_algebra import \
     dynamics_operator, SpinModel, PulseList, PulseExc, PulseTrain, Delay, \
@@ -469,6 +469,6 @@ if __name__ == '__main__':
     # check_fit_spin_model()
     # mrt.utils.elapsed('check_fit_spin_model')
 
-    print_elapsed()
+    msg(report())
     # profile.run('check_z_spectrum()', sort=1)
     plt.show()

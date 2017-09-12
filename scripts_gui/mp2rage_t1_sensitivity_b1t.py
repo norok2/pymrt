@@ -56,7 +56,7 @@ from pymrt.extras import interactive
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
@@ -360,7 +360,7 @@ def main():
             ACQ_INTERACTIVES, title=TITLE, about=__doc__)
 
     elapsed(os.path.basename(__file__))
-    print_elapsed()
+    msg(report())
 
 
 # ======================================================================

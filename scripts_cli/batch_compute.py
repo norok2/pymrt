@@ -64,6 +64,7 @@ import pymrt.computation as pmc
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
+from pymrt import elapsed, report
 
 
 # ======================================================================
@@ -190,8 +191,7 @@ def main():
         print('WW: Method not specified.')
 
     mrt.utils.elapsed('compute')
-    if args.verbose > VERB_LVL['none']:
-        mrt.utils.print_elapsed()
+    msg(report(), args.verbose, VERB_LVL['medium'])
 
 
 # ======================================================================

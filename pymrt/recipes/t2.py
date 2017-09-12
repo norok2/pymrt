@@ -28,7 +28,7 @@ import pymrt as mrt
 
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 from pymrt.recipes import generic
@@ -184,7 +184,7 @@ def _test(use_cache=True):
     #       eval_dist(fit_exp_curve_fit(y + n, x, init=[5, 4000])['tau'], tau_arr))
     # elapsed('leasq')
 
-    print_elapsed()
+    msg(report())
 
 
 # _test()

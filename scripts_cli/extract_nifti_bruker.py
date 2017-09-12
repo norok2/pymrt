@@ -61,7 +61,7 @@ import pymrt.extras as pme
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 
 
 # ======================================================================
@@ -313,7 +313,7 @@ def main():
     extract_nifti(args.dir, args.extradir, args.force, args.verbose)
 
     elapsed('extract_nifit_bruker')
-    print_elapsed()
+    msg(report())
 
 
 

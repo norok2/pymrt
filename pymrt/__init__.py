@@ -219,7 +219,7 @@ def elapsed(
 
 
 # ======================================================================
-def print_elapsed(
+def report(
         events=_EVENTS,
         label='\nElapsed Time(s): ',
         only_last=False):
@@ -237,8 +237,9 @@ def print_elapsed(
     """
     import datetime
 
+    text = ''
     if not only_last:
-        print(label, end='\n' if len(events) > 2 else '')
+        text += label + ('\n' if len(events) > 2 else '')
         first_elapsed = events[0][1]
         for i in range(len(events) - 1):
             _id = i + 1
@@ -249,15 +250,16 @@ def print_elapsed(
             diff_last = curr_elapsed - prev_elapsed
             if diff_first == diff_last:
                 diff_first = '-'
-            print('{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-                name, diff_last, diff_first))
+            text += (
+                '{!s:24s} {!s:>24s}, {!s:>24s}'.format(
+                    name, diff_last, diff_first))
     else:
         _id = -1
         name = events[_id][0]
         curr_elapsed = events[_id][1]
         prev_elapsed = events[_id - 1][1]
-        diff_last = datetime.timedelta(curr_elapsed - prev_elapsed)
-        print('{!s}: {!s:>24s}'.format(name, diff_last))
+        text += ('{!s:24s} {!s:>24s}'.format(name, curr_elapsed - prev_elapsed))
+    return text
 
 
 # ======================================================================
