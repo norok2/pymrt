@@ -30,28 +30,25 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.linalg  # Scipy: Linear Algebra
 
-
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
 import pymrt.segmentation
 
-
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 
 # ======================================================================
-def sum_of_squares(
+def complex_sum(
         arr,
         coil_axis=-1,
         verbose=D_VERB_LVL):
     """
-    Coil sensitivity for the 'sum_of_squares' combination method.
+    Coil sensitivity for the 'complex_sum' combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
+    Note: this function returns a constant number, therefore the `coil_axis`
     parameter is left unused.
 
     Args:
@@ -62,8 +59,41 @@ def sum_of_squares(
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Roemer, P.B., Edelstein, W.A., Hayes, C.E., Souza, S.P.,
+          Mueller, O.M., 1990. The NMR phased array. Magn Reson Med 16,
+          192–225. doi:10.1002/mrm.1910160203
     """
-    sens = arr.copy()
+    return 1.0
+
+
+# ======================================================================
+def sum_of_squares(
+        arr,
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
+    """
+    Coil sensitivity for the 'sum_of_squares' combination method.
+
+    Note: this function returns the same array used for input except for the
+    normalization, therefore the `coil_axis` parameter is left unused.
+
+    Args:
+        arr (np.ndarray): The input array.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Roemer, P.B., Edelstein, W.A., Hayes, C.E., Souza, S.P.,
+          Mueller, O.M., 1990. The NMR phased array. Magn Reson Med 16,
+          192–225. doi:10.1002/mrm.1910160203
+    """
+    sens = arr / np.abs(arr)
     return sens
 
 
@@ -101,7 +131,7 @@ def smooth_sum_of_squares(
     else:
         assert (len(block) + 1 == arr.ndim)
     sens = mrt.utils.filter_cx(
-        arr.copy(), sp.ndimage.uniform_filter, (), dict(size=block))
+        arr / np.abs(arr), sp.ndimage.uniform_filter, (), dict(size=block))
     sens = np.swapaxes(sens, -1, coil_axis)
     return sens
 
@@ -239,7 +269,7 @@ def block_adaptive(
 def block_adaptive_iter(
         arr,
         block=5,
-        max_iter=32,
+        max_iter=16,
         threshold=1e-8,
         coil_axis=-1,
         verbose=D_VERB_LVL):
@@ -292,14 +322,17 @@ def block_adaptive_iter(
     num_coils = shape[coil_axis]
     arr = np.swapaxes(arr, coil_axis, -1)
     base_shape = arr.shape[:-1]
-    if isinstance(block, int):
+    if isinstance(block, (int, float)):
         block = (block,) * (arr.ndim - 1) + (0,)
     else:
         assert (len(block) + 1 == arr.ndim)
 
+    msg('arr.shape={}'.format(arr.shape), verbose, VERB_LVL['debug'])
+    msg('block={}'.format(block), verbose, VERB_LVL['debug'])
     epsilon = np.finfo(np.float).eps
     no_coil_axes = tuple(range(0, arr.ndim - 1))
-
+    msg('threshold={}'.format(threshold), verbose, VERB_LVL['debug'])
+    msg('max_iter={}'.format(max_iter), verbose, VERB_LVL['debug'])
     sens = np.zeros_like(arr, dtype=complex)
 
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -323,11 +356,118 @@ def block_adaptive_iter(
             extra_phase /= (np.abs(extra_phase) + epsilon)
             rho *= extra_phase
             sens *= extra_phase[..., None].conj()
+            msg('{}'.format(i + 1),
+                verbose, VERB_LVL['debug'], end=' ' if threshold else ', ',
+                flush=True)
             if threshold > 0:
                 delta = (np.linalg.norm(rho - last_rho) / np.linalg.norm(rho))
-                msg('{}/{}: D={} ({})'.format(
-                    i + 1, max_iter, delta, threshold),
-                    verbose, VERB_LVL['debug'], end=', ', flush=True,)
+                msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
+                    end=', ' if i + 1 < max_iter else '.\n', flush=True)
+                if delta < threshold:
+                    break
+    sens = np.swapaxes(sens, -1, coil_axis)
+    return sens
+
+
+# ======================================================================
+def wavelet_adaptive_iter(
+        arr,
+        block=5,
+        max_iter=16,
+        threshold=1e-8,
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
+    """
+    Coil sensitivity for the 'block_adaptive_iter' combination method.
+
+    This is an iterative and faster implementation of the algorithm for
+    computing 'block_adaptive' sensitivity, with improved phase accuracy.
+
+    Args:
+        arr (np.ndarray): The input array.
+        block (int|float|iterable[int|float]): The size of the block in px.
+            Used for smoothing the coil covariance.
+            If int or float, the block is isotropic in all non-coil dimensions.
+            If iterable, each size is applied to the corresponding dimension
+            and its size must match the number of non-coil dimensions.
+            If set to 0, no smoothing is performed and the algorithm
+            reduces to non-block adaptive.
+        max_iter (int): Maximum number of iterations.
+            If `threshold` > 0, the algorithm may stop earlier.
+        threshold (float): Threshold for next iteration.
+            If the next iteration globally modifies the sensitivity by less
+            than `threshold`, the algorithm stops.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Walsh, D.O., Gmitro, A.F., Marcellin, M.W., 2000. Adaptive
+          reconstruction of phased array MR imagery. Magn. Reson. Med. 43,
+          682–690. doi:10.1002/(SICI)1522-2594(
+          200005)43:5<682::AID-MRM10>3.0.CO;2-G
+        - Inati, S.J., Hansen, M.S., Kellman, P., 2013. A Solution to the
+          Phase Problem in Adaptive Coil Combination, in: Proceedings of the
+          ISMRM 21st Annual Meeting & Exhibition. Presented at the 21st Annual
+          Meeting & Exhibition of the International Society for Magnetic
+          Resonance in Medicine, ISMRM, Salt Lake City, Utah, USA.
+        - Inati, S.J., Hansen, M.S., Kellman, P., 2014. A Fast Optimal
+          Method for Coil Sensitivity Estimation and Adaptive Coil
+          Combination for Complex Images, in: Proceedings of the ISMRM 22nd
+          Annual Meeting & Exhibition. Presented at the 22nd Annual Meeting
+          & Exhibition of the International Society for Magnetic Resonance
+          in Medicine, ISMRM, Milan, Italy.
+    """
+    raise NotImplementedError
+    coil_axis = coil_axis % arr.ndim
+    shape = arr.shape
+    num_coils = shape[coil_axis]
+    arr = np.swapaxes(arr, coil_axis, -1)
+    base_shape = arr.shape[:-1]
+    if isinstance(block, (int, float)):
+        block = (block,) * (arr.ndim - 1) + (0,)
+    else:
+        assert (len(block) + 1 == arr.ndim)
+
+    msg('arr.shape={}'.format(arr.shape), verbose, VERB_LVL['debug'])
+    msg('block={}'.format(block), verbose, VERB_LVL['debug'])
+    epsilon = np.finfo(np.float).eps
+    no_coil_axes = tuple(range(0, arr.ndim - 1))
+    msg('threshold={}'.format(threshold), verbose, VERB_LVL['debug'])
+    msg('max_iter={}'.format(max_iter), verbose, VERB_LVL['debug'])
+    sens = np.zeros_like(arr, dtype=complex)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mean_coil = np.sum(arr, no_coil_axes)
+        mean_coil /= np.linalg.norm(mean_coil)
+        rho = np.einsum('...i,i', arr, mean_coil.conj())
+
+        for i in range(max_iter):
+            last_rho = rho.copy() if threshold > 0 else rho
+            sens = mrt.utils.filter_cx(
+                arr * rho[..., None].conj(),
+                sp.ndimage.uniform_filter, (), dict(size=block))
+            sens /= (
+                np.sqrt(np.sum(sens * sens.conj(), -1))
+                + epsilon)[..., None]
+            rho = np.sum(arr * np.conj(sens), -1)
+            mean_coil = np.sum(sens * rho[..., None], no_coil_axes)
+            mean_coil /= np.linalg.norm(mean_coil)
+
+            extra_phase = np.einsum('...i,i', sens, mean_coil.conj())
+            extra_phase /= (np.abs(extra_phase) + epsilon)
+            rho *= extra_phase
+            sens *= extra_phase[..., None].conj()
+            msg('{}'.format(i + 1),
+                verbose, VERB_LVL['debug'], end=' ' if threshold else ', ',
+                flush=True)
+            if threshold > 0:
+                delta = (np.linalg.norm(rho - last_rho) / np.linalg.norm(rho))
+                msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
+                    end=', ' if i + 1 < max_iter else '.\n', flush=True)
                 if delta < threshold:
                     break
     sens = np.swapaxes(sens, -1, coil_axis)
@@ -374,6 +514,11 @@ def compress_svd(
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
+
+    References:
+        - Buehrer, M., Pruessmann, K.P., Boesiger, P., Kozerke, S.,
+          2007. Array compression for MRI with large coil arrays. Magn. Reson.
+          Med. 57, 1131–1139. doi:10.1002/mrm.21237
     """
     coil_axis = coil_axis % arr.ndim
     shape = arr.shape
@@ -467,12 +612,12 @@ def block_subspace_fourier(
 
 
 # ======================================================================
-def virtual_reference(
+def virtual_ref(
         arr,
         coil_axis=-1,
         verbose=D_VERB_LVL):
     """
-    Coil sensitivity for the 'virtual_reference' combination method.
+    Coil sensitivity for the 'virtual_ref' combination method.
 
     Args:
         arr:
@@ -517,7 +662,7 @@ def me_conjugate_hermitian(
 
 
 # ======================================================================
-def me_svd(
+def multi_svd(
         arr,
         echo_axis=-2,
         coil_axis=-1,
@@ -539,6 +684,11 @@ def me_svd(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
+    shape = arr.shape
+    num_coils = shape[coil_axis]
+    arr = np.swapaxes(arr, coil_axis, -1)
+    base_shape = arr.shape[:-1]
+
     raise NotImplementedError
 
 
@@ -640,7 +790,7 @@ def sensitivity(
         method='block_adaptive_iter',
         method_kws=None,
         coil_axis=-1,
-        split_axis=0,
+        split_axis=-2,
         verbose=D_VERB_LVL):
     """
     Estimate the coil sensitivity.
@@ -650,12 +800,13 @@ def sensitivity(
         method (str|None): The coil sensitivity method.
             If str, uses the specified method.
             Available options are:
+             - 'complex_sum': use `complex_sum()`;
              - 'sum_of_squares': use `sum_of_squares()`;
-             - 'smooth_sum_of_squares': use `smooth_sum_of_squares()`
+             - 'smooth_sum_of_squares': use `smooth_sum_of_squares()`;
              - 'adaptive': use `adaptive()`;
              - 'block_adaptive': use `block_adaptive()`;
              - 'block_adaptive_iter': use `block_adaptive_iter()`;
-             - 'virtual_reference': use `virtual_reference()`.
+             - 'virtual_ref': use `virtual_ref()`.
         method_kws (dict|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis` is passed to method.
         coil_axis (int): The coil dimension.
@@ -663,7 +814,8 @@ def sensitivity(
             This is passed to `method`.
         split_axis (int|None): The split dimension.
             If int, indicates the dimension of `arr` along which the
-            algorithm is sequentially applied, to reduce memory usage.
+            algorithm is sequentially applied to reduce memory usage,
+            but at the cost of accuracy.
             If None, the algorithm is applied to the whole `arr` at once.
         verbose (int): Set level of verbosity.
 
@@ -671,14 +823,17 @@ def sensitivity(
         sens (arr): The coil sensitivity.
     """
     methods = (
-        'sum_of_squares', 'smooth_sum_of_squares',
+        'complex_sum', 'sum_of_squares', 'smooth_sum_of_squares',
         'adaptive', 'block_adaptive', 'block_adaptive_iter',
-        'virtual_reference')
+        'wavelet_adaptive_iter', 'virtual_ref_svd', 'block_virtual_ref_svd')
     method = method.lower() if method else 'block_adaptive_iter'
     if method_kws is None:
         method_kws = dict()
     if method in methods:
-        if method == 'sum_of_squares':
+        sens_method = None
+        if method == 'complex_sum':
+            sens_method = complex_sum
+        elif method == 'sum_of_squares':
             sens_method = sum_of_squares
         elif method == 'smooth_sum_of_squares':
             sens_method = smooth_sum_of_squares
@@ -688,26 +843,30 @@ def sensitivity(
             sens_method = block_adaptive
         elif method == 'block_adaptive_iter':
             sens_method = block_adaptive_iter
-        elif method == 'virtual_reference':
-            sens_method = virtual_reference
+        elif method == 'virtual_ref':
+            sens_method = virtual_ref
+        msg(method, verbose, VERB_LVL['medium'], end='', flush=True)
         if split_axis is not None:
             shape = arr.shape
             sens = np.zeros(shape, dtype=complex)
             arr = np.swapaxes(arr, split_axis, 0)
             sens = np.swapaxes(sens, split_axis, 0)
+            msg(': split={}'.format(shape[split_axis]),
+                verbose, VERB_LVL['medium'], end='\n', flush=True)
             for i in range(shape[split_axis]):
-                msg('{}: {}/{}'.format(method, i + 1, shape[split_axis]),
-                    verbose, VERB_LVL['medium'])
+                msg('{}'.format(i + 1), verbose, VERB_LVL['high'],
+                    end=' ' if i + 1 < shape[split_axis] else '\n', flush=True)
                 sens[i, ...] = sens_method(
                     arr[i, ...], coil_axis=coil_axis, verbose=verbose,
                     **method_kws)
             sens = np.swapaxes(sens, 0, split_axis)
         else:
+            msg('', verbose, VERB_LVL['medium'])
             sens = sens_method(
                 arr, coil_axis=coil_axis, verbose=verbose, **method_kws)
     else:
         warnings.warn(
-            'Sensitivity estimation method `{}` not known'.format(method) +
+            'Unknown sensitivity estimation method `{}`'.format(method) +
             ' Using default.')
         sens = sensitivity(
             arr, coil_axis=coil_axis, verbose=verbose, **method_kws)
@@ -721,14 +880,14 @@ def combine(
         k_svd='quad_weight',
         norm=False,
         coil_axis=-1,
-        split_axis=0,
+        split_axis=None,
         verbose=D_VERB_LVL):
     """
-    Calculate the coil combination array from multiple coil elements.
+    Calculate the combination of multiple coil elements using coil sensitivity.
 
     The coil sensitivity is specified as a parameter.
     An optional SVD preprocessing step can be used to reduce computational
-    complexity and improve the SNR.
+    complexity and eventually reduce the noise.
 
     Args:
         arr (np.ndarray): The input array.
@@ -744,7 +903,8 @@ def combine(
             The dimension of `arr` along which single coil elements are stored.
         split_axis (int|None): The split dimension.
             If int, indicates the dimension of `arr` along which the
-            algorithm is sequentially applied, to reduce memory usage.
+            algorithm is sequentially applied to reduce memory usage,
+            but at the cost of accuracy.
             If None, the algorithm is applied to the whole `arr` at once.
         verbose (int): Set level of verbosity.
 
@@ -765,6 +925,7 @@ def combine(
         cx_arr = np.zeros(
             tuple(d for i, d in enumerate(shape) if i != coil_axis % arr.ndim),
             dtype=complex)
+        split_axis = split_axis % arr.ndim
         cx_arr = np.swapaxes(cx_arr, split_axis, 0)
         arr = np.swapaxes(arr, split_axis, 0)
         sens = np.swapaxes(sens, split_axis, 0)
@@ -777,19 +938,21 @@ def combine(
         arr = np.swapaxes(arr, 0, split_axis)
         sens = np.swapaxes(sens, 0, split_axis)
     else:
-        cx_arr = np.sum(sens.conj() * arr, coil_axis)
+        cx_arr = np.sum(sens.conj() * arr, axis=coil_axis)
 
     if norm:
         msg('Normalizing.', verbose, VERB_LVL['medium'])
         epsilon = np.finfo(np.float).eps
-        cx_arr /= (np.sum(np.abs(sens) ** 2, coil_axis) + epsilon)
+        cx_arr /= (np.sum(np.abs(sens) ** 2, axis=coil_axis) + epsilon)
     del sens
 
-    if np.isclose(np.mean(np.abs(np.angle(arr))), 0.0, equal_nan=True):
+    if np.isclose(np.mean(np.abs(np.angle(cx_arr))), 0.0, equal_nan=True):
         msg('Adding sum-of-squares phase.', verbose, VERB_LVL['medium'])
-        arr = cx_arr * np.exp(1j * np.angle(np.sum(arr, coil_axis)))
+        arr = cx_arr * np.exp(1j * np.angle(np.sum(arr, axis=coil_axis)))
     else:
         arr = cx_arr
+    elapsed(combine.__name__)
+    msg(report(only_last=True))
     return arr
 
 
@@ -817,6 +980,11 @@ def combine_ref(
 
     Returns:
         arr (np.ndarray): The combined array.
+
+    References:
+        - Roemer, P.B., Edelstein, W.A., Hayes, C.E., Souza, S.P.,
+          Mueller, O.M., 1990. The NMR phased array. Magn Reson Med 16,
+          192–225. doi:10.1002/mrm.1910160203
     """
     if isinstance(sens, str):
         sens = sensitivity(arr, sens)
@@ -829,26 +997,30 @@ def combine_ref(
 
 
 # ======================================================================
-def combine_me(
+def combine_multi(
         arr,
-        sens,
-        norm=False,
-        echo_axis=-2,
+        method,
+        multi_axis=-2,
         coil_axis=-1,
+        split_axis=None,
         verbose=D_VERB_LVL):
     """
-    Calculate the coil combination array from multiple coil elements.
-
-    The coil sensitivity is specified as parameter.
+    Calculate the combination of multiple coil elements from different images.
 
     Args:
         arr (np.ndarray): The input array.
         sens (np.ndarray|str): The coil sensitivity.
             If `np.ndarray`, its shape must match with `arr`.
             If `str`, the sensitivity is calculated using `sensitivity()`.
-        norm (bool): Normalize using coil sensitivity magnitude.
+        norm (bool): Normalize using the coil sensitivity magnitude.
+        echo_axis: The
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
+        split_axis (int|None): The split dimension.
+            If int, indicates the dimension of `arr` along which the
+            algorithm is sequentially applied to reduce memory usage,
+            but at the cost of accuracy.
+            If None, the algorithm is applied to the whole `arr` at once.
         verbose (int): Set level of verbosity.
 
     Returns:
@@ -862,3 +1034,38 @@ def combine_me(
         epsilon = np.finfo(np.float).eps
         arr /= (np.sum(np.abs(sens) ** 2, coil_axis) + epsilon)
     return arr
+
+
+# ======================================================================
+def qq(
+        coils_arr,
+        combined_arr,
+        factor=100,
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
+    """
+    Calculate the voxel-wise quality metric Q for coil combination.
+
+    This is defined as:
+
+    .. math::
+        Q_i = k \\frac{|y_i|}{\\sum_j |x_{ij}|}
+
+    where :math:`x` is the uncombined coil array, :math:`y` is the combined
+    coil array, :math:`i` indicate the voxel index, :math:`j` indicate the coil
+    index and :math:`k` is a proportionality constant (traditionally set to
+    100 for percentage units).
+
+    Args:
+        coils_arr (np.ndarray): The uncombined coil data array.
+        combined_arr (np.ndarray): The combined coil data array.
+        factor (int|float): The multiplicative scale factor.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        qq_arr (np.ndarray): The voxel-wise quality metric array.
+    """
+    qq_arr = np.abs(combined_arr) / np.sum(np.abs(coils_arr), axis=coil_axis)
+    return factor * qq_arr

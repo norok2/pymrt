@@ -61,7 +61,7 @@ from pymrt.recipes import coils
 
 # from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, print_elapsed
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 
@@ -182,8 +182,6 @@ def _reco_from_fid(
         arr,
         acqp,
         method,
-        # coils_combine_kws=(('split_axis', None),),
-        coils_combine_kws=(),
         verbose=D_VERB_LVL):
     is_cartesian = True
     if is_cartesian:
@@ -228,7 +226,7 @@ def _reco_from_fid(
         base_shape = method['PVM_Matrix']
         msg('base_shape={}'.format(base_shape), verbose, VERB_LVL['debug'])
 
-        ref_gains = acqp['ACQ_CalibratedRG']
+        ref_gains = acqp['ACQ_CalibratedRG'].ravel()
         msg('ref_gains={}'.format(ref_gains), verbose, VERB_LVL['debug'])
 
         # number of coils
@@ -237,23 +235,11 @@ def _reco_from_fid(
         msg('num_coils={}'.format(num_coils), verbose, VERB_LVL['debug'])
 
         try:
-            # fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test{n}{o}{s}.nii.gz'
-            # fid_shape = -1, fid_shape[0], fid_shape[1], fid_shape[2]
-            # i = 0
-            # for fid_shape in mrt.utils.unique_permutations(fid_shape):
-            #     for order in 'C',:
-            #         arr = arr.reshape(fid_shape, order=order)
-            #         print(i, fid_shape, order)
-            #         minor = fid_shape.index(min(fid_shape))
-            #         arr = np.swapaxes(arr, minor, -1)
-            #         print(arr.shape)
-            #         mrt.input_output.save(
-            #             fp.format(n=i, o=order, s=fid_shape), np.abs(arr))
-            #         i += 1
+            fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test_{s}.nii.gz'
 
             msg('fid_size={}'.format(arr.size), verbose, VERB_LVL['debug'])
             fid_shape = (
-                mrt.utils.num_align(base_shape[0], block_size),
+                mrt.utils.num_align(base_shape[0], block_size // num_coils),
                 num_coils,
                 num_images,
                 mrt.utils.num_align(base_shape[1], pe_factor, 'lower'),
@@ -275,7 +261,8 @@ def _reco_from_fid(
             # remove additional zeros from redout block alignment
             arr = np.delete(arr, slice(base_shape[0], None), 0)
             # remove additional zeros from over-slices
-            arr = np.delete(arr, slice(base_shape[2], None), 2)
+            if len(acq_shape) == 3:
+                arr = np.delete(arr, slice(base_shape[2], None), 2)
 
             # sort and reshape phase encoding steps
             if pe_factor > 1:
@@ -291,7 +278,7 @@ def _reco_from_fid(
                     dtype=complex)
                 arr[:, :pe_size, ...] = tmp_arr
 
-            # todo: fix phases
+            # todo: fix phases?
 
             msg('arr_shape={}'.format(arr.shape), verbose, VERB_LVL['debug'])
 
@@ -306,22 +293,43 @@ def _reco_from_fid(
 
             # combine coils
             if num_coils > 1:
-                if coils_combine_kws is not None:
-                    arr = coils.combine(
-                        arr, verbose=verbose, **dict(coils_combine_kws))
+                if num_images == 1:
+                    coils_combine_kws=(
+                        ('sens', 'block_adaptive_iter'),
+                        ('norm', False),
+                        ('k_svd', 'quad_weight'),
+                        ('split_axis', -2),),
+                    combined_arr = coils.combine(
+                        arr, coil_axis=coil_axis,
+                        verbose=verbose,
+                        **dict(coils_combine_kws))
+
+                else:
+                    coils_combine_kws=(
+                        ('sens', 'block_adaptive_iter'),
+                        ('norm', False),
+                        ('k_svd', 'quad_weight'),
+                        ('split_axis', -2),),
+                    combined_arr = coils.combine_multi(
+                        arr, coil_axis=coil_axis, multi_axis=images_axis,
+                        verbose=verbose,
+                        **dict(coils_combine_kws))
+
+                # qq_arr = coils.qq(arr, combined_arr)
+                # mrt.input_output.save(fp.format(s='Q'), qq_arr)
+                arr = combined_arr
             if num_avg > 1:
                 arr = np.sum(arr, axis=avg_axis)
             if num_rep > 1:
                 arr = np.sum(arr, axis=rep_axis)
 
-                # mrt.input_output.save(fp.format(n='', o='M', s=''), np.abs(
-                # arr))
-                # print('MAG')
-                # mrt.input_output.save(fp.format(n='', o='P', s=''),
-                # np.angle(arr))
-                # print('PHS')
+            # mrt.input_output.save(fp.format(s='M'), np.abs(arr))
+            # print('MAG')
+            # mrt.input_output.save(fp.format(s='P'), np.angle(arr))
+            # print('PHS')
 
-        except ValueError:
+        except ValueError as e:
+            msg('Failed at: {}'.format(e))
             fid_shape = mrt.utils.factorize_k(arr.size, 3)
             warning = ('Could not determine correct shape for FID. '
                        'Using `{}`'.format(fid_shape))
