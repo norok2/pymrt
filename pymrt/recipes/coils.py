@@ -635,7 +635,7 @@ def virtual_ref(
 
 
 # ======================================================================
-def me_conjugate_hermitian(
+def multi_conjugate_hermitian(
         arr,
         echo_axis=-2,
         coil_axis=-1,
@@ -825,7 +825,7 @@ def sensitivity(
     methods = (
         'complex_sum', 'sum_of_squares', 'smooth_sum_of_squares',
         'adaptive', 'block_adaptive', 'block_adaptive_iter',
-        'wavelet_adaptive_iter', 'virtual_ref_svd', 'block_virtual_ref_svd')
+        'wavelet_adaptive_iter', 'virtual_ref', 'block_virtual_ref')
     method = method.lower() if method else 'block_adaptive_iter'
     if method_kws is None:
         method_kws = dict()
