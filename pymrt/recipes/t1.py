@@ -402,7 +402,7 @@ def multi_flash(
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
             If None, a significant bias may still be present.
         method (str): Determine the fitting method to use.
-            Available options are:
+            Accepted values are:
              - 'auto': determine an optimal method by inspecting the data.
              - 'vfa': use the variable fli-angle method (closed form solution),
                very fast and accurate but very sensitive to flip angle

@@ -431,9 +431,9 @@ def fit_exp_curve_fit(
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
-        num_proc (int): The number of multiprocessing workers.
+        num_proc (int|None): The number of parallel processes.
             If 1, the execution is sequential.
-            If 0, the number of workers is determined automatically.
+            If 0 or None, the number of workers is determined automatically.
         exp_factor (float|None):
         zero_cutoff (float|None): The threshold value for masking zero values.
 
@@ -1016,7 +1016,7 @@ def voxel_curve_fit(
             num_proc = method_kws['num_proc']
             method_kws.pop('num_proc')
         else:
-            num_proc = multiprocessing.cpu_count()
+            num_proc = multiprocessing.cpu_count() + 1
         pool = multiprocessing.Pool()
         mp_results = []
         for i in range(num_voxels):

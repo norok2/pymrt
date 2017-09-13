@@ -657,7 +657,7 @@ def compute(
                 *compute_args, **compute_kwargs)
             mrt.utils.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                mrt.utils.print_elapsed(only_last=True)
+                mrt.utils.report(only_last=True)
     else:
         recursive = True
 

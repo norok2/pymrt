@@ -182,6 +182,10 @@ def _reco_from_fid(
         arr,
         acqp,
         method,
+        coil_axis=-1,
+        images_axis=-2,
+        rep_axis=-3,
+        avg_axis=-4,
         verbose=D_VERB_LVL):
     is_cartesian = True
     if is_cartesian:
@@ -249,10 +253,6 @@ def _reco_from_fid(
                 -1)
             msg('fid_shape={}'.format(fid_shape), verbose, VERB_LVL['debug'])
 
-            coil_axis = -1
-            images_axis = -2
-            rep_axis = -3
-            avg_axis = -4
             arr = arr.reshape(fid_shape, order='F')
             arr = np.moveaxis(arr, (1, 2), (coil_axis, images_axis))
             # remove singleton dimensions
@@ -294,47 +294,44 @@ def _reco_from_fid(
             # combine coils
             if num_coils > 1:
                 if num_images == 1:
-                    coils_combine_kws=(
-                        ('sens', 'block_adaptive_iter'),
-                        ('norm', False),
-                        ('k_svd', 'quad_weight'),
-                        ('split_axis', -2),),
-                    combined_arr = coils.combine(
-                        arr, coil_axis=coil_axis,
-                        verbose=verbose,
-                        **dict(coils_combine_kws))
-
+                    coils_combine_kws = (
+                        ('method', 'block_adaptive_iter'),
+                        ('compression_kws', dict((('k_svd', 'quad_weight'),))),
+                        ('split_axis', None),)
                 else:
                     coils_combine_kws=(
-                        ('sens', 'block_adaptive_iter'),
-                        ('norm', False),
-                        ('k_svd', 'quad_weight'),
-                        ('split_axis', -2),),
-                    combined_arr = coils.combine_multi(
-                        arr, coil_axis=coil_axis, multi_axis=images_axis,
-                        verbose=verbose,
-                        **dict(coils_combine_kws))
+                        ('method', 'multi_svd'),
+                        ('compression', None),
+                        ('split_axis', None),)
+                    # coils_combine_kws = (
+                    #     ('method', 'adaptive_iter'),
+                    #     ('method_kws', dict((('block', 8),))),
+                    #     ('compression_kws', dict((('k_svd', 'quad_weight'),))),
+                    #     ('split_axis', images_axis),)
+                combined_arr = coils.combine(
+                    arr, coil_axis=coil_axis,
+                    verbose=verbose, **dict(coils_combine_kws))
 
-                # qq_arr = coils.qq(arr, combined_arr)
-                # mrt.input_output.save(fp.format(s='Q'), qq_arr)
+                qq_arr = coils.qq(arr, combined_arr)
+                mrt.input_output.save(fp.format(s='Q'), qq_arr)
                 arr = combined_arr
             if num_avg > 1:
                 arr = np.sum(arr, axis=avg_axis)
             if num_rep > 1:
                 arr = np.sum(arr, axis=rep_axis)
 
-            # mrt.input_output.save(fp.format(s='M'), np.abs(arr))
-            # print('MAG')
-            # mrt.input_output.save(fp.format(s='P'), np.angle(arr))
-            # print('PHS')
+            mrt.input_output.save(fp.format(s='M'), np.abs(arr))
+            print('MAG')
+            mrt.input_output.save(fp.format(s='P'), np.angle(arr))
+            print('PHS')
 
-        except ValueError as e:
+        # except ValueError:
+        except NotImplementedError as e:
             msg('Failed at: {}'.format(e))
             fid_shape = mrt.utils.factorize_k(arr.size, 3)
             warning = ('Could not determine correct shape for FID. '
                        'Using `{}`'.format(fid_shape))
             warnings.warn(warning)
-            quit()
             arr = arr.reshape(fid_shape)
     else:
         raise NotImplementedError
@@ -384,7 +381,7 @@ def batch_extract(
         out_dirpath ():
         custom_reco (str|None):
             Determines how results will be saved.
-            Available options are:
+            Accepted values are:
              - 'mag_phs': saves magnitude and phase.
              - 're_im': saves real and imaginary parts.
              - 'cx': saves the complex data.
@@ -403,7 +400,7 @@ def batch_extract(
     text = '\n'.join((
         'EXPERIMENTAL!', 'Use at your own risk!',
         'Known issues:',
-        ' - orientation not consistent with method (i.e. 0->RO, 1->PE, 2->SL)',
+        ' - orientation not adjusted to method (i.e. 0->RO, 1->PE, 2->SL)',
         ' - FOV is centered out',
         ' - voxel size is not set',
         ''))

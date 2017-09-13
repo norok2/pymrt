@@ -1064,7 +1064,7 @@ def registering(
     # set up multiprocess framework
     if use_mp:
         # parallel
-        n_proc = multiprocessing.cpu_count()
+        n_proc = multiprocessing.cpu_count() + 1
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
     if not register_args:
@@ -1139,7 +1139,7 @@ def masking(
         os.makedirs(out_dirpath)
     if use_mp:
         # parallel
-        n_proc = multiprocessing.cpu_count()
+        n_proc = multiprocessing.cpu_count() + 1
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
     out_filepath_list = []
@@ -1280,7 +1280,7 @@ def comparing(
         os.makedirs(out_dirpath)
     if use_mp:
         # parallel
-        n_proc = multiprocessing.cpu_count()
+        n_proc = multiprocessing.cpu_count() + 1
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
     cmp_list = prepare_comparison(

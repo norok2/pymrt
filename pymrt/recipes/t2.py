@@ -62,7 +62,7 @@ def fit_multiecho_mono(
         echo_times_mask (iterable[bool]|None): Determine the echo times to use.
             If None, all will be used.
         method (str): Determine the fitting method to use.
-            Available options are:
+            Accepted values are:
              - 'auto': determine an optimal method by inspecting the data.
              - 'loglin': use a log-linear fit, fast but inaccurate and fragile.
              - 'curve_fit': use non-linear least square curve fitting, slow

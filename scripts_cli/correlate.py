@@ -161,7 +161,7 @@ def main():
     pml.check_correlation(**kws)
 
     elapsed(os.path.basename(__file__))
-    msg(report(), args.verbose, VERB_LVL['medium'])
+    msg(report())
 
 
 # ======================================================================

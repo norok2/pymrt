@@ -604,7 +604,8 @@ def signal_noise(
     Args:
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
-            If str, available methods are:
+            If str, uses the `signal_noise_` functions from this module.
+            Accepted values are:
              - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
              - 'optim': Uses an optimal data-driven method based on st.dev.
              - 'otsu': Uses `signal_noise_otsu()`.

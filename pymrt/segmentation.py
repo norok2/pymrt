@@ -177,31 +177,7 @@ def threshold_otsu(
           62–66. doi:10.1109/TSMC.1979.4310076
     """
     # todo: extend to multiple classes
-    # Check if flat-valued array
-    if arr.min() == arr.max():
-        raise ValueError('The array contains a single value.')
-
-    if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
-    elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
-
-    hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
-    hist = hist.astype(float)
-
-    # class probabilities for all possible thresholds
-    weight1 = np.cumsum(hist)
-    weight2 = np.cumsum(hist[::-1])[::-1]
-    # class means for all possible thresholds
-    mean1 = np.cumsum(hist * bin_centers) / weight1
-    mean2 = (np.cumsum((hist * bin_centers)[::-1]) / weight2[::-1])[::-1]
-    # calculate the variance for all possible thresholds
-    variance12 = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
-
-    i_max_variance = np.argmax(variance12)
-    threshold = bin_centers[:-1][i_max_variance]
-    return threshold
+    return mrt.utils.otsu_threshold(arr, bins=bins)
 
 
 # ======================================================================
@@ -541,7 +517,7 @@ def auto_thresholds(
     Args:
         arr (np.ndarray): The input array.
         method (str): The threshold method.
-            Available methods are:
+            Accepted values are:
              - 'relative': use `threshold_relative()`.
              - 'percentile': use `threshold_percentile()`.
              - 'mean_std': use `threshold_mean_std()`.

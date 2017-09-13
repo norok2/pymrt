@@ -3706,7 +3706,7 @@ def auto_bin(
     Args:
         arr (np.ndarray): The input array.
         method (str|None): The estimation method.
-            Available options (with N the array size):
+            Accepted values (with N the array size):
              - 'auto': max('fd', 'sturges')
              - 'sqrt': sqrt(N), simple
              - 'sturges': log_2(N) + 1
@@ -4818,6 +4818,156 @@ def marginal_sep_quad_inv_weight(items):
     else:
         index = -1
     return index
+
+
+# ======================================================================
+def otsu_threshold(
+        items,
+        bins='sqrt'):
+    """
+    Optimal foreground/background threshold value based on Otsu's method.
+
+    Args:
+        items (iterable): The input items.
+        bins (int|str|None): Number of bins used to calculate histogram.
+            If str or None, this is automatically calculated from the data
+            using `utils.auto_bin()` with `method` set to `bins` if str,
+            and using the default `utils.auto_bin()` method if set to None.
+
+    Returns:
+        threshold (float): The threshold value.
+
+    Raises:
+        ValueError: If `arr` only contains a single value.
+
+    Examples:
+        >>> num = 1000
+        >>> x = np.linspace(-10, 10, num)
+        >>> arr = np.sin(x) ** 2
+        >>> threshold = otsu_threshold(arr)
+        >>> round(threshold, 1)
+        0.5
+
+    References:
+        - Otsu, N., 1979. A Threshold Selection Method from Gray-Level
+          Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
+          62–66. doi:10.1109/TSMC.1979.4310076
+    """
+    # ensure items are not identical.
+    items = np.array(items)
+    if items.min() == items.max():
+        warnings.warn('Items are all identical!')
+        threshold = items.min()
+    else:
+        if isinstance(bins, str):
+            bins = auto_bin(items, bins)
+        elif bins is None:
+            bins = auto_bin(items)
+
+        hist, bin_edges = np.histogram(items, bins)
+        bin_centers = midval(bin_edges)
+        hist = hist.astype(float)
+
+        # class probabilities for all possible thresholds
+        weight1 = np.cumsum(hist)
+        weight2 = np.cumsum(hist[::-1])[::-1]
+        # class means for all possible thresholds
+        mean1 = np.cumsum(hist * bin_centers) / weight1
+        mean2 = (np.cumsum((hist * bin_centers)[::-1]) / weight2[::-1])[::-1]
+        # calculate the variance for all possible thresholds
+        variance12 = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
+
+        i_max_variance = np.argmax(variance12)
+        threshold = bin_centers[:-1][i_max_variance]
+    return threshold
+
+
+# ======================================================================
+def auto_num_components(
+        k,
+        q=None,
+        num=None,
+        verbose=D_VERB_LVL):
+    """
+    Calculate the optimal number of principal components.
+
+    Effectively determine the Principal Component Analysis.
+    
+    Args:
+        k (int|float|str): The number of principal components.
+            If int, the exact number is given. It must not exceed the size
+            of the `coil_axis` dimension.
+            If float, the number is interpreted as relative to the size of
+            the `coil_axis` dimension, and values must be in the
+            [0.1, 1] interval.
+            If str, the number is automatically estimated from the magnitude
+            of the eigenvalues using a specific method.
+            Accepted values are:
+             - 'all': use all components.
+             - 'full': same as 'all'.
+             - 'elbow': use `utils.marginal_sep_elbow()`.
+             - 'quad': use `utils.marginal_sep_quad()`.
+             - 'quad_weight': use `utils.marginal_sep_quad_weight()`.
+             - 'quad_inv_weight': use `utils.marginal_sep_quad_inv_weight()`.
+             - 'otsu': use `segmentation.threshold_otsu()`.
+             - 'X%': set the threshold at 'X' percent of the largest eigenval.
+        q (iterable[int|float|complex]|None): The values of the components.
+            If None, `num` must be specified.
+            If
+        num (int|None): The number of components.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        k (int): The optimal number of principal components.
+
+    Examples:
+        >>> q = [100, 90, 70, 10, 5, 3, 2, 1]
+        >>> auto_num_components('elbow', q)
+        4
+        >>> auto_num_components('quad_weight', q)
+        5
+    """
+    if (q is None and num is None) or (q is not None and num is not None):
+        raise ValueError('At most one of `q` and `num` must not be `None`.')
+    elif q is not None and num is None:
+        q = np.array(q).ravel()
+        num = len(q)
+
+    msg('k={}'.format(k), verbose, VERB_LVL['debug'])
+    if isinstance(k, float):
+        k = max(1, int(num * min(k, 1.0)))
+    elif isinstance(k, str):
+        if q is not None:
+            k = k.lower()
+            if k == 'elbow':
+                k = marginal_sep_elbow(np.abs(q / q[0])) % (num + 1)
+            elif k == 'quad':
+                k = marginal_sep_quad(np.abs(q / q[0])) % (num + 1)
+            elif k == 'quad_weight':
+                k = marginal_sep_quad_weight(np.abs(q / q[0])) % (num + 1)
+            elif k == 'quad_inv_weight':
+                k = marginal_sep_quad_inv_weight(np.abs(q / q[0])) % (num + 1)
+            elif k.endswith('%') and (100.0 > float(k[:-1]) >= 0.0):
+                k = np.abs(q[0]) * float(k[:-1]) / 100.0
+                k = np.where(np.abs(q) < k)[0]
+                k = k[0] if len(k) else num
+            elif k == 'otsu':
+                k = otsu_threshold(q)
+                k = np.where(q < k)[0]
+                k = k[0] if len(k) else num
+            elif k == 'all' or k == 'full':
+                k = num
+            else:
+                warnings.warn('`{}`: invalid value for `k`.'.format(k))
+                k = num
+        else:
+            warnings.warn('`{}`: method requires `q`.'.format(k))
+            k = num
+    if not 0 < k <= num:
+        warnings.warn('`{}` is invalid. Using: `{}`.'.format(k, num))
+        k = num
+    msg('k={}'.format(k), verbose, VERB_LVL['medium'])
+    return k
 
 
 # ======================================================================
