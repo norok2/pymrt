@@ -389,26 +389,24 @@ def grouping(
 def chunks(
         items,
         n,
-        mode=1):
+        mode='+'):
     """
     Yield items into approximately N equally sized chunks.
 
-    If the number of items does not allow chunks of the same size,
+    If the number of items does not allow chunks of the same size, the first
+    items but the last have the same size.
 
     Args:
         items (iterable): The input items.
         n (int): Approximate number of chunks.
             The exact number depends on the value of `mode`.
-        mode (int|str): Determine which approximation to use.
+        mode (str): Determine which approximation to use.
             If str, valid inputs are:
-             - 'upper': at most `n` chunks are generated.
-             - 'lower': at least `n` chunks are genereated.
-             - 'closest': the number of chunks is `n` or `n + 1` depending on
-               which gives the most evenly distributed chunks sizes.
-            If int, valid inputs are:
-             - '+1' has the same behavior as 'upper'.
-             - '-1' has the same behavior as  'lower'.
-             - '0' has the same behavior as  'closest'.
+             - 'upper', '+': at most `n` chunks are generated.
+             - 'lower', '-': at least `n` chunks are genereated.
+             - 'closest', '~': the number of chunks is `n` or `n + 1`
+               depending on which gives the most evenly distributed chunks
+               sizes.
 
     Returns:
         groups (tuple[iterable]): Grouped items from the source.
@@ -425,14 +423,15 @@ def chunks(
         ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],)
         >>> tuple(chunks(l, 3, -1))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
-        >>> tuple(chunks(list(range(10)), 3, 0))
+        >>> tuple(chunks(list(range(10)), 3, '~'))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
     """
-    if mode == 'upper' or mode == +1:
+    # todo: implement more balanced chunks
+    if mode in ('upper', '+'):
         approx = math.ceil
-    elif mode == 'lower' or mode == -1:
+    elif mode in ('lower', '-'):
         approx = math.floor
-    elif mode == 'closest' or mode == 0:
+    elif mode in ('closest', '~'):
         approx = round
     else:
         raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
@@ -737,7 +736,7 @@ def factorize_k_all(
 
     Args:
         num (int): The number of elements to arrange.
-        num_f (int): The number of factors.
+        k (int): The number of factors.
         sort (callable): The sorting function.
             This is passed to the `key` arguments of `sorted()`.
         reverse (bool): The sorting direction.
@@ -786,70 +785,55 @@ def factorize_k_all(
 def factorize_k(
         num,
         k=2,
-        randomize=False):
-    factors = factorize(num)
-    if randomize:
-        random.shuffle(factors)
-    factorization = tuple(
-            functools.reduce(lambda x, y: x * y, j) for j in chunks(factors, k))
-    return factorization
-
-# =====================================================================
-def factorize_k_all(
-        num,
-        k=2,
-        sort=None,
-        reverse=False):
+        mode='+'):
     """
-    Find all possible factorizations of a number with k factors.
+    Generate a factorization of a number with k factors.
 
-    Ones are not present, unless because there are not enough factors.
+    Each factor contains (approximately) the same number of prime factors.
 
     Args:
         num (int): The number of elements to arrange.
-        num_f (int): The number of factors.
-        sort (callable): The sorting function.
-            This is passed to the `key` arguments of `sorted()`.
-        reverse (bool): The sorting direction.
-            This is passed to the `reverse` arguments of `sorted()`.
-            If False, sorting is ascending.
-            Otherwise, sorting is descending.
+        k (int): The number of factors.
+        mode (str): The generation mode.
+            Accepted values are:
+             - 'increasing', 'ascending', '+': factors are sorted increasingly
+               before splitting;
+             - 'decreasing', 'descending', '-': factors are sorted decreasingly
+               before splitting;
+             - 'random': factors are shuffled before splitting;
+             - 'seedX' where 'X' is an int, str or bytes: same as random, but
+               'X' is used to initialize the random seed;
+             - 'balanced': resulting factors have approximately the same size.
 
     Returns:
-        factorizations (tuple[tuple[int]]): The possible factorizations.
-            Each factorization has exactly `k` items.
-            Eventually, `1`s are used to ensure the number of items.
+        tuple (int): A listing of `k` factors of `num`.
 
     Examples:
-        >>> nums = (32, 41, 46, 60)
-        >>> for i in nums:
-        ...     factorize_k_all(i, 2)
-        ((2, 16), (4, 8), (8, 4), (16, 2))
-        ((1, 41), (41, 1))
-        ((2, 23), (23, 2))
-        ((2, 30), (3, 20), (4, 15), (5, 12), (6, 10), (10, 6), (12, 5),\
- (15, 4), (20, 3), (30, 2))
-        >>> for i in nums:
-        ...     factorize_k_all(i, 3)
-        ((2, 2, 8), (2, 4, 4), (2, 8, 2), (4, 2, 4), (4, 4, 2), (8, 2, 2))
-        ((1, 1, 41), (1, 41, 1), (41, 1, 1))
-        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2, 1))
-        ((2, 2, 15), (2, 3, 10), (2, 5, 6), (2, 6, 5), (2, 10, 3), (2, 15, 2),\
- (3, 2, 10), (3, 4, 5), (3, 5, 4), (3, 10, 2), (4, 3, 5), (4, 5, 3),\
- (5, 2, 6), (5, 3, 4), (5, 4, 3), (5, 6, 2), (6, 2, 5), (6, 5, 2),\
- (10, 2, 3), (10, 3, 2), (15, 2, 2))
+        >>> factorize_k(720, 4)
+        (4, 4, 9, 5)
+        >>> factorize_k(720, 3)
+        (8, 18, 5)
+        >>> factorize_k(720, 3, mode='-')
+        (45, 8, 2)
+        >>> factorize_k(720, 3, mode='seed0')
+        (12, 12, 5)
+
     """
     factors = factorize(num)
-    factors = tuple(factors) + (1,) * (k - len(factors))
-    factorizations = [
-        item
-        for subitems in unique_partitions(factors, k)
-        for item in subitems]
-    factorizations = list(set(factorizations))
-    for i in range(len(factorizations)):
-        factorizations[i] = tuple(
-            functools.reduce(lambda x, y: x * y, j) for j in factorizations[i])
-    return tuple(sorted(set(factorizations), key=sort, reverse=reverse))
+    if mode in ('increasing', 'ascending', '+'):
+        factors = sorted(factors)
+    elif mode in ('decreasing', 'descending', '-'):
+        factors = sorted(factors, reverse=True)
+    elif mode == 'balanced':
+        raise NotImplementedError
+    elif mode == 'random':
+        random.shuffle(factors)
+    elif mode.startswith('seed'):
+        random.seed(int(mode[len('seed'):]))
+        random.shuffle(factors)
+    factorization = tuple(
+        functools.reduce(lambda x, y: x * y, j) for j in chunks(factors, k))
+    return factorization
 
 
 # =====================================================================
@@ -2690,6 +2674,7 @@ def check_redo(
         in_filepaths,
         out_filepaths,
         force=False,
+        verbose=D_VERB_LVL,
         make_out_dirpaths=False,
         no_empty_input=False):
     """
@@ -2699,6 +2684,7 @@ def check_redo(
         in_filepaths (iterable[str]|None): Input filepaths for computation.
         out_filepaths (iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
+        verbose (int): Set level of verbosity.
         make_out_dirpaths (bool): Create output dirpaths if not existing.
         no_empty_input (bool): Check if the input filepath list is empty.
 
@@ -2722,6 +2708,8 @@ def check_redo(
         for out_filepath in out_filepaths:
             out_dirpath = os.path.dirname(out_filepath)
             if not os.path.isdir(out_dirpath):
+                msg('mkdir: {}'.format(out_dirpath),
+                    verbose, VERB_LVL['highest'])
                 os.makedirs(out_dirpath)
 
     # check if input is older than output
@@ -2741,6 +2729,13 @@ def check_redo(
                     break
         elif no_empty_input:
             raise IOError('Input file list is empty.')
+
+    if force:
+        msg('Calc: {}'.format(out_filepaths), verbose, VERB_LVL['higher'])
+        msg('From: {}'.format(in_filepaths), verbose, VERB_LVL['highest'])
+    else:
+        msg('Skip: {}'.format(out_filepaths), verbose, VERB_LVL['higher'])
+        msg('From: {}'.format(in_filepaths), verbose, VERB_LVL['highest'])
     return force
 
 
@@ -4968,6 +4963,198 @@ def auto_num_components(
         k = num
     msg('k={}'.format(k), verbose, VERB_LVL['medium'])
     return k
+
+
+# ======================================================================
+def avg(
+        arr,
+        axis=None,
+        dtype=None,
+        out=None,
+        keepdims=np._NoValue,
+        weights=None,
+        removes=(np.inf, -np.inf)):
+    """
+    Calculate the (weighted) average of the array.
+
+    The weighted average is defined as:
+
+    .. math::
+        avg(x, w) = \\frac{\\sum_i w_i x_i}{\\sum_i w_i}
+
+    where :math:`x` is the input N-dim array, :math:`w` is the N-dim array of
+    the weights, and :math:`i` runs through the dimension along which to
+    compute.
+
+    Args:
+        arr (np.ndarray|iterable): The input data.
+        axis (int|iterable[int]|None): Axis along which to compute.
+            See `np.nansum()` for more information.
+        dtype (np.dtype|None): The data type of the result.
+            See `np.nansum()` for more information.
+        out (np.ndarray|None):
+            See `np.nansum()` for more information.
+        keepdims (bool): Keep reduced axis in the result as dims with size 1.
+            See `np.nansum()` for more information.
+        weights (np.ndarray|iterable|None): The weights.
+            If np.ndarray or iterable, the size must match with `arr`.
+            If None, all wegiths are set to 1 (equivalent to no weighting).
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
+
+    Returns:
+        result (np.ndarray): The computed statistics.
+            Its shape depends on the value of axis.
+
+    Examples:
+        >>> arr = np.array([0, 0, 1, 0])
+        >>> weights = np.array([1, 1, 3, 1])
+        >>> avg(arr, weights=weights)
+        0.5
+        >>> avg(arr, weights=weights) == avg(np.array([0, 0, 1, 0, 1, 1]))
+        True
+        >>> np.mean(arr) == avg(arr)
+        True
+
+    See Also:
+        var(), std()
+    """
+    arr = np.array(arr)
+    if weights is not None:
+        weights = np.array(weights, dtype=float)
+    for val in removes:
+        mask = arr == val
+        if val in arr:
+            arr[mask] = np.nan
+        if weights is not None:
+            weights[mask] = np.nan
+    if weights is None:
+        weights = np.ones_like(arr)
+    result = np.nansum(
+        arr * weights, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
+    result /= np.nansum(
+        weights, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
+    return result
+
+
+# ======================================================================
+def var(
+        arr,
+        axis=None,
+        dtype=None,
+        out=None,
+        keepdims=np._NoValue,
+        weights=None,
+        removes=(np.inf, -np.inf)):
+    """
+    Calculate the (weighted) variance of the array.
+
+    The weighted variance is defined as:
+
+    .. math::
+        var(x, w) = \\frac{\\sum_i (w_i x_i - avg(x, w))^2}{\\sum_i w_i}
+
+    where :math:`x` is the input N-dim array, :math:`w` is the N-dim array of
+    the weights, and :math:`i` runs through the dimension along which to
+    compute.
+
+    Args:
+        arr (np.ndarray|iterable): The input data.
+        axis (int|iterable[int]|None): Axis along which to compute.
+            See `np.nansum()` for more information.
+        dtype (np.dtype|None): The data type of the result.
+            See `np.nansum()` for more information.
+        out (np.ndarray|None):
+            See `np.nansum()` for more information.
+        keepdims (bool): Keep reduced axis in the result as dims with size 1.
+            See `np.nansum()` for more information.
+        weights (np.ndarray|iterable|None): The weights.
+            If np.ndarray or iterable, the size must match with `arr`.
+            If None, all wegiths are set to 1 (equivalent to no weighting).
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
+
+    Returns:
+        result (np.ndarray): The computed statistics.
+            Its shape depends on the value of axis.
+
+    See Also:
+        avg(), std()
+
+    Examples:
+        >>> arr = np.array([0, 0, 1, 0])
+        >>> weights = np.array([1, 1, 3, 1])
+        >>> var(arr, weights=weights)
+        0.25
+        >>> var(arr, weights=weights) == var(np.array([0, 0, 1, 0, 1, 1]))
+        True
+        >>> np.var(arr) == var(arr)
+        True
+    """
+    arr = np.array(arr)
+    if weights is not None:
+        weights = np.array(weights, dtype=float)
+    avg_arr = avg(
+        arr, axis=axis, dtype=dtype, out=out, keepdims=keepdims,
+        weights=weights, removes=removes)
+    result = avg(
+        (arr - avg_arr) ** 2, axis=axis, dtype=dtype, out=out,
+        keepdims=keepdims,
+        weights=weights ** 2 if weights is not None else None, removes=removes)
+    return result
+
+
+# ======================================================================
+def std(
+        arr,
+        axis=None,
+        dtype=None,
+        out=None,
+        keepdims=np._NoValue,
+        weights=None,
+        removes=(np.inf, -np.inf)):
+    """
+    Calculate the (weighted) standard deviation of the array.
+
+    The weighted standard deviation is defined as the square root of the
+    variance.
+
+    Args:
+        arr (np.ndarray|iterable): The input data.
+        axis (int|iterable[int]|None): Axis along which to compute.
+            See `np.nansum()` for more information.
+        dtype (np.dtype|None): The data type of the result.
+            See `np.nansum()` for more information.
+        out (np.ndarray|None):
+            See `np.nansum()` for more information.
+        keepdims (bool): Keep reduced axis in the result as dims with size 1.
+            See `np.nansum()` for more information.
+        weights (np.ndarray|iterable|None): The weights.
+            If np.ndarray or iterable, the size must match with `arr`.
+            If None, all wegiths are set to 1 (equivalent to no weighting).
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
+
+    Returns:
+        result (np.ndarray): The computed statistics.
+            Its shape depends on the value of axis.
+
+    Examples:
+        >>> arr = np.array([0, 0, 1, 0])
+        >>> weights = np.array([1, 1, 3, 1])
+        >>> std(arr, weights=weights)
+        0.25
+        >>> std(arr, weights=weights) == std(np.array([0, 0, 1, 0, 1, 1]))
+        True
+        >>> np.std(arr) == std(arr)
+        True
+
+    See Also:
+        avg(), var()
+    """
+    return np.sqrt(
+        var(arr, axis=axis, dtype=dtype, out=out, keepdims=keepdims,
+            weights=weights, removes=removes))
 
 
 # ======================================================================
