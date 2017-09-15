@@ -389,7 +389,8 @@ def grouping(
 def chunks(
         items,
         n,
-        mode='+'):
+        mode='+',
+        balanced=True):
     """
     Yield items into approximately N equally sized chunks.
 
@@ -421,12 +422,12 @@ def chunks(
         ([0, 1, 2, 3], [4, 5, 6, 7], [8, 9])
         >>> tuple(chunks(l, -1))
         ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],)
-        >>> tuple(chunks(l, 3, -1))
+        >>> tuple(chunks(l, 3, '-'))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
         >>> tuple(chunks(list(range(10)), 3, '~'))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
     """
-    # todo: implement more balanced chunks
+    # todo: implement balanced chunks
     if mode in ('upper', '+'):
         approx = math.ceil
     elif mode in ('lower', '-'):
@@ -436,6 +437,9 @@ def chunks(
     else:
         raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
     split = int(approx(len(items) / n))
+    print(split, len(items) % split)
+    if balanced and 0 < len(items) % split <= split // 2:
+        split -= 1
     return grouping(items, split)
 
 
@@ -785,7 +789,8 @@ def factorize_k_all(
 def factorize_k(
         num,
         k=2,
-        mode='+'):
+        mode='+',
+        chunk_mode=''):
     """
     Generate a factorization of a number with k factors.
 
