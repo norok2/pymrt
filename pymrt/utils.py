@@ -331,6 +331,7 @@ def combine_iter_len(items, combine=max):
 
     Returns:
         num (int): The combined length of the collection.
+            If none of the items are iterable, the result is `1`.
 
     Examples:
         >>> a = list(range(10))
@@ -340,6 +341,8 @@ def combine_iter_len(items, combine=max):
         20
         >>> combine_iter_len((a, b, c), min)
         5
+        >>> combine_iter_len((1, a))
+        10
     """
     num = None
     for val in items:
@@ -352,6 +355,8 @@ def combine_iter_len(items, combine=max):
                 num = len(val)
             else:
                 num = combine(len(val), num)
+    if num is None:
+        num = 1
     return num
 
 
@@ -625,21 +630,12 @@ def is_prime(num):
     See Also:
         - https://en.wikipedia.org/wiki/AKS_primality_test
     """
-    # # : alternate implementation
-    # is_divisible = num == 1 or num != 2 and num % 2 == 0
-    # i = 3
-    # while not is_divisible and i * i < num:
-    #     is_divisible = num % i == 0
-    #     # only odd factors needs to be tested
-    #     i += 2
-    # return not is_divisible
-
     # : fastest implementation
     num = abs(num)
-    if num % 2 == 0 and num > 2:
+    if (num % 2 == 0 and num > 2) or (num % 3 == 0 and num > 3):
         return False
-    for i in range(3, int(num ** 0.5) + 1, 2):
-        if num % i == 0:
+    for i in range(5, int(num ** 0.5) + 1, 6):
+        if num % i == 0 or num % (i + 2) == 0:
             return False
     return True
 
@@ -871,8 +867,8 @@ def factorize_k_all(
         ...     factorize_k_all(i, 3)
         ((2, 2, 8), (2, 4, 4), (2, 8, 2), (4, 2, 4), (4, 4, 2), (8, 2, 2))
         ((1, 1, 41), (1, 41, 1), (41, 1, 1))
-        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2,
-        1))
+        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2),\
+ (23, 2, 1))
         ((2, 2, 15), (2, 3, 10), (2, 5, 6), (2, 6, 5), (2, 10, 3), (2, 15, 2),\
  (3, 2, 10), (3, 4, 5), (3, 5, 4), (3, 10, 2), (4, 3, 5), (4, 5, 3),\
  (5, 2, 6), (5, 3, 4), (5, 4, 3), (5, 6, 2), (6, 2, 5), (6, 5, 2),\
@@ -5368,7 +5364,7 @@ def std(
         >>> arr = np.array([0, 0, 1, 0])
         >>> weights = np.array([1, 1, 3, 1])
         >>> std(arr, weights=weights)
-        0.25
+        0.5
         >>> std(arr, weights=weights) == std(np.array([0, 0, 1, 0, 1, 1]))
         True
         >>> np.std(arr) == std(arr)

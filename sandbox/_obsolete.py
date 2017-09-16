@@ -73,6 +73,73 @@ def tty_colorify(
 
 
 # ======================================================================
+def is_prime(num):
+    """
+    Determine if num is a prime number.
+
+    A prime number is only divisible by 1 and itself.
+    0 and 1 are considered special cases; in this implementations they are
+    considered primes.
+
+    It is implemented by directly testing for possible factors.
+
+    Args:
+        num (int): The number to check for primality.
+            Only works for numbers larger than 1.
+
+    Returns:
+        is_divisible (bool): The result of the primality.
+
+    Examples:
+        >>> is_prime(100)
+        False
+        >>> is_prime(101)
+        True
+        >>> is_prime(-100)
+        False
+        >>> is_prime(-101)
+        True
+        >>> is_prime(2 ** 17)
+        False
+        >>> is_prime(17 * 19)
+        False
+        >>> is_prime(2 ** 17 - 1)
+        True
+        >>> is_prime(0)
+        True
+        >>> is_prime(1)
+        True
+
+    See Also:
+        - https://en.wikipedia.org/wiki/AKS_primality_test
+    """
+    # # : verbose implementation
+    # is_divisible = num == 1 or num != 2 and num % 2 == 0
+    # i = 3
+    # while not is_divisible and i * i < num:
+    #     is_divisible = num % i == 0
+    #     # only odd factors needs to be tested
+    #     i += 2
+    # return not is_divisible
+
+    # # : optimized implementation
+    # num = abs(num)
+    # if num % 2 == 0 and num > 2:
+    #     return False
+    # for i in range(3, int(num ** 0.5) + 1, 2):
+    #     if num % i == 0:
+    #         return False
+
+    # : fastest implementation
+    num = abs(num)
+    if (num % 2 == 0 and num > 2) or (num % 3 == 0 and num > 3):
+        return False
+    for i in range(5, int(num ** 0.5) + 1, 6):
+        if num % i == 0 or num % (i + 2) == 0:
+            return False
+    return True
+
+# ======================================================================
 def interval_size(interval):
     """
     Calculate the (signed) size of an interval given as a 2-tuple (A,B)
