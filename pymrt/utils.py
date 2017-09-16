@@ -590,6 +590,43 @@ def unique_partitions(
 
 
 # ======================================================================
+def isqrt(num):
+    """
+    Calculate the integer square root of a number.
+
+    This is defined as the largest integer whose square is smaller then the
+    number, i.e. floor(sqrt(n))
+
+    Args:
+        num (int): The input number.
+
+    Returns:
+        result (int): The integer square root of num.
+
+    Examples:
+        >>> isqrt(1024)
+        32
+        >>> isqrt(1023)
+        31
+        >>> isqrt(1025)
+        32
+        >>> isqrt(2 ** 400)
+        1606938044258990275541962092341162602522202993782792835301376
+    """
+    if num < 0:
+        return 0
+
+    guess = (num >> num.bit_length() // 2) + 1
+    result = (guess + num // guess) // 2
+    while abs(result - guess) > 1:
+        guess = result
+        result = (guess + num // guess) // 2
+    while result * result > num:
+        result -= 1
+    return result
+
+
+# ======================================================================
 def is_prime(num):
     """
     Determine if num is a prime number.
@@ -634,9 +671,12 @@ def is_prime(num):
     num = abs(num)
     if (num % 2 == 0 and num > 2) or (num % 3 == 0 and num > 3):
         return False
-    for i in range(5, int(num ** 0.5) + 1, 6):
+    i = 5
+    while i * i <= num:
         if num % i == 0 or num % (i + 2) == 0:
             return False
+        else:
+            i += 6
     return True
 
 
