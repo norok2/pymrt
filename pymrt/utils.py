@@ -613,9 +613,7 @@ def isqrt(num):
         >>> isqrt(2 ** 400)
         1606938044258990275541962092341162602522202993782792835301376
     """
-    if num < 0:
-        return 0
-
+    num = abs(num)
     guess = (num >> num.bit_length() // 2) + 1
     result = (guess + num // guess) // 2
     while abs(result - guess) > 1:
@@ -3903,7 +3901,7 @@ def auto_bin(
              - 'sqrt': Square-root choice (fast, independent of `dim`)
                n = sqrt(N)
              - 'sturges': Sturges' formula (tends to underestimate)
-               n = log_2(N) + 1
+               n = 1 + log_2(N)
              - 'rice': Rice Rule (fast with `dim` dependence)
                n = 2 * N^(1/(2 + D))
              - 'riced': Modified Rice Rule (fast with strong `dim` dependence)
@@ -3912,6 +3910,11 @@ def auto_bin(
                n = N^(1/(2 + D)) *  / (3.5 * SD(arr)
              - 'fd': Freedman–Diaconis' choice (robust variant of 'scott')
                n = N^(1/(2 + D)) * range(arr) / 2 * (Q75 - Q25)
+             - 'doane': Doane's formula (correction to Sturges'):
+               n = 1 + log_2(N) + log_2(1 + |g1| / sigma_g1)
+               where g1 = (|mean|/sigma) ** 3 is the skewness
+               and sigma_g1 = sqrt(6 * (N - 2) / ((N + 1) * (N + 3))) is the
+               estimated standard deviation on the skewness.
              - None: n = N
         dim (int): The dimension of the histogram.
 
@@ -3974,7 +3977,7 @@ def auto_bin(
     elif method == 'sqrt':
         num = int(np.ceil(np.sqrt(arr.size)))
     elif method == 'sturges':
-        num = int(np.ceil(np.log2(arr.size)) + 1)
+        num = int(np.ceil(1 + np.log2(arr.size)))
     elif method == 'rice':
         num = int(np.ceil(2 * arr.size ** (1 / (2 + dim))))
     elif method == 'riced':
@@ -3986,6 +3989,12 @@ def auto_bin(
         q75, q25 = np.percentile(arr, [75, 25])
         h = 2 * (q75 - q25) / arr.size ** (1 / (2 + dim))
         num = int(np.ceil(np.ptp(arr) / h))
+    elif method == 'doane':
+        g1 = (abs(avg(arr)) / std(arr)) ** 3
+        sigma_g1 = np.sqrt(
+            6 * (arr.size - 2) / ((arr.size + 1) * (arr.size + 3)))
+        num = int(np.ceil(
+            1 + np.log2(arr.size) + np.log2(1 + abs(g1) / sigma_g1)))
     else:
         num = arr.size
     return num
