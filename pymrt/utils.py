@@ -621,6 +621,9 @@ def is_prime(num):
         True
         >>> is_prime(1)
         True
+
+    See Also:
+        - https://en.wikipedia.org/wiki/AKS_primality_test
     """
     # # : alternate implementation
     # is_divisible = num == 1 or num != 2 and num % 2 == 0
