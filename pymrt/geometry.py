@@ -690,28 +690,29 @@ def nd_cuboid(
             If None, the number of dims is guessed from the other parameters.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
+            Uses `utils.grid_coord()` internally.
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `semisizes` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
+            Uses `rel2abs()` internally.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.max_iter_len((shape, position, semisizes))
+        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes))
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
     semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
     # fix relative units
-    if not rel_position:
-        position = abs2rel(shape, position)
     if rel_sizes:
         semisizes = rel2abs(shape, semisizes)
-    position = mrt.utils.grid_coord(shape, position, use_int=False)
+    position = mrt.utils.grid_coord(
+        shape, position, is_relative=rel_position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
     for x_i, semisize in zip(position, semisizes):
@@ -766,18 +767,17 @@ def nd_superellipsoid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.max_iter_len((shape, position, semisizes, indexes))
+        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes, indexes))
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
     semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
     indexes = mrt.utils.auto_repeat(indexes, n_dim, check=True)
     # get correct position
-    if not rel_position:
-        position = abs2rel(shape, position)
     if rel_sizes:
         semisizes = rel2abs(shape, semisizes)
-    position = mrt.utils.grid_coord(shape, position, use_int=False)
+    position = mrt.utils.grid_coord(
+        shape, position, is_relative=rel_position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
     for x_i, semiaxis, index in zip(position, semisizes, indexes):
@@ -825,12 +825,10 @@ def nd_prism(
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
     # get correct position
-    if not rel_position:
-        position = abs2rel((extra_dim,), position)
     if rel_sizes:
         size = rel2abs((extra_dim,), size)
     position = mrt.utils.grid_coord(
-        (extra_dim,), (position,), use_int=False)[0]
+        (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
     extra_mask = np.abs(position) <= (size / 2.0)
     # calculate mask shape
     shape = (
@@ -883,7 +881,7 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
         ([0.4, 0.15], [0.5, 0.35])
     """
     if not num:
-        num = mrt.utils.max_iter_len((minima, maxima, num))
+        num = mrt.utils.combine_iter_len((minima, maxima, num))
     # check compatibility of given parameters
     minima = mrt.utils.auto_repeat(minima, num, check=True)
     maxima = mrt.utils.auto_repeat(maxima, num, check=True)
@@ -1022,7 +1020,7 @@ def dirac_delta(
                [ 0.,  0.,  0.,  0.,  0.]])
     """
     if not n_dim:
-        n_dim = mrt.utils.max_iter_len((shape, position))
+        n_dim = mrt.utils.combine_iter_len((shape, position))
 
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)

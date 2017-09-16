@@ -321,24 +321,37 @@ def auto_repeat(
 
 
 # ======================================================================
-def max_iter_len(items):
+def combine_iter_len(items, combine=max):
     """
     Determine the maximum length of an item within a collection of items.
 
     Args:
         items (iterable): The collection of items to inspect.
+        combine (callable): The combination method.
 
     Returns:
-        num (int): The maximum length of the collection.
+        num (int): The combined length of the collection.
+
+    Examples:
+        >>> a = list(range(10))
+        >>> b = tuple(range(5))
+        >>> c = set(range(20))
+        >>> combine_iter_len((a, b, c))
+        20
+        >>> combine_iter_len((a, b, c), min)
+        5
     """
-    num = 1
+    num = None
     for val in items:
         try:
             iter(val)
         except TypeError:
             pass
         else:
-            num = max(len(val), num)
+            if num is None:
+                num = len(val)
+            else:
+                num = combine(len(val), num)
     return num
 
 
@@ -394,8 +407,8 @@ def chunks(
     """
     Yield items into approximately N equally sized chunks.
 
-    If the number of items does not allow chunks of the same size, the first
-    items but the last have the same size.
+    If the number of items does not allow chunks of the same size, the chunks
+    are determined depending on the values of `balanced`
 
     Args:
         items (iterable): The input items.
@@ -408,6 +421,10 @@ def chunks(
              - 'closest', '~': the number of chunks is `n` or `n + 1`
                depending on which gives the most evenly distributed chunks
                sizes.
+        balanced (bool): Produce balanced chunks.
+            If True, the size of any two chunks is not larger than one.
+            Otherwise, the first chunks except the last have the same size.
+            This has no effect if the number of items is a multiple of `n`.
 
     Returns:
         groups (tuple[iterable]): Grouped items from the source.
@@ -419,15 +436,22 @@ def chunks(
         >>> tuple(chunks(l, 2))
         ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
         >>> tuple(chunks(l, 3))
-        ([0, 1, 2, 3], [4, 5, 6, 7], [8, 9])
+        ([0, 1, 2, 3], [4, 5, 6], [7, 8, 9])
+        >>> tuple(chunks(l, 4))
+        ([0, 1, 2], [3, 4, 5], [6, 7], [8, 9])
         >>> tuple(chunks(l, -1))
         ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],)
+        >>> tuple(chunks(l, 3, balanced=False))
+        ([0, 1, 2, 3], [4, 5, 6, 7], [8, 9])
         >>> tuple(chunks(l, 3, '-'))
+        ([0, 1, 2], [3, 4, 5], [6, 7], [8, 9])
+        >>> tuple(chunks(l, 3, '-', False))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
         >>> tuple(chunks(list(range(10)), 3, '~'))
+        ([0, 1, 2], [3, 4, 5], [6, 7], [8, 9])
+        >>> tuple(chunks(list(range(10)), 3, '~', False))
         ([0, 1, 2], [3, 4, 5], [6, 7, 8], [9])
     """
-    # todo: implement balanced chunks
     if mode in ('upper', '+'):
         approx = math.ceil
     elif mode in ('lower', '-'):
@@ -436,10 +460,12 @@ def chunks(
         approx = round
     else:
         raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
+    n = max(1, n)
     split = int(approx(len(items) / n))
-    print(split, len(items) % split)
     if balanced and 0 < len(items) % split <= split // 2:
-        split -= 1
+        k = len(items) // split + 1
+        q = -len(items) % split
+        split = (split,) * (k - q) + (split - 1,) * q
     return grouping(items, split)
 
 
@@ -461,7 +487,7 @@ def partitions(
         partition (tuple[iterable]]): The grouped items.
             Each partition contains `k` grouped items from the source.
 
-    Example:
+    Examples:
         >>> tuple(partitions(tuple(range(3)), 2))
         (((0,), (1, 2)), ((0, 1), (2,)))
         >>> tuple(partitions(tuple(range(3)), 3))
@@ -700,21 +726,29 @@ def factorize(num):
         num (int): The number to factorize.
 
     Returns:
-        numbers (list[int]): The factors of number.
+        numbers (list[int]): The factors of the number.
 
-    Example:
-        >>> n = 100
-        >>> f = factorize(n)
-        >>> print(f)
+    Examples:
+        >>> factorize(100)
         [2, 2, 5, 5]
-        >>> n == np.prod(f)
-        True
-        >>> n= 1234567890
-        >>> f = factorize(n)
-        >>> print(f)
+        >>> factorize(1234567890)
         [2, 3, 3, 5, 3607, 3803]
+        >>> factorize(-65536)
+        [-1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        >>> factorize(0)
+        [0]
+        >>> factorize(1)
+        [1]
+        >>> all([n == np.prod(factorize(n)) for n in range(1000)])
+        True
     """
-    factors = []
+    # deal with special numbers: 0, 1, and negative
+    if num == 0:
+        text = 'Factorization of `0` is undefined.'
+        warnings.warn(text)
+    factors = [] if num > 1 else [-1] if num < 0 else [num]
+    num = abs(num)
+
     primes = get_primes()
     prime = next(primes)
     while prime * prime <= num:
@@ -725,6 +759,74 @@ def factorize(num):
     if num > 1:
         factors.append(num)
     return factors
+
+
+# ======================================================================
+def factorize2(num):
+    """
+    Find all factors of a number and collect them in an ordered dict.
+
+    Args:
+        num (int): The number to factorize.
+
+    Returns:
+        factors (collections.OrderedDict): The factors of the number.
+
+    Examples:
+        >>> factorize2(100)
+        OrderedDict([(2, 2), (5, 2)])
+        >>> factorize2(1234567890)
+        OrderedDict([(2, 1), (3, 2), (5, 1), (3607, 1), (3803, 1)])
+        >>> factorize2(65536)
+        OrderedDict([(2, 16)])
+    """
+    factors = factorize(num)
+    return collections.OrderedDict(collections.Counter(factors))
+
+
+# ======================================================================
+def factorize3(
+        num,
+        exp_sep='^',
+        fact_sep=' * '):
+    """
+    Find all factors of a number and output a human-readable text.
+
+    Args:
+        num (int): The number to factorize.
+        exp_sep (str): The exponent separator.
+        fact_sep (str): The factors separator.
+
+    Returns:
+        text (str): The factors of the number.
+
+    Examples:
+        >>> factorize3(100)
+        '2^2 * 5^2'
+        >>> factorize3(1234567890)
+        '2 * 3^2 * 5 * 3607 * 3803'
+        >>> factorize3(65536)
+        '2^16'
+    """
+    factors = factorize(num)
+
+    text = ''
+    last_factor = 1
+    exp = 0
+    for factor in factors:
+        if factor == last_factor:
+            exp += 1
+        else:
+            if exp > 1:
+                text += exp_sep + str(exp)
+            if last_factor > 1:
+                text += fact_sep
+            text += str(factor)
+            last_factor = factor
+            exp = 1
+    if exp > 1:
+        text += exp_sep + str(exp)
+    return text
 
 
 # =====================================================================
@@ -766,7 +868,8 @@ def factorize_k_all(
         ...     factorize_k_all(i, 3)
         ((2, 2, 8), (2, 4, 4), (2, 8, 2), (4, 2, 4), (4, 4, 2), (8, 2, 2))
         ((1, 1, 41), (1, 41, 1), (41, 1, 1))
-        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2, 1))
+        ((1, 2, 23), (1, 23, 2), (2, 1, 23), (2, 23, 1), (23, 1, 2), (23, 2,
+        1))
         ((2, 2, 15), (2, 3, 10), (2, 5, 6), (2, 6, 5), (2, 10, 3), (2, 15, 2),\
  (3, 2, 10), (3, 4, 5), (3, 5, 4), (3, 10, 2), (4, 3, 5), (4, 5, 3),\
  (5, 2, 6), (5, 3, 4), (5, 4, 3), (5, 6, 2), (6, 2, 5), (6, 5, 2),\
@@ -789,8 +892,8 @@ def factorize_k_all(
 def factorize_k(
         num,
         k=2,
-        mode='+',
-        chunk_mode=''):
+        mode='=',
+        balanced=True):
     """
     Generate a factorization of a number with k factors.
 
@@ -800,6 +903,8 @@ def factorize_k(
         num (int): The number of elements to arrange.
         k (int): The number of factors.
         mode (str): The generation mode.
+            This determines the factors order before splitting.
+            The splitting itself is obtained with `chunks()`.
             Accepted values are:
              - 'increasing', 'ascending', '+': factors are sorted increasingly
                before splitting;
@@ -808,36 +913,82 @@ def factorize_k(
              - 'random': factors are shuffled before splitting;
              - 'seedX' where 'X' is an int, str or bytes: same as random, but
                'X' is used to initialize the random seed;
-             - 'balanced': resulting factors have approximately the same size.
+             - 'altX' where 'X' is an int: starting from 'X', factors are
+               alternated before splitting;
+             - 'alt1': factors are alternated before splitting;
+             - 'optimal', 'similar', '!', '=': factors have the similar sizes.
+        balanced (bool): Balance the number of primes in each factor.
+            See `chunks()` for more information.
 
     Returns:
         tuple (int): A listing of `k` factors of `num`.
 
     Examples:
+        >>> [factorize_k(402653184, k) for k in range(3, 6)]
+        [(1024, 768, 512), (192, 128, 128, 128), (64, 64, 64, 48, 32)]
+        >>> [factorize_k(402653184, k) for k in (2, 12)]
+        [(24576, 16384), (8, 8, 8, 8, 6, 4, 4, 4, 4, 4, 4, 4)]
+        >>> factorize_k(6, 4)
+        (3, 2, 1, 1)
+        >>> factorize_k(-12, 4)
+        (3, 2, 2, -1)
+        >>> factorize_k(0, 4)
+        (1, 1, 1, 0)
         >>> factorize_k(720, 4)
+        (6, 6, 5, 4)
+        >>> factorize_k(720, 4, '+')
         (4, 4, 9, 5)
         >>> factorize_k(720, 3)
-        (8, 18, 5)
+        (12, 10, 6)
+        >>> factorize_k(720, 3, '+')
+        (8, 6, 15)
         >>> factorize_k(720, 3, mode='-')
-        (45, 8, 2)
+        (45, 4, 4)
         >>> factorize_k(720, 3, mode='seed0')
-        (12, 12, 5)
-
+        (12, 6, 10)
+        >>> factorize_k(720, 3, 'alt')
+        (30, 4, 6)
+        >>> factorize_k(720, 3, 'alt1')
+        (12, 6, 10)
+        >>> factorize_k(720, 3, '=')
+        (12, 10, 6)
     """
-    factors = factorize(num)
-    if mode in ('increasing', 'ascending', '+'):
-        factors = sorted(factors)
-    elif mode in ('decreasing', 'descending', '-'):
-        factors = sorted(factors, reverse=True)
-    elif mode == 'balanced':
-        raise NotImplementedError
-    elif mode == 'random':
-        random.shuffle(factors)
-    elif mode.startswith('seed'):
-        random.seed(int(mode[len('seed'):]))
-        random.shuffle(factors)
-    factorization = tuple(
-        functools.reduce(lambda x, y: x * y, j) for j in chunks(factors, k))
+    if k > 1:
+        factors = factorize(num)
+        if len(factors) < k:
+            factors.extend([1] * (k - len(factors)))
+        groups = None
+        if mode in ('increasing', 'ascending', '+'):
+            factors = sorted(factors)
+        elif mode in ('decreasing', 'descending', '-'):
+            factors = sorted(factors, reverse=True)
+        elif mode == 'random':
+            random.shuffle(factors)
+        elif mode.startswith('seed'):
+            seed = auto_convert(mode[len('seed'):])
+            random.seed(seed)
+            random.shuffle(factors)
+        elif mode.startswith('alt'):
+            try:
+                i = int(mode[len('alt'):]) % (len(factors) - 1)
+            except ValueError:
+                i = 0
+            factors[i::2] = factors[i::2][::-1]
+        elif mode in ('optimal', 'similar', '!', '='):
+            groups = [[] for _ in itertools.repeat(None, k)]
+            # could this algorithm could be improved?
+            for factor in sorted(factors, reverse=True):
+                groups = sorted(
+                    groups, key=lambda x: np.product(x) if len(x) > 0 else 0)
+                groups[0].append(factor)
+            groups = sorted(groups, key=np.product, reverse=True)
+        if not groups:
+            groups = chunks(factors, k, mode='+', balanced=True)
+        factorization = tuple(
+            functools.reduce(lambda x, y: x * y, j) for j in groups)
+    else:
+        factorization = (num,)
+
     return factorization
 
 
@@ -860,7 +1011,8 @@ def optimal_shape(
             This is passed to the `reverse` arguments of `sorted()`.
             If False, sorting is ascending and the minimum of the optimization
             function is picked.
-            Otherwise, sorting is descending and the maximum of the optimization
+            Otherwise, sorting is descending and the maximum of the
+            optimization
             function is picked.
 
     Returns:
@@ -3699,59 +3851,102 @@ def inv_laplacian(
 # ======================================================================
 def auto_bin(
         arr,
-        method='auto'):
+        method='auto',
+        dim=1):
     """
-    Determine the optimal number of bins for an array.
+    Determine the optimal number of bins for histogram of an array.
 
     Args:
         arr (np.ndarray): The input array.
         method (str|None): The estimation method.
-            Accepted values (with N the array size):
+            Accepted values (with: N the array size, D the histogram dim):
              - 'auto': max('fd', 'sturges')
-             - 'sqrt': sqrt(N), simple
-             - 'sturges': log_2(N) + 1
-             - 'rice': 2 * N^(1/3)
-             - 'scott': 3.5 * SD(arr) / N^(1/3)
-             - 'fd': (Freedman-Diaconis) 2 * (Q75 - Q25) / N^(1/3)
-             - None: N
+             - 'sqrt': Square-root choice (fast, independent of `dim`)
+               n = sqrt(N)
+             - 'sturges': Sturges' formula (tends to underestimate)
+               n = log_2(N) + 1
+             - 'rice': Rice Rule (fast with `dim` dependence)
+               n = 2 * N^(1/(2 + D))
+             - 'riced': Modified Rice Rule (fast with strong `dim` dependence)
+               n = (1 + D) * N^(1/(2 + D))
+             - 'scott': Scott's normal reference rule (depends on data)
+               n = N^(1/(2 + D)) *  / (3.5 * SD(arr)
+             - 'fd': Freedman–Diaconis' choice (robust variant of 'scott')
+               n = N^(1/(2 + D)) * range(arr) / 2 * (Q75 - Q25)
+             - None: n = N
+        dim (int): The dimension of the histogram.
+
     Returns:
         num (int): The number of bins.
 
     Examples:
         >>> arr = np.arange(100)
         >>> auto_bin(arr)
-        22
+        8
         >>> auto_bin(arr, 'sqrt')
         10
         >>> auto_bin(arr, 'auto')
-        22
+        8
         >>> auto_bin(arr, 'sturges')
         8
         >>> auto_bin(arr, 'rice')
         10
+        >>> auto_bin(arr, 'riced')
+        14
         >>> auto_bin(arr, 'scott')
-        22
+        5
         >>> auto_bin(arr, 'fd')
-        22
+        5
         >>> auto_bin(arr, None)
         100
+        >>> auto_bin(arr, 'sqrt', 2)
+        10
+        >>> auto_bin(arr, 'auto', 2)
+        8
+        >>> auto_bin(arr, 'sturges', 2)
+        8
+        >>> auto_bin(arr, 'rice', 2)
+        7
+        >>> auto_bin(arr, 'riced', 2)
+        13
+        >>> auto_bin(arr, 'scott', 2)
+        4
+        >>> auto_bin(arr, 'fd', 2)
+        4
+        >>> auto_bin(arr, None, 2)
+        100
+        >>> np.random.seed(0)
+        >>> arr = np.random.random(100) * 1000
+        >>> arr /= np.sum(arr)
+        >>> auto_bin(arr, 'scott')
+        5
+        >>> auto_bin(arr, 'fd')
+        5
+        >>> auto_bin(arr, 'scott', 2)
+        4
+        >>> auto_bin(arr, 'fd', 2)
+        4
 
     References:
          - https://en.wikipedia.org/wiki/Histogram#Number_of_bins_and_width
     """
     if method == 'auto':
-        num = max(auto_bin(arr, 'fd'), auto_bin(arr, 'sturges'))
+        num = max(auto_bin(arr, 'fd', dim), auto_bin(arr, 'sturges', dim))
     elif method == 'sqrt':
         num = int(np.ceil(np.sqrt(arr.size)))
     elif method == 'sturges':
         num = int(np.ceil(np.log2(arr.size)) + 1)
     elif method == 'rice':
-        num = int(np.ceil(2 * arr.size ** (1 / 3)))
+        num = int(np.ceil(2 * arr.size ** (1 / (2 + dim))))
+    elif method == 'riced':
+        num = int(np.ceil((2 + dim) * arr.size ** (1 / (2 + dim))))
     elif method == 'scott':
-        num = int(np.ceil(3.5 * np.std(arr) / arr.size ** (1 / 3)))
+        h = 3.5 * np.std(arr) / arr.size ** (1 / (2 + dim))
+        num = int(np.ceil(np.ptp(arr) / h))
     elif method == 'fd':
         q75, q25 = np.percentile(arr, [75, 25])
-        num = int(np.ceil(2 * (q75 - q25) / arr.size ** (1 / 3)))
+        h = 2 * (q75 - q25) / arr.size ** (1 / (2 + dim))
+        num = int(np.ceil(np.ptp(arr) / h))
     else:
         num = arr.size
     return num
@@ -3760,16 +3955,18 @@ def auto_bin(
 # ======================================================================
 def auto_bins(
         arrs,
-        method='auto',
+        method='rice',
+        dim=None,
         combine=max):
     """
-    Determine the optimal number of bins for a group of arrays.
+    Determine the optimal number of bins for a histogram of a group of arrays.
 
     Args:
         arrs (iterable[np.ndarray]): The input arrays.
-        method (str|iterable[str]|None): The method to use calculating bins.
+        method (str|iterable[str]|None): The method for calculating bins.
             If str, the same method is applied to both arrays.
             See `auto_bin()` for available methods.
+        dim (int|None): The dimension of the histogram.
         combine (callable|None): Combine each bin using the combine function.
             combine(n_bins) -> n_bin
             n_bins is of type iterable[int]
@@ -3784,25 +3981,27 @@ def auto_bins(
         >>> arr2 = np.arange(200)
         >>> arr3 = np.arange(300)
         >>> auto_bins((arr1, arr2))
-        35
+        8
         >>> auto_bins((arr1, arr2, arr3))
-        45
+        7
         >>> auto_bins((arr1, arr2), ('sqrt', 'sturges'))
         10
         >>> auto_bins((arr1, arr2), combine=None)
-        (22, 35)
+        (7, 8)
         >>> auto_bins((arr1, arr2), combine=min)
-        22
+        7
         >>> auto_bins((arr1, arr2), combine=sum)
-        57
+        15
         >>> auto_bins((arr1, arr2), combine=lambda x: abs(x[0] - x[1]))
-        13
+        1
     """
     if isinstance(method, str) or method is None:
         method = (method,) * len(arrs)
+    if not dim:
+        dim = len(arrs)
     n_bins = []
     for arr, method in zip(arrs, method):
-        n_bins.append(auto_bin(arr, method))
+        n_bins.append(auto_bin(arr, method, dim))
     if combine:
         return combine(n_bins)
     else:
@@ -3879,7 +4078,7 @@ def variation_information(
         arr1,
         arr2,
         base=np.e,
-        bins='sturges'):
+        bins='rice'):
     """
     Calculate the variation of information between two arrays.
 
@@ -3894,8 +4093,8 @@ def variation_information(
             If base is np.e (Euler's number), the unit is `nats`.
         bins (int|str|None): The number of bins to use for the distribution.
             If int, the exact number is used.
-            If str, a method accepted by `auto_bin` is expected.
-            If None, uses the maximum number of bins (not recommended).
+            If str, a method accepted by `auto_bins()` is expected.
+            If None, uses the `auto_bins()` default value.
     Returns:
         vi (float): The variation of information.
 
@@ -3941,11 +4140,84 @@ def variation_information(
 
 
 # ======================================================================
+def norm_mutual_information(
+        arr1,
+        arr2,
+        bins='rice'):
+    """
+    Calculate a normalized mutual information between two arrays.
+
+    Note that the numerical result depends on the number of bins.
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+        bins (int|str|None): The number of bins to use for the distribution.
+            If int, the exact number is used.
+            If str, a method accepted by `auto_bin` is expected.
+            If None, uses the maximum number of bins (not recommended).
+
+    Returns:
+        mi (float): The normalized mutual information.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> arr1 = np.zeros(100)
+        >>> arr2 = np.arange(100)
+        >>> arr3 = np.random.rand(100)
+        >>> arr4 = arr3 + np.random.rand(100) / 100
+        >>> mi_11 = norm_mutual_information(arr1, arr1)
+        >>> mi_22 = norm_mutual_information(arr2, arr2)
+        >>> mi_33 = norm_mutual_information(arr3, arr3)
+        >>> mi_44 = norm_mutual_information(arr4, arr4)
+        >>> # print(mi_11, mi_22, mi_33, mi_44)
+        >>> 1.0 == mi_11 == mi_22 == mi_33 == mi_44
+        True
+        >>> mi_12 = norm_mutual_information(arr1, arr2)
+        >>> mi_21 = norm_mutual_information(arr2, arr1)
+        >>> mi_32 = norm_mutual_information(arr3, arr2)
+        >>> mi_34 = norm_mutual_information(arr3, arr4)
+        >>> # print(mi_12, mi_21, mi_32, mi_34)
+        >>> mi_44 > mi_34 and mi_33 > mi_34
+        True
+        >>> np.isclose(mi_12, mi_21)
+        True
+        >>> mi_34 > mi_32
+        True
+        >>> mi_n10 = norm_mutual_information(arr3, arr2, 10)
+        >>> mi_n20 = norm_mutual_information(arr3, arr2, 20)
+        >>> mi_n100 = norm_mutual_information(arr3, arr2, 100)
+        >>> # print(mi_n10, mi_n20, mi_n100)
+        >>> mi_n10 < mi_n20 < mi_n100
+        True
+    """
+    # todo: check if this is correct
+    if not isinstance(bins, int):
+        if bins is not None and not isinstance(bins, str):
+            raise ValueError('Invalid value for `bins`')
+        bins = auto_bins((arr1, arr2), method=bins, combine=max)
+    hist1, bin_edges1 = np.histogram(arr1, bins)
+    hist2, bin_edges2 = np.histogram(arr2, bins)
+    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+    if not np.array_equal(arr1, arr2):
+        base = np.e  # results should be independent of the base
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        nmi = 1 - (2 * h12 - h1 - h2) / h12
+    else:
+        nmi = 1.0
+
+    # absolute value to fix rounding errors
+    return abs(nmi)
+
+
+# ======================================================================
 def mutual_information(
         arr1,
         arr2,
         base=np.e,
-        bins='sturges'):
+        bins='rice'):
     """
     Calculate the mutual information between two arrays.
 
@@ -3955,7 +4227,7 @@ def mutual_information(
         arr1 (np.ndarray): The first input array.
         arr2 (np.ndarray): The second input array.
         base (int|float|None): The base units to express the result.
-            Should be a number larger than 0.
+            Should be a number larger than 1.
             If base is 2, the unit is bits.
             If base is np.e (Euler's number), the unit is `nats`.
             If base is None, the result is normalized to unity.
@@ -4008,9 +4280,9 @@ def mutual_information(
 
     See Also:
         - Cahill, Nathan D. “Normalized Measures of Mutual Information with
-          General Definitions of Entropy for Multimodal Image Registration.” In
-          International Workshop on Biomedical Image Registration, 258–268.
-          Springer, 2010.
+          General Definitions of Entropy for Multimodal Image Registration.”
+          In International Workshop on Biomedical Image Registration,
+          258–268. Springer, 2010.
           http://link.springer.com/chapter/10.1007/978-3-642-14366-3_23.
     """
     # todo: check implementation speed and consistency
@@ -4032,120 +4304,86 @@ def mutual_information(
     #     hist + np.finfo(float).eps, lambda_='log-likelihood')
     # mi = g / hist.sum() / 2
 
-    # entropy-based implementation
-    hist1, bin_edges1 = np.histogram(arr1, bins)
-    hist2, bin_edges2 = np.histogram(arr2, bins)
-    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
-    h12 = entropy(hist12, base)
-    h1 = entropy(hist1, base)
-    h2 = entropy(hist2, base)
-    mi = h1 + h2 - h12
+    if base:
+        # entropy-based implementation
+        hist1, bin_edges1 = np.histogram(arr1, bins)
+        hist2, bin_edges2 = np.histogram(arr2, bins)
+        hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
+        h12 = entropy(hist12, base)
+        h1 = entropy(hist1, base)
+        h2 = entropy(hist2, base)
+        mi = h1 + h2 - h12
+    else:
+        norm_mutual_information(arr1, arr2, bins=bins)
 
     # absolute value to fix rounding errors
     return abs(mi)
 
 
 # ======================================================================
-def norm_mutual_information(
-        arr1,
-        arr2,
-        bins='sturges'):
-    """
-
-    Args:
-        arr1 ():
-        arr2 ():
-        bins ():
-
-    Returns:
-
-
-    Examples:
-        >>> np.random.seed(0)
-        >>> arr1 = np.zeros(100)
-        >>> arr2 = np.arange(100)
-        >>> arr3 = np.random.rand(100)
-        >>> arr4 = arr3 + np.random.rand(100) / 100
-        >>> mi_11 = norm_mutual_information(arr1, arr1)
-        >>> mi_22 = norm_mutual_information(arr2, arr2)
-        >>> mi_33 = norm_mutual_information(arr3, arr3)
-        >>> mi_44 = norm_mutual_information(arr4, arr4)
-        >>> # print(mi_11, mi_22, mi_33, mi_44)
-        >>> 1.0 == mi_11 == mi_22 == mi_33 == mi_44
-        True
-        >>> mi_12 = norm_mutual_information(arr1, arr2)
-        >>> mi_21 = norm_mutual_information(arr2, arr1)
-        >>> mi_32 = norm_mutual_information(arr3, arr2)
-        >>> mi_34 = norm_mutual_information(arr3, arr4)
-        >>> # print(mi_12, mi_21, mi_32, mi_34)
-        >>> mi_44 > mi_34 and mi_33 > mi_34
-        True
-        >>> np.isclose(mi_12, mi_21)
-        True
-        >>> mi_34 > mi_32
-        True
-        >>> mi_n10 = norm_mutual_information(arr3, arr2, 10)
-        >>> mi_n20 = norm_mutual_information(arr3, arr2, 20)
-        >>> mi_n100 = norm_mutual_information(arr3, arr2, 100)
-        >>> # print(mi_n10, mi_n20, mi_n100)
-        >>> mi_n10 < mi_n20 < mi_n100
-        True
-    """
-    if not isinstance(bins, int):
-        if bins is not None and not isinstance(bins, str):
-            raise ValueError('Invalid value for `bins`')
-        bins = auto_bins((arr1, arr2), method=bins, combine=max)
-    hist1, bin_edges1 = np.histogram(arr1, bins)
-    hist2, bin_edges2 = np.histogram(arr2, bins)
-    hist12, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
-    if not np.array_equal(arr1, arr2):
-        base = np.e  # results should be independent of the base
-        h12 = entropy(hist12, base)
-        h1 = entropy(hist1, base)
-        h2 = entropy(hist2, base)
-        nmi = 1 - (2 * h12 - h1 - h2) / h12
-    else:
-        nmi = 1.0
-
-    # absolute value to fix rounding errors
-    return abs(nmi)
-
-
-# ======================================================================
 def gaussian_nd(
         shape,
         sigmas,
-        origin=0.5,
+        position=0.5,
         n_dim=None,
-        normalize=True):
+        norm=np.sum,
+        rel_position=True):
     """
-    Generate an N-dim Gaussian function.
+    Generate a Gaussian distribution in N dimensions.
 
     Args:
-        shape ():
-        sigmas ():
-        origin ():
-        n_dim ():
-        normalize ():
+        shape (int|iterable[int]): The shape of the array in px.
+        sigmas (iterable[int|float]): The standard deviation in px.
+        position (float|iterable[float]): The position of the center.
+            Values are relative to the lowest edge, and scaled by the
+            corresponding shape size.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
+        norm (callable|None): Normalize using the specified function.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` values.
+            Otherwise, they are interpreted as absolute (in px).
+            Uses `utils.grid_coord()` internally.
 
     Returns:
+        arr (np.ndarray): The array containing the N-dim Gaussian.
 
+    Examples:
+        >>> gaussian_nd(8, 1)
+        array([ 0.00087271,  0.01752886,  0.12952176,  0.35207666,  0.35207666,
+                0.12952176,  0.01752886,  0.00087271])
+        >>> gaussian_nd(9, 2)
+        array([ 0.02763055,  0.06628225,  0.12383154,  0.18017382,  0.20416369,
+                0.18017382,  0.12383154,  0.06628225,  0.02763055])
+        >>> gaussian_nd(3, 1, n_dim=2)
+        array([[ 0.07511361,  0.1238414 ,  0.07511361],
+               [ 0.1238414 ,  0.20417996,  0.1238414 ],
+               [ 0.07511361,  0.1238414 ,  0.07511361]])
+        >>> gaussian_nd(7, 2, norm=None)
+        array([ 0.32465247,  0.60653066,  0.8824969 ,  1.        ,  0.8824969 ,
+                0.60653066,  0.32465247])
+        >>> gaussian_nd(4, 2, 1.0, norm=None)
+        array([ 0.32465247,  0.60653066,  0.8824969 ,  1.        ])
+        >>> gaussian_nd(3, 2, 5.0)
+        array([ 0.00982626,  0.10564222,  0.88453152])
+        >>> gaussian_nd(3, 2, 5.0, norm=None)
+        array([  3.72665317e-06,   4.00652974e-05,   3.35462628e-04])
     """
     if not n_dim:
-        n_dim = max_iter_len((shape, sigmas, origin))
+        n_dim = combine_iter_len((shape, sigmas, position))
 
     shape = auto_repeat(shape, n_dim)
     sigmas = auto_repeat(sigmas, n_dim)
-    origin = auto_repeat(origin, n_dim)
+    position = auto_repeat(position, n_dim)
 
-    xx = grid_coord(shape, origin)
-    kernel = np.exp(
-        -(
-            sum([x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in
-                 zip(xx, sigmas)])))
-    if normalize:
-        kernel /= np.sum(kernel)
-    return kernel
+    position = grid_coord(
+        shape, position, is_relative=rel_position, use_int=False)
+    arr = np.exp(-(sum([
+        x_i ** 2 / (2 * sigma ** 2) for x_i, sigma in zip(position, sigmas)])))
+    if callable(norm):
+        arr /= norm(arr)
+    return arr
 
 
 # ======================================================================
@@ -4175,7 +4413,7 @@ def moving_average(
     Returns:
         arr (np.ndarray): The output array.
 
-    Example:
+    Examples:
         >>> moving_average(np.linspace(1, 9, 9), 1)
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
         >>> moving_average(np.linspace(1, 8, 8), 1)
@@ -4228,7 +4466,7 @@ def moving_mean(
     Returns:
         arr (np.ndarray): The output array.
 
-    Example:
+    Examples:
         >>> moving_mean(np.linspace(1, 9, 9), 1)
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
         >>> moving_mean(np.linspace(1, 8, 8), 1)
@@ -4494,27 +4732,6 @@ def running_stat(
             begin = (num - 1) // 2
             arr = arr[begin:begin + size]
     return arr
-
-
-# import timeit
-#
-# z = timeit.repeat(
-#     'moving_mean(np.random.random(10000), 10)',
-#     'from __main__ import moving_mean; import numpy as np', number=100)
-#
-# a = timeit.repeat(
-#     'moving_average(np.random.random(10000), 10)',
-#     'from __main__ import moving_average; import numpy as np', number=100)
-#
-# b = timeit.repeat(
-#     'rolling_stat(np.random.random(10000), 10)',
-#     'from __main__ import rolling_stat; import numpy as np', number=100)
-#
-# c = timeit.repeat(
-#     'running_stat(np.random.random(10000), 10)',
-#     'from __main__ import running_stat; import numpy as np', number=100)
-#
-# print(z, a, b, c)
 
 
 # ======================================================================

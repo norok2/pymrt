@@ -220,7 +220,7 @@ def sequence(
     Yields:
         item (int|float): the next element of the sequence.
 
-    Example:
+    Examples:
         >>> list(sequence(0, 1, 0.1))
         [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         >>> list(sequence(0, 1, 0.3))
