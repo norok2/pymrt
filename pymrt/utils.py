@@ -321,6 +321,49 @@ def auto_repeat(
 
 
 # ======================================================================
+def flatten(
+        items,
+        unexpanded=(str, bytes),
+        max_depth=-1):
+    """
+    Recursively flattens nested iterables.
+
+    Args:
+        items (iterable[iterable]): The input items.
+        unexpanded (iterable): Data types that will not be flattened.
+        max_depth (int): Maximum depth to reach. Negative for unlimited.
+
+    Yields:
+        item (any): The next non-iterable item of the flattened items.
+
+    Examples:
+        >>> ll = [[1,2,3],[4,5,6], [7], [8,9]]
+        >>> list(flatten(ll))
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> list(flatten(ll)) == list(itertools.chain.from_iterable(ll))
+        True
+        >>> ll = [[[1,2,3],[4,5,6], [7], [8,9]], [[1,2,3],[4,5,6], [7], [8,9]]]
+        >>> list(flatten(ll))
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> list(flatten([1, 2, 3]))
+        [1, 2, 3]
+        >>> list(flatten(['best', 'function', 'ever']))
+        ['best', 'function', 'ever']
+    """
+    for item in items:
+        try:
+            if isinstance(item, unexpanded) or max_depth == 0:
+                raise TypeError
+            else:
+                iter(item)
+        except TypeError:
+            yield item
+        else:
+            for i in flatten(item, unexpanded, max_depth - 1):
+                yield i
+
+
+# ======================================================================
 def combine_iter_len(items, combine=max):
     """
     Determine the maximum length of an item within a collection of items.
@@ -1663,13 +1706,13 @@ def iwalk2(
     Recursively walk through sub paths of a base directory
 
     Args:
-        base (str): directory where to operate
-        follow_links (bool): follow links during recursion
-        follow_mounts (bool): follow mount points during recursion
-        allow_special (bool): include special files
-        allow_hidden (bool): include hidden files
-        max_depth (int): maximum depth to reach. Negative for unlimited
-        on_error (callable): function to call on error
+        base (str): Directory where to operate.
+        follow_links (bool): Follow links during recursion.
+        follow_mounts (bool): Follow mount points during recursion.
+        allow_special (bool): Include special files.
+        allow_hidden (bool): Include hidden files.
+        max_depth (int): Maximum depth to reach. Negative for unlimited.
+        on_error (callable): Function to call on error.
 
     Yields:
         result (tuple): The tuple
@@ -1728,13 +1771,13 @@ def walk2(
     Recursively walk through sub paths of a base directory
 
     Args:
-        base (str): directory where to operate
-        follow_links (bool): follow links during recursion
-        follow_mounts (bool): follow mount points during recursion
-        allow_special (bool): include special files
-        allow_hidden (bool): include hidden files
-        max_depth (int): maximum depth to reach. Negative for unlimited
-        on_error (callable): function to call on error
+        base (str): Directory where to operate.
+        follow_links (bool): Follow links during recursion.
+        follow_mounts (bool): Follow mount points during recursion.
+        allow_special (bool): Include special files.
+        allow_hidden (bool): Include hidden files.
+        max_depth (int): Maximum depth to reach. Negative for unlimited.
+        on_error (callable): Function to call on error.
 
     Returns:
         items (list[tuple]): The list of items.
@@ -2869,7 +2912,7 @@ def check_redo(
         out_filepaths,
         force=False,
         verbose=D_VERB_LVL,
-        make_out_dirpaths=False,
+        makedirs=False,
         no_empty_input=False):
     """
     Check if input files are newer than output files, to force calculation.
@@ -2879,7 +2922,7 @@ def check_redo(
         out_filepaths (iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
         verbose (int): Set level of verbosity.
-        make_out_dirpaths (bool): Create output dirpaths if not existing.
+        makedirs (bool): Create output dirpaths if not existing.
         no_empty_input (bool): Check if the input filepath list is empty.
 
     Returns:
@@ -2898,7 +2941,7 @@ def check_redo(
                 break
 
     # create output directories
-    if force and make_out_dirpaths:
+    if force and makedirs:
         for out_filepath in out_filepaths:
             out_dirpath = os.path.dirname(out_filepath)
             if not os.path.isdir(out_dirpath):
