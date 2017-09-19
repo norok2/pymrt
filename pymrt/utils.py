@@ -1137,6 +1137,10 @@ def _gcd(a, b):
         1
         >>> _gcd(211815584, 211815584)
         211815584
+
+    Note:
+        This should never be used as `math.gcd` offers identical functionality,
+        but it is faster.
     """
     while b:
         a, b = b, a % b
