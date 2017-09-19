@@ -19,7 +19,6 @@ import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
 import collections  # Container datatypes
 import subprocess  # Subprocess management
-import fractions  # Rational numbers
 import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
 import doctest  # Test interactive Python examples
@@ -323,43 +322,49 @@ def auto_repeat(
 # ======================================================================
 def flatten(
         items,
-        unexpanded=(str, bytes),
+        avoid=(str, bytes),
         max_depth=-1):
     """
     Recursively flattens nested iterables.
 
+    The maximum depth is limited by Python's recursion limit.
+
     Args:
         items (iterable[iterable]): The input items.
-        unexpanded (iterable): Data types that will not be flattened.
+        avoid (iterable): Data types that will not be flattened.
         max_depth (int): Maximum depth to reach. Negative for unlimited.
 
     Yields:
         item (any): The next non-iterable item of the flattened items.
 
     Examples:
-        >>> ll = [[1,2,3],[4,5,6], [7], [8,9]]
+        >>> ll = [[1, 2, 3], [4, 5, 6], [7], [8, 9]]
         >>> list(flatten(ll))
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
         >>> list(flatten(ll)) == list(itertools.chain.from_iterable(ll))
         True
-        >>> ll = [[[1,2,3],[4,5,6], [7], [8,9]], [[1,2,3],[4,5,6], [7], [8,9]]]
+        >>> ll = [ll, ll]
         >>> list(flatten(ll))
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         >>> list(flatten([1, 2, 3]))
         [1, 2, 3]
-        >>> list(flatten(['best', 'function', 'ever']))
+        >>> list(flatten(['best', ['function', 'ever']]))
         ['best', 'function', 'ever']
+        >>> ll2 = [[(1, 2, 3), (4, 5)], [(1, 2), (3, 4, 5)], ['1, 2', [6, 7]]]
+        >>> list(flatten(ll2, avoid=(tuple, str)))
+        [(1, 2, 3), (4, 5), (1, 2), (3, 4, 5), '1, 2', 6, 7]
+        >>> list(flatten([['best', 'func'], 'ever'], avoid=None))
+        ['b', 'e', 's', 't', 'f', 'u', 'n', 'c', 'e', 'v', 'e', 'r']
     """
     for item in items:
         try:
-            if isinstance(item, unexpanded) or max_depth == 0:
+            no_expand = avoid and isinstance(item, avoid)
+            if no_expand or max_depth == 0 or item == next(iter(item)):
                 raise TypeError
-            else:
-                iter(item)
         except TypeError:
             yield item
         else:
-            for i in flatten(item, unexpanded, max_depth - 1):
+            for i in flatten(item, avoid, max_depth - 1):
                 yield i
 
 
@@ -1113,6 +1118,31 @@ def optimal_shape(
     return sorted(factorizations, key=sort, reverse=reverse)[0]
 
 
+# ======================================================================
+def _gcd(a, b):
+    """
+    Calculate the greatest common divisor (GCD) of a and b.
+
+    Unless b==0, the result will have the same sign as b (so that when
+    b is divided by it, the result comes out positive).
+
+    Examples:
+        >>> _gcd(123, 45)
+        3
+        >>> _gcd(45, 123)
+        3
+        >>> _gcd(0, 1)
+        1
+        >>> _gcd(-3, 1)
+        1
+        >>> _gcd(211815584, 211815584)
+        211815584
+    """
+    while b:
+        a, b = b, a % b
+    return a
+
+
 # =====================================================================
 def gcd(*nums):
     """
@@ -1161,7 +1191,7 @@ def lcm(*nums):
     """
     lcm_val = nums[0]
     for num in nums[1:]:
-        lcm_val = lcm_val * num // fractions.gcd(lcm_val, num)
+        lcm_val = lcm_val * num // math.gcd(lcm_val, num)
     return lcm_val
 
 
