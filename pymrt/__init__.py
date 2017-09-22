@@ -104,7 +104,7 @@ def msg(
          : a b c
     """
     if verb_lvl >= verb_threshold and text:
-        # if blessed is not present, no coloring
+        # if blessed/blessings is not present, no coloring
         try:
             import blessed
         except ImportError:
