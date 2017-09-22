@@ -369,7 +369,28 @@ def flatten(
 
 
 # ======================================================================
-def combine_iter_len(items, combine=max):
+def prod(items):
+    """
+    Calculate the cumulative product of an arbitrary number of items.
+
+    This is similar to `sum`, but uses product instead of addition.
+
+    Args:
+        items (iterable): The input items.
+
+    Returns:
+        result: The cumulative product of `items`.
+
+    Examples:
+        >>> prod([2] * 10)
+    """
+    return functools.reduce(lambda x, y: x * y, items)
+
+
+# ======================================================================
+def combine_iter_len(
+        items,
+        combine=max):
     """
     Determine the maximum length of an item within a collection of items.
 
@@ -556,6 +577,90 @@ def partitions(
         yield tuple(
             container(
                 items[index[i]:index[i + 1]] for i in range(k)))
+
+
+# ======================================================================
+def random_unique_combinations_k(items, k, pseudo=False):
+    """
+    Obtain a number of random unique combinations of a sequence of sequences.
+
+    Args:
+        items (Sequence[Sequence]): The input sequence of sequences.
+        k (int): The number of random unique combinations to obtain.
+        pseudo (bool): Generate random combinations somewhat less randomly.
+            If True, the memory requirements for intermediate steps will
+            be significantly lower (but still all `k` items are required to
+            fit in memory).
+
+    Yields:
+        combination (Sequence): The next random unique combination.
+
+    Examples:
+        >>> import string
+        >>> max_lens = [i for i in range(2, 10)]
+        >>> items = [string.ascii_lowercase[:max_len] for max_len in max_lens]
+        >>> random.seed(0)
+        >>> num = 10
+        >>> for i in random_unique_combinations_k(items, num):
+        ...     print(i)
+        ('b', 'a', 'd', 'a', 'd', 'a', 'a', 'f')
+        ('a', 'a', 'c', 'c', 'b', 'f', 'd', 'f')
+        ('b', 'b', 'b', 'e', 'c', 'b', 'e', 'a')
+        ('a', 'b', 'a', 'b', 'd', 'g', 'c', 'd')
+        ('b', 'c', 'd', 'd', 'b', 'b', 'f', 'g')
+        ('a', 'a', 'b', 'a', 'f', 'd', 'c', 'g')
+        ('a', 'c', 'd', 'a', 'f', 'a', 'c', 'f')
+        ('b', 'c', 'd', 'a', 'f', 'd', 'h', 'd')
+        ('a', 'c', 'b', 'b', 'a', 'e', 'b', 'g')
+        ('a', 'c', 'c', 'b', 'e', 'b', 'f', 'e')
+        >>> max_lens = [i for i in range(2, 4)]
+        >>> items = [string.ascii_uppercase[:max_len] for max_len in max_lens]
+        >>> random.seed(0)
+        >>> num = 10
+        >>> for i in random_unique_combinations_k(items, num):
+        ...     print(i)
+        ('B', 'B')
+        ('B', 'C')
+        ('A', 'A')
+        ('B', 'A')
+        ('A', 'B')
+        ('A', 'C')
+    """
+    if pseudo:
+        # randomize generators
+        comb_gens = list(items)
+        for num, comb_gen in enumerate(comb_gens):
+            random.shuffle(list(comb_gens[num]))
+        # get the first `k` combinations
+        combinations = list(itertools.islice(itertools.product(*comb_gens), k))
+        random.shuffle(combinations)
+        for combination in itertools.islice(combinations, k):
+            yield tuple(combination)
+    else:
+        max_lens = [len(list(item)) for item in items]
+        max_k = prod(max_lens)
+        try:
+            for num in random.sample(range(max_k), min(k, max_k)):
+                indexes = []
+                for max_len in max_lens:
+                    indexes.append(num % max_len)
+                    num = num // max_len
+                yield tuple(item[i] for i, item in zip(indexes, items))
+        except OverflowError:
+            # use `set` to ensure uniqueness
+            index_combs = set()
+            # make sure that with the chosen number the next loop can exit
+            # WARNING: if `k` is too close to the total number of combinations,
+            # it may take a while until the next valid combination is found
+            while len(index_combs) < min(k, max_k):
+                index_combs.add(tuple(
+                    random.randint(0, max_len - 1) for max_len in max_lens))
+            # make sure their order is shuffled
+            # (`set` seems to sort its content)
+            index_combs = list(index_combs)
+            random.shuffle(index_combs)
+            for index_comb in itertools.islice(index_combs, k):
+                yield tuple(item[i] for i, item in zip(index_comb, items))
 
 
 # ======================================================================
