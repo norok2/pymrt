@@ -4807,18 +4807,18 @@ def rolling_stat(
             extension = np.zeros((num - 1,))
         elif borders == 'same':
             extension = np.concatenate(
-                (np.ones((num - 1,)) * arr[-1],
-                 np.ones((num - 1,)) * arr[0]))
+                (np.full((num - 1,), arr[-1]),
+                 np.full((num - 1,), arr[0])))
         elif borders == 'circ':
             extension = arr
         elif borders == 'sym':
             extension = arr[::-1]
         elif isinstance(borders, (int, float, complex)):
-            extension = np.ones((num - 1,)) * borders
+            extension = np.full((num - 1,), borders)
         elif isinstance(borders, (tuple, float)):
             extension = np.concatenate(
-                (np.ones((num - 1,)) * borders[-1],
-                 np.ones((num - 1,)) * borders[0]))
+                (np.full((num - 1,), borders[-1]),
+                 np.full((num - 1,), borders[0])))
         else:
             raise ValueError(
                 '`borders={borders}` not understood'.format_map(locals()))
@@ -4927,8 +4927,8 @@ def running_stat(
         if borders is None:
             head = tail = np.zeros((num - 1,))
         elif borders == 'same':
-            head = np.ones((num - 1,)) * arr[0]
-            tail = np.ones((num - 1,)) * arr[-1]
+            head = np.full((num - 1,), arr[0])
+            tail = np.full((num - 1,), arr[-1])
         elif borders == 'circ':
             tail = arr[:num - 1]
             head = arr[-num + 1:]
@@ -4936,10 +4936,10 @@ def running_stat(
             tail = arr[-num + 1:]
             head = arr[:num - 1]
         elif isinstance(borders, (int, float, complex)):
-            head = tail = np.ones((num - 1,)) * borders
+            head = tail = np.full((num - 1,), borders)
         elif isinstance(borders, (tuple, float)):
-            head = np.ones((num - 1,)) * borders[0]
-            tail = np.ones((num - 1,)) * borders[-1]
+            head = np.full((num - 1,), borders[0])
+            tail = np.full((num - 1,), borders[-1])
         else:
             raise ValueError(
                 '`borders={borders}` not understood'.format_map(locals()))
@@ -5550,7 +5550,7 @@ def var(
         arr, axis=axis, dtype=dtype, out=out, keepdims=keepdims,
         weights=weights, removes=removes)
     result = avg(
-        (arr - avg_arr) ** 2, axis=axis, dtype=dtype, out=out,
+        (arr - avg_arr[..., np.newaxis]) ** 2, axis=axis, dtype=dtype, out=out,
         keepdims=keepdims,
         weights=weights ** 2 if weights is not None else None, removes=removes)
     return result

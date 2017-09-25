@@ -1114,8 +1114,9 @@ def frame(
         else:
             borders = [
                 round(border * dim) for dim, border in zip(arr.shape, borders)]
-    result = background + np.zeros(
-        [dim + 2 * border for dim, border in zip(arr.shape, borders)])
+    result = np.full(
+        [dim + 2 * border for dim, border in zip(arr.shape, borders)],
+        background)
     inner = [
         slice(border, border + dim, None)
         for dim, border in zip(arr.shape, borders)]
@@ -1154,7 +1155,7 @@ def reframe(
         raise IndexError('number of dimensions must match')
     elif any([old > new for old, new in zip(arr.shape, new_shape)]):
         raise ValueError('new shape cannot be smaller than the old one.')
-    result = background + np.zeros(new_shape)
+    result = np.full(new_shape, background)
     borders = [
         round((new - old) / 2.0) for old, new in zip(arr.shape, new_shape)]
     inner = [

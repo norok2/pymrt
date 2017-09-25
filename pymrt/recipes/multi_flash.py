@@ -333,7 +333,7 @@ def triple_special2(
     tr1, tr2, tr3 = tr, tr, n_tr * tr
 
     with np.errstate(divide='ignore', invalid='ignore'):
-        t1_arr = np.ones_like(arr1) * tr
+        t1_arr = np.full_like(arr1, tr)
         eta_fa_arr = np.ones_like(arr1)
         mask = np.ones_like(arr1, dtype=bool)
         mask *= arr1 >= mrt.segmentation.threshold_otsu(arr1)
@@ -591,7 +591,7 @@ def vfa(
         else:
             # warnings.warn('Using approximation: TR << T1')
             tr_arr = np.stack(
-                [tr + np.zeros(arrs[0].shape, dtype=float) for tr in trs],
+                [np.full_like(arrs[0], tr, dtype=float) for tr in trs],
                 index)
             t1_arr = \
                 ((num * np.sum(s_arr ** 2 / tr_arr, index) -

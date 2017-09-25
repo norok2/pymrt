@@ -315,7 +315,7 @@ def double_flash(
             warnings.warn(
                 'Unsupported fa1, fa2, tr1, tr2 combination for B1T.'
                 'Fallback to 1.')
-            eta_fa_arr = np.ones_like(arr1) * fa
+            eta_fa_arr = np.full_like(arr1, fa)
 
     eta_fa_arr = np.real(np.arccos(eta_fa_arr))
     return eta_fa_arr / fa

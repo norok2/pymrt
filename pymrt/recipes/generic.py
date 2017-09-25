@@ -909,8 +909,8 @@ def _curve_fit(args):
         err_val = np.nan
         # number of fitting parameters
         num_params = len(args[3])
-        p_val = np.ones(num_params) * err_val
-        p_cov = np.ones((num_params, num_params)) * err_val
+        p_val = np.full(num_params, err_val)
+        p_cov = np.full((num_params, num_params), err_val)
     return p_val, p_cov
 
 
