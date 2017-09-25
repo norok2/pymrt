@@ -103,7 +103,7 @@ def msg(
         >>> msg(' : a b c', fmt='cyan')  # if ANSI Terminal, cyan text
          : a b c
     """
-    if verb_lvl >= verb_threshold and text:
+    if verb_lvl >= verb_threshold and text is not None:
         # if blessed/blessings is not present, no coloring
         try:
             import blessed
@@ -136,7 +136,7 @@ def msg(
                 else:
                     e = t.white
                 # first non-whitespace word
-                txt1 = text.split(None, 1)[0]
+                txt1 = text.split(None, 1)[0] if len(text) > 0 else ''
                 # initial whitespaces
                 n = text.find(txt1)
                 txt0 = text[:n]
