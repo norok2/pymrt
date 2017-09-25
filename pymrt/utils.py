@@ -1389,7 +1389,7 @@ def merge_dicts(*dicts):
     Merge dictionaries into a new dict (new keys overwrite the old ones).
 
     Args:
-        dicts (tuple[dict]): Dictionaries to be merged together.
+        dicts (args[dict]): Dictionaries to be merged together.
 
     Returns:
         merged (dict): The merged dict (new keys overwrite the old ones).
