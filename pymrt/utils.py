@@ -69,6 +69,9 @@ EXT = {
     'text': 'txt',
     'tab': 'csv',
     'data': 'json',
+    'gzip': 'gz',
+    'bzip': 'bz2',
+    'lzip': 'lz',
 }
 D_TAB_SIZE = 8
 
@@ -383,8 +386,134 @@ def prod(items):
 
     Examples:
         >>> prod([2] * 10)
+        1024
     """
     return functools.reduce(lambda x, y: x * y, items)
+
+
+# ======================================================================
+def unsqueezing(
+        source_shape,
+        target_shape):
+    """
+    Generate a broadcasting-compatible shape.
+
+    The resulting shape contains *singletons* (i.e. `1`) for non-matching dims.
+    Assumes all elements of the source shape are contained in the target shape
+    (excepts for singletons) in the correct order.
+
+    This is generate a shape the whe used in conjunction with `np.reshape()`
+    it would be obtain the inverse of `np.squeeze()`.
+
+    Args:
+        source_shape (Sequence): The source shape.
+        target_shape (Sequence): The target shape.
+
+    Returns:
+        shape (tuple): The broadcast-safe shape.
+
+    Raises:
+        ValueError: if elements of `source_shape` are not in `target_shape`.
+
+    Examples:
+        >>> unsqueezing((2, 3), (2, 3, 4))
+        (2, 3, 1)
+        >>> unsqueezing((3, 4), (2, 3, 4))
+        (1, 3, 4)
+        >>> unsqueezing((3, 5), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+        >>> unsqueezing((1, 3, 1, 5, 1), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+        >>> unsqueezing((1, 3, 5, 1), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+        >>> unsqueezing((2, 2), (2, 2, 2, 2, 2))
+        (2, 2, 1, 1, 1)
+        >>> unsqueezing((2, 2), (2, 3, 2, 2, 2))
+        (2, 1, 2, 1, 1)
+        >>> unsqueezing((2, 3), (2, 2, 2, 2, 2))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (2, 3) -> (2, 2, 2, 2, 2)
+        >>> unsqueezing((5, 3), (2, 3, 4, 5, 6))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (5, 3) -> (2, 3, 4, 5, 6)
+        >>> unsqueezing((2, 3), (2, 3))
+        (2, 3)
+    """
+    shape = []
+    j = 0
+    for i, dim in enumerate(target_shape):
+        if j < len(source_shape):
+            if dim == source_shape[j]:
+                shape.append(dim)
+                j += 1
+            else:
+                if source_shape[j] == 1:
+                    j += 1
+                shape.append(1)
+    if j < len(source_shape):
+        raise ValueError(
+            'Target shape must contain all source shape elements'
+            ' (in correct order). {} -> {}'.format(source_shape, target_shape))
+    shape.extend([1] * (len(target_shape) - len(shape)))
+    return tuple(shape)
+
+
+# ======================================================================
+def unsqueeze(
+        arr,
+        shape):
+    """
+    Add singletons to the shape of an array to broadcast-match a given shape.
+
+    Args:
+        arr (np.ndarray): The input array.
+        shape (Sequence): The target shape.
+
+    Returns:
+        arr (np.ndarray): The reshaped array.
+
+    Raises:
+        ValueError: if the `arr` shape cannot be broadcasted to `shape`.
+
+    Examples:
+        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
+        >>> arr.shape
+        (2, 3, 4)
+        >>> arr = unsqueeze(arr, (2, 3, 4, 5, 6))
+        >>> arr.shape
+        (2, 3, 4, 1, 1)
+        >>> arr = np.squeeze(arr)
+        >>> arr.shape
+        (2, 3, 4)
+        >>> arr = unsqueeze(arr, (2, 5, 3, 7, 2, 4, 5, 6))
+        >>> arr.shape
+        (2, 1, 3, 1, 1, 4, 1, 1)
+        >>> arr = np.squeeze(arr)
+        >>> arr.shape
+        (2, 3, 4)
+        >>> arr = unsqueeze(arr, (5, 3, 7, 2, 4, 5, 6))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (2, 3, 4) -> (5, 3, 7, 2, 4, 5, 6)
+        >>> arr1 = np.arange(2 * 3 * 4 * 5 * 6).reshape((2, 3, 4, 5, 6))
+        >>> arr2 = np.sum(arr1, (0, 2, 4), keepdims=True)
+        >>> arr2.shape
+        (1, 3, 1, 5, 1)
+        >>> arr3 = np.sum(arr1, (0, 2, 4))
+        >>> arr3.shape
+        (3, 5)
+        >>> arr3 = unsqueeze(arr3, arr1.shape)
+        >>> arr3.shape
+        (1, 3, 1, 5, 1)
+        >>> np.all(arr2 == arr3)
+        True
+    """
+    return arr.reshape(unsqueezing(arr.shape, shape))
 
 
 # ======================================================================
@@ -1598,130 +1727,6 @@ def common_subseq(
 
 
 # ======================================================================
-def safe_filename(
-        text,
-        allowed='a-zA-Z0-9._-',
-        replacing='_',
-        group_consecutive=True):
-    """
-    Return a string containing a safe filename.
-
-    Args:
-        text (str): The input string.
-        allowed (str):  The valid characters.
-            Must comply to Python's regular expression syntax.
-        replacing (str): The replacing text.
-        group_consecutive (str): Group consecutive non-allowed.
-            If True, consecutive non-allowed characters are replaced by a
-            single instance of `replacing`.
-            Otherwise, each character is replaced individually.
-
-    Returns:
-        text (str): The filtered text.
-
-    Examples:
-        >>> safe_filename('pymrt.txt')
-        'pymrt.txt'
-        >>> safe_filename('pymrt+12.txt')
-        'pymrt_12.txt'
-        >>> safe_filename('pymrt+12.txt')
-        'pymrt_12.txt'
-        >>> safe_filename('pymrt+++12.txt')
-        'pymrt_12.txt'
-        >>> safe_filename('pymrt+++12.txt', group_consecutive=False)
-        'pymrt___12.txt'
-        >>> safe_filename('pymrt+12.txt', allowed='a-zA-Z0-9._+-')
-        'pymrt+12.txt'
-        >>> safe_filename('pymrt+12.txt', replacing='-')
-        'pymrt-12.txt'
-    """
-    return re.sub(
-        r'[^{allowed}]{greedy}'.format(
-            allowed=allowed, greedy='+' if group_consecutive else ''),
-        replacing, text)
-
-
-# ======================================================================
-def auto_open(filepath, *args, **kwargs):
-    """
-    Auto-magically open a compressed file.
-
-    Supports `gzip` and `bzip2`.
-
-    Note: all compressed files should be opened as binary.
-    Opening in text mode is not supported.
-
-    Args:
-        filepath (str): The file path.
-        *args (iterable): Positional arguments passed to `open()`.
-        **kwargs (dict): Keyword arguments passed to `open()`.
-
-    Returns:
-        file_obj: A file object.
-
-    Raises:
-        IOError: on failure.
-
-    See Also:
-        open(), gzip.open(), bz2.open()
-
-    Examples:
-        >>> file_obj = auto_open(__file__, 'rb')
-    """
-    zip_module_names = 'gzip', 'bz2'
-    file_obj = None
-    for zip_module_name in zip_module_names:
-        try:
-            zip_module = importlib.import_module(zip_module_name)
-            file_obj = zip_module.open(filepath, *args, **kwargs)
-            file_obj.read(1)
-        except (OSError, IOError, AttributeError, ImportError):
-            file_obj = None
-        else:
-            file_obj.seek(0)
-            break
-    if not file_obj:
-        file_obj = open(filepath, *args, **kwargs)
-    return file_obj
-
-
-# ======================================================================
-def zopen(filepath, *args, **kwargs):
-    """
-    Auto-magically open a gzip-compressed file.
-
-    Note: all compressed files should be opened as binary.
-    Opening in text mode is not supported.
-
-    Args:
-        filepath (str): The file path.
-        *args (iterable): Positional arguments passed to `open()`.
-        **kwargs (dict): Keyword arguments passed to `open()`.
-
-    Returns:
-        file_obj: A file object.
-
-    Raises:
-        IOError: on failure.
-
-    See Also:
-        open(), gzip.open()
-
-    Examples:
-        >>> file_obj = zopen(__file__, 'rb')
-    """
-    file_obj = open(filepath, *args, **kwargs)
-
-    # test if file is gzip using magic type (first 2 bytes)
-    magic = file_obj.read(2)
-    file_obj.seek(0)
-    if magic == b'\x1f\x8b':
-        file_obj = gzip.GzipFile(fileobj=file_obj)
-
-    return file_obj
-
-
-# ======================================================================
 def set_keyword_parameters(
         func,
         values):
@@ -2538,6 +2543,149 @@ def change_ext(
         root, ext, case_sensitive, auto_multi_ext)
     filepath = root + (add_extsep(new_ext) if new_ext else '')
     return filepath
+
+
+# ======================================================================
+def safe_filename(
+        text,
+        allowed='a-zA-Z0-9._-',
+        replacing='_',
+        group_consecutive=True):
+    """
+    Return a string containing a safe filename.
+
+    Args:
+        text (str): The input string.
+        allowed (str):  The valid characters.
+            Must comply to Python's regular expression syntax.
+        replacing (str): The replacing text.
+        group_consecutive (str): Group consecutive non-allowed.
+            If True, consecutive non-allowed characters are replaced by a
+            single instance of `replacing`.
+            Otherwise, each character is replaced individually.
+
+    Returns:
+        text (str): The filtered text.
+
+    Examples:
+        >>> safe_filename('pymrt.txt')
+        'pymrt.txt'
+        >>> safe_filename('pymrt+12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+++12.txt')
+        'pymrt_12.txt'
+        >>> safe_filename('pymrt+++12.txt', group_consecutive=False)
+        'pymrt___12.txt'
+        >>> safe_filename('pymrt+12.txt', allowed='a-zA-Z0-9._+-')
+        'pymrt+12.txt'
+        >>> safe_filename('pymrt+12.txt', replacing='-')
+        'pymrt-12.txt'
+    """
+    return re.sub(
+        r'[^{allowed}]{greedy}'.format(
+            allowed=allowed, greedy='+' if group_consecutive else ''),
+        replacing, text)
+
+
+# ======================================================================
+def auto_open(filepath, *args, **kwargs):
+    """
+    Auto-magically open a compressed file.
+
+    Supports `gzip` and `bzip2`.
+
+    Note: all compressed files should be opened as binary.
+    Opening in text mode is not supported.
+
+    Args:
+        filepath (str): The file path.
+        *args (iterable): Positional arguments passed to `open()`.
+        **kwargs (dict): Keyword arguments passed to `open()`.
+
+    Returns:
+        file_obj: A file object.
+
+    Raises:
+        IOError: on failure.
+
+    See Also:
+        open(), gzip.open(), bz2.open()
+
+    Examples:
+        >>> file_obj = auto_open(__file__, 'rb')
+    """
+    zip_module_names = 'gzip', 'bz2'
+    file_obj = None
+    for zip_module_name in zip_module_names:
+        try:
+            zip_module = importlib.import_module(zip_module_name)
+            file_obj = zip_module.open(filepath, *args, **kwargs)
+            file_obj.read(1)
+        except (OSError, IOError, AttributeError, ImportError):
+            file_obj = None
+        else:
+            file_obj.seek(0)
+            break
+    if not file_obj:
+        file_obj = open(filepath, *args, **kwargs)
+    return file_obj
+
+
+# ======================================================================
+def zopen(filepath, mode='rb', *args, **kwargs):
+    """
+    Auto-magically open a gzip-compressed file.
+
+    Note: all compressed files should be opened as binary.
+    Opening in text mode is not supported.
+
+    Args:
+        filepath (str): The file path.
+        mode (str): The mode for file opening.
+            See `open()` for more information.
+            If the `t` mode is not specified, `b` mode is assumed.
+            If `t` mode is specified, the file cannot be compressed.
+        *args (iterable): Positional arguments passed to `open()`.
+        **kwargs (dict): Keyword arguments passed to `open()`.
+
+    Returns:
+        file_obj: A file object.
+
+    Raises:
+        IOError: on failure.
+
+    See Also:
+        open(), gzip.open()
+
+    Examples:
+        >>> file_obj = zopen(__file__, 'rb')
+    """
+    if 't' not in mode and 'b' not in mode:
+        mode += 'b'
+
+    valid_mode = 'b' in mode and 't' not in mode
+
+    # try open file as normal
+    file_obj = open(filepath, mode=mode, *args, **kwargs)
+
+    if valid_mode:
+        # test if file is gzip using magic type (first 2 bytes)
+        try:
+            magic = file_obj.read(2)
+            by_magic = magic == b'\x1f\x8b'
+        except io.UnsupportedOperation:
+            by_magic = False
+        finally:
+            file_obj.seek(0)
+
+        by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['gzip']))
+
+        if by_magic or by_ext:
+            file_obj = gzip.GzipFile(fileobj=file_obj, mode=mode)
+
+    return file_obj
 
 
 # ======================================================================
@@ -4531,7 +4679,7 @@ def mutual_information(
     # # alternate implementation
     # hist, x_edges, y_edges = np.histogram2d(arr1, arr2, bins=bins)
     # g, p, dof, expected = scipy.stats.chi2_contingency(
-    #     hist + np.finfo(float).eps, lambda_='log-likelihood')
+    #     hist + np.finfo(np.float).eps, lambda_='log-likelihood')
     # mi = g / hist.sum() / 2
 
     if base:
@@ -5461,25 +5609,38 @@ def avg(
     Examples:
         >>> arr = np.array([0, 0, 1, 0])
         >>> weights = np.array([1, 1, 3, 1])
+        >>> avg(arr)
+        0.25
         >>> avg(arr, weights=weights)
         0.5
         >>> avg(arr, weights=weights) == avg(np.array([0, 0, 1, 0, 1, 1]))
         True
         >>> np.mean(arr) == avg(arr)
         True
+        >>> arr = np.arange(2 * 3 * 4, dtype=float).reshape((2, 3, 4))
+        >>> weights = np.arange(4) + 1
+        >>> avg(arr, weights=weights, axis=-1)
+        array([[  2.,   6.,  10.],
+               [ 14.,  18.,  22.]])
+        >>> avg(arr, weights=weights, axis=(0, 1), removes=(1,))
+        array([ 10.,  13.,  12.,  13.])
 
     See Also:
         var(), std()
     """
     arr = np.array(arr)
+    if np.issubdtype(arr.dtype, int):
+        arr = arr.astype(float)
     if weights is not None:
         weights = np.array(weights, dtype=float)
+        if axis is not None and weights.shape != arr.shape:
+            weights = np.broadcast_to(weights, arr.shape).copy()
     for val in removes:
         mask = arr == val
         if val in arr:
             arr[mask] = np.nan
-        if weights is not None:
-            weights[mask] = np.nan
+            if weights is not None:
+                weights[mask] = np.nan
     if weights is None:
         weights = np.ones_like(arr)
     result = np.nansum(
@@ -5542,15 +5703,22 @@ def var(
         True
         >>> np.var(arr) == var(arr)
         True
+        >>> arr = np.arange(2 * 3 * 4, dtype=float).reshape((2, 3, 4))
+        >>> weights = np.arange(4) + 1
+        >>> var(arr, weights=weights, axis=-1)
+        array([[ 0.8,  0.8,  0.8],
+               [ 0.8,  0.8,  0.8]])
+        >>> var(arr, weights=weights, axis=(0, 1), removes=(1,))
+        array([ 46.66666667,  50.66666667,  46.66666667,  46.66666667])
     """
     arr = np.array(arr)
     if weights is not None:
         weights = np.array(weights, dtype=float)
     avg_arr = avg(
-        arr, axis=axis, dtype=dtype, out=out, keepdims=keepdims,
+        arr, axis=axis, dtype=dtype, out=out, keepdims=True,
         weights=weights, removes=removes)
     result = avg(
-        (arr - avg_arr[..., np.newaxis]) ** 2, axis=axis, dtype=dtype, out=out,
+        (arr - avg_arr) ** 2, axis=axis, dtype=dtype, out=out,
         keepdims=keepdims,
         weights=weights ** 2 if weights is not None else None, removes=removes)
     return result
