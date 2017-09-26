@@ -447,18 +447,15 @@ def unsqueezing(
     j = 0
     for i, dim in enumerate(target_shape):
         if j < len(source_shape):
-            if dim == source_shape[j]:
-                shape.append(dim)
+            shape.append(dim if dim == source_shape[j] else 1)
+            if dim == source_shape[j] or source_shape[j] == 1:
                 j += 1
-            else:
-                if source_shape[j] == 1:
-                    j += 1
-                shape.append(1)
+        else:
+            shape.append(1)
     if j < len(source_shape):
         raise ValueError(
             'Target shape must contain all source shape elements'
             ' (in correct order). {} -> {}'.format(source_shape, target_shape))
-    shape.extend([1] * (len(target_shape) - len(shape)))
     return tuple(shape)
 
 
