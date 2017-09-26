@@ -443,6 +443,7 @@ def unsqueezing(
         >>> unsqueezing((2, 3), (2, 3))
         (2, 3)
     """
+    # todo: handle an "axis" parameter
     shape = []
     j = 0
     for i, dim in enumerate(target_shape):
@@ -5630,8 +5631,9 @@ def avg(
         arr = arr.astype(float)
     if weights is not None:
         weights = np.array(weights, dtype=float)
-        if axis is not None and weights.shape != arr.shape:
-            weights = np.broadcast_to(weights, arr.shape).copy()
+        if weights.shape != arr.shape:
+            weights = unsqueeze(weights, arr.shape)
+            weights = np.zeros_like(arr) + weights
     for val in removes:
         mask = arr == val
         if val in arr:
