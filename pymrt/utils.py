@@ -392,129 +392,6 @@ def prod(items):
 
 
 # ======================================================================
-def unsqueezing(
-        source_shape,
-        target_shape):
-    """
-    Generate a broadcasting-compatible shape.
-
-    The resulting shape contains *singletons* (i.e. `1`) for non-matching dims.
-    Assumes all elements of the source shape are contained in the target shape
-    (excepts for singletons) in the correct order.
-
-    This is generate a shape the whe used in conjunction with `np.reshape()`
-    it would be obtain the inverse of `np.squeeze()`.
-
-    Args:
-        source_shape (Sequence): The source shape.
-        target_shape (Sequence): The target shape.
-
-    Returns:
-        shape (tuple): The broadcast-safe shape.
-
-    Raises:
-        ValueError: if elements of `source_shape` are not in `target_shape`.
-
-    Examples:
-        >>> unsqueezing((2, 3), (2, 3, 4))
-        (2, 3, 1)
-        >>> unsqueezing((3, 4), (2, 3, 4))
-        (1, 3, 4)
-        >>> unsqueezing((3, 5), (2, 3, 4, 5, 6))
-        (1, 3, 1, 5, 1)
-        >>> unsqueezing((1, 3, 1, 5, 1), (2, 3, 4, 5, 6))
-        (1, 3, 1, 5, 1)
-        >>> unsqueezing((1, 3, 5, 1), (2, 3, 4, 5, 6))
-        (1, 3, 1, 5, 1)
-        >>> unsqueezing((2, 2), (2, 2, 2, 2, 2))
-        (2, 2, 1, 1, 1)
-        >>> unsqueezing((2, 2), (2, 3, 2, 2, 2))
-        (2, 1, 2, 1, 1)
-        >>> unsqueezing((2, 3), (2, 2, 2, 2, 2))
-        Traceback (most recent call last):
-          ...
-        ValueError: Target shape must contain all source shape elements\
- (in correct order). (2, 3) -> (2, 2, 2, 2, 2)
-        >>> unsqueezing((5, 3), (2, 3, 4, 5, 6))
-        Traceback (most recent call last):
-          ...
-        ValueError: Target shape must contain all source shape elements\
- (in correct order). (5, 3) -> (2, 3, 4, 5, 6)
-        >>> unsqueezing((2, 3), (2, 3))
-        (2, 3)
-    """
-    # todo: handle an "axis" parameter
-    shape = []
-    j = 0
-    for i, dim in enumerate(target_shape):
-        if j < len(source_shape):
-            shape.append(dim if dim == source_shape[j] else 1)
-            if dim == source_shape[j] or source_shape[j] == 1:
-                j += 1
-        else:
-            shape.append(1)
-    if j < len(source_shape):
-        raise ValueError(
-            'Target shape must contain all source shape elements'
-            ' (in correct order). {} -> {}'.format(source_shape, target_shape))
-    return tuple(shape)
-
-
-# ======================================================================
-def unsqueeze(
-        arr,
-        shape):
-    """
-    Add singletons to the shape of an array to broadcast-match a given shape.
-
-    Args:
-        arr (np.ndarray): The input array.
-        shape (Sequence): The target shape.
-
-    Returns:
-        arr (np.ndarray): The reshaped array.
-
-    Raises:
-        ValueError: if the `arr` shape cannot be broadcasted to `shape`.
-
-    Examples:
-        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
-        >>> arr.shape
-        (2, 3, 4)
-        >>> arr = unsqueeze(arr, (2, 3, 4, 5, 6))
-        >>> arr.shape
-        (2, 3, 4, 1, 1)
-        >>> arr = np.squeeze(arr)
-        >>> arr.shape
-        (2, 3, 4)
-        >>> arr = unsqueeze(arr, (2, 5, 3, 7, 2, 4, 5, 6))
-        >>> arr.shape
-        (2, 1, 3, 1, 1, 4, 1, 1)
-        >>> arr = np.squeeze(arr)
-        >>> arr.shape
-        (2, 3, 4)
-        >>> arr = unsqueeze(arr, (5, 3, 7, 2, 4, 5, 6))
-        Traceback (most recent call last):
-          ...
-        ValueError: Target shape must contain all source shape elements\
- (in correct order). (2, 3, 4) -> (5, 3, 7, 2, 4, 5, 6)
-        >>> arr1 = np.arange(2 * 3 * 4 * 5 * 6).reshape((2, 3, 4, 5, 6))
-        >>> arr2 = np.sum(arr1, (0, 2, 4), keepdims=True)
-        >>> arr2.shape
-        (1, 3, 1, 5, 1)
-        >>> arr3 = np.sum(arr1, (0, 2, 4))
-        >>> arr3.shape
-        (3, 5)
-        >>> arr3 = unsqueeze(arr3, arr1.shape)
-        >>> arr3.shape
-        (1, 3, 1, 5, 1)
-        >>> np.all(arr2 == arr3)
-        True
-    """
-    return arr.reshape(unsqueezing(arr.shape, shape))
-
-
-# ======================================================================
 def combine_iter_len(
         items,
         combine=max):
@@ -1754,6 +1631,321 @@ def set_keyword_parameters(
         elif key in defaults:
             kw_params[key] = defaults[key]
     return kw_params
+
+
+# ======================================================================
+def unsqueezing(
+        source_shape,
+        target_shape):
+    """
+    Generate a broadcasting-compatible shape.
+
+    The resulting shape contains *singletons* (i.e. `1`) for non-matching dims.
+    Assumes all elements of the source shape are contained in the target shape
+    (excepts for singletons) in the correct order.
+
+    Warning! The generated shape may not be unique if some of the elements
+    from the source shape are present multiple timesin the target shape.
+
+    Args:
+        source_shape (Sequence): The source shape.
+        target_shape (Sequence): The target shape.
+
+    Returns:
+        shape (tuple): The broadcast-safe shape.
+
+    Raises:
+        ValueError: if elements of `source_shape` are not in `target_shape`.
+
+    Examples:
+        For non-repeating elements, `unsqueezing()` is always well-defined:
+
+        >>> unsqueezing((2, 3), (2, 3, 4))
+        (2, 3, 1)
+        >>> unsqueezing((3, 4), (2, 3, 4))
+        (1, 3, 4)
+        >>> unsqueezing((3, 5), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+        >>> unsqueezing((1, 3, 5, 1), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+
+        If there is nothing to unsqueeze, the `source_shape` is returned:
+
+        >>> unsqueezing((1, 3, 1, 5, 1), (2, 3, 4, 5, 6))
+        (1, 3, 1, 5, 1)
+        >>> unsqueezing((2, 3), (2, 3))
+        (2, 3)
+
+        If some elements in `source_shape` are repeating in `target_shape`,
+        a user warning will be issued:
+
+        >>> unsqueezing((2, 2), (2, 2, 2, 2, 2))
+        (2, 2, 1, 1, 1)
+        >>> unsqueezing((2, 2), (2, 3, 2, 2, 2))
+        (2, 1, 2, 1, 1)
+
+        If some elements of `source_shape` are not presente in `target_shape`,
+        an error is raised.
+
+        >>> unsqueezing((2, 3), (2, 2, 2, 2, 2))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (2, 3) -> (2, 2, 2, 2, 2)
+        >>> unsqueezing((5, 3), (2, 3, 4, 5, 6))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (5, 3) -> (2, 3, 4, 5, 6)
+
+    """
+    shape = []
+    j = 0
+    for i, dim in enumerate(target_shape):
+        if j < len(source_shape):
+            shape.append(dim if dim == source_shape[j] else 1)
+            if i + 1 < len(target_shape) and dim == source_shape[j] \
+                    and dim != 1 and dim in target_shape[i + 1:]:
+                text = ('Multiple positions (e.g. {} and {})'
+                        ' for source shape element {}.'.format(
+                    i, target_shape[i + 1:].index(dim) + (i + 1), dim))
+                warnings.warn(text)
+            if dim == source_shape[j] or source_shape[j] == 1:
+                j += 1
+        else:
+            shape.append(1)
+    if j < len(source_shape):
+        raise ValueError(
+            'Target shape must contain all source shape elements'
+            ' (in correct order). {} -> {}'.format(source_shape, target_shape))
+    return tuple(shape)
+
+
+# ======================================================================
+def unsqueeze(
+        arr,
+        axis=None,
+        shape=None,
+        complement=False):
+    """
+    Add singletons to the shape of an array to broadcast-match a given shape.
+
+    In some sense, this function implements the inverse of `numpy.squeeze()`.
+
+
+    Args:
+        arr (np.ndarray): The input array.
+        axis (int|Iterable|None): Axis or axes in which to operate.
+            If None, a valid set axis is generated from `shape` when this is
+            defined and the shape can be matched by `unsqueezing()`.
+            If int or Iterable, specified how singletons are added.
+            This depends on the value of `reverse`.
+            If `shape` is not None, the `axis` and `shape` parameters must be
+            consistent.
+            Values must be in the range [-(ndim+1), ndim+1]
+            At least one of `axis` and `shape` must be specified.
+        shape (int|Iterable|None): The target shape.
+            If None, no safety checks are performed.
+            If int, this is interpreted as the number of dimensions of the
+            output array.
+            If Iterable, the result must be broadcastable to an array with the
+            specified shape.
+            If `axis` is not None, the `axis` and `shape` parameters must be
+            consistent.
+            At least one of `axis` and `shape` must be specified.
+        reverse (bool): Interpret `axis` parameter as its complementary.
+            If True, the dims of the input array are placed at the positions
+            indicated by `axis`, and singletons are placed everywherelse and
+            the `axis` length must be equal to the number of dimensions of the
+            input array; the `shape` parameter cannot be `None`.
+            If False, the singletons are added at the position(s) specified by
+            `axis`.
+            If `axis` is None, `reverse` has no effect.
+
+    Returns:
+        arr (np.ndarray): The reshaped array.
+
+    Raises:
+        ValueError: if the `arr` shape cannot be reshaped correctly.
+
+    Examples:
+        Let's define some input array `arr`:
+
+        >>> arr = np.arange(2 * 3 * 4).reshape((2, 3, 4))
+        >>> arr.shape
+        (2, 3, 4)
+
+        A call to `unsqueeze()` can be reversed by `np.squeeze()`:
+
+        >>> arr_ = unsqueeze(arr, (0, 2, 4))
+        >>> arr_.shape
+        (1, 2, 1, 3, 1, 4)
+        >>> arr = np.squeeze(arr_, (0, 2, 4))
+        >>> arr.shape
+        (2, 3, 4)
+
+        The order of the axes does not matter:
+
+        >>> arr_ = unsqueeze(arr, (0, 4, 2))
+        >>> arr_.shape
+        (1, 2, 1, 3, 1, 4)
+
+        If `shape` is an int, `axis` must be consistent with it:
+
+        >>> arr_ = unsqueeze(arr, (0, 2, 4), 6)
+        >>> arr_.shape
+        (1, 2, 1, 3, 1, 4)
+        >>> arr_ = unsqueeze(arr, (0, 2, 4), 7)
+        Traceback (most recent call last):
+          ...
+        ValueError: Incompatible `[0, 2, 4]` axis and `7` shape for array of\
+ shape (2, 3, 4)
+
+        It is possible to reverse the meaning to `axis` to add singletons
+        everywhere except where specified (but requires `shape` to be defined
+        and the length of `axis` must match the array dims):
+
+        >>> arr_ = unsqueeze(arr, (0, 2, 4), 10, True)
+        >>> arr_.shape
+        (2, 1, 3, 1, 4, 1, 1, 1, 1, 1)
+        >>> arr_ = unsqueeze(arr, (0, 2, 4), complement=True)
+        Traceback (most recent call last):
+          ...
+        ValueError: When `reverse` is True, `shape` cannot be None.
+        >>> arr_ = unsqueeze(arr, (0, 2), 10, True)
+        Traceback (most recent call last):
+          ...
+        ValueError: When `reverse` is True, the length of axis (2) must match\
+ the num of dims of array (3).
+
+        Axes values must be valid:
+
+        >>> arr_ = unsqueeze(arr, 0)
+        >>> arr_.shape
+        (1, 2, 3, 4)
+        >>> arr_ = unsqueeze(arr, 3)
+        >>> arr_.shape
+        (2, 3, 4, 1)
+        >>> arr_ = unsqueeze(arr, -1)
+        >>> arr_.shape
+        (2, 3, 4, 1)
+        >>> arr_ = unsqueeze(arr, -4)
+        >>> arr_.shape
+        (1, 2, 3, 4)
+        >>> arr_ = unsqueeze(arr, 10)
+        Traceback (most recent call last):
+          ...
+        ValueError: Axis (10,) out of range.
+
+        If `shape` is specified, `axis` can be omitted (USE WITH CARE!) or its
+        value is used for addiotional safety checks:
+
+        >>> arr_ = unsqueeze(arr, shape=(2, 3, 4, 5, 6))
+        >>> arr_.shape
+        (2, 3, 4, 1, 1)
+        >>> arr_ = unsqueeze(
+        ...     arr, (3, 6, 8), (2, 5, 3, 2, 7, 2, 3, 2, 4, 5, 6), True)
+        >>> arr_.shape
+        (1, 1, 1, 2, 1, 1, 3, 1, 4, 1, 1)
+        >>> arr_ = unsqueeze(
+        ...     arr, (3, 7, 8), (2, 5, 3, 2, 7, 2, 3, 2, 4, 5, 6), True)
+        Traceback (most recent call last):
+          ...
+        ValueError: New shape [1, 1, 1, 2, 1, 1, 1, 3, 4, 1, 1] cannot be\
+ broadcasted to shape (2, 5, 3, 2, 7, 2, 3, 2, 4, 5, 6)
+        >>> arr = unsqueeze(arr, shape=(2, 5, 3, 7, 2, 4, 5, 6))
+        >>> arr.shape
+        (2, 1, 3, 1, 1, 4, 1, 1)
+        >>> arr = np.squeeze(arr)
+        >>> arr.shape
+        (2, 3, 4)
+        >>> arr = unsqueeze(arr, shape=(5, 3, 7, 2, 4, 5, 6))
+        Traceback (most recent call last):
+          ...
+        ValueError: Target shape must contain all source shape elements\
+ (in correct order). (2, 3, 4) -> (5, 3, 7, 2, 4, 5, 6)
+
+        The behavior is consistent with other NumPy functions and the
+        `keepdims` mechanism:
+
+        >>> axis = (0, 2, 4)
+        >>> arr1 = np.arange(2 * 3 * 4 * 5 * 6).reshape((2, 3, 4, 5, 6))
+        >>> arr2 = np.sum(arr1, axis, keepdims=True)
+        >>> arr2.shape
+        (1, 3, 1, 5, 1)
+        >>> arr3 = np.sum(arr1, axis)
+        >>> arr3.shape
+        (3, 5)
+        >>> arr3 = unsqueeze(arr3, axis)
+        >>> arr3.shape
+        (1, 3, 1, 5, 1)
+        >>> np.all(arr2 == arr3)
+        True
+    """
+    # calculate `new_shape`
+    if axis is None and shape is None:
+        raise ValueError(
+            'At least one of `axis` and `shape` parameters must be specified.')
+    elif axis is None and shape is not None:
+        new_shape = unsqueezing(arr.shape, shape)
+    elif axis is not None:
+        if isinstance(axis, int):
+            axis = (axis,)
+        # calculate the dim of the result
+        if shape is not None:
+            if isinstance(shape, int):
+                ndim = shape
+            else:  # shape is a sequence
+                ndim = len(shape)
+        elif not complement:
+            ndim = len(axis) + arr.ndim
+        else:
+            raise ValueError(
+                'When `complement` is True, `shape` cannot be None.')
+        # check that axis is properly constructed
+        if any([ax < -ndim - 1 or ax > ndim + 1 for ax in axis]):
+            raise ValueError('Axis {} out of range.'.format(axis))
+        # normalize axis using `ndim`
+        axis = sorted([ax % ndim for ax in axis])
+        # manage complement mode
+        if complement:
+            if len(axis) == arr.ndim:
+                axis = [i for i in range(ndim) if i not in axis]
+            else:
+                raise ValueError(
+                    'When `complement` is True, the length of axis ({})'
+                    ' must match the num of dims of array ({}).'.format(
+                        len(axis), arr.ndim))
+        elif len(axis) + arr.ndim != ndim:
+            raise ValueError(
+                'Incompatible `{}` axis and `{}` shape'
+                ' for array of shape {}'.format(axis, shape, arr.shape))
+        # generate the new shape from axis, ndim and shape
+        new_shape = []
+        i, j = 0, 0
+        for l in range(ndim):
+            if i < len(axis) and l == axis[i] or j >= arr.ndim:
+                new_shape.append(1)
+                i += 1
+            else:
+                new_shape.append(arr.shape[j])
+                j += 1
+
+    # check that `new_shape` is consistent with `shape`
+    if shape is not None:
+        if isinstance(shape, int):
+            if len(new_shape) != ndim:
+                raise ValueError(
+                    'Length of new shape {} does not match '
+                    'expected length ({}).'.format(len(new_shape), ndim))
+        else:
+            if not all([new_dim == 1 or new_dim == dim
+                        for new_dim, dim in zip(new_shape, shape)]):
+                raise ValueError(
+                    'New shape {} cannot be broadcasted to shape {}'.format(
+                        new_shape, shape))
+
+    return arr.reshape(new_shape)
 
 
 # ======================================================================
@@ -4318,11 +4510,11 @@ def auto_bin(
         h = 2 * (q75 - q25) / arr.size ** (1 / (2 + dim))
         num = int(np.ceil(np.ptp(arr) / h))
     elif method == 'doane':
-        g1 = (abs(avg(arr)) / std(arr)) ** 3
+        g1 = (np.abs(np.mean(arr)) / np.std(arr)) ** 3
         sigma_g1 = np.sqrt(
             6 * (arr.size - 2) / ((arr.size + 1) * (arr.size + 3)))
         num = int(np.ceil(
-            1 + np.log2(arr.size) + np.log2(1 + abs(g1) / sigma_g1)))
+            1 + np.log2(arr.size) + np.log2(1 + np.abs(g1) / sigma_g1)))
     else:
         num = arr.size
     return num
@@ -5620,8 +5812,9 @@ def avg(
         >>> avg(arr, weights=weights, axis=-1)
         array([[  2.,   6.,  10.],
                [ 14.,  18.,  22.]])
+        >>> weights = np.arange(2 * 3).reshape((2, 3)) + 1
         >>> avg(arr, weights=weights, axis=(0, 1), removes=(1,))
-        array([ 10.,  13.,  12.,  13.])
+        array([ 13.33333333,  15.        ,  15.33333333,  16.33333333])
 
     See Also:
         var(), std()
@@ -5632,7 +5825,9 @@ def avg(
     if weights is not None:
         weights = np.array(weights, dtype=float)
         if weights.shape != arr.shape:
-            weights = unsqueeze(weights, arr.shape)
+            weights = unsqueeze(
+                weights, axis=axis, shape=arr.shape, complement=True)
+            # cannot use `np.broadcast_to()` because we need to write data
             weights = np.zeros_like(arr) + weights
     for val in removes:
         mask = arr == val
@@ -5707,8 +5902,9 @@ def var(
         >>> var(arr, weights=weights, axis=-1)
         array([[ 0.8,  0.8,  0.8],
                [ 0.8,  0.8,  0.8]])
+        >>> weights = np.arange(2 * 3).reshape((2, 3)) + 1
         >>> var(arr, weights=weights, axis=(0, 1), removes=(1,))
-        array([ 46.66666667,  50.66666667,  46.66666667,  46.66666667])
+        array([ 28.44444444,  26.15384615,  28.44444444,  28.44444444])
     """
     arr = np.array(arr)
     if weights is not None:
