@@ -747,6 +747,49 @@ def unique_partitions(
 
 
 # ======================================================================
+def shuffle_on_axis(arr, axis=-1):
+    """
+    Shuffle the elements of the array separately along the specified axis.
+
+    By contrast `numpy.random.shuffle()` shuffle **by** axis and only on the
+    first axis.
+
+    Args:
+        arr (np.ndarray): The input array.
+        axis (int): The axis along which to shuffle.
+
+    Returns:
+        result (np.ndarray): The shuffled array.
+
+    Examples:
+        >>> np.random.seed(0)
+        >>> shape = 2, 3, 4
+        >>> arr = np.arange(prod(shape)).reshape(shape)
+        >>> shuffle_on_axis(arr.copy())
+        array([[[ 1,  0,  2,  3],
+                [ 6,  4,  5,  7],
+                [10,  8, 11,  9]],
+        <BLANKLINE>
+               [[12, 15, 13, 14],
+                [18, 17, 16, 19],
+                [21, 20, 23, 22]]])
+        >>> shuffle_on_axis(arr.copy(), 0)
+        array([[[ 0, 13,  2, 15],
+                [16,  5,  6, 19],
+                [ 8,  9, 10, 23]],
+        <BLANKLINE>
+               [[12,  1, 14,  3],
+                [ 4, 17, 18,  7],
+                [20, 21, 22, 11]]])
+    """
+    arr = np.swapaxes(arr, 0, axis)
+    shape = arr.shape
+    i = np.random.rand(*arr.shape).argsort(0).reshape(shape[0], -1)
+    return arr.reshape(shape[0], -1)[i, np.arange(prod(shape[1:]))].reshape(
+        shape).swapaxes(axis, 0)
+
+
+# ======================================================================
 def isqrt(num):
     """
     Calculate the integer square root of a number.
