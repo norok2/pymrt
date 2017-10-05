@@ -218,6 +218,7 @@ def quick_2d(arr, values_range=None):
         vmin=values_range[0], vmax=values_range[1])
 
 
+# ======================================================================
 def quick_3d(array, values_range=None):
     """
     TODO: DOCSTRING.
@@ -232,6 +233,7 @@ def quick_3d(array, values_range=None):
     if array.ndim == 3:
         # using Matplotlib
         from skimage import measure
+
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -758,6 +760,7 @@ def sample2d(
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 
+
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -833,6 +836,7 @@ def sample3d_view2d(
         mode='standard',
         title=None,
         array_interval=None,
+        interpolation='nearest',
         ticks_limit=None,
         cmap=None,
         cbar_kws=None,
@@ -981,7 +985,7 @@ def sample3d_view2d(
     # plot data
     plot = ax.imshow(
         view, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
-        interpolation='none')
+        interpolation=interpolation)
 
     # plot ticks in plotting axes
     if ticks_limit is not None:
@@ -994,6 +998,7 @@ def sample3d_view2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1839,6 +1844,8 @@ def subplots(
         row_labels=None,
         col_labels=None,
         label_pads=0.03,
+        borders=0.0,
+        subplot_kws=None,
         legend_kws=None,
         more_texts=None,
         save_filepath=None,
@@ -1911,6 +1918,7 @@ def subplots(
 
     pads = list(mrt.utils.auto_repeat(pads, 2, False, True))
     label_pads = list(mrt.utils.auto_repeat(label_pads, 2, False, True))
+    borders = list(mrt.utils.auto_repeat(borders, 4, False, True))
     size_factors = list(
         mrt.utils.auto_repeat(size_factors, 2, False, True))
 
@@ -1953,7 +1961,15 @@ def subplots(
     gs = mpl.gridspec.GridSpec(
         num_row, num_col, width_ratios=cols, height_ratios=rows)
 
-    axs = [plt.subplot(gs[n]) for n in range(num_row * num_col)]
+    if subplot_kws is None:
+        subplot_kws = ({},) * (num_row * num_col)
+    else:
+        subplot_kws = \
+            tuple(subplot_kws) + ({},) * (num_row * num_col - len(subplot_kws))
+
+    axs = [
+        fig.add_subplot(gs[n], **subplot_kws[n])
+        for n in range(num_row * num_col)]
     axs = np.array(axs).reshape((num_row, num_col))
 
     for i, row_label in enumerate(row_labels):
@@ -2020,8 +2036,10 @@ def subplots(
     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout(
             rect=[
-                0.0 + label_pads[0], 0.0,
-                1.0 - legend_pad, 1.0 - label_pads[1]],
+                0.0 + label_pads[0] + borders[0],
+                0.0 + borders[1],
+                1.0 - legend_pad - borders[2],
+                1.0 - label_pads[1] - borders[3]],
             pad=1.0, h_pad=pads[0], w_pad=pads[1])
         if save_kws is None:
             save_kws = {}
