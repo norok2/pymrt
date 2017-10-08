@@ -6016,6 +6016,59 @@ def std(
 
 
 # ======================================================================
+def gavg(
+        arr,
+        axis=None,
+        dtype=None,
+        out=None,
+        keepdims=np._NoValue,
+        weights=None,
+        removes=(np.inf, -np.inf)):
+    """
+    Calculate the (weighted) geometric average of the array.
+
+    The weighted geometric average is defined as exponential of the
+    weighted average of the logarithm of the absolute value of the array.
+
+    Args:
+        arr (np.ndarray|iterable): The input data.
+        axis (int|iterable[int]|None): Axis along which to compute.
+            See `np.nansum()` for more information.
+        dtype (np.dtype|None): The data type of the result.
+            See `np.nansum()` for more information.
+        out (np.ndarray|None):
+            See `np.nansum()` for more information.
+        keepdims (bool): Keep reduced axis in the result as dims with size 1.
+            See `np.nansum()` for more information.
+        weights (np.ndarray|iterable|None): The weights.
+            If np.ndarray or iterable, the size must match with `arr`.
+            If None, all wegiths are set to 1 (equivalent to no weighting).
+        removes (iterable): Values to remove.
+            If empty, no values will be removed.
+
+    Returns:
+        result (np.ndarray): The computed statistics.
+            Its shape depends on the value of axis.
+
+    Examples:
+        >>> arr = np.array([1, 1, 4, 1])
+        >>> weights = np.array([1, 1, 3, 1])
+        >>> gavg(arr, weights=weights)
+        2.0
+        >>> gavg(arr, weights=weights) == gavg(np.array([1, 1, 4, 1, 4, 4]))
+        True
+        >>> sp.stats.gmean(arr) == gavg(arr)
+        True
+
+    See Also:
+        avg()
+    """
+    return np.exp(
+        avg(np.log(np.abs(arr)), axis=axis, dtype=dtype, out=out,
+            keepdims=keepdims, weights=weights, removes=removes))
+
+
+# ======================================================================
 def calc_stats(
         arr,
         removes=(np.nan, np.inf, -np.inf),
