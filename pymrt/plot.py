@@ -1754,10 +1754,11 @@ def bar_chart(
         x_label=None,
         y_label=None,
         colors=PLOT_COLORS,
-        title=None,
-        y_limits=None,
+        limits=None,
         legend_kws=None,
+        orientation='h',
         bar_width=None,
+        title=None,
         ax=None):
     """
     Plot a bar chart.
@@ -1772,7 +1773,7 @@ def bar_chart(
         x_label:
         y_label:
         title:
-        y_limits:
+        limits:
         legend_kws:
         bar_width:
         ax:
@@ -1791,29 +1792,53 @@ def bar_chart(
         ax = fig.add_subplot(1, 1, 1)
     else:
         fig = plt.gcf()
-    if y_limits is not None:
-        ax.set_ylim(y_limits)
+
     num_series = len(series)
-    num_groups = len(groups)
+    if groups is not None:
+        num_groups = len(groups)
+    else:
+        num_groups = 1
     indices = np.arange(num_groups)
     if not bar_width:
         bar_width = 1 / (num_series + 0.5)
+
+    orientation = orientation.lower()
+    if orientation in ('h', 'horizontal'):
+        is_hor = True
+    elif orientation in ('v', 'vertical'):
+        is_hor = False
+    else:
+        text = 'Unknown orientation `{}`. ' \
+               'Fallback to `horizontal`.'.format(orientation)
+        warnings.warn(text)
+        is_hor = True
+
+    if limits is not None:
+        set_lim = ax.set_ylim if is_hor else ax.set_xlim
+        set_lim(limits)
 
     colors = itertools.cycle(colors)
     bcs = []
     for j, serie in enumerate(series):
         bar_data = data[serie]
-        bar_err = err[serie]
-        bc = ax.bar(
+        bar_err = err[serie] if err is not None else None
+        bar_plot = ax.bar if is_hor else ax.barh
+        bc = bar_plot(
             indices + (j * bar_width),
             bar_data,
             bar_width,
-            yerr=bar_err,
+            xerr=None if is_hor else bar_err,
+            yerr=bar_err if is_hor else None,
             color=next(colors))
         bcs.append(bc)
-    ax.set_xticks(indices + bar_width)
+    set_ticks = ax.set_xticks if is_hor else ax.set_yticks
+    set_ticklabels = ax.set_xticklabels if is_hor else ax.set_yticklabels
     if groups is not None:
-        ax.set_xticklabels(groups)
+        set_ticks(indices + bar_width / 2)
+        set_ticklabels(groups)
+    else:
+        set_ticks(np.arange(num_series) * bar_width)
+        set_ticklabels(series)
     if x_label:
         ax.set_xlabel(x_label)
     if y_label:
@@ -1823,7 +1848,6 @@ def bar_chart(
 
     if legend_kws is not None:
         ax.legend(tuple(bc[0] for bc in bcs), series, **dict(legend_kws))
-    # barplot_autolabel(ax, bc)
     return data, fig
 
 
