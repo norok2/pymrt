@@ -780,8 +780,8 @@ def nd_superellipsoid(
         shape, position, is_relative=rel_position, use_int=False)
     # create the mask
     mask = np.zeros(shape, dtype=float)
-    for x_i, semiaxis, index in zip(position, semisizes, indexes):
-        mask += (np.abs(x_i / semiaxis) ** index)
+    for x_i, semisize, index in zip(position, semisizes, indexes):
+        mask += (np.abs(x_i / semisize) ** index)
     mask = mask <= 1.0
     return mask
 
@@ -2049,24 +2049,24 @@ def _self_test_interactive():
 
     # :: 2D Tests
     # :: - shape test
-    pmp.quick(square(dim, pos, l1))
-    pmp.quick(rectangle(dim, pos, (l1, l2)))
-    pmp.quick(rhombus(dim, pos, (l1, l2)))
-    pmp.quick(circle(dim, pos, l1))
-    pmp.quick(ellipsis(dim, pos, (l1, l2)))
+    pmp.quick(square(dim, l1, pos))
+    pmp.quick(rectangle(dim, (l1, l2), pos))
+    pmp.quick(rhombus(dim, (l1, l2), pos))
+    pmp.quick(circle(dim, l1, pos))
+    pmp.quick(ellipsis(dim, (l1, l2), pos))
     # :: - Position test
-    pmp.quick(ellipsis(dim, (0.2, 0.7), (l1, l2)))
+    pmp.quick(ellipsis(dim, (l1, l2), (0.2, 0.7)))
 
     # :: 3D Tests
     # :: - shape test
-    pmp.quick(cube(dim, pos, l1))
-    pmp.quick(cuboid(dim, pos, (l1, l2, l3)))
-    pmp.quick(rhomboid(dim, pos, (l1, l2, l3)))
-    pmp.quick(sphere(dim, pos, l1))
-    pmp.quick(ellipsoid(dim, pos, (l1, l2, l3)))
-    pmp.quick(cylinder(dim, pos, 2.0 * l1, l1))
+    pmp.quick(cube(dim, l1, pos))
+    pmp.quick(cuboid(dim, (l1, l2, l3), pos))
+    pmp.quick(rhomboid(dim, (l1, l2, l3), pos))
+    pmp.quick(sphere(dim, l1, pos))
+    pmp.quick(ellipsoid(dim, (l1, l2, l3), pos))
+    pmp.quick(cylinder(dim, 2.0 * l1, l1, -1, pos))
     # :: - Position test
-    pmp.quick(ellipsoid(dim, (0.0, 1.0, 0.5), (l1, l2, l3)))
+    pmp.quick(ellipsoid(dim, (l1, l2, l3), (0.0, 1.0, 0.5)))
 
 
 # ======================================================================

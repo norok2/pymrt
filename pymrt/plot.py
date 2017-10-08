@@ -210,7 +210,6 @@ def quick_2d(arr, values_range=None):
     if not values_range:
         values_range = mrt.utils.minmax(img)
 
-    print(values_range)
     # using Matplotlib
     fig = plt.subplots()
     plt.imshow(
@@ -219,18 +218,18 @@ def quick_2d(arr, values_range=None):
 
 
 # ======================================================================
-def quick_3d(array, values_range=None):
+def quick_3d(arr, values_range=None):
     """
     TODO: DOCSTRING.
 
     Args:
-        array:
+        arr:
 
     Returns:
         None
     """
     warnings.warn('3D-support plots might be slow (consider using `explore`)')
-    if array.ndim == 3:
+    if arr.ndim == 3:
         # using Matplotlib
         from skimage import measure
 
@@ -240,11 +239,12 @@ def quick_3d(array, values_range=None):
         # zz, xx, yy = array.nonzero()
         # ax.scatter(xx, yy, zz, cmap=plt.cm.afmhot_r)
 
-        verts, faces = measure.marching_cubes(array, 0.5, (2,) * 3)
+        verts, faces, normals, values = measure.marching_cubes(
+            arr, 0.5, (2,) * 3)
         ax.plot_trisurf(
             verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral',
             antialiased=False, linewidth=0.0)
-    elif array.ndim > 3:
+    elif arr.ndim > 3:
         # todo: 3D projection
         pass
     else:
@@ -1791,7 +1791,7 @@ def bar_chart(
         ax = fig.add_subplot(1, 1, 1)
     else:
         fig = plt.gcf()
-    if y_limits:
+    if y_limits is not None:
         ax.set_ylim(y_limits)
     num_series = len(series)
     num_groups = len(groups)
@@ -1812,7 +1812,7 @@ def bar_chart(
             color=next(colors))
         bcs.append(bc)
     ax.set_xticks(indices + bar_width)
-    if groups:
+    if groups is not None:
         ax.set_xticklabels(groups)
     if x_label:
         ax.set_xlabel(x_label)
