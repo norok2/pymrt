@@ -3730,8 +3730,8 @@ def scale(
 # ======================================================================
 def combine_interval(
         interval1,
-        interval2,
-        operation):
+        interval2=None,
+        operation='+'):
     """
     Combine two intervals with some operation to obtain a new interval.
 
@@ -3752,6 +3752,8 @@ def combine_interval(
         >>> combine_interval((-1.0, 1.0), (0, 1), '-')
         (-2.0, 1.0)
     """
+    if interval2 is None:
+        interval2 = interval1
     if operation == '+':
         new_interval = (
             interval1[0] + interval2[0], interval1[1] + interval2[1])
