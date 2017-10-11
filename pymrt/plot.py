@@ -1813,11 +1813,14 @@ def bar_chart(
         warnings.warn(text)
         is_hor = True
 
+    if not is_hor:
+        series = series[::-1]
+
     if limits is not None:
         set_lim = ax.set_ylim if is_hor else ax.set_xlim
         set_lim(limits)
 
-    colors = itertools.cycle(colors)
+    colors = itertools.cycle(colors if is_hor else colors[::-1])
     bcs = []
     for j, serie in enumerate(series):
         bar_data = data[serie]
