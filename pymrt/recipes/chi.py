@@ -45,9 +45,12 @@ def dipole_kernel(
 
     .. math::
     
-        C=\\frac{1}{3}-\\frac{(\\vec{k} \\cdot \\vec{B}_0)^2}{\\vec{k}^2}
+        C=\\frac{1}{3}-\\frac{(\\vec{k} \\cdot \\hat{B}_0)^2}{\\vec{k}^2}
 
-    or:
+    where :math:`\\hat{B}_0` is the unit vector identifying the direction of
+    :math:`\\vec{B}_0`.
+
+    or, in Cartesian coordinates:
 
     .. math::
 
