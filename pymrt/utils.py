@@ -392,6 +392,34 @@ def prod(items):
 
 
 # ======================================================================
+def uniques(items):
+    """
+    Get unique items (keeping order of appearance).
+
+    If the order of appearance is not important, use `set()`.
+
+    Args:
+        items (Iterable): The input items.
+
+    Yields:
+        item: Unique items.
+
+    Examples:
+        >>> items = (5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 3, 2, 4, 2, 4, 1, 1)
+        >>> tuple(uniques(items))
+        (5, 4, 3, 2, 1)
+        >>> tuple(set(items))
+        (1, 2, 3, 4, 5)
+        >>> sorted(set(items)) == sorted(uniques(items))
+        True
+    """
+    seen = set()
+    for item in items:
+        if item not in seen and not seen.add(item):
+            yield item
+
+
+# ======================================================================
 def combine_iter_len(
         items,
         combine=max):
