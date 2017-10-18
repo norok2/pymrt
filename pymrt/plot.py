@@ -1471,8 +1471,8 @@ def histogram1d_list(
         # plot figure
         plot = ax.plot(
             mrt.utils.midval(bin_edges), hist,
-            **next(style_cycler),
-            label=legend)
+            label=legend,
+            **next(style_cycler))
         data.append((hist, bin_edges))
     # create the legend for the first line.
     ax.legend(**(legend_kws if legend_kws is not None else {}))
@@ -1521,7 +1521,7 @@ def histogram2d(
         interpolation='bicubic',
         title='2D Histogram ({bins} bins, {scale})',
         labels=('Array 1 Values', 'Array 2 Values'),
-        cmap=mpl.cm.afmhot_r,
+        cmap='afmhot_r',
         bisector=None,
         stats_kws=None,
         cbar_kws=None,
