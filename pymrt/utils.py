@@ -3269,12 +3269,16 @@ def format_value_error(
         ('12345.6', '7.9')
         >>> format_value_error(12345.6, 78.9, 2)
         ('12346', '79')
+        >>> format_value_error(12345.6, 0)
+        ('12345.60', '0.0')
+        >>> format_value_error(12345.6, 0, 0)
+        ('12346', '0')
     """
     val = float(val)
     err = float(err)
     num = int(num)
     val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
-    err_order = np.ceil(np.log10(np.abs(err))) if val != 0 else 0
+    err_order = np.ceil(np.log10(np.abs(err))) if err != 0 else 0
     try:
         val_str = significant_figures(val, val_order - err_order + num)
         err_str = significant_figures(err, num)

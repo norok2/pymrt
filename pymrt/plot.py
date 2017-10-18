@@ -304,6 +304,8 @@ def simple(
 
 # ======================================================================
 def empty(
+        more_texts,
+        title=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -314,6 +316,10 @@ def empty(
         ax = fig.gca()
     else:
         fig = plt.gcf()
+
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
 
     ax.axis('off')
     ax.set_aspect(1)
@@ -768,8 +774,8 @@ def sample2d(
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
-                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
-                             rotation=90)
+                cbar.ax.text(
+                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
             else:
                 cbar.set_label(cbar_txt)
 
@@ -2070,8 +2076,7 @@ def subplots(
             pad=1.0, h_pad=pads[0], w_pad=pads[1])
         if save_kws is None:
             save_kws = {}
-        fig.savefig(
-            save_filepath, **dict(save_kws))
+        fig.savefig(save_filepath, **dict(save_kws))
         msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
     return fig
