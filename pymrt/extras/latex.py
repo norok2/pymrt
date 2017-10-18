@@ -6,7 +6,7 @@ PyMRT: generate output for LaTeX.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
 
 # ======================================================================
@@ -49,10 +49,9 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
-
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
-# from pymrt import msg, dbg
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -199,6 +198,52 @@ def make(
             save_file.write(output_str)
 
     return output_str
+
+
+# ======================================================================
+def gen_matrix(
+        x_arr,
+        dx_arr=None,
+        c_sep=r'&',
+        r_sep=r'\\',
+        container=r'bmatrix',
+        prec=2):
+    """
+    Generate a LaTeX matrix from a numerical array.
+
+    Optionally support specifying the error.
+
+    Args:
+        x_arr (np.ndarray): The input array of values.
+        dx_arr (np.ndarray|None): The input array of errors.
+        c_sep (str): The column separator.
+        r_sep (str): The row separator.
+        container (str): The container environment.
+        prec (int): The approximation precision.
+            If `dx_arr` is not None, determines the number of significant
+            figures for the error (typically 1 or 2).
+            Otherwise, indicates the number of digits after the decimal
+            separator.
+            Must be a non-negative number.
+
+    Returns:
+        text (str): The LaTeX-formatted matrix.
+    """
+    if dx_arr is None:
+        dx_arr = np.zeros_like(x_arr)
+    assert (x_arr.shape == dx_arr.shape)
+    assert (x_arr.ndim == 2)
+    text = ''
+    for i, (x, dx) in enumerate(zip(x_arr.ravel(), dx_arr.ravel())):
+        cell = ' {} \pm {} '.format(
+            *mrt.utils.format_value_error(x, dx, prec))
+        ending = c_sep if i % x_arr.shape[1] < x_arr.shape[1] - 1 else r_sep
+        text += cell + ending
+    text = (
+        r'\begin{{{}}}'.format(container) +
+        text +
+        r'\end{{{}}}'.format(container))
+    return text
 
 
 # ======================================================================
