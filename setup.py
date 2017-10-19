@@ -152,6 +152,7 @@ setup(
         'seaborn',
         'h5py',
         'pytk',
+        'pillow',
     ],
 
     setup_requires=[
