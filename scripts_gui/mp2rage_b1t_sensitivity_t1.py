@@ -62,6 +62,9 @@ from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
+    ('use_rho', dict(
+        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=False)),
+
     ('n_gre', dict(
         label='N_GRE / #', default=64, start=1, stop=512, step=1)),
 
@@ -101,6 +104,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
+    ('use_rho', dict(
+        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=False)),
+    
     ('matrix_size_ro', dict(
         label='N_ro / #', default=64, start=1, stop=1024, step=1)),
     ('matrix_size_pe', dict(
@@ -178,6 +184,10 @@ def plot_rho_b1t_mp2rage_seq(
         title=TITLE.split(':')[1].strip()):
     ax = fig.gca()
     try:
+        if params['use_rho']:
+            mp2rage_rho = mp2rage.rho
+        else:
+            mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
             params['eta_fa_start'], params['eta_fa_stop'],
             params['eta_fa_num'])
@@ -187,9 +197,11 @@ def plot_rho_b1t_mp2rage_seq(
             'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['eta_fa'] = eta_fa_arr
+        if seq_kws['eta_p'] == 0:
+            seq_kws['eta_p'] = seq_kws['eta_fa']
         for t1 in t1_arr:
             seq_kws['t1'] = t1
-            rho_arr = mp2rage.rho(**seq_kws)
+            rho_arr = mp2rage_rho(**seq_kws)
             ax.plot(rho_arr, eta_fa_arr, label='T1={:.1f} ms'.format(t1))
     except Exception as e:
         print(traceback.format_exc())
@@ -198,9 +210,16 @@ def plot_rho_b1t_mp2rage_seq(
         ax.set_title(title)
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
-        ax.set_xlim(mp2rage.RHO_INTERVAL)
-        ax.set_xlabel(r'$\rho$ / arb.units')
         ax.set_ylabel(r'$\eta_\alpha$ / #')
+        if params['use_rho']:
+            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        else:
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
         ax.legend()
     return ax
 
@@ -212,6 +231,10 @@ def plot_rho_b1t_mp2rage_acq(
         title=TITLE.split(':')[1].strip()):
     ax = fig.gca()
     try:
+        if params['use_rho']:
+            mp2rage_rho = mp2rage.rho
+        else:
+            mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
             params['eta_fa_start'], params['eta_fa_stop'],
             params['eta_fa_num'])
@@ -250,9 +273,11 @@ def plot_rho_b1t_mp2rage_acq(
         seq_kws['eta_fa'] = eta_fa_arr
         kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
+        if seq_kws['eta_p'] == 0:
+            seq_kws['eta_p'] = seq_kws['eta_fa']
         for t1 in t1_arr:
             seq_kws['t1'] = t1
-            rho_arr = mp2rage.rho(**seq_kws)
+            rho_arr = mp2rage_rho(**seq_kws)
             ax.plot(rho_arr, eta_fa_arr, label='T1={:.1f} ms'.format(t1))
     except Exception as e:
         print(traceback.format_exc())
@@ -261,9 +286,16 @@ def plot_rho_b1t_mp2rage_acq(
         ax.set_title('\n'.join((acq_to_seq_info, title)))
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
-        ax.set_xlim(mp2rage.RHO_INTERVAL)
-        ax.set_xlabel(r'$\rho$ / arb.units')
         ax.set_ylabel(r'$\eta_\alpha$ / #')
+        if params['use_rho']:
+            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        else:
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
         ax.legend()
     return ax
 

@@ -85,22 +85,27 @@ def _mz_nrf(mz0, t1, n_gre, tr_gre, fa, m0, eta_fa):
         (1 - cos(fa * eta_fa) * exp(-tr_gre / t1)))
 
 
+# ======================================================================
 def _mz_0rf(mz0, t1, t, m0):
     """Magnetization during the period with no pulses"""
     return mz0 * exp(-t / t1) + m0 * (1 - exp(-t / t1))
 
 
-def _mz_i(mz0, fa_p, eta_p):
+# ======================================================================
+def _mz_p(mz0, fa_p, eta_p):
     """Magnetization after preparation pulse"""
     return mz0 * cos(fa_p * eta_p)
 
 
 # ======================================================================
-def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
+def _prepare_mp2rage(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE rho expression analytically."""
 
     cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
+        print('Solving MP2RAGE equations. May take some time.')
+        print('Caching results: {}'.format(use_cache))
+        s1, s2 = sym.symbols('s1 s2')
         m0, mz_ss = sym.symbols('m0 mz_ss')
         n_gre, tr_gre = sym.symbols('n_gre tr_gre')
         fa1, fa2 = sym.symbols('fa1 fa2')
@@ -108,6 +113,7 @@ def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
         fa_p, eta_p = sym.symbols('fa_p eta_p')
         t1, eta_fa = sym.symbols('t1 eta_fa')
 
+        # steady-state magnetization
         eqn_mz_ss = sym.Eq(
             mz_ss,
             _mz_0rf(
@@ -115,52 +121,93 @@ def _prepare_rho_mp2rage(use_cache=CFG['use_cache']):
                     _mz_0rf(
                         _mz_nrf(
                             _mz_0rf(
-                                _mz_i(mz_ss, fa_p, eta_p),
+                                _mz_p(mz_ss, fa_p, eta_p),
                                 t1, ta, m0),
                             t1, n_gre, tr_gre, fa1, m0, eta_fa),
                         t1, tb, m0),
                     t1, n_gre, tr_gre, fa2, m0, eta_fa),
                 t1, tc, m0))
         mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
+        print('mz_ss: {}'.format(mz_ss_))
 
         # convenient exponentials
         e1 = exp(-tr_gre / t1)
+        # e2 = exp(-te / t2s)  # * exp(-1j * d_omega * te)
         ea = exp(-ta / t1)
         # eb = exp(-tb / t1)
         ec = exp(-tc / t1)
 
-        # rho for TI1 image (omitted factor: b1r * e2 * m0)
-        gre_ti1 = sin(fa1 * eta_fa) * (
-            (_mz_i(mz_ss, fa_p, eta_p) / m0 * ea +
+        # : signal for TI1
+        # eqn_s1 = sym.Eq(
+        #     s1,
+        #     _mz_nrf(
+        #         _mz_0rf(
+        #             _mz_p(mz_ss, fa_p, eta_p),
+        #             t1, ta, m0),
+        #         t1, n_gre / 2 - 1, tr_gre, fa1, m0, eta_fa))
+        # s1_ = sym.simplify(sym.solve(eqn_s1, s1)[0])
+
+        # expression from paper (omitted: b1r * e2 * m0 * sin(fa1 * eta_fa))
+        s1_ = (
+            (_mz_p(mz_ss, fa_p, eta_p) / m0 * ea +
              (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
                 (1 - e1) * (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1)) /
                 (1 - cos(fa1 * eta_fa) * e1)))
+        print('s1: {}'.format(s1_))
 
-        # rho for TI2 image (omitted factor: b1r * e2 * m0)
-        gre_ti2 = sin(fa2 * eta_fa) * (
+        # : signal for TI2
+        # eqn_s2 = sym.Eq(
+        #     s2,
+        #     _mz_nrf(
+        #         _mz_0rf(
+        #             _mz_nrf(
+        #                 _mz_0rf(
+        #                     _mz_p(mz_ss, fa_p, eta_p),
+        #                     t1, ta, m0),
+        #                 t1, n_gre, tr_gre, fa1, m0, eta_fa),
+        #             t1, tb, m0),
+        #         t1, n_gre / 2 - 1, tr_gre, fa2, m0, eta_fa))
+        # s2_ = sym.simplify(sym.solve(eqn_s2, s2)[0])
+
+        # expression from paper (omitted: b1r * e2 * m0 * sin(fa2 * eta_fa))
+        s2_ = (
             ((mz_ss / m0) - (1 - ec)) /
             (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre / 2)) -
-            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (-n_gre / 2) - 1) /
+            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (n_gre / 2) - 1) /
             (1 - cos(fa2 * eta_fa) * e1))
+        print('s2: {}'.format(s2_))
+
+        # include factors that do not vanish in the ratio
+        # (still omitted factors: b1r * e2 * m0)
+        s1_ = sin(fa1 * eta_fa) * s1_
+        s2_ = sin(fa2 * eta_fa) * s2_
 
         # T1 map as a function of steady state rho
-        s = (gre_ti1 * gre_ti2) / (gre_ti1 ** 2 + gre_ti2 ** 2)
-        s = s.subs(mz_ss, mz_ss_)
+        # rho_ = 1 / ((s1 / s2) + (s2 / s1))
+        rho_ = (s1 * s2) / (s1 ** 2 + s2 ** 2)
+        rho_ = (
+            rho_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
+        ratio_ = s1 / s2
+        ratio_ = sym.factor(
+            ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
 
-        pickles = (
-            (n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa), s)
+        print('rho: {}'.format(rho_))
+        print('ratio: {}'.format(ratio_))
+
+        params = (n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
-            pickle.dump(pickles, cache_file)
+            pickle.dump((params, rho_, ratio_), cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
-            pickles = pickle.load(cache_file)
-    result = np.vectorize(sym.lambdify(*pickles))
-    return result
+            params, rho_, ratio_ = pickle.load(cache_file)
+    rho_ = np.vectorize(sym.lambdify(params, rho_))
+    ratio_ = np.vectorize(sym.lambdify(params, ratio_))
+    return rho_, ratio_
 
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_rho = _prepare_rho_mp2rage()
+_rho, _ratio = _prepare_mp2rage()
 
 
 # ======================================================================
@@ -228,6 +275,56 @@ def rho(
     fa2 = np.deg2rad(fa2)
     fa_p = np.deg2rad(fa_p)
     result = _rho(
+        n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
+    if bijective:
+        result = _bijective_part(result)
+    return result
+
+
+# ======================================================================
+def ratio(
+        n_gre,
+        tr_gre,
+        fa1,
+        fa2,
+        ta,
+        tb,
+        tc,
+        fa_p,
+        eta_p,
+        t1,
+        eta_fa,
+        bijective=False):
+    """
+    Calculate (generalized) MP2RAGE signal ratio from the sequence parameters.
+
+    This expression can also be used for SA2RAGE.
+
+    This function is NumPy-aware.
+
+    Args:
+        n_gre (int): Number n of r.f. pulses in each GRE block.
+        tr_gre (float): repetition time of GRE pulses in ms.
+        fa1 (float): Flip angle of the first GRE block in deg.
+        fa2 (float): Flip angle fa2 of the second GRE block in deg.
+        ta (float): Time between preparation pulse and first GRE block in ms.
+        tb (float): Time between first and second GRE blocks in ms.
+        tc (float): Time after second GRE block in ms.
+        fa_p (float): Flip angle of the preparation pulse in deg.
+        eta_p (float): Efficiency of the preparation pulse.
+        t1 (float): Longitudinal relaxation time in ms.
+        eta_fa (float): Efficiency of the RF excitation in the GRE block.
+            Equivalent to B1+ efficiency.
+        bijective (bool): Force the rho expression to be bijective.
+            Non-bijective parts of rho are masked out (set to NaN).
+
+    Returns:
+        rho (float): rho intensity of the MP2RAGE sequence.
+    """
+    fa1 = np.deg2rad(fa1)
+    fa2 = np.deg2rad(fa2)
+    fa_p = np.deg2rad(fa_p)
+    result = _ratio(
         n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
@@ -322,7 +419,6 @@ def acq_to_seq_params(
 # ======================================================================
 def test_signal():
     import matplotlib.pyplot as plt
-
 
     t1 = np.linspace(50, 5000, 5000)
     s = rho(t1=t1, **_SEQ_PARAMS, bijective=True)

@@ -60,6 +60,9 @@ from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
+    ('use_rho', dict(
+        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=True)),
+
     ('n_gre', dict(
         label='N_GRE / #', default=64, start=1, stop=512, step=1)),
 
@@ -96,6 +99,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
+    ('use_rho', dict(
+        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=True)),
+
     ('matrix_size_ro', dict(
         label='N_ro / #', default=256, start=1, stop=1024, step=1)),
     ('matrix_size_pe', dict(
@@ -172,35 +178,40 @@ def plot_rho_t1_mp2rage_seq(
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     try:
+        if params['use_rho']:
+            mp2rage_rho = mp2rage.rho
+        else:
+            mp2rage_rho = mp2rage.ratio
+
         kws_names = (
             'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
-        rho_kws = {name: params[name] for name in kws_names}
-        rho_kws['t1'] = t1_arr
+        seq_kws = {name: params[name] for name in kws_names}
+        seq_kws['t1'] = t1_arr
 
-        rho_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage.rho(**rho_kws)
+        seq_kws['eta_fa'] = params['eta_fa']
+        rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
-        rho_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
+        rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
-        rho_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
+        rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
-        rho_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
+        rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
-        rho_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
+        rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
@@ -211,9 +222,16 @@ def plot_rho_t1_mp2rage_seq(
         ax.set_title(title)
     finally:
         ax.set_ylim(params['t1_start'], params['t1_stop'])
-        ax.set_xlim(mp2rage.RHO_INTERVAL)
-        ax.set_xlabel(r'$\rho$ / arb.units')
         ax.set_ylabel(r'$T_1$ / ms')
+        if params['use_rho']:
+            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        else:
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
         ax.legend()
     return ax
 
@@ -227,6 +245,11 @@ def plot_rho_t1_mp2rage_acq(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     ax = fig.gca()
     try:
+        if params['use_rho']:
+            mp2rage_rho = mp2rage.rho
+        else:
+            mp2rage_rho = mp2rage.ratio
+
         rho_kws, extra_info = mp2rage.acq_to_seq_params(
             matrix_sizes=(
                 params['matrix_size_ro'],
@@ -262,29 +285,29 @@ def plot_rho_t1_mp2rage_acq(
         rho_kws['t1'] = t1_arr
         
         rho_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage.rho(**rho_kws)
+        rho_arr = mp2rage_rho(**rho_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
         rho_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        rho_arr = mp2rage_rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
         rho_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        rho_arr = mp2rage_rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
         rho_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        rho_arr = mp2rage_rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
         rho_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage.rho(**rho_kws)
+        rho_arr = mp2rage_rho(**rho_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
@@ -295,9 +318,16 @@ def plot_rho_t1_mp2rage_acq(
         ax.set_title('\n'.join((acq_to_seq_info, title)))
     finally:
         ax.set_ylim(params['t1_start'], params['t1_stop'])
-        ax.set_xlim(mp2rage.RHO_INTERVAL)
-        ax.set_xlabel(r'$\rho$ / arb.units')
         ax.set_ylabel(r'$T_1$ / ms')
+        if params['use_rho']:
+            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        else:
+            ax.set_xlabel(
+                r'$\rho='
+                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
         ax.legend()
     return ax
 
