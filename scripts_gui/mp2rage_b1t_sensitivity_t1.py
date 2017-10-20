@@ -248,7 +248,7 @@ def plot_rho_b1t_mp2rage_acq(
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
         seq_kws['eta_fa'] = eta_fa_arr
-        kws_names = ('eta_p', 'fa_p')
+        kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
         for t1 in t1_arr:
             seq_kws['t1'] = t1
