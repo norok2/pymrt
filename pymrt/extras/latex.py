@@ -77,7 +77,7 @@ def to_safe(text):
 
 
 # ======================================================================
-def tabular(labels, rows, label_filters, row_filters, format_dict):
+def tabular(labels, rows, grouping, label_filters, row_filters, format_dict):
     output_str = ''
     # open wrapping...
     output_str += '{\n'

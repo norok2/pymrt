@@ -1673,35 +1673,68 @@ def common_subseq(
 
 
 # ======================================================================
-def set_keyword_parameters(
+def set_func_kws(
         func,
-        values):
+        func_kws):
     """
     Set keyword parameters of a function to specific or default values.
 
     Args:
         func (callable): The function to be inspected.
-        values (dict): The (key, value) pairs to set.
+        func_kws (dict): The (key, value) pairs to set.
             If a value is None, it will be replaced by the default value.
             To use the names defined locally, use: `locals()`.
 
     Results:
-        kw_params (dict): A dictionary of the keyword parameters to set.
+        kws (dict): A dictionary of the keyword parameters to set.
 
     See Also:
-        inspect.getargspec, locals, globals.
+        inspect, locals, globals.
     """
-    # todo: refactor to get rid of deprecated getargspec
-    inspected = inspect.getargspec(func)
+    try:
+        get_argspec = inspect.getfullargspec
+    except AttributeError:
+        get_argspec = inspect.getargspec
+    inspected = get_argspec(func)
     defaults = dict(
         zip(reversed(inspected.args), reversed(inspected.defaults)))
-    kw_params = {}
+    kws = {}
     for key in inspected.args:
-        if key in values:
-            kw_params[key] = values[key]
+        if key in func_kws:
+            kws[key] = func_kws[key]
         elif key in defaults:
-            kw_params[key] = defaults[key]
-    return kw_params
+            kws[key] = defaults[key]
+    return kws
+
+
+# ======================================================================
+def split_func_kws(
+        func,
+        func_kws):
+    """
+    Split a set of keywords into accepted and not accepted by some function.
+
+    Args:
+        func (callable): The function to be inspected.
+        func_kws (dict): The (key, value) pairs to split.
+
+    Results:
+        result (tuple): The tuple
+            contains:
+             - kws (dict): The keywords NOT accepted by `func`.
+             - func_kws (dict): The keywords accepted by `func`.
+
+    See Also:
+        inspect, locals, globals.
+    """
+    try:
+        get_argspec = inspect.getfullargspec
+    except AttributeError:
+        get_argspec = inspect.getargspec
+    inspected = get_argspec(func)
+    kws = {k: v for k, v in func_kws.items() if k not in inspected.args}
+    func_kws = {k: v for k, v in func_kws.items() if k in inspected.args}
+    return func_kws, kws
 
 
 # ======================================================================

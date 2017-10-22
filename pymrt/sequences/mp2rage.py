@@ -10,9 +10,9 @@ functions.
 - eff : efficiency eff of the preparation pulse
 - n_GRE : number of pulses in each GRE block
 - TR_GRE : repetition time of GRE pulses in ms
-- TA : time between preparation pulse and first GRE block in ms
-- TB : time between first and second GRE blocks in ms
-- TC : time after second GRE block in ms
+- TD0 : time between preparation pulse and first GRE block in ms
+- TD1 : time between first and second GRE blocks in ms
+- TD2 : time after second GRE block in ms
 - A1 : flip angle of the first GRE block in deg
 - A2 : flip angle of the second GRE block in deg
 
@@ -109,7 +109,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         m0, mz_ss = sym.symbols('m0 mz_ss')
         n_gre, tr_gre = sym.symbols('n_gre tr_gre')
         fa1, fa2 = sym.symbols('fa1 fa2')
-        ta, tb, tc = sym.symbols('ta tb tc')
+        td0, td1, td2 = sym.symbols('td0 td1 td2')
         fa_p, eta_p = sym.symbols('fa_p eta_p')
         t1, eta_fa = sym.symbols('t1 eta_fa')
 
@@ -122,20 +122,20 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
                         _mz_nrf(
                             _mz_0rf(
                                 _mz_p(mz_ss, fa_p, eta_p),
-                                t1, ta, m0),
+                                t1, td0, m0),
                             t1, n_gre, tr_gre, fa1, m0, eta_fa),
-                        t1, tb, m0),
+                        t1, td1, m0),
                     t1, n_gre, tr_gre, fa2, m0, eta_fa),
-                t1, tc, m0))
+                t1, td2, m0))
         mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
         print('mz_ss: {}'.format(mz_ss_))
 
         # convenient exponentials
         e1 = exp(-tr_gre / t1)
         # e2 = exp(-te / t2s)  # * exp(-1j * d_omega * te)
-        ea = exp(-ta / t1)
-        # eb = exp(-tb / t1)
-        ec = exp(-tc / t1)
+        ea = exp(-td0 / t1)
+        # eb = exp(-td1 / t1)
+        ec = exp(-td2 / t1)
 
         # : signal for TI1
         # eqn_s1 = sym.Eq(
@@ -143,7 +143,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         #     _mz_nrf(
         #         _mz_0rf(
         #             _mz_p(mz_ss, fa_p, eta_p),
-        #             t1, ta, m0),
+        #             t1, td0, m0),
         #         t1, n_gre / 2 - 1, tr_gre, fa1, m0, eta_fa))
         # s1_ = sym.simplify(sym.solve(eqn_s1, s1)[0])
 
@@ -163,9 +163,9 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         #             _mz_nrf(
         #                 _mz_0rf(
         #                     _mz_p(mz_ss, fa_p, eta_p),
-        #                     t1, ta, m0),
+        #                     t1, td0, m0),
         #                 t1, n_gre, tr_gre, fa1, m0, eta_fa),
-        #             t1, tb, m0),
+        #             t1, td1, m0),
         #         t1, n_gre / 2 - 1, tr_gre, fa2, m0, eta_fa))
         # s2_ = sym.simplify(sym.solve(eqn_s2, s2)[0])
 
@@ -194,14 +194,14 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         print('rho: {}'.format(rho_))
         print('ratio: {}'.format(ratio_))
 
-        params = (n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
+        params = (n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
             pickle.dump((params, rho_, ratio_), cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
             params, rho_, ratio_ = pickle.load(cache_file)
-    rho_ = np.vectorize(sym.lambdify(params, rho_))
-    ratio_ = np.vectorize(sym.lambdify(params, ratio_))
+    rho_ = sym.lambdify(params, rho_)
+    ratio_ = sym.lambdify(params, ratio_)
     return rho_, ratio_
 
 
@@ -237,9 +237,9 @@ def rho(
         tr_gre,
         fa1,
         fa2,
-        ta,
-        tb,
-        tc,
+        td0,
+        td1,
+        td2,
         fa_p,
         eta_p,
         t1,
@@ -248,34 +248,45 @@ def rho(
     """
     Calculate (generalized) MP2RAGE signal rho from the sequence parameters.
 
-    This expression can also be used for SA2RAGE.
+    .. math::
+        \\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2} =
+        \\left(\\frac{s_1}{s_2} + \\frac{s_2}{s_1}\\right)^{-1}
+
+    This expression can also be used for SA2RAGE and NO2RAGE.
 
     This function is NumPy-aware.
 
     Args:
-        n_gre (int): Number n of r.f. pulses in each GRE block.
-        tr_gre (float): repetition time of GRE pulses in ms.
-        fa1 (float): Flip angle of the first GRE block in deg.
-        fa2 (float): Flip angle fa2 of the second GRE block in deg.
-        ta (float): Time between preparation pulse and first GRE block in ms.
-        tb (float): Time between first and second GRE blocks in ms.
-        tc (float): Time after second GRE block in ms.
-        fa_p (float): Flip angle of the preparation pulse in deg.
-        eta_p (float): Efficiency of the preparation pulse.
-        t1 (float): Longitudinal relaxation time in ms.
-        eta_fa (float): Efficiency of the RF excitation in the GRE block.
+        n_gre (int|np.ndarray): Number n of r.f. pulses in each GRE block.
+        tr_gre (float|np.ndarray): repetition time of GRE pulses in ms.
+        fa1 (float|np.ndarray): Flip angle of the first GRE block in deg.
+        fa2 (float|np.ndarray): Flip angle fa2 of the second GRE block in deg.
+        td0 (float|np.ndarray): First delay in ms.
+             This is the time between the beginning of the preparation pulse
+             and the beginning of the first GRE block.
+        td1 (float|np.ndarray): Second delay in ms.
+            This is the time between the end of the first and the beginning
+            of the second GRE blocks.
+        td2 (float|np.ndarray): Third delay in ms.
+            This is the time between the end of the second GRE block and the
+            beginning of the preparation pulse.
+        fa_p (float|np.ndarray): Flip angle of the preparation pulse in deg.
+        eta_p (float|np.ndarray): Efficiency of the preparation pulse in #.
+        t1 (float|np.ndarray): Longitudinal relaxation time in ms.
+        eta_fa (float|np.ndarray): Efficiency of the RF excitation.
+            This only affects the excitation inside the GRE blocks.
             Equivalent to B1+ efficiency.
         bijective (bool): Force the rho expression to be bijective.
             Non-bijective parts of rho are masked out (set to NaN).
 
     Returns:
-        rho (float): rho intensity of the MP2RAGE sequence.
+        rho (float|np.ndarray): rho intensity of the MP2RAGE sequence.
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
     fa_p = np.deg2rad(fa_p)
     result = _rho(
-        n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
+        n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
     return result
@@ -287,9 +298,9 @@ def ratio(
         tr_gre,
         fa1,
         fa2,
-        ta,
-        tb,
-        tc,
+        td0,
+        td1,
+        td2,
         fa_p,
         eta_p,
         t1,
@@ -298,34 +309,44 @@ def ratio(
     """
     Calculate (generalized) MP2RAGE signal ratio from the sequence parameters.
 
-    This expression can also be used for SA2RAGE.
+    .. math::
+        r = \\frac{s_1}{s_2}
+
+    This expression can also be used for SA2RAGE and NO2RAGE.
 
     This function is NumPy-aware.
 
     Args:
-        n_gre (int): Number n of r.f. pulses in each GRE block.
-        tr_gre (float): repetition time of GRE pulses in ms.
-        fa1 (float): Flip angle of the first GRE block in deg.
-        fa2 (float): Flip angle fa2 of the second GRE block in deg.
-        ta (float): Time between preparation pulse and first GRE block in ms.
-        tb (float): Time between first and second GRE blocks in ms.
-        tc (float): Time after second GRE block in ms.
-        fa_p (float): Flip angle of the preparation pulse in deg.
-        eta_p (float): Efficiency of the preparation pulse.
-        t1 (float): Longitudinal relaxation time in ms.
-        eta_fa (float): Efficiency of the RF excitation in the GRE block.
+        n_gre (int|np.ndarray): Number n of r.f. pulses in each GRE block.
+        tr_gre (float|np.ndarray): repetition time of GRE pulses in ms.
+        fa1 (float|np.ndarray): Flip angle of the first GRE block in deg.
+        fa2 (float|np.ndarray): Flip angle fa2 of the second GRE block in deg.
+        td0 (float|np.ndarray): First delay in ms.
+             This is the time between the beginning of the preparation pulse
+             and the beginning of the first GRE block.
+        td1 (float|np.ndarray): Second delay in ms.
+            This is the time between the end of the first and the beginning
+            of the second GRE blocks.
+        td2 (float|np.ndarray): Third delay in ms.
+            This is the time between the end of the second GRE block and the
+            beginning of the preparation pulse.
+        fa_p (float|np.ndarray): Flip angle of the preparation pulse in deg.
+        eta_p (float|np.ndarray): Efficiency of the preparation pulse in #.
+        t1 (float|np.ndarray): Longitudinal relaxation time in ms.
+        eta_fa (float|np.ndarray): Efficiency of the RF excitation.
+            This only affects the excitation inside the GRE blocks.
             Equivalent to B1+ efficiency.
         bijective (bool): Force the rho expression to be bijective.
             Non-bijective parts of rho are masked out (set to NaN).
 
     Returns:
-        rho (float): rho intensity of the MP2RAGE sequence.
+        ratio (float|np.ndarray): ratio intensity of the MP2RAGE sequence.
     """
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
     fa_p = np.deg2rad(fa_p)
     result = _ratio(
-        n_gre, tr_gre, fa1, fa2, ta, tb, tc, fa_p, eta_p, t1, eta_fa)
+        n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
     return result
@@ -333,27 +354,31 @@ def ratio(
 
 # ======================================================================
 def acq_to_seq_params(
-        matrix_sizes=(256, 256, 256),
-        grappa_factors=(1, 2, 1),
-        grappa_refs=(0, 24, 0),
-        part_fourier_factors=(1.0, 6 / 8, 6 / 8),
-        bandwidths=None,
-        sl_pe_swap=True,
+        ti,
+        tr_gre,
+        tr_seq,
+        matrix_sizes,
+        grappa_factors=1,
+        grappa_refs=0,
+        part_fourier_factors=1.0,
+        n_dim=3,
+        sl_pe_swap=False,
         pe_correction=(np.pi / 4, 1),
         center_k_correction=0.5,
-        tr_seq=8000,
-        ti=(900, 3300),
-        tr_gre=20.0):
+        bandwidths=None):
     """
     Determine the sequence parameters from the acquisition parameters.
 
     Args:
-        matrix_sizes (tuple[int]):
-        grappa_factors (tuple[int]):
+        ti (tuple[int]): The inversion times TI of the sequence in ms.
+        tr_gre (float): The repetition time TR_GRE of the GRE block in ms.
+        tr_seq (int): The repetition time TR_seq of the sequence in ms.
+        matrix_sizes (int|tuple[int]):
+        grappa_factors (int|tuple[int]):
         grappa_refs (tuple[int]
         part_fourier_factors (tuple[float]):
-        bandwidths (tuple[int]|None): readout bandwidth in Hz/px
         sl_pe_swap (bool):
+        n_dim (int|None):
         pe_correction (tuple[float]): Correct for the number of k-space lines.
             This factor determines how many k-space lines are actually acquired
             in the k-space for the phase encoding directions.
@@ -363,17 +388,34 @@ def acq_to_seq_params(
             This factor determines where the k-space central line is actually
             acquired within the GRE block.
             This parameter affects the accessible inversion times.
-        tr_seq (int): repetition time TR_seq of the sequence
-        ti (tuple[int]):
-        fa (tuple[int]):
-        eta_p (float):
-        tr_gre (float):
+        bandwidths (tuple[int]|None): readout bandwidth in Hz/px
+
 
     Returns:
         result (tuple[dict]): The tuple
             contains:
              - seq_params (dict): The sequence parameters for rho calculation.
              - extra_info (dict): Additional sequence information.
+
+    Examples:
+        >>> seq_kws, extra_info = acq_to_seq_params(
+        ...     ti=(900, 3300),
+        ...     tr_gre=20.0,
+        ...     tr_seq=8000,
+        ...     matrix_sizes=256,
+        ...     grappa_factors=(1, 2, 1),
+        ...     grappa_refs=(0, 24, 0),
+        ...     part_fourier_factors=(1.0, 6 / 8, 6 / 8),
+        ...     sl_pe_swap=True,
+        ...     n_dim=None,
+        ...     pe_correction=(np.pi / 4, 1),
+        ...     center_k_correction=0.5,
+        ...     bandwidths=None)
+        >>> print(sorted(seq_kws.items()))
+        [('n_gre', 87), ('td0', 573.75), ('td1', 660.0), ('td2', 3286.25),\
+ ('tr_gre', 20.0)]
+        >>> print(sorted(extra_info.items()))
+        [('t_acq', 1536.0)]
     """
 
     def k_space_lines(size, part_fourier, grappa, grappa_refs):
@@ -383,8 +425,25 @@ def acq_to_seq_params(
     if len(ti) != 2:
         raise ValueError('Exactly two inversion times must be used.')
 
-    pe1 = 1 if sl_pe_swap else 2
-    pe2 = 2 if sl_pe_swap else 1
+    if not n_dim:
+        n_dim = mrt.utils.combine_iter_len(
+            (matrix_sizes, grappa_factors, grappa_refs, part_fourier_factors))
+    # check compatibility of given parameters
+    matrix_sizes = mrt.utils.auto_repeat(
+        matrix_sizes, n_dim, check=True)
+    grappa_factors = mrt.utils.auto_repeat(
+        grappa_factors, n_dim, check=True)
+    grappa_refs = mrt.utils.auto_repeat(
+        grappa_refs, n_dim, check=True)
+    part_fourier_factors = mrt.utils.auto_repeat(
+        part_fourier_factors, n_dim, check=True)
+
+    if n_dim == 3:
+        pe1 = 1 if sl_pe_swap else 2
+        pe2 = 2 if sl_pe_swap else 1
+    else:
+        pe1 = 1
+        pe2 = None
 
     n_gre = k_space_lines(
         int(matrix_sizes[pe1] * pe_correction[0]),
@@ -400,16 +459,12 @@ def acq_to_seq_params(
          tuple(np.diff(ti) - t_gre_block) + \
          ((tr_seq - ti[-1] - (1 - center_k) * t_gre_block),)
     seq_params = dict(
-        n_gre=n_gre,
-        tr_gre=tr_gre,
-        ta=td[0],
-        tb=td[1],
-        tc=td[2])
+        n_gre=n_gre, tr_gre=tr_gre, td0=td[0], td1=td[1], td2=td[2])
     extra_info = dict(
-        t_acq=tr_seq * 1e-3 * k_space_lines(
+        t_acq=tr_seq * 1e-3 * (k_space_lines(
             int(matrix_sizes[pe2] * pe_correction[1]),
             part_fourier_factors[pe2],
-            grappa_factors[pe2], grappa_refs[pe2]))
+            grappa_factors[pe2], grappa_refs[pe2]) if pe2 else 1))
 
     if any(x < 0.0 for x in td):
         raise ValueError('Invalid sequence parameters: {}'.format(seq_params))
@@ -435,9 +490,9 @@ def test_signal():
         # tr_seq': 8000.0,  # ms
         # ti1': 1000.0,  # ms
         # ti2': 3300.0,  # ms
-        ta=440.0,  # ms
-        tb=1180.0,  # ms
-        tc=4140.0,  # ms
+        td0=440.0,  # ms
+        td1=1180.0,  # ms
+        td2=4140.0,  # ms
         eta_fa=eta_fa,  # #
         fa_p=180,  # deg
         bijective=False)

@@ -150,7 +150,7 @@ def main():
         root, base, ext = mrt.utils.split_path(args.input)
         args.output = mrt.utils.join_path(root, 'mask__' + base, ext)
 
-    kws = mrt.utils.set_keyword_parameters(
+    kws = mrt.utils.set_func_kws(
         mrt.segmentation.auto_mask, vars(args))
 
     kws['threshold_kws'] = json.loads(args.threshold_opts)

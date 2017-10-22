@@ -29,6 +29,8 @@ import pymrt.utils
 from pymrt.recipes.generic import (
     fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate)
 import pymrt.recipes.multi_flash
+from pymrt.sequences import mp2rage
+
 
 # ======================================================================
 def mp2rage_cx_to_rho(
@@ -117,6 +119,7 @@ def mp2rage_rho_to_t1(
         t1_num=512,
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
+        inverted=False,
         **params_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
@@ -142,26 +145,51 @@ def mp2rage_rho_to_t1(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This affects the precision of the estimation.
-        **params_kws (dict): The acquisition parameters.
-            This should match the signature of: `mp2rage.acq_to_seq_params`.
+        inverted (bool): Invert results to convert times to rates.
+            Assumes that units of time is ms and units of rates is Hz.
+        **params_kws: The acquisition parameters.
+            This is filtered through `utils.split_func_kws()` for
+            `sequences.mp2rage.acq_to_seq_params()` and the result
+            is passed to `sequences.mp2rage.rho()`.
+            Its (key, value) pairs must be accepted by either
+             `sequences.mp2rage.acq_to_seq_params()` or
+             `sequences.mp2rage.rho()`.
 
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
-    from pymrt.sequences import mp2rage
+    # determine the sequence parameters
+    try:
+        acq_kws, kws = mrt.utils.split_func_kws(
+            mp2rage.acq_to_seq_params, params_kws)
+        seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
+        seq_kws.update(kws)
+    except TypeError:
+        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
+        if len(kws) > 0:
+            warnings.warn('Unrecognized parameters: {}'.format(kws))
+
+    if eta_fa_arr is not None:
+        # determine the rho expression
+        t1 = np.linspace(
+            t1_values_range[0], t1_values_range[1], t1_num).reshape(-1, 1)
+        eta_fa = np.linspace(
+            eta_fa_values_range[0], eta_fa_values_range[1],
+            eta_fa_num).reshape(1, -1)
+        rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, **seq_kws)
+        print(rho.shape)
+
+        import pymrt.plot
+        import matplotlib.pyplot as plt
+        mrt.plot.quick_2d(rho)
+        plt.show()
 
 
-    if eta_fa_arr:
-        # todo: implement B1T correction
-        raise NotImplementedError('B1T correction is not yet implemented')
+
     else:
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        for k, v in params_kws.items():
-            pass
-        # todo: split acq_params and seq_params
-        seq_pars = mp2rage.acq_to_seq_params(**params_kws)[0]
-        rho = mp2rage.rho(t1=t1, **seq_pars)
+        rho = mp2rage.rho(t1=t1, eta_fa=1, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         t1 = t1[bijective_slice]
@@ -183,6 +211,14 @@ def mp2rage_rho_to_t1(
     if inverted:
         t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr
+
+
+_t1_arr = mp2rage_rho_to_t1(
+    np.linspace(-0.1, 0.1, 10), np.linspace(0.9, 1.1, 10),
+    n_gre=100, tr_gre=10, fa1=4, fa2=5, td0=100, td1=1000, td2=2000, fa_p=180,
+    eta_p=0.95)
+print(_t1_arr)
+quit()
 
 
 # ======================================================================
@@ -246,7 +282,7 @@ def mp2rage_t1(
     t1_arr = mp2rage_rho_to_t1(
         rho_arr, eta_fa_arr,
         t1_values_range, t1_num,
-        eta_fa_values_range, eta_fa_num, **acq_param_kws)
+        eta_fa_values_range, eta_fa_num, inverted, **acq_param_kws)
     return t1_arr
 
 
@@ -289,7 +325,8 @@ def double_flash(
     .. math::
         T_1 = -\\frac{T_R}{\\log(X)}
 
-    Note: a similar expression may be derived for different repetition times and
+    Note: a similar expression may be derived for different repetition times
+    and
     identical flip angles, but this produces inaccurate results.
 
     This is a closed-form solution.

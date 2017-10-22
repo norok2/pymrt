@@ -23,7 +23,7 @@ import pymrt as mrt
 import pymrt.utils
 
 from pymrt.recipes.generic import fix_magnitude_bias
-
+from pymrt.sequences import mp2rage
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
@@ -358,10 +358,6 @@ def mp2rage_rho_to_eta_fa(
     Returns:
         t1_arr (float|np.ndarray): The calculated T1 map.
     """
-    # todo: implement correctly
-    from pymrt.sequences import mp2rage
-
-
     if t1_arr:
         # todo: implement T1 correction
         raise NotImplementedError('T1 correction is not yet implemented')

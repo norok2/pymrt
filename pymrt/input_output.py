@@ -926,7 +926,7 @@ def mask_threshold(
     See Also:
         segmentation.mask_threshold
     """
-    kw_params = mrt.utils.set_keyword_parameters(
+    kw_params = mrt.utils.set_func_kws(
         mrt.segmentation.mask_threshold, locals())
     simple_filter_1_1(
         in_filepath, out_filepath, mrt.segmentation.mask_threshold,

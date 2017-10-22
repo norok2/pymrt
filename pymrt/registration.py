@@ -252,7 +252,7 @@ def minimize_discrete(
                 interp_order=interp_order))
     if cost_func is None:
         cost_func = \
-            mrt.utils.set_keyword_parameters(_min_func_affine, {})['cost_func']
+            mrt.utils.set_func_kws(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
@@ -345,7 +345,7 @@ def affine_registration(
             method = 'BFGS'
         if cost_func is None:
             kwargs__min_func_affine = \
-                mrt.utils.set_keyword_parameters(_min_func_affine, {})
+                mrt.utils.set_func_kws(_min_func_affine, {})
             cost_func = kwargs__min_func_affine['cost_func']
         args__min_func_affine = (
             moving.ravel(), fixed.ravel(), moving.shape,
