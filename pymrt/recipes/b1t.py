@@ -17,13 +17,19 @@ import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+import scipy as sp  # SciPy (signal and image processing library)
+
+import scipy.interpolate  # Scipy: Interpolation
 
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
 
-from pymrt.recipes.generic import fix_magnitude_bias
+from pymrt.recipes.generic import (
+    fix_magnitude_bias,
+    mag_phase_2_combine, cx_2_combine)
 from pymrt.sequences import mp2rage
+
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
@@ -324,161 +330,113 @@ def double_flash(
 # ======================================================================
 def mp2rage_rho_to_eta_fa(
         rho_arr,
-        t1_arr=None,
+        t1_arr=1500,
+        t1_values_range=(100, 5000),
+        t1_num=512,
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
-        t1_values_range=(1200, 2000),
-        t1_num=512,
-        **acq_params_kws):
+        use_ratio=False,
+        inverted=False,
+        **params_kws):
     """
-    Calculate the T1 map from an MP2RAGE acquisition.
+    Calculate the flip angle efficiency from an MP2RAGE acquisition.
+
+    This also supports SA2RAGE and NO2RAGE.
 
     Args:
-        rho_arr (float|np.ndarray): Magnitude of the first inversion image.
-        eta_fa_arr (float|np.array|None): Efficiency of the RF pulse
-        excitation.
-            This is equivalent to the normalized B1T field.
-            Note that this must have the same spatial dimensions as the images
-            acquired with MP2RAGE.
-            If None, no correction for the RF efficiency is performed.
-        t1_values_range (tuple[float]): The T1 value range to consider.
+        rho_arr (float|np.ndarray): MP2RAGE signal (uniform) array.
+        t1_arr (int|float|np.array): Longitudinal relaxation in ms.
+            If np.ndarray, it must have the same shape as `rho_arr`.
+            If int or float, the longitudinal relaxation is assumed to be
+            constant over `rho_arr`.
+        t1_values_range (tuple[float]): The T1 range.
             The format is (min, max) where min < max.
             Values should be positive.
-        t1_num (int): The number of sampling points of T1.
+        t1_num (int): The number of samples for T1.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the MP2RAGE estimation.
-        eff_num (int): The number of sampling points for flip angle efficiency.
+            This parameter may affect the precision of the estimation.
+        eta_fa_values_range (tuple[float]): The flip angle efficiency range.
+            The format is (min, max) where min < max.
+            Values should be positive.
+        eta_fa_num (int): The number of samples for flip angle efficiency.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the MP2RAGE estimation.
-        **acq_params_kws (dict): The acquisition parameters.
-            This should match the signature of: `mp2rage.acq_to_seq_params`.
+            This parameter may affect the precision of the estimation.
+        use_ratio (bool): Use ratio instead of pseudo ratio.
+        **params_kws: The acquisition parameters.
+            This is filtered through `utils.split_func_kws()` for
+            `sequences.mp2rage.acq_to_seq_params()` and the result
+            is passed to `sequences.mp2rage.rho()`.
+            Its (key, value) pairs must be accepted by either
+             `sequences.mp2rage.acq_to_seq_params()` or
+             `sequences.mp2rage.rho()`.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+
+    References:
+        1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W.,
+           Van de Moortele, P.-F., Gruetter, R., 2010. MP2RAGE, a self
+           bias-field corrected sequence for improved segmentation and
+           T1-mapping at high field. NeuroImage 49, 1271–1281.
+           doi:10.1016/j.neuroimage.2009.10.002
+        2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous
+           Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with
+           Multi-Echo MP2RAGE. PLOS ONE 12, e0169265.
+           doi:10.1371/journal.pone.0169265
+        3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R.,
+           Marques, J.P., 2012. SA2RAGE: A new sequence for fast B1+-mapping.
+           Magnetic Resonance Medicine 67, 1609–1619. doi:10.1002/mrm.23145
     """
-    if t1_arr:
-        # todo: implement T1 correction
-        raise NotImplementedError('T1 correction is not yet implemented')
-    else:
+    # determine the sequence parameters
+    try:
+        acq_kws, kws = mrt.utils.split_func_kws(
+            mp2rage.acq_to_seq_params, params_kws)
+        seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
+        seq_kws.update(kws)
+    except TypeError:
+        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
+        if len(kws) > 0:
+            warnings.warn('Unrecognized parameters: {}'.format(kws))
+
+    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.ratio
+    # fix values range for rho
+    if not use_ratio and \
+            not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+
+    if isinstance(t1_arr, (int, float)):
         # determine the rho expression
-        b1t = np.linspace(
-            eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
-        rho = mp2rage.rho(
-            t1_arr, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
+        eta_fa = np.linspace(
+            eta_fa_values_range[0], eta_fa_values_range[1], t1_num)
+        rho = mp2rage_rho(t1=t1_arr, eta_fa=eta_fa, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
-        t1 = t1_arr[bijective_slice]
+        eta_fa = eta_fa[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:
             rho = rho[::-1]
-            t1 = t1[::-1]
+            eta_fa = eta_fa[::-1]
         # check that rho values are strictly increasing
         if not np.all(np.diff(rho) > 0):
             raise ValueError(
                 'MP2RAGE look-up table was not properly prepared.')
+        eta_fa_arr = np.interp(rho_arr, rho, eta_fa)
 
-        # fix values range for rho
-        if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-            rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+    else:
+        # determine the rho expression
+        t1 = np.linspace(
+            t1_values_range[0], t1_values_range[1], t1_num).reshape(-1, 1)
+        eta_fa = np.linspace(
+            eta_fa_values_range[0], eta_fa_values_range[1],
+            eta_fa_num).reshape(1, -1)
+        rho = mp2rage_rho(t1=t1, eta_fa=eta_fa, **seq_kws)
+        # todo: remove non bijective branches
+        # use griddata for interpolation
+        eta_fa_arr = sp.interpolate.griddata(
+            (rho.ravel(), (np.zeros_like(rho) + t1).ravel()),
+            (np.zeros_like(rho) + eta_fa).ravel(),
+            (rho_arr.ravel(), t1_arr.ravel()))
 
-        t1_arr = np.interp(rho_arr, rho, t1)
-    return t1_arr
-
-
-# ======================================================================
-def sa2rage(
-        rho_arr,
-        fa1,
-        fa2,
-        tr_gre,
-        n_gre,
-        t1=2000,
-        eta_fa_values_range=(0.01, 2.0),
-        eta_fa_num=512):
-    """
-    Calculate the flip angle efficiency from a MU2RAGE acquisitions.
-
-    MU2RAGE: Magnetization Unprepared 2 RApid Gradient Echo
-
-    Args:
-        rho_arr (np.ndarray): The input array.
-
-
-    References:
-        - Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R., Marques,
-          J.P., 2012. SA2RAGE: A new sequence for fast B1+-mapping. Magnetic
-          Resonance Medicine 67, 1609–1619. doi:10.1002/mrm.23145
-    """
-    # todo: implement correctly
-    from pymrt.sequences import mp2rage
-
-
-    eta_fa = np.linspace(
-        eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
-    rho = mp2rage.rho(
-        t1, n_gre, tr_gre, 0, 0, 0, fa1, fa2, 0, eta_fa)
-    # remove non-bijective branches
-    bijective_slice = mrt.utils.bijective_part(rho)
-    eta_fa = eta_fa[bijective_slice]
-    rho = rho[bijective_slice]
-    if rho[0] > rho[-1]:
-        rho = rho[::-1]
-        eta_fa = eta_fa[::-1]
-    # check that rho values are strictly increasing
-    if not np.all(np.diff(rho) > 0):
-        raise ValueError('MP2RAGE look-up table was not properly prepared.')
-
-    # fix values range for rho
-    if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
-
-    eta_fa_arr = np.interp(rho_arr, rho, eta_fa)
-    return eta_fa_arr
-
-
-# ======================================================================
-def mu2rage(
-        rho_arr,
-        fa1,
-        fa2,
-        tr_gre,
-        n_gre,
-        t1=2000,
-        eta_fa_values_range=(0.01, 2.0),
-        eta_fa_num=512):
-    """
-    Calculate the flip angle efficiency from a MU2RAGE acquisitions.
-
-    MU2RAGE: Magnetization Unprepared 2 RApid Gradient Echo
-
-    Args:
-        rho_arr (np.ndarray): The input array.
-
-    """
-    # todo: implement correctly
-    from pymrt.sequences import mp2rage
-
-
-    eta_fa = np.linspace(
-        eta_fa_values_range[0], eta_fa_values_range[1], eta_fa_num)
-    rho = mp2rage.rho(
-        t1, n_gre, tr_gre, 0, 0, 0, fa1, fa2, 0, eta_fa)
-    # remove non-bijective branches
-    bijective_slice = mrt.utils.bijective_part(rho)
-    eta_fa = eta_fa[bijective_slice]
-    rho = rho[bijective_slice]
-    if rho[0] > rho[-1]:
-        rho = rho[::-1]
-        eta_fa = eta_fa[::-1]
-    # check that rho values are strictly increasing
-    if not np.all(np.diff(rho) > 0):
-        raise ValueError('MP2RAGE look-up table was not properly prepared.')
-
-    # fix values range for rho
-    if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
-
-    eta_fa_arr = np.interp(rho_arr, rho, eta_fa)
     return eta_fa_arr

@@ -17,6 +17,9 @@ import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+import scipy as sp  # SciPy (signal and image processing library)
+
+import scipy.interpolate  # Scipy: Interpolation
 
 # :: Local Imports
 import pymrt as mrt
@@ -27,124 +30,50 @@ import pymrt as mrt
 # from pymrt import msg, dbg
 import pymrt.utils
 from pymrt.recipes.generic import (
-    fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate)
+    fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate,
+    mag_phase_2_combine, cx_2_combine)
 import pymrt.recipes.multi_flash
 from pymrt.sequences import mp2rage
 
 
 # ======================================================================
-def mp2rage_cx_to_rho(
-        inv1_arr,
-        inv2_arr,
-        regularization=np.spacing(1),
-        values_interval=None):
-    """
-    Calculate the rho signal from an MP2RAGE acquisition.
-
-    This is also referred to as the uniform arrays, because it should be free
-    from low-spatial frequency biases.
-
-    Args:
-        inv1_arr (float|np.ndarray): Complex array of the first inversion.
-        inv2_arr (float|np.ndarray): Complex array of the second inversion.
-        regularization (float|int): Parameter for the regularization.
-            This parameter is added to the denominator of the rho expression
-            for normalization purposes, therefore should be much smaller than
-            the average of the magnitude arrays.
-            Larger values of this parameter will have the side effect of
-            denoising the background.
-        values_interval (tuple[float|int]|None): The output values interval.
-            The standard values are linearly converted to this range.
-            If None, the natural [-0.5, 0.5] interval will be used.
-
-    Returns:
-        rho_arr (float|np.ndarray): The calculated rho (uniform) array.
-    """
-    rho_arr = np.real(
-        inv1_arr.conj() * inv2_arr /
-        (np.abs(inv1_arr) + np.abs(inv2_arr) + regularization))
-    if values_interval:
-        rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
-    return rho_arr
-
-
-# ======================================================================
-def mp2rage_mag_phs_to_rho(
-        inv1m_arr,
-        inv1p_arr,
-        inv2m_arr,
-        inv2p_arr,
-        regularization=np.spacing(1),
-        values_interval=None):
-    """
-    Calculate the rho signal from an MP2RAGE acquisition.
-    
-    This is also referred to as the uniform arrays, because it should be free
-    from low-spatial frequency biases.
-
-    Args:
-        inv1m_arr (float|np.ndarray): Magnitude of the first inversion.
-        inv1p_arr (float|np.ndarray): Phase of the first inversion.
-        inv2m_arr (float|np.ndarray): Magnitude of the second inversion.
-        inv2p_arr (float|np.ndarray): Phase of the second inversion.
-        regularization (float|int): Parameter for the regularization.
-            This parameter is added to the denominator of the rho expression
-            for normalization purposes, therefore should be much smaller than
-            the average of the magnitude arrays.
-            Larger values of this parameter will have the side effect of
-            denoising the background.
-        values_interval (tuple[float|int]|None): The output values interval.
-            The standard values are linearly converted to this range.
-            If None, the natural [-0.5, 0.5] interval will be used.
-
-    Returns:
-        rho_arr (float|np.ndarray): The calculated rho (uniform) array.
-    """
-    inv1m_arr = inv1m_arr.astype(float)
-    inv2m_arr = inv2m_arr.astype(float)
-    inv1p_arr = fix_phase_interval(inv1p_arr)
-    inv2p_arr = fix_phase_interval(inv2p_arr)
-    inv1_arr = mrt.utils.polar2complex(inv1m_arr, inv1p_arr)
-    inv2_arr = mrt.utils.polar2complex(inv2m_arr, inv2p_arr)
-    rho_arr = mp2rage_cx_to_rho(
-        inv1_arr, inv2_arr, regularization, values_interval)
-    return rho_arr
-
-
-# ======================================================================
 def mp2rage_rho_to_t1(
         rho_arr,
-        eta_fa_arr=None,
+        eta_fa_arr=1,
         t1_values_range=(100, 5000),
         t1_num=512,
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
+        use_ratio=False,
         inverted=False,
         **params_kws):
     """
     Calculate the T1 map from an MP2RAGE acquisition.
+    
+    This also supports SA2RAGE and NO2RAGE.
 
     Args:
         rho_arr (float|np.ndarray): MP2RAGE signal (uniform) array.
-        eta_fa_arr (float|np.array|None): Flip angle efficiency.
+        eta_fa_arr (int|float|np.array): Flip angle efficiency in #.
             This is equivalent to the normalized B1T field.
-            Note that this must have the same spatial dimensions as the arrays
-            acquired with MP2RAGE.
-            If None, no correction for the flip angle efficiency is performed.
+            If np.ndarray, it must have the same shape as `rho_arr`.
+            If int or float, the flip angle efficiency is assumed to be
+            constant over `rho_arr`.
         t1_values_range (tuple[float]): The T1 range.
             The format is (min, max) where min < max.
             Values should be positive.
         t1_num (int): The number of samples for T1.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the estimation.
+            This parameter may affect the precision of the estimation.
         eta_fa_values_range (tuple[float]): The flip angle efficiency range.
             The format is (min, max) where min < max.
             Values should be positive.
         eta_fa_num (int): The number of samples for flip angle efficiency.
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
-            This affects the precision of the estimation.
+            This parameter may affect the precision of the estimation.
+        use_ratio (bool): Use ratio instead of pseudo ratio.
         inverted (bool): Invert results to convert times to rates.
             Assumes that units of time is ms and units of rates is Hz.
         **params_kws: The acquisition parameters.
@@ -156,7 +85,21 @@ def mp2rage_rho_to_t1(
              `sequences.mp2rage.rho()`.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map.
+        t1_arr (np.ndarray): The T1 map in ms.
+        
+    References:
+        1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W.,
+           Van de Moortele, P.-F., Gruetter, R., 2010. MP2RAGE, a self
+           bias-field corrected sequence for improved segmentation and
+           T1-mapping at high field. NeuroImage 49, 1271–1281.
+           doi:10.1016/j.neuroimage.2009.10.002
+        2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous 
+           Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with 
+           Multi-Echo MP2RAGE. PLOS ONE 12, e0169265.
+           doi:10.1371/journal.pone.0169265
+        3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R.,
+           Marques, J.P., 2012. SA2RAGE: A new sequence for fast B1+-mapping.
+           Magnetic Resonance Medicine 67, 1609–1619. doi:10.1002/mrm.23145 
     """
     # determine the sequence parameters
     try:
@@ -169,27 +112,17 @@ def mp2rage_rho_to_t1(
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
-    if eta_fa_arr is not None:
-        # determine the rho expression
-        t1 = np.linspace(
-            t1_values_range[0], t1_values_range[1], t1_num).reshape(-1, 1)
-        eta_fa = np.linspace(
-            eta_fa_values_range[0], eta_fa_values_range[1],
-            eta_fa_num).reshape(1, -1)
-        rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, **seq_kws)
-        print(rho.shape)
+    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.ratio
 
-        import pymrt.plot
-        import matplotlib.pyplot as plt
-        mrt.plot.quick_2d(rho)
-        plt.show()
+    # fix values range for rho
+    if not use_ratio and \
+            not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
+        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
 
-
-
-    else:
+    if isinstance(eta_fa_arr, (int, float)):
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage.rho(t1=t1, eta_fa=1, **seq_kws)
+        rho = mp2rage_rho(t1=t1, eta_fa=eta_fa_arr, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         t1 = t1[bijective_slice]
@@ -201,24 +134,26 @@ def mp2rage_rho_to_t1(
         if not np.all(np.diff(rho) > 0):
             raise ValueError(
                 'MP2RAGE look-up table was not properly prepared.')
-
-        # fix values range for rho
-        if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-            rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
-
         t1_arr = np.interp(rho_arr, rho, t1)
+
+    else:
+        # determine the rho expression
+        t1 = np.linspace(
+            t1_values_range[0], t1_values_range[1], t1_num).reshape(-1, 1)
+        eta_fa = np.linspace(
+            eta_fa_values_range[0], eta_fa_values_range[1],
+            eta_fa_num).reshape(1, -1)
+        rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, **seq_kws)
+        # todo: remove non bijective branches?
+        # use griddata for interpolation
+        t1_arr = sp.interpolate.griddata(
+            (rho.ravel(), (np.zeros_like(rho) + eta_fa).ravel()),
+            (np.zeros_like(rho) + t1).ravel(),
+            (rho_arr.ravel(), eta_fa_arr.ravel()))
 
     if inverted:
         t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr
-
-
-_t1_arr = mp2rage_rho_to_t1(
-    np.linspace(-0.1, 0.1, 10), np.linspace(0.9, 1.1, 10),
-    n_gre=100, tr_gre=10, fa1=4, fa2=5, td0=100, td1=1000, td2=2000, fa_p=180,
-    eta_p=0.95)
-print(_t1_arr)
-quit()
 
 
 # ======================================================================
@@ -274,9 +209,9 @@ def mp2rage_t1(
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map.
+        t1_arr (np.ndarray): The T1 map in ms.
     """
-    rho_arr = mp2rage_mag_phs_to_rho(
+    rho_arr = mag_phase_2_combine(
         inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
         values_interval=None)
     t1_arr = mp2rage_rho_to_t1(
@@ -360,7 +295,7 @@ def double_flash(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map.
+        t1_arr (np.ndarray): The calculated T1 map in time units.
     """
     if eta_fa_arr is None:
         eta_fa_arr = 1
@@ -454,7 +389,7 @@ def multi_flash(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        t1_arr (float|np.ndarray): The calculated T1 map.
+        t1_arr (np.ndarray): The calculated T1 map in time units.
 
     See Also:
         recipes.multi_flash.vfa()

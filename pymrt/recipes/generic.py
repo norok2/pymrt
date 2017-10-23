@@ -168,9 +168,19 @@ def cx_div(
         regularization=np.spacing(1),
         values_interval=None):
     """
-    Calculate the expression: s1 * s2 / (s1^2 + s2^2)
+    Calculate the pseudo-ratio expression: s1 * s2 / (s1^2 + s2^2)
 
     This is an SNR optimal expression for (s1 / s2) or (s2 / s1).
+
+    Equivalent expressions are:
+
+    .. math::
+        f(s_1, s_2) = \frac{s_1 s_2}{(s_1^2 + s_2^2}
+        = \frac{1}{\frac{s_1}{s_2}+\frac{s_2}{s_1}}
+
+    which is either the inverse of the arithmetic mean of the two ratios or half
+    the harmonic mean of the two ratios.
+
     Resulting values are in the [-0.5, 0.5] interval.
 
     Args:
@@ -184,12 +194,12 @@ def cx_div(
             If None, the natural [-0.5, 0.5] interval will be used.
 
     Returns:
-        rho_arr (float|np.ndarray): The calculated rho (uniform) image.
+        result (float|complex|np.ndarray): The pseud-ratio array.
     """
-    rho_arr = arr1 * arr2 / (np.abs(arr1) + np.abs(arr2) + regularization)
+    result = arr1 * arr2 / (np.abs(arr1) + np.abs(arr2) + regularization)
     if values_interval:
-        rho_arr = mrt.utils.scale(rho_arr, values_interval, (-0.5, 0.5))
-    return rho_arr
+        result = mrt.utils.scale(result, values_interval, (-0.5, 0.5))
+    return result
 
 
 # ======================================================================
@@ -880,6 +890,97 @@ def fit_exp_tau(
 
     """
     raise NotImplementedError
+
+
+# ======================================================================
+def cx_2_combine(
+        cx1_arr,
+        cx2_arr,
+        func='ratio',
+        regularization=np.spacing(1)):
+    """
+    Calculate the combination of two arrays.
+
+    Args:
+        cx1_arr (float|np.ndarray): First complex array.
+        cx2_arr (float|np.ndarray): Second complex array.
+        func (str|callable): Determine the combination function to use.
+            If str, must be any of:
+             - 'ratio': :math:`\frac{s_1}{s_2}`
+             - 'pseudo-ratio': :math:`\frac{s_1 s_2}{s_1^2+s_2^2}`.
+             - 'mp2rage': The MP2RAGE rho:
+               :math:`\frac{s_1^* s_2}{s_1^2+s_2^2}`
+            If callable, its signature must be:
+            `func(np.ndarray, np.ndarray) -> np.ndarray`
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the fractional
+            expressions for normalization purposes, therefore should be much
+            smaller than the average of the magnitude arrays.
+            Larger values of this parameter may have as side effect the
+            denoising the background.
+
+    Returns:
+        result (np.ndarray): The combined  array.
+    """
+    if callable(func):
+        result = func(cx1_arr, cx2_arr)
+    else:
+        func = func.lower()
+        if func == 'ratio':
+            result = cx1_arr / (cx2_arr + regularization)
+        elif func == 'pseudo-ratio':
+            result = cx_div(cx1_arr, cx2_arr, regularization)
+        elif func == 'mp2rage':
+            result = np.real(
+                cx1_arr.conj() * cx2_arr /
+                (np.abs(cx1_arr) + np.abs(cx2_arr) + regularization))
+        else:
+            raise ValueError('Unknown value `{}` for `func`.'.format(func))
+    return result
+
+
+# ======================================================================
+def mag_phase_2_combine(
+        mag1_arr,
+        phs1_arr,
+        mag2_arr,
+        phs2_arr,
+        func='ratio',
+        regularization=np.spacing(1)):
+    """
+    Calculate the combination of two arrays.
+
+    This is also referred to as the uniform arrays, because it should be free
+    from low-spatial frequency biases.
+
+    Args:
+        cx1_arr (float|np.ndarray): First complex array.
+        cx2_arr (float|np.ndarray): Second complex array.
+        func (str|callable): Determine the combination function to use.
+            If str, must be any of:
+             - 'ratio': :math:`\frac{s_1}{s_2}`
+             - 'pseudo-ratio': :math:`\frac{s_1 s_2}{s_1^2+s_2^2}`.
+             - 'mp2rage': The MP2RAGE rho:
+               :math:`\frac{s_1^* s_2}{s_1^2+s_2^2}`
+            If callable, its signature must be:
+            `func(np.ndarray, np.ndarray) -> np.ndarray`
+        regularization (float|int): Parameter for the regularization.
+            This parameter is added to the denominator of the fractional
+            expressions for normalization purposes, therefore should be much
+            smaller than the average of the magnitude arrays.
+            Larger values of this parameter may have as side effect the
+            denoising the background.
+
+    Returns:
+        result (np.ndarray): The rho (uniform) array.
+    """
+    mag1_arr = mag1_arr.astype(float)
+    mag2_arr = mag2_arr.astype(float)
+    phs1_arr = fix_phase_interval(phs1_arr)
+    phs2_arr = fix_phase_interval(phs2_arr)
+    inv1_arr = mrt.utils.polar2complex(mag1_arr, phs1_arr)
+    inv2_arr = mrt.utils.polar2complex(mag2_arr, phs2_arr)
+    return cx_2_combine(inv1_arr, inv2_arr, regularization, func)
 
 
 # ======================================================================
