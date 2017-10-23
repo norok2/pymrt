@@ -69,12 +69,12 @@ SEQ_INTERACTIVES = collections.OrderedDict([
     ('tr_gre', dict(
         label='TR_GRE / ms', default=6, start=1, stop=128, step=0.1)),
 
-    ('ta', dict(
-        label='T_A / ms', default=440, start=0, stop=10000, step=10)),
-    ('tb', dict(
-        label='T_B / ms', default=1180, start=0, stop=10000, step=10)),
-    ('tc', dict(
-        label='T_C / ms', default=4140, start=0, stop=10000, step=10)),
+    ('td0', dict(
+        label='T_D0 / ms', default=0, start=0, stop=10000, step=10)),
+    ('td1', dict(
+        label='T_D1 / ms', default=0, start=0, stop=10000, step=10)),
+    ('td2', dict(
+        label='T_D2 / ms', default=0, start=0, stop=10000, step=10)),
 
     ('fa1', dict(
         label='α_1 / deg', default=4.0, start=0.05, stop=22.0, step=0.05)),
@@ -184,7 +184,7 @@ def plot_rho_t1_mp2rage_seq(
             mp2rage_rho = mp2rage.ratio
 
         kws_names = (
-            'n_gre', 'tr_gre', 'ta', 'tb', 'tc', 'fa1', 'fa2', 'eta_p', 'fa_p')
+            'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['t1'] = t1_arr
 
