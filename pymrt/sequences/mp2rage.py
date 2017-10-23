@@ -151,7 +151,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         s1_ = (
             (_mz_p(mz_ss, fa_p, eta_p) / m0 * ea +
              (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
-                (1 - e1) * (1 - (cos(fa1 * eta_fa) * e1) ** (-n_gre / 2 - 1)) /
+                (1 - e1) * (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1)) /
                 (1 - cos(fa1 * eta_fa) * e1)))
         print('s1: {}'.format(s1_))
 
@@ -173,7 +173,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         s2_ = (
             ((mz_ss / m0) - (1 - ec)) /
             (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre / 2)) -
-            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (n_gre / 2) - 1) /
+            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (-n_gre / 2) - 1) /
             (1 - cos(fa2 * eta_fa) * e1))
         print('s2: {}'.format(s2_))
 
