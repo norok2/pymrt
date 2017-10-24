@@ -285,7 +285,7 @@ def rho(
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
     fa_p = np.deg2rad(fa_p)
-    if eta_p is None:
+    if eta_p is None or eta_p == 0.0:
         eta_p = eta_fa
     result = _rho(
         n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
@@ -347,7 +347,7 @@ def ratio(
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
     fa_p = np.deg2rad(fa_p)
-    if eta_p is None:
+    if eta_p is None or eta_p == 0.0:
         eta_p = eta_fa
     result = _ratio(
         n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
