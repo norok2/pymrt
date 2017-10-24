@@ -196,7 +196,8 @@ def cx_div(
     Returns:
         result (float|complex|np.ndarray): The pseud-ratio array.
     """
-    result = arr1 * arr2 / (np.abs(arr1) + np.abs(arr2) + regularization)
+    result = arr1 * arr2 / (
+        np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
         result = mrt.utils.scale(result, values_interval, (-0.5, 0.5))
     return result

@@ -112,7 +112,7 @@ def mp2rage_rho_to_t1(
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
-    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.ratio
+    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.rho
 
     # fix values range for rho
     if not use_ratio and \

@@ -336,7 +336,6 @@ def mp2rage_rho_to_eta_fa(
         eta_fa_values_range=(0.1, 2),
         eta_fa_num=512,
         use_ratio=False,
-        inverted=False,
         **params_kws):
     """
     Calculate the flip angle efficiency from an MP2RAGE acquisition.
@@ -400,7 +399,7 @@ def mp2rage_rho_to_eta_fa(
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
-    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.ratio
+    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.rho
     # fix values range for rho
     if not use_ratio and \
             not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
