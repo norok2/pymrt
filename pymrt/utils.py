@@ -3238,13 +3238,16 @@ def guess_decimals(
 # ======================================================================
 def significant_figures(
         val,
-        num):
+        num,
+        keep_zeros=4):
     """
     Format a number with the correct number of significant figures.
 
     Args:
         val (str|float|int): The numeric value to be correctly formatted.
         num (str|int): The number of significant figures to be displayed.
+        keep_zeros (int): The number of zeros to keep after the figures.
+            This is useful for preventing the use of the scientific notation.
 
     Returns:
         val (str): String containing the properly formatted number.
@@ -3255,11 +3258,13 @@ def significant_figures(
         >>> significant_figures(1.2345, 4)
         '1.234'
         >>> significant_figures(1.234e3, 2)
-        '1.2e+03'
+        '1200'
         >>> significant_figures(-1.234e3, 3)
-        '-1.23e+03'
+        '-1230'
         >>> significant_figures(12345678, 4)
-        '1.235e+07'
+        '12350000'
+        >>> significant_figures(1234567890, 4)
+        '1.235e+09'
 
     See Also:
         The 'decimal' Python standard module.
@@ -3268,10 +3273,20 @@ def significant_figures(
     num = int(num)
     order = int(np.floor(np.log10(abs(val)))) if abs(val) != 0.0 else 0
     dec = num - order - 1  # if abs(order) < abs(num) else 0
-    typ = 'f' if order < num else 'g'
-    prec = dec if order < num else num
-    #    print('val={}, num={}, ord={}, dec={}, typ={}, prec={}'.format(
-    #        val, num, order, dec, typ, prec))  # DEBUG
+    if order >= num + keep_zeros:
+        typ = 'g'
+        prec = num
+    elif num + keep_zeros > order > num:
+        typ = 'f'
+        prec = 0
+    elif num > order >= 0:
+        typ = 'f'
+        prec = dec
+    else:
+        typ = 'f'
+        prec = 0
+    # print('val={}, num={}, ord={}, dec={}, typ={}, prec={}'.format(
+    #     val, num, order, dec, typ, prec))  # DEBUG
     val = '{:.{prec}{typ}}'.format(round(val, dec), prec=prec, typ=typ)
     return val
 
@@ -3280,14 +3295,17 @@ def significant_figures(
 def format_value_error(
         val,
         err,
-        num=2):
+        num=2,
+        keep_zeros=4):
     """
-    Write correct value/error pairs.
+    Outputs correct value/error pairs formatting.
 
     Args:
         val (str|float|int): The numeric value to be correctly formatted.
         err (str|float|int): The numeric error to be correctly formatted.
         num (str|int): The precision to be used for the error (usually 1 or 2).
+        keep_zeros (int): The number of zeros to keep after the figures.
+            This is useful for preventing the use of the scientific notation.
 
     Returns:
         val_str (str): The string with the correctly formatted numeric value.
@@ -3306,6 +3324,14 @@ def format_value_error(
         ('12345.60', '0.0')
         >>> format_value_error(12345.6, 0, 0)
         ('12346', '0')
+        >>> format_value_error(12345.6, 67)
+        ('12346', '67')
+        >>> format_value_error(12345.6, 670)
+        ('12350', '670')
+        >>> format_value_error(1234567890.0, 123456.0)
+        ('1234570000', '120000')
+        >>> format_value_error(1234567890.0, 1234567.0)
+        ('1.2346e+09', '1.2e+06')
     """
     val = float(val)
     err = float(err)
@@ -3313,8 +3339,12 @@ def format_value_error(
     val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
     err_order = np.ceil(np.log10(np.abs(err))) if err != 0 else 0
     try:
-        val_str = significant_figures(val, val_order - err_order + num)
-        err_str = significant_figures(err, num)
+        # print('val_order={}, err_order={}, num={}'.format(
+        #     val_order, err_order, num))  # DEBUG
+        val_str = significant_figures(
+            val, val_order - err_order + num, keep_zeros)
+        err_str = significant_figures(
+            err, num, keep_zeros)
     except ValueError:
         val_str = str(val)
         err_str = str(err)
