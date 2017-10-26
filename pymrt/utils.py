@@ -3265,6 +3265,8 @@ def significant_figures(
         '12350000'
         >>> significant_figures(1234567890, 4)
         '1.235e+09'
+        >>> significant_figures(-0.1234, 1)
+        '-0.1'
 
     See Also:
         The 'decimal' Python standard module.
@@ -3276,15 +3278,12 @@ def significant_figures(
     if order >= num + keep_zeros:
         typ = 'g'
         prec = num
-    elif num + keep_zeros > order > num:
+    elif num + keep_zeros > abs(order) > num:
         typ = 'f'
         prec = 0
-    elif num > order >= 0:
+    else:  # if num >= abs(order) >= 0:
         typ = 'f'
-        prec = dec
-    else:
-        typ = 'f'
-        prec = 0
+        prec = max(dec, 0)
     # print('val={}, num={}, ord={}, dec={}, typ={}, prec={}'.format(
     #     val, num, order, dec, typ, prec))  # DEBUG
     val = '{:.{prec}{typ}}'.format(round(val, dec), prec=prec, typ=typ)
@@ -3332,6 +3331,8 @@ def format_value_error(
         ('1234570000', '120000')
         >>> format_value_error(1234567890.0, 1234567.0)
         ('1.2346e+09', '1.2e+06')
+        >>> format_value_error(-0.470, 1.722)
+        ('-0.5', '1.7')
     """
     val = float(val)
     err = float(err)

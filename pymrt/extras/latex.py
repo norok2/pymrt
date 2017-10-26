@@ -206,7 +206,9 @@ def gen_matrix(
         dx_arr=None,
         c_sep=r'&',
         r_sep=r'\\',
-        container=r'bmatrix',
+        container=r'array',
+        prefix=r'\left[' + '\n',
+        suffix=r'\right]' + '\n',
         prec=2):
     """
     Generate a LaTeX matrix from a numerical array.
@@ -239,10 +241,13 @@ def gen_matrix(
             *mrt.utils.format_value_error(x, dx, prec))
         ending = c_sep if i % x_arr.shape[1] < x_arr.shape[1] - 1 else r_sep
         text += cell + ending
+    columns = 'c' * x_arr.shape[1]
     text = (
-        r'\begin{{{}}}'.format(container) +
+        prefix +
+        r'\begin{{{}}}{{{}}}'.format(container, columns) +
         text +
-        r'\end{{{}}}'.format(container))
+        r'\end{{{}}}'.format(container) +
+        suffix)
     return text
 
 

@@ -199,7 +199,7 @@ def plot_rho_b1t_mp2rage_seq(
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['eta_fa'] = eta_fa_arr
         if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
+            seq_kws['eta_p'] = None
         for t1 in t1_arr:
             seq_kws['t1'] = t1
             rho_arr = mp2rage_rho(**seq_kws)
@@ -275,7 +275,7 @@ def plot_rho_b1t_mp2rage_acq(
         kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
         if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
+            seq_kws['eta_p'] = None
         for t1 in t1_arr:
             seq_kws['t1'] = t1
             rho_arr = mp2rage_rho(**seq_kws)

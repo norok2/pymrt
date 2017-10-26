@@ -188,40 +188,32 @@ def plot_rho_t1_mp2rage_seq(
             'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['t1'] = t1_arr
+        if seq_kws['eta_p'] == 0:
+            seq_kws['eta_p'] = None
 
         seq_kws['eta_fa'] = params['eta_fa']
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
@@ -294,40 +286,32 @@ def plot_rho_t1_mp2rage_acq(
         kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
         seq_kws['t1'] = t1_arr
+        if seq_kws['eta_p'] == 0:
+            seq_kws['eta_p'] = None
         
         seq_kws['eta_fa'] = params['eta_fa']
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        if seq_kws['eta_p'] == 0:
-            seq_kws['eta_p'] = seq_kws['eta_fa']
         rho_arr = mp2rage_rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',

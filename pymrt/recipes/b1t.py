@@ -42,7 +42,7 @@ def afi(
         arr2,
         n_tr,
         fa,
-        prepare=fix_magnitude_bias):
+        prepare=None):
     """
     Calculate the flip angle efficiency from Actual Flip Angle (AFI) data.
 
@@ -85,8 +85,8 @@ def afi(
           transmitted radiofrequency field. Magn. Reson. Med. 57, 192–200.
           doi:10.1002/mrm.21120
     """
-    arr1 = prepare(arr1) if prepare else arr1.astype(float)
-    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+    arr1 = prepare(arr1) if prepare else arr1.astype(complex)
+    arr2 = prepare(arr2) if prepare else arr2.astype(complex)
 
     fa = np.deg2rad(fa)
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -162,8 +162,8 @@ def double_rare(
           589–593.
           doi:10.1002/(SICI)1522-2594(200004)43:4<589::AID-MRM14>3.0.CO;2-2
     """
-    arr1 = prepare(arr1) if prepare else arr1.astype(float)
-    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+    arr1 = prepare(arr1) if prepare else arr1.astype(complex)
+    arr2 = prepare(arr2) if prepare else arr2.astype(complex)
 
     fa = np.deg2rad(fa)
     with np.errstate(divide='ignore', invalid='ignore'):
