@@ -185,7 +185,7 @@ class PytkMain(pytk.widgets.Frame):
                 chk = pytk.widgets.Checkbox(
                     self.frmParams, text=info['label'], variable=var)
                 chk.pack(fill='x', padx=1, pady=1)
-                self.wdgInteractives[name] = {'var': var, 'chk': chk}
+                self.wdgInteractives[name] = dict(var=var, chk=chk)
             elif isinstance(info['default'], (int, float)):
                 var = pytk.tk.StringVar()
                 var.set(str(info['default']))
@@ -207,10 +207,23 @@ class PytkMain(pytk.widgets.Frame):
                 spb.pack(
                     side='right', fill='none', anchor='w', padx=1, pady=1,
                     expand=False)
-                self.wdgInteractives[name] = {
-                    'var': var, 'frm': frm, 'lbl': lbl, 'spb': spb, 'rng': rng}
-            elif isinstance(info['default'], (str, bytes)):
-                pass
+                self.wdgInteractives[name] = dict(
+                    var=var, frm=frm, lbl=lbl, spb=spb, rng=rng)
+            elif isinstance(info['default'], str):
+                var = pytk.tk.StringVar()
+                var.set(str(info['default']))
+                frm = pytk.widgets.Frame(self.frmParams)
+                frm.pack(fill='x', padx=1, pady=1, expand=True)
+                lbl = pytk.widgets.Label(frm, text=info['label'])
+                lbl.pack(side='left', fill='x', padx=1, pady=1, expand=False)
+                cmb = pytk.widgets.Combobox(
+                    frm,
+                    values=info['values'], textvariable=var)
+                cmb.pack(
+                    side='right', fill='x', anchor='w', padx=1, pady=1,
+                    expand=False)
+                self.wdgInteractives[name] = dict(
+                    var=var, frm=frm, lbl=lbl, cmb=cmb)
         self._bind_interactions()
         self.actionReset()
 
@@ -241,8 +254,9 @@ class PytkMain(pytk.widgets.Frame):
             params = {}
             for k, v in self.wdgInteractives.items():
                 val = v['var'].get()
+                my_type = type(self.interactives[k]['default'])
                 try:
-                    val = float(val)
+                    val = my_type(val)
                 except ValueError:
                     val = self.interactives[k]['default']
                 params[k] = val
