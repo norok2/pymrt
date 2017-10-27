@@ -185,7 +185,7 @@ def plot_rho_b1t_mp2rage_seq(
     ax = fig.gca()
     try:
         if params['use_rho']:
-            mp2rage_rho = mp2rage.rho
+            mp2rage_rho = mp2rage.pseudo_ratio
         else:
             mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
@@ -213,7 +213,7 @@ def plot_rho_b1t_mp2rage_seq(
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
         ax.set_ylabel(r'$\eta_\alpha$ / #')
         if params['use_rho']:
-            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
             ax.set_xlabel(
                 r'$\rho='
                 r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
@@ -233,7 +233,7 @@ def plot_rho_b1t_mp2rage_acq(
     ax = fig.gca()
     try:
         if params['use_rho']:
-            mp2rage_rho = mp2rage.rho
+            mp2rage_rho = mp2rage.pseudo_ratio
         else:
             mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
@@ -289,7 +289,7 @@ def plot_rho_b1t_mp2rage_acq(
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
         ax.set_ylabel(r'$\eta_\alpha$ / #')
         if params['use_rho']:
-            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
             ax.set_xlabel(
                 r'$\rho='
                 r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')

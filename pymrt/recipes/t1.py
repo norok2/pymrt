@@ -37,12 +37,12 @@ from pymrt.sequences import mp2rage
 
 
 # ======================================================================
-def mp2rage_rho_to_t1(
+def mp2rage_rho(
         rho_arr,
         eta_fa_arr=1,
         t1_values_range=(100, 5000),
         t1_num=512,
-        eta_fa_values_range=(0.1, 2),
+        eta_fa_values_range=(0.01, 2),
         eta_fa_num=512,
         use_ratio=False,
         inverted=False,
@@ -53,7 +53,12 @@ def mp2rage_rho_to_t1(
     This also supports SA2RAGE and NO2RAGE.
 
     Args:
-        rho_arr (float|np.ndarray): MP2RAGE signal (uniform) array.
+        rho_arr (float|np.ndarray): MP2RAGE rho signal array.
+            Its interpretation depends on `use_ratio`.
+            If `use_ratio` is False, the pseudo-ratio s1*s2/(s1^2+s2^2) is
+            used and the values must be in the (-0.5, 0.5) range.
+            If `use_ratio` is True, the ratio s1/s2 is used and the values are
+            not bound.    
         eta_fa_arr (int|float|np.array): Flip angle efficiency in #.
             This is equivalent to the normalized B1T field.
             If np.ndarray, it must have the same shape as `rho_arr`.
@@ -86,7 +91,7 @@ def mp2rage_rho_to_t1(
 
     Returns:
         t1_arr (np.ndarray): The T1 map in ms.
-        
+
     References:
         1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W.,
            Van de Moortele, P.-F., Gruetter, R., 2010. MP2RAGE, a self
@@ -108,21 +113,17 @@ def mp2rage_rho_to_t1(
         seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
         seq_kws.update(kws)
     except TypeError:
-        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
+        seq_kws, kws = mrt.utils.split_func_kws(
+            mp2rage.pseudo_ratio, params_kws)
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
-    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.rho
-
-    # fix values range for rho
-    if not use_ratio and \
-            not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+    rho_func = mp2rage.ratio if use_ratio else mp2rage.pseudo_ratio
 
     if isinstance(eta_fa_arr, (int, float)):
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage_rho(t1=t1, eta_fa=eta_fa_arr, **seq_kws)
+        rho = rho_func(t1=t1, eta_fa=eta_fa_arr, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         t1 = t1[bijective_slice]
@@ -143,7 +144,7 @@ def mp2rage_rho_to_t1(
         eta_fa = np.linspace(
             eta_fa_values_range[0], eta_fa_values_range[1],
             eta_fa_num).reshape(1, -1)
-        rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, **seq_kws)
+        rho = mp2rage.pseudo_ratio(t1=t1, eta_fa=eta_fa, **seq_kws)
         # todo: remove non bijective branches?
         # use griddata for interpolation
         t1_arr = sp.interpolate.griddata(
@@ -214,7 +215,7 @@ def mp2rage_t1(
     rho_arr = mag_phase_2_combine(
         inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
         values_interval=None)
-    t1_arr = mp2rage_rho_to_t1(
+    t1_arr = mp2rage_rho(
         rho_arr, eta_fa_arr,
         t1_values_range, t1_num,
         eta_fa_values_range, eta_fa_num, inverted, **acq_param_kws)

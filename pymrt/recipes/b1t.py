@@ -328,12 +328,12 @@ def double_flash(
 
 
 # ======================================================================
-def mp2rage_rho_to_eta_fa(
+def mp2rage_rho(
         rho_arr,
         t1_arr=1500,
         t1_values_range=(100, 5000),
         t1_num=512,
-        eta_fa_values_range=(0.1, 2),
+        eta_fa_values_range=(0.01, 2.0),
         eta_fa_num=512,
         use_ratio=False,
         **params_kws):
@@ -343,7 +343,12 @@ def mp2rage_rho_to_eta_fa(
     This also supports SA2RAGE and NO2RAGE.
 
     Args:
-        rho_arr (float|np.ndarray): MP2RAGE signal (uniform) array.
+        rho_arr (float|np.ndarray): MP2RAGE signal array.
+            Its interpretation depends on `use_ratio`.
+            If `use_ratio` is False, the pseudo-ratio s1*s2/(s1^2+s2^2) is
+            used and the values must be in the (-0.5, 0.5) range.
+            If `use_ratio` is True, the ratio s1/s2 is used and the values are
+            not bound.
         t1_arr (int|float|np.array): Longitudinal relaxation in ms.
             If np.ndarray, it must have the same shape as `rho_arr`.
             If int or float, the longitudinal relaxation is assumed to be
@@ -395,21 +400,18 @@ def mp2rage_rho_to_eta_fa(
         seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
         seq_kws.update(kws)
     except TypeError:
-        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
+        seq_kws, kws = mrt.utils.split_func_kws(
+            mp2rage.pseudo_ratio, params_kws)
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
-    mp2rage_rho = mp2rage.ratio if use_ratio else mp2rage.rho
-    # fix values range for rho
-    if not use_ratio and \
-            not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-        rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+    rho_func = mp2rage.ratio if use_ratio else mp2rage.pseudo_ratio
 
     if isinstance(t1_arr, (int, float)):
         # determine the rho expression
         eta_fa = np.linspace(
             eta_fa_values_range[0], eta_fa_values_range[1], t1_num)
-        rho = mp2rage_rho(t1=t1_arr, eta_fa=eta_fa, **seq_kws)
+        rho = rho_func(t1=t1_arr, eta_fa=eta_fa, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         eta_fa = eta_fa[bijective_slice]

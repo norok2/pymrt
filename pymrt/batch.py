@@ -557,7 +557,7 @@ def rho_to_t1_mp2rage(
     else:
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage.rho(
+        rho = mp2rage.pseudo_ratio(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
@@ -571,8 +571,8 @@ def rho_to_t1_mp2rage(
             raise ValueError('MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
-        if not mrt.utils.is_in_range(rho_arr, mp2rage.RHO_INTERVAL):
-            rho_arr = mrt.utils.scale(rho_arr, mp2rage.RHO_INTERVAL)
+        if not mrt.utils.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
+            rho_arr = mrt.utils.scale(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL)
 
         t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr

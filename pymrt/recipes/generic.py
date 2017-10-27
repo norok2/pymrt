@@ -907,10 +907,10 @@ def cx_2_combine(
         cx2_arr (float|np.ndarray): Second complex array.
         func (str|callable): Determine the combination function to use.
             If str, must be any of:
-             - 'ratio': :math:`\frac{s_1}{s_2}`
-             - 'pseudo-ratio': :math:`\frac{s_1 s_2}{s_1^2+s_2^2}`.
+             - 'ratio': :math:`\\frac{s_1}{s_2}`
+             - 'pseudo-ratio': :math:`\\frac{s_1 s_2}{s_1^2+s_2^2}`.
              - 'mp2rage': The MP2RAGE rho:
-               :math:`\frac{s_1^* s_2}{s_1^2+s_2^2}`
+               :math:`\\frac{s_1^* s_2}{s_1^2+s_2^2}`
             If callable, its signature must be:
             `func(np.ndarray, np.ndarray) -> np.ndarray`
         regularization (float|int): Parameter for the regularization.

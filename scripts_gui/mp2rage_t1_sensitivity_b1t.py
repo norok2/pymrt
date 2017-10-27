@@ -179,7 +179,7 @@ def plot_rho_t1_mp2rage_seq(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     try:
         if params['use_rho']:
-            mp2rage_rho = mp2rage.rho
+            mp2rage_rho = mp2rage.pseudo_ratio
         else:
             mp2rage_rho = mp2rage.ratio
 
@@ -227,7 +227,7 @@ def plot_rho_t1_mp2rage_seq(
         ax.set_ylim(params['t1_start'], params['t1_stop'])
         ax.set_ylabel(r'$T_1$ / ms')
         if params['use_rho']:
-            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
             ax.set_xlabel(
                 r'$\rho='
                 r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
@@ -249,7 +249,7 @@ def plot_rho_t1_mp2rage_acq(
     ax = fig.gca()
     try:
         if params['use_rho']:
-            mp2rage_rho = mp2rage.rho
+            mp2rage_rho = mp2rage.pseudo_ratio
         else:
             mp2rage_rho = mp2rage.ratio
 
@@ -325,7 +325,7 @@ def plot_rho_t1_mp2rage_acq(
         ax.set_ylim(params['t1_start'], params['t1_stop'])
         ax.set_ylabel(r'$T_1$ / ms')
         if params['use_rho']:
-            ax.set_xlim(mp2rage.RHO_INTERVAL)
+            ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
             ax.set_xlabel(
                 r'$\rho='
                 r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')

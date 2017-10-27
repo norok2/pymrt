@@ -73,7 +73,7 @@ _SEQ_PARAMS = dict(
 )
 
 # rho ranges
-RHO_INTERVAL = (-0.5, 0.5)
+PSEUDO_RATIO_INTERVAL = (-0.5, 0.5)
 
 
 # ======================================================================
@@ -99,7 +99,7 @@ def _mz_p(mz0, fa_p, eta_p):
 
 # ======================================================================
 def _prepare_mp2rage(use_cache=CFG['use_cache']):
-    """Solve the MP2RAGE rho expression analytically."""
+    """Solve the MP2RAGE signal expressions analytically."""
 
     cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
@@ -183,31 +183,31 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         s2_ = sin(fa2 * eta_fa) * s2_
 
         # T1 map as a function of steady state rho
-        # rho_ = 1 / ((s1 / s2) + (s2 / s1))
-        rho_ = (s1 * s2) / (s1 ** 2 + s2 ** 2)
-        rho_ = (
-            rho_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
+        # pseudo_ratio_ = 1 / ((s1 / s2) + (s2 / s1))
+        pseudo_ratio_ = (s1 * s2) / (s1 ** 2 + s2 ** 2)
+        pseudo_ratio_ = (
+            pseudo_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
         ratio_ = s1 / s2
         ratio_ = sym.factor(
             ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
 
-        print('rho: {}'.format(rho_))
+        print('pseudo-ratio: {}'.format(pseudo_ratio_))
         print('ratio: {}'.format(ratio_))
 
         params = (n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
-            pickle.dump((params, rho_, ratio_), cache_file)
+            pickle.dump((params, pseudo_ratio_, ratio_), cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
-            params, rho_, ratio_ = pickle.load(cache_file)
-    rho_ = sym.lambdify(params, rho_)
+            params, pseudo_ratio_, ratio_ = pickle.load(cache_file)
+    pseudo_ratio_ = sym.lambdify(params, pseudo_ratio_)
     ratio_ = sym.lambdify(params, ratio_)
-    return rho_, ratio_
+    return pseudo_ratio_, ratio_
 
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_rho, _ratio = _prepare_mp2rage()
+_pseudo_ratio, _ratio = _prepare_mp2rage()
 
 
 # ======================================================================
@@ -232,7 +232,7 @@ def _bijective_part(arr, mask_val=np.nan):
 
 
 # ======================================================================
-def rho(
+def pseudo_ratio(
         n_gre,
         tr_gre,
         fa1,
@@ -246,7 +246,7 @@ def rho(
         eta_fa,
         bijective=False):
     """
-    Calculate (generalized) MP2RAGE signal rho from the sequence parameters.
+    Calculate the MP2RAGE signal pseudo-ratio from the sequence parameters.
 
     .. math::
         \\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2} =
@@ -287,7 +287,7 @@ def rho(
     fa_p = np.deg2rad(fa_p)
     if eta_p is None:
         eta_p = eta_fa
-    result = _rho(
+    result = _pseudo_ratio(
         n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
@@ -309,10 +309,10 @@ def ratio(
         eta_fa,
         bijective=False):
     """
-    Calculate (generalized) MP2RAGE signal ratio from the sequence parameters.
+    Calculate the MP2RAGE signal ratio from the sequence parameters.
 
     .. math::
-        r = \\frac{s_1}{s_2}
+        \\rho = \\frac{s_1}{s_2}
 
     This expression can also be used for SA2RAGE and NO2RAGE.
 
@@ -480,11 +480,11 @@ def test_signal():
     import matplotlib.pyplot as plt
 
     t1 = np.linspace(50, 5000, 5000)
-    s = rho(t1=t1, **_SEQ_PARAMS, bijective=True)
+    s = pseudo_ratio(t1=t1, **_SEQ_PARAMS, bijective=True)
     plt.plot(s, t1)
     plt.show()
     eta_fa = np.array([0.9, 1.0, 1.1])
-    s0 = rho(
+    s0 = pseudo_ratio(
         t1=100,
         eta_p=1.0,  # #
         n_gre=160,  # #

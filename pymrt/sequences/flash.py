@@ -268,7 +268,7 @@ def _prepare_multi_flash(use_cache=CFG['use_cache']):
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-# _rho = _prepare_multi_flash()
+# _pseudo_ratio = _prepare_multi_flash()
 
 
 # ======================================================================
