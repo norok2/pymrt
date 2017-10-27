@@ -1525,7 +1525,6 @@ def gen_p_ratio(*items):
     .. math::
         \\frac{1}{\\sum_{ij} \\frac{x_i}{x_j}}
 
-
     Args:
         *items (iterable[int|float|np.ndarray]): Input values.
 
