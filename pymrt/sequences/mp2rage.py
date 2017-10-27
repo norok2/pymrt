@@ -183,31 +183,37 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         s2_ = sin(fa2 * eta_fa) * s2_
 
         # T1 map as a function of steady state rho
-        # pseudo_ratio_ = 1 / ((s1 / s2) + (s2 / s1))
-        pseudo_ratio_ = (s1 * s2) / (s1 ** 2 + s2 ** 2)
-        pseudo_ratio_ = (
-            pseudo_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
+        # p_ratio_ = 1 / ((s1 / s2) + (s2 / s1))
+        p_ratio_ = (s1 * s2) / (s1 ** 2 + s2 ** 2)
+        p_ratio_ = (
+            p_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
         ratio_ = s1 / s2
         ratio_ = sym.factor(
             ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
+        r_ratio_ = s2 / s1
+        r_ratio_ = sym.factor(
+            r_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
 
-        print('pseudo-ratio: {}'.format(pseudo_ratio_))
+        print('pseudo-ratio: {}'.format(p_ratio_))
         print('ratio: {}'.format(ratio_))
+        print('reverse-ratio: {}'.format(r_ratio_))
 
-        params = (n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
+        params = (
+            n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
-            pickle.dump((params, pseudo_ratio_, ratio_), cache_file)
+            pickle.dump((params, p_ratio_, ratio_, r_ratio_), cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
-            params, pseudo_ratio_, ratio_ = pickle.load(cache_file)
-    pseudo_ratio_ = sym.lambdify(params, pseudo_ratio_)
+            params, p_ratio_, ratio_, r_ratio_ = pickle.load(cache_file)
+    p_ratio_ = sym.lambdify(params, p_ratio_)
     ratio_ = sym.lambdify(params, ratio_)
-    return pseudo_ratio_, ratio_
+    r_ratio_ = sym.lambdify(params, r_ratio_)
+    return p_ratio_, ratio_, r_ratio_
 
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_pseudo_ratio, _ratio = _prepare_mp2rage()
+_p_ratio, _ratio, _r_ratio = _prepare_mp2rage()
 
 
 # ======================================================================
@@ -232,7 +238,7 @@ def _bijective_part(arr, mask_val=np.nan):
 
 
 # ======================================================================
-def pseudo_ratio(
+def rho(
         n_gre,
         tr_gre,
         fa1,
@@ -244,70 +250,8 @@ def pseudo_ratio(
         eta_p,
         t1,
         eta_fa,
-        bijective=False):
-    """
-    Calculate the MP2RAGE signal pseudo-ratio from the sequence parameters.
-
-    .. math::
-        \\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2} =
-        \\left(\\frac{s_1}{s_2} + \\frac{s_2}{s_1}\\right)^{-1}
-
-    This expression can also be used for SA2RAGE and NO2RAGE.
-
-    This function is NumPy-aware.
-
-    Args:
-        n_gre (int|np.ndarray): Number n of r.f. pulses in each GRE block.
-        tr_gre (float|np.ndarray): repetition time of GRE pulses in ms.
-        fa1 (float|np.ndarray): Flip angle of the first GRE block in deg.
-        fa2 (float|np.ndarray): Flip angle fa2 of the second GRE block in deg.
-        td0 (float|np.ndarray): First delay in ms.
-             This is the time between the beginning of the preparation pulse
-             and the beginning of the first GRE block.
-        td1 (float|np.ndarray): Second delay in ms.
-            This is the time between the end of the first and the beginning
-            of the second GRE blocks.
-        td2 (float|np.ndarray): Third delay in ms.
-            This is the time between the end of the second GRE block and the
-            beginning of the preparation pulse.
-        fa_p (float|np.ndarray): Flip angle of the preparation pulse in deg.
-        eta_p (float|np.ndarray): Efficiency of the preparation pulse in #.
-        t1 (float|np.ndarray): Longitudinal relaxation time in ms.
-        eta_fa (float|np.ndarray): Efficiency of the RF excitation.
-            This only affects the excitation inside the GRE blocks.
-            Equivalent to B1+ efficiency.
-        bijective (bool): Force the rho expression to be bijective.
-            Non-bijective parts of rho are masked out (set to NaN).
-
-    Returns:
-        rho (float|np.ndarray): rho intensity of the MP2RAGE sequence.
-    """
-    fa1 = np.deg2rad(fa1)
-    fa2 = np.deg2rad(fa2)
-    fa_p = np.deg2rad(fa_p)
-    if eta_p is None:
-        eta_p = eta_fa
-    result = _pseudo_ratio(
-        n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
-    if bijective:
-        result = _bijective_part(result)
-    return result
-
-
-# ======================================================================
-def ratio(
-        n_gre,
-        tr_gre,
-        fa1,
-        fa2,
-        td0,
-        td1,
-        td2,
-        fa_p,
-        eta_p,
-        t1,
-        eta_fa,
-        bijective=False):
+        bijective=False,
+        mode='pseudo-ratio'):
     """
     Calculate the MP2RAGE signal ratio from the sequence parameters.
 
@@ -340,6 +284,14 @@ def ratio(
             Equivalent to B1+ efficiency.
         bijective (bool): Force the rho expression to be bijective.
             Non-bijective parts of rho are masked out (set to NaN).
+        mode (str): Signal calculation mode.
+            Accepted values are:
+             - 'p-ratio', 'uni', 'pseudo-ratio', 'uniform': use the pseudo-ratio
+               :math:`\\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2}`
+             - 'ratio', 'div': calculate the ratio
+               :math:`\\rho = \\frac{s_1}{s_2}`
+             - 'r-ratio', 'r-div', 'reverse-ratio': use the reverse ratio
+               :math:`\\rho = \\frac{s_2}{s_1}`
 
     Returns:
         ratio (float|np.ndarray): ratio intensity of the MP2RAGE sequence.
@@ -349,7 +301,16 @@ def ratio(
     fa_p = np.deg2rad(fa_p)
     if eta_p is None:
         eta_p = eta_fa
-    result = _ratio(
+    mode = mode.lower()
+    if mode in ('p-ratio', 'uni', 'pseudo-ratio', 'uniform'):
+        rho_func = _p_ratio
+    elif mode in ('ratio', 'div'):
+        rho_func = _ratio
+    elif mode in ('r-ratio', 'r-div', 'reverse-ratio'):
+        rho_func = _r_ratio
+    else:
+        rho_func = None
+    result = rho_func(
         n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
@@ -480,11 +441,11 @@ def test_signal():
     import matplotlib.pyplot as plt
 
     t1 = np.linspace(50, 5000, 5000)
-    s = pseudo_ratio(t1=t1, **_SEQ_PARAMS, bijective=True)
+    s = rho(t1=t1, **_SEQ_PARAMS, bijective=True)
     plt.plot(s, t1)
     plt.show()
     eta_fa = np.array([0.9, 1.0, 1.1])
-    s0 = pseudo_ratio(
+    s0 = rho(
         t1=100,
         eta_p=1.0,  # #
         n_gre=160,  # #

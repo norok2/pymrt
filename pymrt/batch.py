@@ -557,7 +557,7 @@ def rho_to_t1_mp2rage(
     else:
         # determine the rho expression
         t1 = np.linspace(t1_values_range[0], t1_values_range[1], t1_num)
-        rho = mp2rage.pseudo_ratio(
+        rho = mp2rage.rho(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)

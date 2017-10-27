@@ -1487,7 +1487,7 @@ def merge_dicts(*dicts):
 
 
 # =====================================================================
-def pseudo_ratio(x, y):
+def p_ratio(x, y):
     """
     Calculate the pseudo-ratio of x, y: 1 / ((x / y) + (y / x))
 
@@ -1502,23 +1502,23 @@ def pseudo_ratio(x, y):
         result: 1 / ((x / y) + (y / x))
 
     Examples:
-        >>> pseudo_ratio(2, 2)
+        >>> p_ratio(2, 2)
         0.5
-        >>> pseudo_ratio(200, 200)
+        >>> p_ratio(200, 200)
         0.5
-        >>> pseudo_ratio(1, 2)
+        >>> p_ratio(1, 2)
         0.4
-        >>> pseudo_ratio(100, 200)
+        >>> p_ratio(100, 200)
         0.4
         >>> items = 100, 200
-        >>> (pseudo_ratio(*items) == pseudo_ratio(*items[::-1]))
+        >>> (p_ratio(*items) == p_ratio(*items[::-1]))
         True
     """
     return (x * y) / (x ** 2 + y ** 2)
 
 
 # =====================================================================
-def gen_pseudo_ratio(*items):
+def gen_p_ratio(*items):
     """
     Calculate the generalized pseudo-ratio of x_i: 1 / sum_ij [ x_i / x_j ]
 
@@ -1533,21 +1533,21 @@ def gen_pseudo_ratio(*items):
         result: 1 / sum_ij [ x_i / x_j ]
 
     Examples:
-        >>> gen_pseudo_ratio(2, 2, 2, 2, 2)
+        >>> gen_p_ratio(2, 2, 2, 2, 2)
         0.05
-        >>> gen_pseudo_ratio(200, 200, 200, 200, 200)
+        >>> gen_p_ratio(200, 200, 200, 200, 200)
         0.05
-        >>> gen_pseudo_ratio(1, 2)
+        >>> gen_p_ratio(1, 2)
         0.4
-        >>> gen_pseudo_ratio(100, 200)
+        >>> gen_p_ratio(100, 200)
         0.4
         >>> items1 = [x * 10 for x in range(2, 10)]
         >>> items2 = [x * 1000 for x in range(2, 10)]
-        >>> np.isclose(gen_pseudo_ratio(*items1), gen_pseudo_ratio(*items2))
+        >>> np.isclose(gen_p_ratio(*items1), gen_p_ratio(*items2))
         True
         >>> items = list(range(2, 10))
         >>> np.isclose(
-        ...     gen_pseudo_ratio(*items), gen_pseudo_ratio(*items[::-1]))
+        ...     gen_p_ratio(*items), gen_p_ratio(*items[::-1]))
         True
     """
     return 1 / np.sum(x / y for x, y in itertools.permutations(items, 2))

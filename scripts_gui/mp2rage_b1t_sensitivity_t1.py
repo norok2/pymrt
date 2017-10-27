@@ -62,14 +62,15 @@ from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
-    ('use_rho', dict(
-        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=False)),
+    ('mode', dict(
+        label='ρ expression', default='p-ratio',
+        values=('ratio', 'p-ratio', 'r-ratio'))),
 
     ('n_gre', dict(
         label='N_GRE / #', default=64, start=1, stop=512, step=1)),
 
     ('tr_gre', dict(
-        label='TR_GRE / ms', default=6, start=1, stop=128, step=0.1)),
+        label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
 
     ('td0', dict(
         label='T_D0 / ms', default=0, start=0, stop=10000, step=10)),
@@ -84,7 +85,7 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_p / #', default=1, start=0, stop=1, step=0.01)),
+        label='η_p / #', default=0.0, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
         label='α_p / #', default=0, start=-180, stop=180, step=5)),
 
@@ -104,8 +105,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
-    ('use_rho', dict(
-        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=False)),
+    ('mode', dict(
+        label='ρ expression', default='p-ratio',
+        values=('ratio', 'p-ratio', 'r-ratio'))),
     
     ('matrix_size_ro', dict(
         label='N_ro / #', default=64, start=1, stop=1024, step=1)),
@@ -157,7 +159,7 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_p / #', default=1, start=0, stop=1, step=0.01)),
+        label='η_p / #', default=0.0, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
         label='α_p / #', default=0, start=-180, stop=180, step=5)),
 
@@ -184,17 +186,13 @@ def plot_rho_b1t_mp2rage_seq(
         title=TITLE.split(':')[1].strip()):
     ax = fig.gca()
     try:
-        if params['use_rho']:
-            mp2rage_rho = mp2rage.pseudo_ratio
-        else:
-            mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
             params['eta_fa_start'], params['eta_fa_stop'],
             params['eta_fa_num'])
         t1_arr = np.linspace(
             params['t1_start'], params['t1_stop'], params['t1_num'])
         kws_names = (
-            'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2',
+            'mode', 'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2',
             'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['eta_fa'] = eta_fa_arr
@@ -202,7 +200,7 @@ def plot_rho_b1t_mp2rage_seq(
             seq_kws['eta_p'] = None
         for t1 in t1_arr:
             seq_kws['t1'] = t1
-            rho_arr = mp2rage_rho(**seq_kws)
+            rho_arr = mp2rage.rho(**seq_kws)
             ax.plot(rho_arr, eta_fa_arr, label='T1={:.1f} ms'.format(t1))
     except Exception as e:
         print(traceback.format_exc())
@@ -212,15 +210,17 @@ def plot_rho_b1t_mp2rage_seq(
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
         ax.set_ylabel(r'$\eta_\alpha$ / #')
-        if params['use_rho']:
+        if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        if params['mode'] == 'p-ratio':
+            expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
+        elif params['mode'] == 'ratio':
+            expression = r'\frac{T_{I,1}}{T_{I,2}}'
+        elif params['mode'] == 'r-ratio':
+            expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
+            expression = None
+        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
         ax.legend()
     return ax
 
@@ -233,7 +233,7 @@ def plot_rho_b1t_mp2rage_acq(
     ax = fig.gca()
     try:
         if params['use_rho']:
-            mp2rage_rho = mp2rage.pseudo_ratio
+            mp2rage_rho = mp2rage.rho
         else:
             mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
@@ -272,13 +272,13 @@ def plot_rho_b1t_mp2rage_acq(
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
         seq_kws['eta_fa'] = eta_fa_arr
-        kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
+        kws_names = ('mode', 'fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
         if seq_kws['eta_p'] == 0:
             seq_kws['eta_p'] = None
         for t1 in t1_arr:
             seq_kws['t1'] = t1
-            rho_arr = mp2rage_rho(**seq_kws)
+            rho_arr = mp2rage.rho(**seq_kws)
             ax.plot(rho_arr, eta_fa_arr, label='T1={:.1f} ms'.format(t1))
     except Exception as e:
         print(traceback.format_exc())
@@ -288,15 +288,17 @@ def plot_rho_b1t_mp2rage_acq(
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
         ax.set_ylabel(r'$\eta_\alpha$ / #')
-        if params['use_rho']:
+        if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        if params['mode'] == 'p-ratio':
+            expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
+        elif params['mode'] == 'ratio':
+            expression = r'\frac{T_{I,1}}{T_{I,2}}'
+        elif params['mode'] == 'r-ratio':
+            expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
+            expression = None
+        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
         ax.legend()
     return ax
 

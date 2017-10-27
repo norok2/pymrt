@@ -333,9 +333,9 @@ def mp2rage_rho(
         t1_arr=1500,
         t1_values_range=(100, 5000),
         t1_num=512,
-        eta_fa_values_range=(0.01, 2.0),
+        eta_fa_values_range=(0.001, 2.0),
         eta_fa_num=512,
-        use_ratio=False,
+        mode='ratio',
         **params_kws):
     """
     Calculate the flip angle efficiency from an MP2RAGE acquisition.
@@ -367,7 +367,8 @@ def mp2rage_rho(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This parameter may affect the precision of the estimation.
-        use_ratio (bool): Use ratio instead of pseudo ratio.
+        mode (str): Select the array combination mode.
+            See `sequences.mp2rage.rho()` for more information.
         **params_kws: The acquisition parameters.
             This is filtered through `utils.split_func_kws()` for
             `sequences.mp2rage.acq_to_seq_params()` and the result
@@ -392,6 +393,9 @@ def mp2rage_rho(
         3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R.,
            Marques, J.P., 2012. SA2RAGE: A new sequence for fast B1+-mapping.
            Magnetic Resonance Medicine 67, 1609–1619. doi:10.1002/mrm.23145
+
+    See Also:
+        sequences.mp2rage
     """
     # determine the sequence parameters
     try:
@@ -400,18 +404,15 @@ def mp2rage_rho(
         seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
         seq_kws.update(kws)
     except TypeError:
-        seq_kws, kws = mrt.utils.split_func_kws(
-            mp2rage.pseudo_ratio, params_kws)
+        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
-
-    rho_func = mp2rage.ratio if use_ratio else mp2rage.pseudo_ratio
 
     if isinstance(t1_arr, (int, float)):
         # determine the rho expression
         eta_fa = np.linspace(
             eta_fa_values_range[0], eta_fa_values_range[1], t1_num)
-        rho = rho_func(t1=t1_arr, eta_fa=eta_fa, **seq_kws)
+        rho = mp2rage.rho(t1=t1_arr, eta_fa=eta_fa, mode=mode, **seq_kws)
         # remove non-bijective branches
         bijective_slice = mrt.utils.bijective_part(rho)
         eta_fa = eta_fa[bijective_slice]
@@ -432,7 +433,7 @@ def mp2rage_rho(
         eta_fa = np.linspace(
             eta_fa_values_range[0], eta_fa_values_range[1],
             eta_fa_num).reshape(1, -1)
-        rho = mp2rage_rho(t1=t1, eta_fa=eta_fa, **seq_kws)
+        rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, mode=mode, **seq_kws)
         # todo: remove non bijective branches
         # use griddata for interpolation
         eta_fa_arr = sp.interpolate.griddata(

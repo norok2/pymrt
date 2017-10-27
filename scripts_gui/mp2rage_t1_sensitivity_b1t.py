@@ -60,14 +60,15 @@ from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
-    ('use_rho', dict(
-        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=True)),
+    ('mode', dict(
+        label='ρ expression', default='p-ratio',
+        values=('ratio', 'p-ratio', 'r-ratio'))),
 
     ('n_gre', dict(
         label='N_GRE / #', default=64, start=1, stop=512, step=1)),
 
     ('tr_gre', dict(
-        label='TR_GRE / ms', default=6, start=1, stop=128, step=0.1)),
+        label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
 
     ('td0', dict(
         label='T_D0 / ms', default=0, start=0, stop=10000, step=10)),
@@ -99,8 +100,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 ])
 
 ACQ_INTERACTIVES = collections.OrderedDict([
-    ('use_rho', dict(
-        label='use ρ = TI1 * TI2 / (TI1 ^ 2 + TI2 ^ 2)', default=True)),
+    ('mode', dict(
+        label='ρ expression', default='p-ratio',
+        values=('ratio', 'p-ratio', 'r-ratio'))),
 
     ('matrix_size_ro', dict(
         label='N_ro / #', default=256, start=1, stop=1024, step=1)),
@@ -141,7 +143,7 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='TI_2 / ms', default=2900, start=0, stop=10000, step=10)),
 
     ('tr_gre', dict(
-        label='TR_GRE / ms', default=6, start=1, stop=128, step=0.1)),
+        label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
 
     ('sl_pe_swap', dict(
         label='Swap PE/SL', default=False)),
@@ -178,43 +180,38 @@ def plot_rho_t1_mp2rage_seq(
     t1_arr = np.linspace(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     try:
-        if params['use_rho']:
-            mp2rage_rho = mp2rage.pseudo_ratio
-        else:
-            mp2rage_rho = mp2rage.ratio
-
         kws_names = (
-            'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2', 'eta_p',
-            'fa_p')
+            'mode', 'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2',
+            'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['t1'] = t1_arr
         if seq_kws['eta_p'] == 0:
             seq_kws['eta_p'] = None
 
         seq_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
@@ -226,15 +223,17 @@ def plot_rho_t1_mp2rage_seq(
     finally:
         ax.set_ylim(params['t1_start'], params['t1_stop'])
         ax.set_ylabel(r'$T_1$ / ms')
-        if params['use_rho']:
+        if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        if params['mode'] == 'p-ratio':
+            expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
+        elif params['mode'] == 'ratio':
+            expression = r'\frac{T_{I,1}}{T_{I,2}}'
+        elif params['mode'] == 'r-ratio':
+            expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
+            expression = None
+        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
         ax.legend()
     return ax
 
@@ -248,11 +247,6 @@ def plot_rho_t1_mp2rage_acq(
         params['t1_start'], params['t1_stop'], params['t1_num'])
     ax = fig.gca()
     try:
-        if params['use_rho']:
-            mp2rage_rho = mp2rage.pseudo_ratio
-        else:
-            mp2rage_rho = mp2rage.ratio
-
         seq_kws, extra_info = mp2rage.acq_to_seq_params(
             matrix_sizes=(
                 params['matrix_size_ro'],
@@ -283,36 +277,36 @@ def plot_rho_t1_mp2rage_acq(
             datetime.timedelta(seconds=extra_info['t_acq']))
         acq_to_seq_info = '\n'.join((seq_kws_str, extra_info_str))
 
-        kws_names = ('fa1', 'fa2', 'eta_p', 'fa_p')
+        kws_names = ('mode', 'fa1', 'fa2', 'eta_p', 'fa_p')
         seq_kws.update({name: params[name] for name in kws_names})
         seq_kws['t1'] = t1_arr
         if seq_kws['eta_p'] == 0:
             seq_kws['eta_p'] = None
-        
+
         seq_kws['eta_fa'] = params['eta_fa']
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(rho_arr, t1_arr, color='g', label='MP2RAGE')
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#cc3333',
             label='$B_1^+$ +{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#3333cc',
             label='$B_1^+$ −{:.0%}'.format(params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 + 2 * params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#ff9999',
             label='$B_1^+$ +{:.0%}'.format(2 * params['d_eta_fa']))
 
         seq_kws['eta_fa'] = params['eta_fa'] * (1 - 2 * params['d_eta_fa'])
-        rho_arr = mp2rage_rho(**seq_kws)
+        rho_arr = mp2rage.rho(**seq_kws)
         ax.plot(
             rho_arr, t1_arr, color='#9999ff',
             label='$B_1^+$ −{:.0%}'.format(2 * params['d_eta_fa']))
@@ -324,15 +318,17 @@ def plot_rho_t1_mp2rage_acq(
     finally:
         ax.set_ylim(params['t1_start'], params['t1_stop'])
         ax.set_ylabel(r'$T_1$ / ms')
-        if params['use_rho']:
+        if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}$ / arb.units')
+        if params['mode'] == 'p-ratio':
+            expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
+        elif params['mode'] == 'ratio':
+            expression = r'\frac{T_{I,1}}{T_{I,2}}'
+        elif params['mode'] == 'r-ratio':
+            expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
-            ax.set_xlabel(
-                r'$\rho='
-                r'\frac{T_{I,1}}{T_{I,2}}$ / arb.units')
+            expression = None
+        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
         ax.legend()
     return ax
 

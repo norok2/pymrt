@@ -907,8 +907,10 @@ def cx_2_combine(
         cx2_arr (float|np.ndarray): Second complex array.
         func (str|callable): Determine the combination function to use.
             If str, must be any of:
-             - 'ratio': :math:`\\frac{s_1}{s_2}`
-             - 'pseudo-ratio': :math:`\\frac{s_1 s_2}{s_1^2+s_2^2}`.
+             - 'ratio', 'div': :math:`\\frac{s_1}{s_2}`
+             - 'r-ratio', 'r-div', 'reverse-ratio': :math:`\\frac{s_2}{s_1}`
+             - 'p-ratio', 'pseudo-ratio', 'uni', 'uniform':
+               :math:`\\frac{s_1 s_2}{s_1^2+s_2^2}`.
              - 'mp2rage': The MP2RAGE rho:
                :math:`\\frac{s_1^* s_2}{s_1^2+s_2^2}`
             If callable, its signature must be:
@@ -927,9 +929,11 @@ def cx_2_combine(
         result = func(cx1_arr, cx2_arr)
     else:
         func = func.lower()
-        if func == 'ratio':
+        if func in ('ratio', 'div', 'reverse-ratio'):
             result = cx1_arr / (cx2_arr + regularization)
-        elif func == 'pseudo-ratio':
+        elif func in ('r-ratio', 'r-div'):
+            result = cx2_arr / (cx1_arr + regularization)
+        elif func in ('p-ratio', 'pseudo-ratio', 'uni', 'uniform'):
             result = cx_div(cx1_arr, cx2_arr, regularization)
         elif func == 'mp2rage':
             result = np.real(
