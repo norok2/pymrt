@@ -64,7 +64,7 @@ TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
     ('mode', dict(
         label='ρ expression', default='p-ratio',
-        values=('ratio', 'p-ratio', 'r-ratio'))),
+        values=('ratio', 'p-ratio', 'i-ratio'))),
 
     ('n_gre', dict(
         label='N_GRE / #', default=64, start=1, stop=512, step=1)),
@@ -107,7 +107,7 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 ACQ_INTERACTIVES = collections.OrderedDict([
     ('mode', dict(
         label='ρ expression', default='p-ratio',
-        values=('ratio', 'p-ratio', 'r-ratio'))),
+        values=('ratio', 'p-ratio', 'i-ratio'))),
     
     ('matrix_size_ro', dict(
         label='N_ro / #', default=64, start=1, stop=1024, step=1)),
@@ -216,7 +216,7 @@ def plot_rho_b1t_mp2rage_seq(
             expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
         elif params['mode'] == 'ratio':
             expression = r'\frac{T_{I,1}}{T_{I,2}}'
-        elif params['mode'] == 'r-ratio':
+        elif params['mode'] == 'i-ratio':
             expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
             expression = None
@@ -294,7 +294,7 @@ def plot_rho_b1t_mp2rage_acq(
             expression = r'\frac{T_{I,1}T_{I,2}}{T_{I,1}^2+T_{I,2}^2}'
         elif params['mode'] == 'ratio':
             expression = r'\frac{T_{I,1}}{T_{I,2}}'
-        elif params['mode'] == 'r-ratio':
+        elif params['mode'] == 'i-ratio':
             expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
             expression = None

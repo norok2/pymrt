@@ -190,30 +190,30 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         ratio_ = s1 / s2
         ratio_ = sym.factor(
             ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
-        r_ratio_ = s2 / s1
-        r_ratio_ = sym.factor(
-            r_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
+        i_ratio_ = s2 / s1
+        i_ratio_ = sym.factor(
+            i_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
 
         print('pseudo-ratio: {}'.format(p_ratio_))
         print('ratio: {}'.format(ratio_))
-        print('reverse-ratio: {}'.format(r_ratio_))
+        print('inverse-ratio: {}'.format(i_ratio_))
 
         params = (
             n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
-            pickle.dump((params, p_ratio_, ratio_, r_ratio_), cache_file)
+            pickle.dump((params, p_ratio_, ratio_, i_ratio_), cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
-            params, p_ratio_, ratio_, r_ratio_ = pickle.load(cache_file)
+            params, p_ratio_, ratio_, i_ratio_ = pickle.load(cache_file)
     p_ratio_ = sym.lambdify(params, p_ratio_)
     ratio_ = sym.lambdify(params, ratio_)
-    r_ratio_ = sym.lambdify(params, r_ratio_)
-    return p_ratio_, ratio_, r_ratio_
+    i_ratio_ = sym.lambdify(params, i_ratio_)
+    return p_ratio_, ratio_, i_ratio_
 
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_p_ratio, _ratio, _r_ratio = _prepare_mp2rage()
+_p_ratio, _ratio, _i_ratio = _prepare_mp2rage()
 
 
 # ======================================================================
@@ -290,7 +290,7 @@ def rho(
                :math:`\\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2}`
              - 'ratio', 'div': calculate the ratio
                :math:`\\rho = \\frac{s_1}{s_2}`
-             - 'r-ratio', 'r-div', 'reverse-ratio': use the reverse ratio
+             - 'i-ratio', 'i-div', 'inverse-ratio': use the reverse ratio
                :math:`\\rho = \\frac{s_2}{s_1}`
 
     Returns:
@@ -306,8 +306,8 @@ def rho(
         rho_func = _p_ratio
     elif mode in ('ratio', 'div'):
         rho_func = _ratio
-    elif mode in ('r-ratio', 'r-div', 'reverse-ratio'):
-        rho_func = _r_ratio
+    elif mode in ('i-ratio', 'i-div', 'inverse-ratio'):
+        rho_func = _i_ratio
     else:
         rho_func = None
     result = rho_func(
