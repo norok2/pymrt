@@ -5559,9 +5559,13 @@ def filter_cx(
         filter_kws (dict|None): Keyword arguments of `filter_func`.
         mode (str): Complex calculation mode.
             Available:
-             - 'cartesian': apply the n-dim filter to real and imaginary parts.
-             - 'polar': apply the n-dim filter to the magnitude and phase.
-            If unknown, uses defalt.
+             - 'cartesian': apply to real and imaginary separately.
+             - 'polar': apply to magnitude and phase separately.
+             - 'real': apply to real part only.
+             - 'imag': apply to imaginary part only.
+             - 'mag': apply to magnitude part only.
+             - 'phs': apply to phase part only.
+            If unknown, uses default.
 
     Returns:
         arr (np.ndarray): The filtered complex array.
@@ -5580,6 +5584,20 @@ def filter_cx(
         arr = (
             filter_func(np.abs(arr), *filter_args, **filter_kws) *
             np.exp(
+                1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
+    elif mode == 'real':
+        arr = (
+            filter_func(arr.real, *filter_args, **filter_kws) + 1j * arr.imag)
+    elif mode == 'imag':
+        arr = (
+            arr.real + 1j * filter_func(arr.imag, *filter_args, **filter_kws))
+    elif mode == 'mag':
+        arr = (
+            filter_func(np.abs(arr), *filter_args, **filter_kws) *
+            np.exp(1j * np.angle(arr)))
+    elif mode == 'phs':
+        arr = (
+            np.abs(arr) * np.exp(
                 1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
     else:
         warnings.warn(
