@@ -150,6 +150,7 @@ setup(
         'numeral',
         'appdirs',
         'seaborn',
+        'pywavelets',
         'h5py',
         'pytk',
         'pillow',
