@@ -76,49 +76,54 @@ def standard(
         mode (str): Complex calculation mode.
             See `mode` parameter of `utils.filter_cx()` for more information.
 
+    Raises:
+        ValueError: If `method` is unknown.
+
     Returns:
         arr (np.ndarray): The denoised array.
     """
     method = method.lower()
     if filter_kws is None:
         filter_kws = {}
+
     if method == 'gaussian':
         if 'sigma' not in filter_kws:
             filter_kws['sigma'] = 1.0
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.gaussian_filter, (), filter_kws)
+        filter_func = sp.ndimage.gaussian_filter
     elif method == 'uniform':
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.uniform_filter, (), filter_kws)
+        filter_func = sp.ndimage.uniform_filter
     elif method == 'median':
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.median_filter, (), filter_kws)
+        filter_func = sp.ndimage.median_filter
     elif method == 'minimum':
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.minimum_filter, (), filter_kws)
+        filter_func = sp.ndimage.minimum_filter
     elif method == 'maximum':
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.maximum_filter, (), filter_kws)
+        filter_func = sp.ndimage.maximum_filter
     elif method == 'rank':
         if 'rank' not in filter_kws:
             filter_kws['rank'] = 1
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.rank_filter, (), filter_kws)
+        filter_func = sp.ndimage.rank_filter
     elif method == 'percentile':
         if 'percentile' not in filter_kws:
             filter_kws['percentile'] = 50
-        arr = mrt.utils.filter_cx(
-            arr, sp.ndimage.percentile_filter, (), filter_kws)
+        filter_func = sp.ndimage.percentile_filter
     elif method == 'bilateral':
-        arr = mrt.utils.filter_cx(arr, denoise_bilateral, (), filter_kws)
+        filter_func = denoise_bilateral
     elif method == 'nl_means':
-        arr = mrt.utils.filter_cx(arr, denoise_nl_means, (), filter_kws)
+        filter_func = denoise_nl_means
     elif method == 'wavelet':
-        arr = mrt.utils.filter_cx(arr, denoise_wavelet, (), filter_kws)
+        filter_func = denoise_wavelet
     elif method == 'tv_bregman':
         if 'weight' not in filter_kws:
             filter_kws['weight'] = 1
-        arr = mrt.utils.filter_cx(arr, denoise_tv_bregman, (), filter_kws)
+        filter_func = denoise_tv_bregman
     elif method == 'tv_chambolle':
-        arr = mrt.utils.filter_cx(arr, denoise_tv_chambolle, (), filter_kws)
+        filter_func = denoise_tv_chambolle
+    else:
+        text = 'Unknown method `{}` in `denoise.standard()`.'.format(method)
+        raise ValueError(text)
+
+    if np.iscomplex(arr):
+        arr = mrt.utils.filter_cx(arr, filter_func, (), filter_kws)
+    else:
+        arr = filter_func(arr, **filter_kws)
     return arr
