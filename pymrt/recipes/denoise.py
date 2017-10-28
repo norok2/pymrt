@@ -57,7 +57,7 @@ def standard(
     `skimage.restoration`.
 
     Args:
-        arr:
+        arr (np.ndarray): The input array.
         method (str): Denoising method.
             Accepted values are:
              - 'gaussian': `scipy.ndimage.gaussian_filter()`
@@ -72,8 +72,11 @@ def standard(
              - 'wavelet': `skimage.restoration.denoise_wavelet()`
              - 'tv_bregman': `skimage.restoration.denoise_tv_bregman()`
              - 'tv_chambolle': `skimage.restoration.denoise_tv_chambolle()`
-        filter_kws:
+        filter_kws (dict|None): Keyword parameters for the denoising.
+            These are passed to the corresponding function.
+            See the respective documentation for details.
         mode (str): Complex calculation mode.
+            If `arr` is not complex, this parameter is ignored.
             See `mode` parameter of `utils.filter_cx()` for more information.
 
     Raises:
