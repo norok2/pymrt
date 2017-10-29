@@ -19,9 +19,11 @@ import multiprocessing  # Process-based parallelism
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import pywt as pw  # PyWavelets - Wavelet Transforms in Python
 
 import scipy.integrate  # SciPy: Integration and ODEs
 import scipy.optimize  # SciPy: Optimization and root finding
+import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
 import pymrt as mrt
@@ -178,7 +180,8 @@ def cx_div(
         f(s_1, s_2) = \frac{s_1 s_2}{(s_1^2 + s_2^2}
         = \frac{1}{\frac{s_1}{s_2}+\frac{s_2}{s_1}}
 
-    which is either the inverse of the arithmetic mean of the two ratios or half
+    which is either the inverse of the arithmetic mean of the two ratios or
+    half
     the harmonic mean of the two ratios.
 
     Resulting values are in the [-0.5, 0.5] interval.
@@ -221,8 +224,8 @@ def fix_phase_interval(arr):
         array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
                 1.34639685,  2.24399475,  3.14159265])
         >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
-        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,
-        3.14159265])
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,\
+  3.14159265])
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
@@ -263,51 +266,6 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     else:
         cx_arr = mag_arr.astype(float)
     return cx_arr
-
-
-# ======================================================================
-def fix_magnitude_bias(
-        arr,
-        positive=True):
-    """
-    Fix magnitude level to remove the bias associated with Rician noise.
-
-    The background noise region is estimated from histogram peaks.
-
-    The noise of the resulting data is still definite positive, but much
-    closer to a Gaussian distribution, and the magnitude bias is now
-    reduced.
-
-    Args:
-        arr (np.ndarray): The input array.
-        positive (bool): Force result to be positive.
-            If True, the new signal magnitude is given by:
-            :math:`s' = \\sqrt{|s^2 - \\sigma^2|}`
-            Otherwise, uses the sign of the argument of the square root.
-            :math:`s' = sgn({s^2 - \\sigma^2})\\sqrt{|s^2 - \\sigma^2|}`
-
-    Returns:
-        arr (np.ndarray): The output array.
-
-    References:
-        - Gudbjartsson, H., Patz, S., 1995. The Rician Distribution of Noisy
-          MRI Data. Magn Reson Med 34, 910–914.
-    """
-    arr = arr.astype(float)
-    threshold = mrt.segmentation.threshold_otsu(arr) / 4
-    noise_mask = arr < threshold
-    if np.sum(noise_mask) > 0:
-        sigma = np.std(arr[noise_mask]) * (np.sqrt(2.0 / (4 - np.pi)))
-    else:
-        # estimate sigma from mu assuming min(arr) = mu(noise)
-        sigma = np.min(arr)
-
-    arr = arr ** 2 - sigma ** 2
-    if positive:
-        arr = np.sqrt(np.abs(arr))
-    else:
-        arr = np.sign(arr) * np.sqrt(np.abs(arr))
-    return arr
 
 
 # ======================================================================

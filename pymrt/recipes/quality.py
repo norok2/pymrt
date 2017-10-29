@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.recipes._snr: quality assurance (QA) computations.
+pymrt.recipes.quality: quality assurance (QA) computations.
 """
 
 # ======================================================================
@@ -12,30 +12,23 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import itertools  # Functions creating iterators for efficient looping
-import collections  # Container datatypes
-import warnings  # Warning control
-import multiprocessing  # Process-based parallelism
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (signal and image processing library)
+
+# :: Local Imports
+import pymrt as mrt
+import pymrt.segmentation
+import pymrt.utils
+from pymrt import correction
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed
+from pymrt import msg
+
 
 # import scipy.integrate  # SciPy: Integration and ODEs
 # import scipy.optimize  # SciPy: Optimization and root finding
 # import scipy.signal  # SciPy: Signal Processing
-import scipy.ndimage  # SciPy: ND-image Manipulation
-import scipy.special  # SciPy: Special functions
-
-# :: Local Imports
-import pymrt as mrt
-import pymrt.utils
-import pymrt.geometry
-import pymrt.segmentation
-
-from pymrt import INFO, DIRS
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
-from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -131,386 +124,6 @@ def _pcnr(
 
 
 # ======================================================================
-def signal_noise_test_retest(
-        test_arr,
-        retest_arr):
-    """
-    Separate signal from noise using test-retest data.
-
-    Test-retest data refer to two instances of the same acquisition.
-    Assumes the measured signal is the same, but the noise, while different,
-    has zero mean.
-
-    test = signal + noise_test
-    retest = signal + noise_retest
-
-    signal = (test + retest) / 2
-    noise = (test - retest) / 2
-
-    Args:
-        test_arr (np.ndarray): The input test array.
-        retest_arr (np.ndarray): The input retest array.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    signal_arr = (test_arr + retest_arr) / 2
-    noise_arr = (test_arr - retest_arr) / 2
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_multi_acq(
-        arrs,
-        remove_bias=True):
-    """
-    Separate signal from noise using multiple test-retest data.
-
-    Assumes the measured signal is the same, but the noise, while different,
-    has zero (or constant) mean.
-
-    Args:
-        arrs (iterable[np.ndarray]): The input test array.
-        remove_bias (bool): Remove bias in the signal from the noise mean.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    axis = -1
-    num = len(arrs)
-    arr = np.stack(arrs, axis)
-    signal_arr = np.mean(arr, axis)
-    noise_arr = np.std(arr, axis)
-    if num > 2 and remove_bias:
-        bias_arr = np.zeros_like(signal_arr)
-        for i, j in itertools.combinations(range(num), 2):
-            bias_arr += arrs[i] - arrs[j]
-        bias_arr /= sp.special.binom(num, 2)
-        signal_arr -= bias_arr
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_calib_region(
-        arr,
-        signal_region=None,
-        noise_region=None,
-        region_shape='cuboid'):
-    """
-    Separate signal from noise a calibration region.
-
-    Use a n-dim superellipsis or cuboid as calibration regions for signal
-    and noise estimation.
-
-
-    Args:
-        arr (np.ndarray): The input array.
-        region:
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-
-    """
-    if not signal_region:
-        raise NotImplementedError
-    if not noise_region:
-        raise NotImplementedError
-    s_semisizes, s_position = mrt.geometry.extrema_to_semisizes_position(
-        *signal_region, num=arr.ndim)
-    signal_arr = arr[
-        mrt.geometry.nd_cuboid(arr.shape, s_semisizes, s_position)]
-    n_semisizes, n_position = mrt.geometry.extrema_to_semisizes_position(
-        *noise_region, num=arr.ndim)
-    noise_arr = arr[
-        mrt.geometry.nd_cuboid(arr.shape, n_semisizes, n_position)]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_optim(arr):
-    """
-    Separate signal from noise using optimal peak thresholding.
-
-    Uses the first inverted peak after the the first peak of the data
-    histogram.
-
-    Args:
-        arr (np.ndarray): The input array.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    threshold = mrt.segmentation.threshold_optim(arr)
-    signal_mask = arr > threshold
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[~signal_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_otsu(
-        arr,
-        corrections=(1.0, 0.2)):
-    """
-    Separate signal from noise using the Otsu threshold.
-
-    Args:
-        arr (np.ndarray): The input array.
-        corrections (int|float|iterable[int|float]: The correction factors.
-            If value is 1, no correction is performed.
-            If int or float, the Otsu threshold is corrected (multiplied)
-            by the corresponding factor before thresholding.
-            If iterable, the first correction is used to estimate the signal,
-            while the second correction is used to estimate the noise.
-            At most two values are accepted.
-            When the two values are not identical some values may be ignored
-            or counted both in signal and in noise.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    corrections = mrt.utils.auto_repeat(corrections, 2, check=True)
-    otsu = mrt.segmentation.threshold_otsu(arr)
-    signal_mask = arr > otsu * corrections[0]
-    noise_mask = arr <= otsu * corrections[1]
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[noise_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_relative(
-        arr,
-        thresholds=(0.75, 0.25)):
-    """
-    Separate signal from noise using the relative threshold(s).
-
-    Args:
-        arr (np.ndarray): The input array.
-        thresholds (int|float|iterable[int|float]: The percentile values.
-            Values must be in the [0, 1] range.
-            If int or float, values above are considered signal,
-            and below or equal ar considered noise.
-            If iterable, values above the first percentile threshold are
-            considered signals, while values below the second percentile
-            threshold are considered noise.
-            At most two values are accepted.
-            When the two values are not identical some values may be ignored
-            or counted both in signal and in noise.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-
-    See Also:
-        segmentation.threshold_relative(),
-    """
-    thresholds = mrt.utils.auto_repeat(thresholds, 2, check=True)
-    signal_threshold, noise_threshold = \
-        mrt.segmentation.threshold_relative(arr, thresholds)
-    signal_mask = arr > signal_threshold
-    noise_mask = arr <= noise_threshold
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[noise_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_percentile(
-        arr,
-        thresholds=(0.75, 0.25)):
-    """
-    Separate signal from noise using the percentile threshold(s).
-
-    Args:
-        arr (np.ndarray): The input array.
-        thresholds (int|float|iterable[int|float]: The percentile values.
-            Values must be in the [0, 1] range.
-            If int or float, values above are considered signal,
-            and below or equal ar considered noise.
-            If iterable, values above the first percentile threshold are
-            considered signals, while values below the second percentile
-            threshold are considered noise.
-            At most two values are accepted.
-            When the two values are not identical some values may be ignored
-            or counted both in signal and in noise.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-
-    See Also:
-        segmentation.threshold_percentile()
-    """
-    thresholds = mrt.utils.auto_repeat(thresholds, 2, check=True)
-    signal_threshold, noise_threshold = \
-        mrt.segmentation.threshold_percentile(arr, thresholds)
-    signal_mask = arr > signal_threshold
-    noise_mask = arr <= noise_threshold
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[noise_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_mean_std(
-        arr,
-        std_steps=(-1, -2),
-        mean_steps=1,
-        separate=True):
-    """
-    Separate signal from noise using a threshold combining mean and std.dev.
-
-    Thresholds are calculated using `segmentation.threshold_mean_std()`.
-
-    Signal/noise values interval depend on the `symmetric` parameter.
-
-    Args:
-        arr (np.ndarray): The input array.
-        std_steps (iterable[int|float]): The st.dev. multiplication step(s).
-            These are usually values between -2 and 2.
-        mean_steps (iterable[int|float]): The mean multiplication step(s).
-            This is usually set to 1.
-        symmetric (bool): Use symmetric thresholds.
-            If True, signal values are between the smallest and the largest
-            thresholds.
-            Otherwise, only the smallest threshold is used.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    thresholds = sorted(
-        mrt.segmentation.threshold_mean_std(arr, std_steps, mean_steps),
-        reverse=True)
-    signal_mask = arr > thresholds[0]
-    noise_mask = arr <= thresholds[-1]
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[noise_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_thresholds(
-        arr,
-        signal_threshold='otsu',
-        noise_threshold=None,
-        signal_kws=None,
-        noise_kws=None,
-        signal_index=None,
-        noise_index=None):
-    """
-    Separate signal from noise using value thresholds.
-
-    Assumes that a significant portion of the data contains no signal.
-
-    Args:
-        arr (np.ndarray): The input array.
-        signal_threshold (int|float|str|None): The noise threshold.
-            If str, the threshold is estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
-            to `signal_threshold`.
-        noise_threshold (int|float|str|None): The noise threshold.
-            If str, the threshold is estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
-            to `noise_threshold`.
-            If None, `noise_threshold` is set to `signal_threshold`.
-        signal_kws (dict|None): Keyword parameters.
-            If `signal_threshold` is str, the parameters are passed to
-            `segmentation.auto_thresholds()` for `signal_threshold`.
-        noise_kws (dict|None): Keyword parameters.
-            If `noisel_threshold` is str, the parameters are passed to
-            `segmentation.auto_thresholds()` for `noise_threshold`.
-        signal_index (int|None): Select a specific threshold.
-            The index is applied to the iterable obtained from
-            `segmentation.auto_thresholds()` for `signal_threshold`.
-            If None, the first value is selected.
-        noise_index (int|None): Select a specific threshold.
-            The index is applied to the iterable obtained from
-            `segmentation.auto_thresholds()` for `noise_threshold`.
-            If None, the first value is selected.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-
-    See Also:
-        segmentation.auto_thresholds()
-    """
-    if isinstance(signal_threshold, str):
-        if signal_kws is None:
-            signal_kws = dict()
-        signal_threshold = mrt.segmentation.auto_thresholds(
-            arr, signal_threshold, signal_kws)
-
-    if noise_threshold is None:
-        noise_threshold = signal_threshold
-    elif isinstance(noise_threshold, str):
-        if noise_kws is None:
-            noise_kws = dict()
-        noise_threshold = mrt.segmentation.auto_thresholds(
-            arr, noise_threshold, noise_kws)
-
-    if signal_index is None:
-        signal_index = 0
-    if noise_index is None:
-        noise_index = 0
-
-    signal_mask = arr > signal_threshold[signal_index]
-    noise_mask = arr <= noise_threshold[noise_index]
-    signal_arr = arr[signal_mask]
-    noise_arr = arr[noise_mask]
-    return signal_arr, noise_arr
-
-
-# ======================================================================
-def signal_noise_denoise(arr, smoothing=2):
-    """
-    Separate signal from noise using denoisingof the data.
-
-    Args:
-        arr (np.ndarray): The input array.
-        smoothing (int|float|iterable[int|float]): Smoothing factor.
-            Size of the box for the uniform filter.
-            If int or float, the box size is the same in all dims.
-            If iterable, each value correspond to a dimension of arr and its
-            size must match the number of dims of arr.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
-    """
-    signal_arr = sp.ndimage.uniform_filter(arr, smoothing)
-    noise_arr = arr - signal_arr
-    return signal_arr, noise_arr
-
-
-# ======================================================================
 def snr_multi_acq(
         arrs,
         remove_bias=True):
@@ -544,9 +157,9 @@ def snr_multi_acq(
         153.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = signal_noise_test_retest(*arrs)
+        signal_arr, noise_arr = correction.test_retest(*arrs)
     else:
-        signal_arr, noise_arr = signal_noise_multi_acq(
+        signal_arr, noise_arr = correction.multi_acq(
             arrs, remove_bias=remove_bias)
     return _snr(signal_arr, noise_arr)
 
@@ -585,83 +198,11 @@ def psnr_multi_acq(
         255.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = signal_noise_test_retest(*arrs)
+        signal_arr, noise_arr = correction.test_retest(*arrs)
     else:
-        signal_arr, noise_arr = signal_noise_multi_acq(
+        signal_arr, noise_arr = correction.multi_acq(
             arrs, remove_bias=remove_bias)
     return _psnr(signal_arr, noise_arr)
-
-
-# ======================================================================
-def signal_noise(
-        arr,
-        method='auto',
-        *args,
-        **kwargs):
-    """
-    Separate signal from noise.
-
-    Args:
-        arr (np.ndarray): The input array.
-        method (str): The signal/noise estimation method.
-            If str, uses the `signal_noise_` functions from this module.
-            Accepted values are:
-             - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
-             - 'optim': Uses an optimal data-driven method based on st.dev.
-             - 'otsu': Uses `signal_noise_otsu()`.
-                Only works for positive values.
-             - 'relative': Uses `signal_noise_relative()`.
-                Only works for positive values.
-             - 'percentile': Uses `signal_noise_percentile()`.
-                Only works for positive values.
-             - 'mean_std': Uses `signal_noise_mean_std()`.
-                Only works for positive values.
-             - 'thresholds': Uses `signal_noise_thresholds()`.
-                Only works for positive values.
-             - 'denoise': Uses `signal_noise_denoise()`.
-                Useful when no noise calibration region is present.
-            If callable, the signature must be:
-            f(np.ndarray, *args, **kwargs) -> (np.ndarray, np.ndarray)
-            where the input array is `arr` and the two returned arrays are:
-             - the signal array
-             - the noise array
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
-
-    Returns:
-        method (callable): The selected signal/noise estimation method.
-
-    Raises:
-        ValueError: If `method` is unknown.
-    """
-    methods = (
-        'auto',
-        'otsu', 'relative', 'percentile', 'mean_std', 'thresholds',
-        'bg_peaks', 'denoise')
-    method = method.lower()
-    if method == 'auto':
-        if np.all(arr) >= 0.0:
-            method = signal_noise_optim
-        else:
-            method = signal_noise_denoise
-    elif method == 'optim':
-        method = signal_noise_optim
-    elif method == 'otsu':
-        method = signal_noise_otsu
-    elif method == 'relative':
-        method = signal_noise_relative
-    elif method == 'percentile':
-        method = signal_noise_percentile
-    elif method == 'mean_std':
-        method = signal_noise_mean_std
-    elif method == 'thresholds':
-        method = signal_noise_thresholds
-    elif method == 'denoise':
-        method = signal_noise_denoise
-    else:
-        raise ValueError(
-            'valid methods are: {} (given: {})'.format(methods, method))
-    return method(arr, *args, **kwargs)
 
 
 # ======================================================================
@@ -713,7 +254,7 @@ def snr(
         >>> round(val)
         20.0
     """
-    signal_arr, noise_arr = signal_noise(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
     return _snr(signal_arr, noise_arr)
 
 
@@ -766,7 +307,7 @@ def psnr(
         >>> round(val)
         18.0
     """
-    signal_arr, noise_arr = signal_noise(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
     return _psnr(signal_arr, noise_arr)
 
 
@@ -957,7 +498,7 @@ def cnr(
         >>> round(val * 100)
         45.0
     """
-    signal_arr, noise_arr = signal_noise(arr, sn_method, **sn_kws)
+    signal_arr, noise_arr = correction(arr, sn_method, **sn_kws)
     signal_arrs = separate_signals(signal_arr, ss_method, **ss_kws)
     return _cnr(contrast(signal_arrs), noise_arr)
 
@@ -1010,7 +551,7 @@ def pcnr(
         >>> round(val)
         4.0
     """
-    signal_arr, noise_arr = signal_noise(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
     return _pcnr(signal_arr, noise_arr)
 
 
