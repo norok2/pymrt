@@ -24,13 +24,14 @@ import scipy.interpolate  # Scipy: Interpolation
 # :: Local Imports
 import pymrt as mrt
 # import pymrt.utils
+import pymrt.correction
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
 # from pymrt import msg, dbg
 import pymrt.utils
 from pymrt.recipes.generic import (
-    fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate,
+    fix_phase_interval, rate_to_time, time_to_rate,
     mag_phase_2_combine, cx_2_combine)
 import pymrt.recipes.multi_flash
 from pymrt.sequences import mp2rage
@@ -159,71 +160,6 @@ def mp2rage_rho(
 
 
 # ======================================================================
-def mp2rage_t1(
-        inv1m_arr,
-        inv1p_arr,
-        inv2m_arr,
-        inv2p_arr,
-        regularization=np.spacing(1),
-        eta_fa_arr=None,
-        t1_values_range=(100, 5000),
-        t1_num=512,
-        eta_fa_values_range=(0.1, 2),
-        eta_fa_num=512,
-        inverted=False,
-        **acq_param_kws):
-    """
-    Calculate the T1 map from an MP2RAGE acquisition.
-
-    Args:
-        inv1m_arr (float|np.ndarray): Magnitude of the first inversion.
-        inv1p_arr (float|np.ndarray): Phase of the first inversion.
-        inv2m_arr (float|np.ndarray): Magnitude of the second inversion.
-        inv2p_arr (float|np.ndarray): Phase of the second inversion.
-        regularization (float|int): Parameter for the regularization.
-            This parameter is added to the denominator of the rho expression
-            for normalization purposes, therefore should be much smaller than
-            the average of the magnitude arrays.
-            Larger values of this parameter will have the side effect of
-            denoising the background.
-        eta_fa_arr (float|np.array|None): Flip angle efficiency.
-            This is equivalent to the normalized B1T field.
-            Note that this must have the same spatial dimensions as the arrays
-            acquired with MP2RAGE.
-            If None, no correction for the flip angle efficiency is performed.
-        t1_values_range (tuple[float]): The T1 range.
-            The format is (min, max) where min < max.
-            Values should be positive.
-        t1_num (int): The number of samples for T1.
-            The actual number of sampling points is usually smaller, because of
-            the removal of non-bijective branches.
-            This affects the precision of the estimation.
-        eta_fa_values_range (tuple[float]): The flip angle efficiency range.
-            The format is (min, max) where min < max.
-            Values should be positive.
-        eta_fa_num (int): The number of samples for flip angle efficiency.
-            The actual number of sampling points is usually smaller, because of
-            the removal of non-bijective branches.
-            This affects the precision of the estimation.
-        inverted (bool): Invert results to convert times to rates.
-            Assumes that units of time is ms and units of rates is Hz.
-        **acq_param_kws (dict): The acquisition parameters.
-            This should match the signature of:  `mp2rage.acq_to_seq_params`.
-
-    Returns:
-        t1_arr (np.ndarray): The T1 map in ms.
-    """
-    rho_arr = mag_phase_2_combine(
-        inv1m_arr, inv1p_arr, inv2m_arr, inv2p_arr, regularization,
-        values_interval=None)
-    t1_arr = mp2rage_rho(
-        rho_arr, eta_fa_arr,
-        t1_values_range, t1_num,
-        eta_fa_values_range, eta_fa_num, inverted, **acq_param_kws)
-    return t1_arr
-
-
-# ======================================================================
 def double_flash(
         arr1,
         arr2,
@@ -234,7 +170,7 @@ def double_flash(
         eta_fa_arr=None,
         approx=None,
         inverted=False,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the T1 map from two FLASH acquisitions.
 
@@ -362,7 +298,7 @@ def multi_flash(
         eta_fa_arr=None,
         method='vfa',
         inverted=False,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the T1 map using multiple FLASH acquisitions.
 
@@ -370,9 +306,9 @@ def multi_flash(
     If the different TR are used for the acquisitions, assumes all TRs << T1.
 
     Args:
-        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
-        fas (iterable[int|float]): The flip angles in deg.
-        trs (iterable[int|float]): The repetition times in time units.
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (Iterable[int|float]): The flip angles in deg.
+        trs (Iterable[int|float]): The repetition times in time units.
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
             If None, a significant bias may still be present.
         method (str): Determine the fitting method to use.

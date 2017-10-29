@@ -308,9 +308,9 @@ def fit_exp_loglin(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
@@ -387,16 +387,16 @@ def fit_exp_curve_fit(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         optim (str):
-        init (np.ndarray|iterable): The parameters to fit.
+        init (np.ndarray|Iterable): The parameters to fit.
             If np.ndarray, must have all dims except the last same as `y_arr`;
             the last dim dictate the number of fit parameters; must have the
             same shape as the output.
-            If iterable, specify the initial value(s) of the parameters to fit.
+            If Iterable, specify the initial value(s) of the parameters to fit.
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
@@ -476,9 +476,9 @@ def fit_exp_tau_quad(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         integrate (callable): The numerical integration function to use.
             Must accept an `axis=-1` keyword argument, which defines the
@@ -563,9 +563,9 @@ def fit_exp_tau_quadr(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         integrate (callable): The numerical integration function to use.
             Must accept an `axis=-1` keyword argument, which defines the
@@ -658,9 +658,9 @@ def fit_exp_tau_diff(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         differentiate (callable): The numerical differentiation function to
         use.
@@ -727,9 +727,9 @@ def fit_exp_tau_arlo(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         window_size (int): The window over which calculating the integral. 
 
@@ -800,9 +800,9 @@ def fit_exp_tau_loglin(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         variant (str): Specify a variant of the algorithm.
             A valid Python expression is expected and used as keyword argument
@@ -838,9 +838,9 @@ def fit_exp_tau(
     Args:
         arr (np.ndarray): The input array in arb.units.
             The sampling time T_i varies in the last dimension.
-        tis (iterable): The sampling times T_i in time units.
+        tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
 
     Returns:
@@ -1002,12 +1002,12 @@ def voxel_curve_fit(
         x_arr (np.ndarray): Independent variable array.
             Must be 1D, with length equal to the size of last `y_arr` axis.
         fit_func (func): The function to fit.
-        fit_params (int|np.ndarray|iterable): The parameters to fit.
+        fit_params (int|np.ndarray|Iterable): The parameters to fit.
             If int, specify the number of parameters to fit.
             If np.ndarray, must have all dims except the last same as `y_arr`;
             the last dim dictate the number of fit parameters; must have the
             same shape as the output.
-            If iterable, specify the initial value(s) of the parameters to fit.
+            If Iterable, specify the initial value(s) of the parameters to fit.
             If the method requires initial values, but only the number of
             parameters to fit is specified, initial value(s) set to one.
         pre_func (func):

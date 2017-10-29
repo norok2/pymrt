@@ -69,9 +69,9 @@ def phs_to_dphs_multi(
     Args:
         phs_arr (np.ndarray): The input array in arb.units.
             The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
+        tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         unwrap (bool|callable|None): Determine unwrapping method.
             If None, no unwrapping or fixing is performed (assume units is rad).
@@ -142,9 +142,9 @@ def phs_to_dphs(
             Arbitrary units are accepted, will be automatically converted to
             radians under the assumption that data is wrapped.
             Do not provide unwrapped data.
-        tis (iterable|int|float): The sampling times Ti in time units.
+        tis (Iterable|int|float): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         units (str|float|int): Units of measurement of Ti.
             If str, the following will be accepted: 'ms'
@@ -179,9 +179,9 @@ def dphs_to_phs(
     Args:
         phs_arr (np.ndarray): The input array in arb.units.
             The sampling time Ti varies in the last dimension.
-        tis (iterable|int|float): The sampling times Ti in time units.
+        tis (Iterable|int|float): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         units (str|float|int): Units of measurement of Ti.
             If str, the following will be accepted: 'ms'
@@ -220,11 +220,11 @@ def unwrap_laplacian(
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.
         pre_func (callable|None): Preprocessing function for the input.
-        pre_args (iterable|None): Positional arguments of preprocess function.
-        pre_kws (iterable|None): Keyword arguments of preprocess function.
+        pre_args (Iterable|None): Positional arguments of preprocess function.
+        pre_kws (Iterable|None): Keyword arguments of preprocess function.
         post_func (callable|None): Postprocessing function for the output.
-        post_args (iterable|None): Positional arguments of postprocess function.
-        post_kws (iterable|None): Keyword arguments of postprocess function.
+        post_args (Iterable|None): Positional arguments of postprocess function.
+        post_kws (Iterable|None): Keyword arguments of postprocess function.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
@@ -296,14 +296,14 @@ def unwrap_sorting_path(
     Args:
         arr (np.ndarray): The multi-dimensional array to unwrap.`
         pre_func (callable|None): Preprocessing function for the input.
-        pre_args (iterable|None): Positional arguments of preprocess function.
-        pre_kws (iterable|None): Keyword arguments of preprocess function.
+        pre_args (Iterable|None): Positional arguments of preprocess function.
+        pre_kws (Iterable|None): Keyword arguments of preprocess function.
         post_func (callable|None): Postprocessing function for the output.
-        post_args (iterable|None): Positional arguments of postprocess function.
-        post_kws (iterable|None): Keyword arguments of postprocess function.
+        post_args (Iterable|None): Positional arguments of postprocess function.
+        post_kws (Iterable|None): Keyword arguments of postprocess function.
         unwrap_axes (tuple[int]): Axes along which unwrapping is performed.
             Must have length 2 or 3.
-        wrap_around (bool|iterable[bool]|None): Circular unwrapping.
+        wrap_around (bool|Iterable[bool]|None): Circular unwrapping.
             See also: skimage.restoration.unwrap_phase.
         seed (int|None): Randomization seed.
             See also: skimage.restoration.unwrap_phase.

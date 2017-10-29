@@ -356,11 +356,11 @@ def block_adaptive(
 
     Args:
         arr (np.ndarray): The input array.
-        block (int|float|iterable[int|float]): The size of the block in px.
+        block (int|float|Iterable[int|float]): The size of the block in px.
             Smooth the coil covariance using a uniform filter with the
             specified block size.
             If int or float, the block is isotropic in all non-coil dimensions.
-            If iterable, each size is applied to the corresponding dimension
+            If Iterable, each size is applied to the corresponding dimension
             and its size must match the number of non-coil dimensions.
             If set to 0, no smoothing is performed and the algorithm
             reduces to non-block adaptive.
@@ -523,11 +523,11 @@ def block_adaptive_iter(
 
     Args:
         arr (np.ndarray): The input array.
-        block (int|float|iterable[int|float]): The size of the block in px.
+        block (int|float|Iterable[int|float]): The size of the block in px.
             Smooth the coil covariance using a uniform filter with the
             specified block size.
             If int or float, the block is isotropic in all non-coil dimensions.
-            If iterable, each size is applied to the corresponding dimension
+            If Iterable, each size is applied to the corresponding dimension
             and its size must match the number of non-coil dimensions.
             If set to 0, no smoothing is performed and the algorithm
             reduces to non-block adaptive.

@@ -279,13 +279,13 @@ def auto_repeat(
     """
     Automatically repeat the specified object n times.
 
-    If the object is not iterable, a tuple with the specified size is returned.
-    If the object is iterable, the object is left untouched.
+    If the object is not Iterable, a tuple with the specified size is returned.
+    If the object is Iterable, the object is left untouched.
 
     Args:
         obj: The object to operate with.
         n (int): The length of the output object.
-        force (bool): Force the repetition, even if the object is iterable.
+        force (bool): Force the repetition, even if the object is Iterable.
         check (bool): Ensure that the object has length n.
 
     Returns:
@@ -328,23 +328,23 @@ def flatten(
         avoid=(str, bytes),
         max_depth=-1):
     """
-    Recursively flattens nested iterables.
+    Recursively flattens nested Iterables.
 
     The maximum depth is limited by Python's recursion limit.
 
     Args:
-        items (iterable[iterable]): The input items.
-        avoid (iterable): Data types that will not be flattened.
+        items (Iterable[Iterable]): The input items.
+        avoid (Iterable): Data types that will not be flattened.
         max_depth (int): Maximum depth to reach. Negative for unlimited.
 
     Yields:
-        item (any): The next non-iterable item of the flattened items.
+        item (any): The next non-Iterable item of the flattened items.
 
     Examples:
         >>> ll = [[1, 2, 3], [4, 5, 6], [7], [8, 9]]
         >>> list(flatten(ll))
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        >>> list(flatten(ll)) == list(itertools.chain.from_iterable(ll))
+        >>> list(flatten(ll)) == list(itertools.chain.from_Iterable(ll))
         True
         >>> ll = [ll, ll]
         >>> list(flatten(ll))
@@ -379,7 +379,7 @@ def prod(items):
     This is similar to `sum`, but uses product instead of addition.
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
 
     Returns:
         result: The cumulative product of `items`.
@@ -427,12 +427,12 @@ def combine_iter_len(
     Determine the maximum length of an item within a collection of items.
 
     Args:
-        items (iterable): The collection of items to inspect.
+        items (Iterable): The collection of items to inspect.
         combine (callable): The combination method.
 
     Returns:
         num (int): The combined length of the collection.
-            If none of the items are iterable, the result is `1`.
+            If none of the items are Iterable, the result is `1`.
 
     Examples:
         >>> a = list(range(10))
@@ -469,15 +469,15 @@ def grouping(
     Generate a tuple of grouped items.
 
     Args:
-        items (iterable): The input items.
-        splits (int|iterable[int]): Grouping information.
-            If iterable, each group (except the last) has the number of
+        items (Iterable): The input items.
+        splits (int|Iterable[int]): Grouping information.
+            If Iterable, each group (except the last) has the number of
             elements specified.
             If int, all groups (except the last, which may have less items)
             has the same number of elements.
 
     Returns:
-        groups (tuple[iterable]): Grouped items from the source.
+        groups (tuple[Iterable]): Grouped items from the source.
 
     Examples:
         >>> l = list(range(10))
@@ -517,7 +517,7 @@ def chunks(
     are determined depending on the values of `balanced`
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
         n (int): Approximate number of chunks.
             The exact number depends on the value of `mode`.
         mode (str): Determine which approximation to use.
@@ -533,7 +533,7 @@ def chunks(
             This has no effect if the number of items is a multiple of `n`.
 
     Returns:
-        groups (tuple[iterable]): Grouped items from the source.
+        groups (tuple[Iterable]): Grouped items from the source.
 
     Examples:
         >>> l = list(range(10))
@@ -584,13 +584,13 @@ def partitions(
     Generate all k-partitions for the items.
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
         k (int): The number of splitting partitions.
             Each group has exactly `k` elements.
         container (callable): The group container.
 
     Yields:
-        partition (tuple[iterable]]): The grouped items.
+        partition (tuple[Iterable]]): The grouped items.
             Each partition contains `k` grouped items from the source.
 
     Examples:
@@ -703,11 +703,11 @@ def unique_permutations(
     Yield unique permutations of items in an efficient way.
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
         container (callable)
 
     Yields:
-        items (iterable): The next unique permutation of the items.
+        items (Iterable): The next unique permutation of the items.
 
     Examples:
         >>> list(unique_permutations([0, 0, 0]))
@@ -756,7 +756,7 @@ def unique_partitions(
     Generate all k-partitions for all unique permutations of the items.
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
         k (int): The number of splitting partitions.
             Each group has exactly `k` elements.
 
@@ -1333,7 +1333,7 @@ def gcd(*nums):
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *nums (iterable[int]): The input numbers.
+        *nums (Iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
@@ -1360,7 +1360,7 @@ def lcm(*nums):
     Find the least common multiple (LCM) of a list of numbers.
 
     Args:
-        *numbers (iterable[int]): The input numbers.
+        *numbers (Iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the least common multiple (LCM).
@@ -1526,7 +1526,7 @@ def gen_p_ratio(*items):
         \\frac{1}{\\sum_{ij} \\frac{x_i}{x_j}}
 
     Args:
-        *items (iterable[int|float|np.ndarray]): Input values.
+        *items (Iterable[int|float|np.ndarray]): Input values.
 
     Returns:
         result: 1 / sum_ij [ x_i / x_j ]
@@ -1585,19 +1585,19 @@ def common_subseq_2(
         sorting=None):
     """
     Find the longest common consecutive subsequence(s).
-    This version works for two iterables.
+    This version works for two Iterables.
 
     This is known as the `longest common substring` problem, or LCS for short.
 
     Args:
-        seq1 (iterable): The first input sequence.
+        seq1 (Iterable): The first input sequence.
             Must be of the same type as seq2.
-        seq2 (iterable): The second input sequence.
+        seq2 (Iterable): The second input sequence.
             Must be of the same type as seq1.
         sorting (callable): Sorting function passed to 'sorted' via `key` arg.
 
     Returns:
-        commons (list[iterable]): The longest common subsequence(s).
+        commons (list[Iterable]): The longest common subsequence(s).
 
     Examples:
         >>> common_subseq_2('academy','abracadabra')
@@ -1636,17 +1636,17 @@ def common_subseq(
         sorting=None):
     """
     Find the longest common consecutive subsequence(s).
-    This version works for an iterable of iterables.
+    This version works for an Iterable of Iterables.
 
     This is known as the `longest common substring` problem, or LCS for short.
 
     Args:
-        seqs (iterable[iterable]): The input sequences.
+        seqs (Iterable[Iterable]): The input sequences.
             All the items must be of the same type.
         sorting (callable): Sorting function passed to 'sorted' via `key` arg.
 
     Returns:
-        commons (list[iterable]): The longest common subsequence(s).
+        commons (list[Iterable]): The longest common subsequence(s).
 
     Examples:
         >>> common_subseq(['academy', 'abracadabra', 'cadet'])
@@ -2446,7 +2446,7 @@ def iflistdir(
 
     Args:
         dirpath (str): The base directory.
-        patterns (str|iterable[str]): The pattern(s) to match.
+        patterns (str|Iterable[str]): The pattern(s) to match.
             These must be either a Unix-style pattern or a regular expression,
             depending on the value of `unix_style`.
         unix_style (bool): Interpret the patterns as Unix-style.
@@ -2486,7 +2486,7 @@ def flistdir(
 
     Args:
         dirpath (str): The base directory.
-        patterns (str|iterable[str]): The pattern(s) to match.
+        patterns (str|Iterable[str]): The pattern(s) to match.
             These must be either a Unix-style pattern or a regular expression,
             depending on the value of `unix_style`.
         unix_style (bool): Interpret the patterns as Unix-style.
@@ -2719,7 +2719,7 @@ def join_path(*args):
     Note that this is the inverse of `split_path()`.
 
     Args:
-        *args (iterable[str]): The path elements to be concatenated.
+        *args (Iterable[str]): The path elements to be concatenated.
             The last item is treated as the file extension.
 
     Returns:
@@ -2894,7 +2894,7 @@ def auto_open(filepath, *args, **kwargs):
 
     Args:
         filepath (str): The file path.
-        *args (iterable): Positional arguments passed to `open()`.
+        *args (Iterable): Positional arguments passed to `open()`.
         **kwargs (dict): Keyword arguments passed to `open()`.
 
     Returns:
@@ -2940,7 +2940,7 @@ def zopen(filepath, mode='rb', *args, **kwargs):
             See `open()` for more information.
             If the `t` mode is not specified, `b` mode is assumed.
             If `t` mode is specified, the file cannot be compressed.
-        *args (iterable): Positional arguments passed to `open()`.
+        *args (Iterable): Positional arguments passed to `open()`.
         **kwargs (dict): Keyword arguments passed to `open()`.
 
     Returns:
@@ -3533,8 +3533,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (iterable[str]|None): Input filepaths for computation.
-        out_filepaths (iterable[str]): Output filepaths for computation.
+        in_filepaths (Iterable[str]|None): Input filepaths for computation.
+        out_filepaths (Iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
         verbose (int): Set level of verbosity.
         makedirs (bool): Create output dirpaths if not existing.
@@ -3660,7 +3660,7 @@ def is_increasing(
     Check if items are increasing.
 
     Args:
-        items (iterable): The items to check.
+        items (Iterable): The items to check.
         strict (bool): Check for strict monotonicity.
             If True, consecutive items cannot be equal.
             Otherwise they can be also equal.
@@ -3695,7 +3695,7 @@ def is_decreasing(
     Check if items are decreasing.
 
     Args:
-        items (iterable): The items to check.
+        items (Iterable): The items to check.
         strict (bool): Check for strict monotonicity.
             If True, consecutive items cannot be equal.
             Otherwise they can be also equal.
@@ -3725,10 +3725,10 @@ def is_decreasing(
 # ======================================================================
 def is_same_sign(items):
     """
-    Determine if all items in an iterable have the same sign.
+    Determine if all items in an Iterable have the same sign.
 
     Args:
-        items (iterable): The items to check.
+        items (Iterable): The items to check.
             The comparison operators '>=' and '<' must be defined.
 
     Returns:
@@ -3785,7 +3785,7 @@ def scale(
         out_interval (float,float): Interval of the output value(s).
             If None, set to: (0, 1).
         in_interval (float,float): Interval of the input value(s).
-            If None, and val is iterable, it is calculated as:
+            If None, and val is Iterable, it is calculated as:
             (min(val), max(val)), otherwise set to: (0, 1).
 
     Returns:
@@ -4033,7 +4033,7 @@ def ravel_clean(
 
     Args:
         arr (np.ndarray): The input array.
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
 
     Returns:
@@ -4118,8 +4118,8 @@ def coord(
     Calculate the coordinate in a given shape for a specified position.
 
     Args:
-        shape (iterable[int]): The shape of the mask in px.
-        position (float|iterable[float]): Relative position of the origin.
+        shape (Iterable[int]): The shape of the mask in px.
+        position (float|Iterable[float]): Relative position of the origin.
             Values are in the [0, 1] interval.
         is_relative (bool): Interpret origin as relative.
         use_int (bool): Force interger values for the coordinates.
@@ -4159,8 +4159,8 @@ def grid_coord(
     Calculate the generic x_i coordinates for N-dim operations.
 
     Args:
-        shape (iterable[int]): The shape of the mask in px.
-        position (float|iterable[float]): Relative position of the origin.
+        shape (Iterable[int]): The shape of the mask in px.
+        position (float|Iterable[float]): Relative position of the origin.
             Values are in the [0, 1] interval.
         is_relative (bool): Interpret origin as relative.
         dense (bool): Determine the shape of the mesh-grid arrays.
@@ -4231,8 +4231,8 @@ def _kk_2(
     Calculate the k^2 kernel to be used for the Laplacian operators.
 
     Args:
-        shape (iterable[int]): The size of the array.
-        factors (iterable[int|tuple]): The size conversion factors for each
+        shape (Iterable[int]): The size of the array.
+        factors (Iterable[int|tuple]): The size conversion factors for each
         dim.
 
     Returns:
@@ -4288,8 +4288,8 @@ def _kk(
     Calculate the k kernel to be used for the gradient operators.
 
     Args:
-        shape (iterable[int]): The size of the array.
-        factors (iterable[int|tuple]): The size conversion factors for each
+        shape (Iterable[int]): The size of the array.
+        factors (Iterable[int|tuple]): The size conversion factors for each
         dim.
 
     Returns:
@@ -4418,19 +4418,19 @@ def auto_pad_width(
     Ensure pad_width value(s) to be consisting of integer.
 
     Args:
-        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+        pad_width (float|int|Iterable[float|int]): Size of the padding to use.
             This is useful for mitigating border effects.
-            If iterable, a value for each dim must be specified.
-            If not iterable, all dims will have the same value.
+            If Iterable, a value for each dim must be specified.
+            If not Iterable, all dims will have the same value.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to corresponding dim size.
-        shape (iterable[int]): The shape to associate to `pad_width`.
+        shape (Iterable[int]): The shape to associate to `pad_width`.
         combine (callable|None): The function for combining shape values.
             If None, uses the corresponding dim from the shape.
 
     Returns:
         pad_width (int|tuple[tuple[int]]): The absolute `pad_width`.
-            If input `pad_width` is not iterable, result is not iterable.
+            If input `pad_width` is not Iterable, result is not Iterable.
 
     See Also:
         np.pad
@@ -4489,10 +4489,10 @@ def laplacian(
         arr (np.ndarray): The input array.
         ft_factor (float): The Fourier factor for the gradient operator.
             Should be either 1 or 2*pi, depending on DFT implementation.
-        pad_width (float|int|iterable[float|int]): Size of the padding to use.
+        pad_width (float|int|Iterable[float|int]): Size of the padding to use.
             This is useful for mitigating border effects.
-            If iterable, a value for each dim must be specified.
-            If not iterable, all dims will have the same value.
+            If Iterable, a value for each dim must be specified.
+            If not Iterable, all dims will have the same value.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to the maximum size.
 
@@ -4670,14 +4670,14 @@ def auto_bins(
     Determine the optimal number of bins for a histogram of a group of arrays.
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays.
-        method (str|iterable[str]|None): The method for calculating bins.
+        arrs (Iterable[np.ndarray]): The input arrays.
+        method (str|Iterable[str]|None): The method for calculating bins.
             If str, the same method is applied to both arrays.
             See `auto_bin()` for available methods.
         dim (int|None): The dimension of the histogram.
         combine (callable|None): Combine each bin using the combine function.
             combine(n_bins) -> n_bin
-            n_bins is of type iterable[int]
+            n_bins is of type Iterable[int]
 
     Returns:
         n_bins (int|tuple[int]): The number of bins.
@@ -5040,9 +5040,9 @@ def gaussian_nd(
     Generate a Gaussian distribution in N dimensions.
 
     Args:
-        shape (int|iterable[int]): The shape of the array in px.
-        sigmas (iterable[int|float]): The standard deviation in px.
-        position (float|iterable[float]): The position of the center.
+        shape (int|Iterable[int]): The shape of the array in px.
+        sigmas (Iterable[int|float]): The standard deviation in px.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge, and scaled by the
             corresponding shape size.
         n_dim (int|None): The number of dimensions.
@@ -5110,7 +5110,7 @@ def moving_average(
 
     Args:
         arr (np.ndarray): The input array.
-        weights (int|iterable): The running weights.
+        weights (int|Iterable): The running weights.
             If int, the number of elements to group in the 'running' axis and
             unity weights are used.
             The size of the weights array len(weights) must be such that
@@ -5168,7 +5168,7 @@ def moving_mean(
 
     Args:
         arr (np.ndarray): The input array.
-        num (int|iterable): The running window size.
+        num (int|Iterable): The running window size.
             The number of elements to group.
 
     Returns:
@@ -5217,7 +5217,7 @@ def rolling_stat(
 
     Args:
         arr (np.ndarray): The input array.
-        weights (int|iterable): The running weights.
+        weights (int|Iterable): The running weights.
             If int, the number of elements to group in the 'running' axis and
             unity weights are used.
             The size of the weights array len(weights) must be such that
@@ -5234,9 +5234,9 @@ def rolling_stat(
             - 'valid': only values inside the array are used.
             - 'same': must have the same size as the input.
             - 'full': the full output is provided.
-        borders (str|complex|iterable[complex]|None): The border parameters.
+        borders (str|complex|Iterable[complex]|None): The border parameters.
             If int or float, the value is repeated at the borders.
-            If iterable of int, float or complex, the first and last values are
+            If Iterable of int, float or complex, the first and last values are
             repeated to generate the head and tail, respectively.
             If str, the following values are accepted:
                 - 'same': the array extrema are used to generate head / tail.
@@ -5347,7 +5347,7 @@ def running_stat(
 
     Args:
         arr (np.ndarray): The input array.
-        weights (int|iterable): The running weights.
+        weights (int|Iterable): The running weights.
             If int, the number of elements to group in the 'running' axis and
             unity weights are used.
             The size of the weights array len(weights) must be such that
@@ -5364,7 +5364,7 @@ def running_stat(
             - 'full': the full output is provided.
         borders (str|complex|None): The border parameters.
             If int, float or complex, the value is repeated at the borders.
-            If iterable of int, float or complex, the first and last values are
+            If Iterable of int, float or complex, the first and last values are
             repeated to generate the head and tail, respectively.
             If str, the following values are accepted:
                 - 'same': the array extrema are used to generate head / tail.
@@ -5616,7 +5616,7 @@ def marginal_sep_elbow(items):
     slope is smaller than the (signed) local slope.
 
     Args:
-        items (iterable): The collection of items to inspect.
+        items (Iterable): The collection of items to inspect.
             The input must be already sorted non-negative values.
 
     Returns:
@@ -5660,7 +5660,7 @@ def marginal_sep_quad(items):
     than the sum of the differences of all following items.
 
     Args:
-        items (iterable): The collection of items to inspect.
+        items (Iterable): The collection of items to inspect.
             The input must be already sorted non-negative values.
 
     Returns:
@@ -5697,7 +5697,7 @@ def marginal_sep_quad_weight(items):
     number of items already considered.
 
     Args:
-        items (iterable): The collection of items to inspect.
+        items (Iterable): The collection of items to inspect.
             The input must be already sorted non-negative values.
 
     Returns:
@@ -5735,7 +5735,7 @@ def marginal_sep_quad_inv_weight(items):
     number of items to be considered.
 
     Args:
-        items (iterable): The collection of items to inspect.
+        items (Iterable): The collection of items to inspect.
             The input must be already sorted non-negative values.
 
     Returns:
@@ -5771,7 +5771,7 @@ def otsu_threshold(
     Optimal foreground/background threshold value based on Otsu's method.
 
     Args:
-        items (iterable): The input items.
+        items (Iterable): The input items.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
             using `utils.auto_bin()` with `method` set to `bins` if str,
@@ -5854,7 +5854,7 @@ def auto_num_components(
              - 'quad_inv_weight': use `utils.marginal_sep_quad_inv_weight()`.
              - 'otsu': use `segmentation.threshold_otsu()`.
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
-        q (iterable[int|float|complex]|None): The values of the components.
+        q (Iterable[int|float|complex]|None): The values of the components.
             If None, `num` must be specified.
             If
         num (int|None): The number of components.
@@ -5935,8 +5935,8 @@ def avg(
     compute.
 
     Args:
-        arr (np.ndarray|iterable): The input data.
-        axis (int|iterable[int]|None): Axis along which to compute.
+        arr (np.ndarray|Iterable): The input data.
+        axis (int|Iterable[int]|None): Axis along which to compute.
             See `np.nansum()` for more information.
         dtype (np.dtype|None): The data type of the result.
             See `np.nansum()` for more information.
@@ -5944,10 +5944,10 @@ def avg(
             See `np.nansum()` for more information.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
             See `np.nansum()` for more information.
-        weights (np.ndarray|iterable|None): The weights.
-            If np.ndarray or iterable, the size must match with `arr`.
+        weights (np.ndarray|Iterable|None): The weights.
+            If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
 
     Returns:
@@ -6024,8 +6024,8 @@ def var(
     compute.
 
     Args:
-        arr (np.ndarray|iterable): The input data.
-        axis (int|iterable[int]|None): Axis along which to compute.
+        arr (np.ndarray|Iterable): The input data.
+        axis (int|Iterable[int]|None): Axis along which to compute.
             See `np.nansum()` for more information.
         dtype (np.dtype|None): The data type of the result.
             See `np.nansum()` for more information.
@@ -6033,10 +6033,10 @@ def var(
             See `np.nansum()` for more information.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
             See `np.nansum()` for more information.
-        weights (np.ndarray|iterable|None): The weights.
-            If np.ndarray or iterable, the size must match with `arr`.
+        weights (np.ndarray|Iterable|None): The weights.
+            If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
 
     Returns:
@@ -6093,8 +6093,8 @@ def std(
     variance.
 
     Args:
-        arr (np.ndarray|iterable): The input data.
-        axis (int|iterable[int]|None): Axis along which to compute.
+        arr (np.ndarray|Iterable): The input data.
+        axis (int|Iterable[int]|None): Axis along which to compute.
             See `np.nansum()` for more information.
         dtype (np.dtype|None): The data type of the result.
             See `np.nansum()` for more information.
@@ -6102,10 +6102,10 @@ def std(
             See `np.nansum()` for more information.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
             See `np.nansum()` for more information.
-        weights (np.ndarray|iterable|None): The weights.
-            If np.ndarray or iterable, the size must match with `arr`.
+        weights (np.ndarray|Iterable|None): The weights.
+            If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
 
     Returns:
@@ -6146,8 +6146,8 @@ def gavg(
     weighted average of the logarithm of the absolute value of the array.
 
     Args:
-        arr (np.ndarray|iterable): The input data.
-        axis (int|iterable[int]|None): Axis along which to compute.
+        arr (np.ndarray|Iterable): The input data.
+        axis (int|Iterable[int]|None): Axis along which to compute.
             See `np.nansum()` for more information.
         dtype (np.dtype|None): The data type of the result.
             See `np.nansum()` for more information.
@@ -6155,10 +6155,10 @@ def gavg(
             See `np.nansum()` for more information.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
             See `np.nansum()` for more information.
-        weights (np.ndarray|iterable|None): The weights.
-            If np.ndarray or iterable, the size must match with `arr`.
+        weights (np.ndarray|Iterable|None): The weights.
+            If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
 
     Returns:
@@ -6196,7 +6196,7 @@ def calc_stats(
 
     Args:
         arr (np.ndarray): The array to be investigated.
-        removes (iterable): Values to remove.
+        removes (Iterable): Values to remove.
             If empty, no values will be removed.
         val_interval (tuple): The (min, max) values interval.
         save_path (str|None): The path to which the plot is to be saved.
@@ -6276,8 +6276,8 @@ def ndim_slice(
 
     Args:
         arr (np.ndarray): The input N-dim array
-        axes (iterable[int]|int): The slicing axis
-        indexes (iterable[int|float|None]|None): The slicing index.
+        axes (Iterable[int]|int): The slicing axis
+        indexes (Iterable[int|float|None]|None): The slicing index.
             If None, mid-value is taken.
             Otherwise, its length must match that of axes.
             If an element is None, again the mid-value is taken.

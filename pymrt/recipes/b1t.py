@@ -24,10 +24,8 @@ import scipy.interpolate  # Scipy: Interpolation
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+import pymrt.correction
 
-from pymrt.recipes.generic import (
-    fix_magnitude_bias,
-    mag_phase_2_combine, cx_2_combine)
 from pymrt.sequences import mp2rage
 
 
@@ -103,7 +101,7 @@ def double_rare(
         arr2,
         fa,
         sign=1,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the flip angle efficiency from two RARE acquisitions.
 
@@ -187,7 +185,7 @@ def double_flash(
         t1_arr=None,
         approx=None,
         sign=1,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the flip angle efficiency from two FLASH acquisitions.
 

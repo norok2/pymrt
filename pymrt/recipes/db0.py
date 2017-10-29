@@ -134,9 +134,9 @@ def fit_phase(
     Args:
         phs_arr (np.ndarray): The input array in arb.units.
             The sampling time Ti varies in the last dimension.
-        tis (iterable): The sampling times Ti in time units.
+        tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
-        tis_mask (iterable[bool]|None): Determine the sampling times Ti to use.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
         b0 (float): Main Magnetic Field B0 Strength in T
 

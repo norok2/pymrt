@@ -337,7 +337,7 @@ def accumulate(
     Cumulatively apply the specified function to the elements of the list.
 
     Args:
-        items (iterable): The items to process.
+        items (Iterable): The items to process.
         func (callable): func(x,y) -> z
             The function applied cumulatively to the first n items of the list.
             Defaults to cumulative sum.

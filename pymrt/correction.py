@@ -44,10 +44,38 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
+def dwt_filter(
+        arr,
+        wavelet,
+        mode='symmetric',
+        axes=None,
+        threshold=None,
+        sigma=None,
+        approximation='soft',
+        levels=None):
+    """
+
+    Args:
+        arr:
+        wavelet:
+        mode:
+        axes:
+        threshold:
+        sigma:
+        approximation:
+        levels:
+
+    Returns:
+
+    """
+    return arr
+
+
+# ======================================================================
 def denoise(
         arr,
         method='wavelet',
-        filter_kws=None,
+        method_kws=None,
         mode='cartesian'):
     """
     Perform standard single-data de-noising algorithms.
@@ -74,8 +102,8 @@ def denoise(
              - 'tv_chambolle': `skimage.restoration.denoise_tv_chambolle()`
              - 'bilateral': `skimage.restoration.denoise_bilateral()`
                (only works with 2D images)
-             - 'dwt': `recipes.generic.dwt_filter()`
-        filter_kws (dict|None): Keyword parameters for the denoising.
+             - 'dwt': `dwt_filter()`
+        method_kws (dict|None): Keyword parameters for the denoising.
             These are passed to the corresponding function.
             See the respective documentation for details.
         mode (str): Complex calculation mode.
@@ -89,44 +117,44 @@ def denoise(
         arr (np.ndarray): The denoised array.
     """
     method = method.lower()
-    if filter_kws is None:
-        filter_kws = {}
+    if method_kws is None:
+        method_kws = {}
 
     if method == 'gaussian':
-        if 'sigma' not in filter_kws:
-            filter_kws['sigma'] = 1.0
+        if 'sigma' not in method_kws:
+            method_kws['sigma'] = 1.0
         filter_func = sp.ndimage.gaussian_filter
     elif method == 'uniform':
         filter_func = sp.ndimage.uniform_filter
     elif method == 'median':
-        if 'size' not in filter_kws:
-            filter_kws['size'] = 5
+        if 'size' not in method_kws:
+            method_kws['size'] = 5
         filter_func = sp.ndimage.median_filter
     elif method == 'minimum':
-        if 'size' not in filter_kws:
-            filter_kws['size'] = 5
+        if 'size' not in method_kws:
+            method_kws['size'] = 5
         filter_func = sp.ndimage.minimum_filter
     elif method == 'maximum':
-        if 'size' not in filter_kws:
-            filter_kws['size'] = 5
+        if 'size' not in method_kws:
+            method_kws['size'] = 5
         filter_func = sp.ndimage.maximum_filter
     elif method == 'rank':
-        if 'size' not in filter_kws:
-            filter_kws['size'] = 5
-        if 'rank' not in filter_kws:
-            filter_kws['rank'] = 1
+        if 'size' not in method_kws:
+            method_kws['size'] = 5
+        if 'rank' not in method_kws:
+            method_kws['rank'] = 1
         filter_func = sp.ndimage.rank_filter
     elif method == 'percentile':
-        if 'size' not in filter_kws:
-            filter_kws['size'] = 5
-        if 'percentile' not in filter_kws:
-            filter_kws['percentile'] = 50
+        if 'size' not in method_kws:
+            method_kws['size'] = 5
+        if 'percentile' not in method_kws:
+            method_kws['percentile'] = 50
         filter_func = sp.ndimage.percentile_filter
     elif method == 'bilateral':
-        filter_kws['multichannel'] = False
+        method_kws['multichannel'] = False
         filter_func = denoise_bilateral
     elif method == 'nl_means':
-        filter_kws['multichannel'] = False
+        method_kws['multichannel'] = False
         filter_func = denoise_nl_means
     elif method == 'wavelet':
         if np.max(np.abs(arr)) > 1.0:
@@ -136,8 +164,8 @@ def denoise(
     elif method == 'dwt':
         filter_func = dwt_filter
     elif method == 'tv_bregman':
-        if 'weight' not in filter_kws:
-            filter_kws['weight'] = 1
+        if 'weight' not in method_kws:
+            method_kws['weight'] = 1
         filter_func = denoise_tv_bregman
     elif method == 'tv_chambolle':
         filter_func = denoise_tv_chambolle
@@ -146,9 +174,9 @@ def denoise(
         raise ValueError(text)
 
     if np.any(np.iscomplex(arr)):
-        arr = mrt.utils.filter_cx(arr, filter_func, (), filter_kws)
+        arr = mrt.utils.filter_cx(arr, filter_func, (), method_kws)
     else:
-        arr = filter_func(np.real(arr), **filter_kws)
+        arr = filter_func(np.real(arr), **method_kws)
     return arr
 
 
@@ -195,7 +223,7 @@ def separate_multi_acq(
     has zero (or constant) mean.
 
     Args:
-        arrs (iterable[np.ndarray]): The input test array.
+        arrs (Iterable[np.ndarray]): The input test array.
         remove_bias (bool): Remove bias in the signal from the noise mean.
 
     Returns:
@@ -223,7 +251,7 @@ def separate_calib_region(
         arr,
         signal_region=None,
         noise_region=None,
-        region_shape='cuboid'):
+        region_shape=mrt.geometry.nd_cuboid):
     """
     Separate signal from noise a calibration region.
 
@@ -233,7 +261,12 @@ def separate_calib_region(
 
     Args:
         arr (np.ndarray): The input array.
-        region:
+        signal_region (Iterable[|float]): Region description.
+            T
+
+        region_shape (callable): Function for calculating the region masks.
+            The signature of the function is:
+            `f(shape,
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -249,11 +282,11 @@ def separate_calib_region(
     s_semisizes, s_position = mrt.geometry.extrema_to_semisizes_position(
         *signal_region, num=arr.ndim)
     signal_arr = arr[
-        mrt.geometry.nd_cuboid(arr.shape, s_semisizes, s_position)]
+        region_shape(arr.shape, s_semisizes, s_position)]
     n_semisizes, n_position = mrt.geometry.extrema_to_semisizes_position(
         *noise_region, num=arr.ndim)
     noise_arr = arr[
-        mrt.geometry.nd_cuboid(arr.shape, n_semisizes, n_position)]
+        region_shape(arr.shape, n_semisizes, n_position)]
     return signal_arr, noise_arr
 
 
@@ -290,11 +323,11 @@ def separate_otsu(
 
     Args:
         arr (np.ndarray): The input array.
-        corrections (int|float|iterable[int|float]: The correction factors.
+        corrections (int|float|Iterable[int|float]: The correction factors.
             If value is 1, no correction is performed.
             If int or float, the Otsu threshold is corrected (multiplied)
             by the corresponding factor before thresholding.
-            If iterable, the first correction is used to estimate the signal,
+            If Iterable, the first correction is used to estimate the signal,
             while the second correction is used to estimate the noise.
             At most two values are accepted.
             When the two values are not identical some values may be ignored
@@ -324,11 +357,11 @@ def separate_relative(
 
     Args:
         arr (np.ndarray): The input array.
-        thresholds (int|float|iterable[int|float]: The percentile values.
+        thresholds (int|float|Iterable[int|float]: The percentile values.
             Values must be in the [0, 1] range.
             If int or float, values above are considered signal,
             and below or equal ar considered noise.
-            If iterable, values above the first percentile threshold are
+            If Iterable, values above the first percentile threshold are
             considered signals, while values below the second percentile
             threshold are considered noise.
             At most two values are accepted.
@@ -363,11 +396,11 @@ def separate_percentile(
 
     Args:
         arr (np.ndarray): The input array.
-        thresholds (int|float|iterable[int|float]: The percentile values.
+        thresholds (int|float|Iterable[int|float]: The percentile values.
             Values must be in the [0, 1] range.
             If int or float, values above are considered signal,
             and below or equal ar considered noise.
-            If iterable, values above the first percentile threshold are
+            If Iterable, values above the first percentile threshold are
             considered signals, while values below the second percentile
             threshold are considered noise.
             At most two values are accepted.
@@ -408,9 +441,9 @@ def separate_mean_std(
 
     Args:
         arr (np.ndarray): The input array.
-        std_steps (iterable[int|float]): The st.dev. multiplication step(s).
+        std_steps (Iterable[int|float]): The st.dev. multiplication step(s).
             These are usually values between -2 and 2.
-        mean_steps (iterable[int|float]): The mean multiplication step(s).
+        mean_steps (Iterable[int|float]): The mean multiplication step(s).
             This is usually set to 1.
         symmetric (bool): Use symmetric thresholds.
             If True, signal values are between the smallest and the largest
@@ -465,11 +498,11 @@ def separate_thresholds(
             If `noisel_threshold` is str, the parameters are passed to
             `segmentation.auto_thresholds()` for `noise_threshold`.
         signal_index (int|None): Select a specific threshold.
-            The index is applied to the iterable obtained from
+            The index is applied to the Iterable obtained from
             `segmentation.auto_thresholds()` for `signal_threshold`.
             If None, the first value is selected.
         noise_index (int|None): Select a specific threshold.
-            The index is applied to the iterable obtained from
+            The index is applied to the Iterable obtained from
             `segmentation.auto_thresholds()` for `noise_threshold`.
             If None, the first value is selected.
 
@@ -509,17 +542,20 @@ def separate_thresholds(
 
 
 # ======================================================================
-def separate_denoise(arr, smoothing=2):
+def separate_denoise(
+        arr,
+        method='gaussian',
+        method_kws=None):
     """
-    Separate signal from noise using denoisingof the data.
+    Separate signal from noise using denoising of the data.
 
     Args:
         arr (np.ndarray): The input array.
-        smoothing (int|float|iterable[int|float]): Smoothing factor.
-            Size of the box for the uniform filter.
-            If int or float, the box size is the same in all dims.
-            If iterable, each value correspond to a dimension of arr and its
-            size must match the number of dims of arr.
+        method (str): Denoising method.
+            This is passed to `denoise()`
+        method_kws (dict|None): Keyword parameters for the denoising.
+            These are passed to the corresponding function.
+            See the respective documentation for details.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -527,7 +563,9 @@ def separate_denoise(arr, smoothing=2):
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    signal_arr = sp.ndimage.uniform_filter(arr, smoothing)
+    if method_kws is None:
+        method_kws = {}
+    signal_arr = denoise(arr, method, method_kws)
     noise_arr = arr - signal_arr
     return signal_arr, noise_arr
 
@@ -547,7 +585,7 @@ def separate(
             If str, uses the `separate_` functions from this module.
             Accepted values are:
              - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
-             - 'optim': Uses an optimal data-driven method based on st.dev.
+             - 'optim': Uses `separate_optim()`.
              - 'otsu': Uses `separate_otsu()`.
                 Only works for positive values.
              - 'relative': Uses `separate_relative()`.
@@ -558,6 +596,8 @@ def separate(
                 Only works for positive values.
              - 'thresholds': Uses `separate_thresholds()`.
                 Only works for positive values.
+             - 'calib_region': Uses `separate_calib_region()`.
+                Specify the calibration regions directly.
              - 'denoise': Uses `separate_denoise()`.
                 Useful when no noise calibration region is present.
             If callable, the signature must be:
@@ -578,9 +618,9 @@ def separate(
         ValueError: If `method` is unknown.
     """
     methods = (
-        'auto',
+        'auto', 'optim',
         'otsu', 'relative', 'percentile', 'mean_std', 'thresholds',
-        'bg_peaks', 'denoise')
+        'calib_region', 'denoise')
     method = method.lower()
     if method == 'auto':
         if np.all(arr) >= 0.0:
@@ -599,6 +639,8 @@ def separate(
         method = separate_mean_std
     elif method == 'thresholds':
         method = separate_thresholds
+    elif method == 'calib_region':
+        method = separate_calib_region
     elif method == 'denoise':
         method = separate_denoise
     else:
@@ -682,7 +724,7 @@ def estimate_noise_sigma_separated(
 def estimate_noise_sigma(
         arr,
         dwt_kws=None,
-        method='auto',
+        method='calib_region',
         *args,
         **kwargs):
     """
@@ -690,6 +732,8 @@ def estimate_noise_sigma(
 
     Args:
         arr (np.ndarray): The input array.
+        dwt_kws (dict|None): Keyword parameters for noise sigma DWT.
+            This is passed to `estimate_noise_sigma_dwt()`.
         method (str): The signal/noise estimation method.
             This is passed to `separate()`
             See `separated()` for more information.
@@ -702,14 +746,14 @@ def estimate_noise_sigma(
     signal_arr, noise_arr = separate(arr, method, *args, **kwargs)
     if dwt_kws is None:
         dwt_kws = {}
-    sigma = noise_sigma_dwt(noise_arr, **dwt_kws)
+    sigma = estimate_noise_sigma_dwt(noise_arr, **dwt_kws)
     return sigma
 
 
 # ======================================================================
 def fix_bias_rician(
         arr,
-        method='dwt',
+        method='best',
         method_kws=None,
         positive=True):
     """
@@ -725,8 +769,8 @@ def fix_bias_rician(
         arr (np.ndarray): The input array.
         method (str): Sigma noise estimation method.
             Accepted values are:
-             - 'dwt': `sigma_noise_dwt()`
-             - 'threshold': `sigma_noise_threshold()`
+             - 'best': `estimate_noise_sigma()`
+             - 'separated': `estimate_noise_sigma_separated()`
              - 'region': `sigma_noise_region()`
         method_kws (dict|None): Keyword parameters for the sigma estimate.
             These are passed to the corresponding function.
@@ -754,9 +798,9 @@ def fix_bias_rician(
     sigma = estimate_noise_sigma(arr, **method_kws)
 
     # sigma *= (np.sqrt(2.0 / (4 - np.pi)))  # correct for Rice factor
-    # print('sigma={}, min={}, max= {}, mean={}, std={}, median={}'.format(
-    #     sigma, np.min(arr), np.max(arr), np.mean(arr), np.std(arr),
-    #     np.median(arr)))  # DEBUG
+    print('sigma={}, min={}, max= {}, mean={}, std={}, median={}'.format(
+        sigma, np.min(arr), np.max(arr), np.mean(arr), np.std(arr),
+        np.median(arr)))  # DEBUG
     arr = arr ** 2 - sigma ** 2
     if positive:
         arr = np.sqrt(np.abs(arr))

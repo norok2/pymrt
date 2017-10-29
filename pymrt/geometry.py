@@ -55,7 +55,7 @@ from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 
-# todo: support for iterable relative position/size in nd_cuboid, etc.
+# todo: support for Iterable relative position/size in nd_cuboid, etc.
 
 # ======================================================================
 def rel2abs(shape, size=0.5):
@@ -63,7 +63,7 @@ def rel2abs(shape, size=0.5):
     Calculate the absolute size from a relative size for a given shape.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         size (float|tuple[float]): Relative position (to the lowest edge).
             Each element of the tuple should be in the range [0, 1].
 
@@ -95,7 +95,7 @@ def abs2rel(shape, position=0):
     Calculate the relative size from an absolute size for a given shape.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         position (float|tuple[float]): Absolute position inside the shape.
             Each element of the tuple should be in the range [0, dim - 1],
             where dim is the corresponding dimension of the shape.
@@ -156,9 +156,9 @@ def square(
     Generate a mask whose shape is a square.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         side (float): The side of the square in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -192,9 +192,9 @@ def rectangle(
     Generate a mask whose shape is a rectangle.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semisides (tuple[float]): The semisides of the rectangle in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -239,9 +239,9 @@ def rhombus(
     Generate a mask whose shape is a rhombus.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -276,9 +276,9 @@ def circle(
     Generate a mask whose shape is a circle.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         radius (float): The radius of the circle in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -319,9 +319,9 @@ def ellipsis(
     Generate a mask whose shape is an ellipsis.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -358,9 +358,9 @@ def cube(
     Generate a mask whose shape is a cube.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         side (float): The side of the cube in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -403,9 +403,9 @@ def cuboid(
     Generate a mask whose shape is a cuboid.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semisides (tuple[float]): The semisides of the cuboid in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -443,9 +443,9 @@ def rhomboid(
     Generate a mask whose shape is a rhomboid.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -487,9 +487,9 @@ def sphere(
     Generate a mask whose shape is a sphere.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         radius (float): The radius of the sphere in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -554,9 +554,9 @@ def ellipsoid(
     Generate a mask whose shape is an ellipsoid.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -611,11 +611,11 @@ def cylinder(
     Generate a mask whose shape is a cylinder.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the mask in px.
         height (float): The height of the cylinder in px.
         radius (float): The radius of the cylinder in px.
         axis (int): Orientation of the cylinder in the N-dim space.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
@@ -680,10 +680,10 @@ def nd_cuboid(
     :math:`\\inf` is infinity.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
-        semisizes (float|iterable[float]): The N-dim cuboid semisides sizes.
+        shape (int|Iterable[int]): The shape of the mask in px.
+        semisizes (float|Iterable[float]): The N-dim cuboid semisides sizes.
             The values interpretation depend on `rel_sizes`.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
         n_dim (int|None): The number of dimensions.
@@ -744,10 +744,10 @@ def nd_superellipsoid(
     When the index is 2, an ellipsis is generated.
 
     Args:
-        shape (int|iterable[int]): The shape of the mask in px.
-        semisizes (float|iterable[float]): The N-dim superellipsoid axes sizes.
+        shape (int|Iterable[int]): The shape of the mask in px.
+        semisizes (float|Iterable[float]): The N-dim superellipsoid axes sizes.
             The values interpretation depend on `rel_sizes`.
-        position (float|iterable[float]): The position of the center.
+        position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
         indexes (float|tuple[float]): The exponent of the summed terms.
@@ -848,24 +848,24 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
     """
 
     Args:
-        minima (float|iterable[float]): The minimum extrema.
+        minima (float|Iterable[float]): The minimum extrema.
             These are the lower bound of the object.
-            If both `minima` and `maxima` are iterable, their length must
+            If both `minima` and `maxima` are Iterable, their length must
             match.
-        maxima (float|iterable[float]): The maximum extrema.
+        maxima (float|Iterable[float]): The maximum extrema.
             These are the upper bound of the object.
-            If both `minima` and `maxima` are iterable, their length must
+            If both `minima` and `maxima` are Iterable, their length must
             match.
         num (int|None): The number of extrema.
             If None, it is guessed from the `minima` and/or `maxima`.
             If int, must match the length of `minima` and/or `maxima`
-            (if they are iterable).
+            (if they are Iterable).
 
     Returns:
         result (tuple): The tuple
             contains:
-             - semisizes (iterable[float]): The N-dim cuboid semisides sizes.
-             - position (iterable[float]): The position of the center.
+             - semisizes (Iterable[float]): The N-dim cuboid semisides sizes.
+             - position (Iterable[float]): The position of the center.
                Values are relative to the lowest edge.
 
     Examples:
@@ -904,24 +904,24 @@ def nd_gradient(
     This is useful for generating simulation data patterns.
 
     Args:
-        gen_ranges (iterable[iterable]): Generator ranges and numbers.
-            An iterable of size 3 iterables: (start, stop, number) where
+        gen_ranges (Iterable[Iterable]): Generator ranges and numbers.
+            An Iterable of size 3 Iterables: (start, stop, number) where
             start and stop are the extrema of the range to cover, and number
             indicate the number of samples.
         dtype (data-type): Desired output data-type.
             See `np.ndarray()` for more.
-        generators (callable|iterable[callable]): The range generator(s).
+        generators (callable|Iterable[callable]): The range generator(s).
             A generator must have signature:
-            f(any, any, int, **kws) -> iterable
+            f(any, any, int, **kws) -> Iterable
             If callable, the same generator is used for all dimensions.
-            If iterable, each generator generate the data corresponding to its
-            position in the iterable, and its length must match the length of
+            If Iterable, each generator generate the data corresponding to its
+            position in the Iterable, and its length must match the length of
             `gen_ranges`.
-        generators_kws (dict|iterable[dict|None]|None): Keyword arguments.
+        generators_kws (dict|Iterable[dict|None]|None): Keyword arguments.
             If None, no arguments are passed to the generator.
             If dict, the same object is passed to all instances of
             `generators`.
-            If iterable, each dict (or None) is applied to the corresponding
+            If Iterable, each dict (or None) is applied to the corresponding
             generator in `generators`, and its length must match the length of
             `generators`.
 
@@ -1053,7 +1053,7 @@ def apply_mask(
             If int, this is in units of pixels.
             If float, this is proportional to the initial array shape.
             If int or float, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
+            If Iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
         background (int|float): The value used for masked-out pixels.
@@ -1088,11 +1088,11 @@ def frame(
 
     Args:
         arr (np.ndarray): The input array.
-        borders (int|float|iterable[int|float]): The border size(s).
+        borders (int|float|Iterable[int|float]): The border size(s).
             If int, this is in units of pixels.
             If float, this is proportional to the initial array shape.
             If int or float, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
+            If Iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
         background (int|float): The background value to be used for the frame.
@@ -1134,9 +1134,9 @@ def reframe(
 
     Args:
         arr (np.ndarray): The input array.
-        new_shape (int|iterable[int]): The shape of the output array.
+        new_shape (int|Iterable[int]): The shape of the output array.
             If int, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
+            If Iterable, the size must match `arr` dimensions.
             Additionally, each value of `new_shape` must be greater than or
             equal to the corresponding dimensions of `arr`.
         background (int|float): The background value to be used for the frame.
@@ -1180,8 +1180,8 @@ def multi_reframe(
      - the support space / field-of-view will change.
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays.
-        new_shape (iterable[int]): The new base shape of the arrays.
+        arrs (Iterable[np.ndarray]): The input arrays.
+        new_shape (Iterable[int]): The new base shape of the arrays.
         background (int|float|complex): The background value for the frame.
         dtype (data-type): Desired output data-type.
             If None, its guessed from dtype of arrs.
@@ -1229,13 +1229,13 @@ def zoom_prepare(
     Args:
         zoom_factors (float|tuple[float]): The zoom factors for each
         directions.
-        shape (int|iterable[int]): The shape of the array to operate with.
+        shape (int|Iterable[int]): The shape of the array to operate with.
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
 
     Returns:
         zoom (tuple[float]): The zoom factors for each directions.
-        shape (int|iterable[int]): The shape of the array to operate with.
+        shape (int|Iterable[int]): The shape of the array to operate with.
     """
     zoom_factors = list(mrt.utils.auto_repeat(zoom_factors, len(shape)))
     if extra_dim:
@@ -1257,10 +1257,10 @@ def shape2zoom(
     Calculate zoom (or conversion) factor between two shapes.
 
     Args:
-        old_shape (int|iterable[int]): The shape of the source array.
-        new_shape (int|iterable[int]): The target shape of the array.
+        old_shape (int|Iterable[int]): The shape of the source array.
+        new_shape (int|Iterable[int]): The target shape of the array.
         aspect (callable|None): Function for the manipulation of the zoom.
-            Signature: aspect(iterable[float]) -> float.
+            Signature: aspect(Iterable[float]) -> float.
             None to leave the zoom unmodified. If specified, the function is
             applied to zoom factors tuple for fine tuning of the aspect.
             Particularly, to obtain specific aspect ratio results:
@@ -1291,15 +1291,15 @@ def zoom(
 
     Args:
         arr (np.ndarray): The input array.
-        factors (int|float|iterable[int|float]): The zoom factor(s).
+        factors (int|float|Iterable[int|float]): The zoom factor(s).
             If int or float, uses isotropic factor along all axes.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             Values larger than 1 increase `arr` size along the axis.
             Values smaller than 1 decrease `arr` size along the axis.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from the `zoom`
             parameter.
@@ -1337,14 +1337,14 @@ def resample(
 
     Args:
         arr (np.ndarray): The input array.
-        new_shape (iterable[int|None]): New dimensions of the array.
-        aspect (callable|iterable[callable]|None): Zoom shape manipulation.
+        new_shape (Iterable[int|None]): New dimensions of the array.
+        aspect (callable|Iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
             This is passed to `pymrt.geometry.shape2zoom()`.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from `new_shape`.
         interp_order (int|None): Order of the spline interpolation.
@@ -1384,13 +1384,13 @@ def multi_resample(
      - the support space / field-of-view will NOT change.
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays,
-        new_shape (iterable[int]): The new base shape of the arrays.
+        arrs (Iterable[np.ndarray]): The input arrays,
+        new_shape (Iterable[int]): The new base shape of the arrays.
         lossless (bool): allow for lossy resampling.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from `new_shape`.
         interp_order (int|None): Order of the spline interpolation.
@@ -1652,7 +1652,7 @@ def weighted_center(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1700,7 +1700,7 @@ def weighted_covariance(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1756,7 +1756,7 @@ def tensor_of_inertia(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1794,7 +1794,7 @@ def rotation_axes(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1851,7 +1851,7 @@ def auto_rotate(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1908,7 +1908,7 @@ def auto_shift(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.
@@ -1967,7 +1967,7 @@ def realign(
             The output of `scipy.ndimage.label` is expected.
             The number of dimensions must be the same as `array`.
             Only uses the labels as indicated by `index`.
-        index (int|iterable[int]|None): Labels used for the calculation.
+        index (int|Iterable[int]|None): Labels used for the calculation.
             If an int, uses all labels between 1 and the specified value.
             If a tuple of int, uses only the selected labels.
             If None, uses all positive labels.

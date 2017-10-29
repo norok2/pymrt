@@ -59,7 +59,7 @@ def dipole_kernel(
         {k_x^2 + k_y^2 + k_z^2}
 
     Args:
-        shape (iterable[int]): 3D-shape of the dipole kernel array.
+        shape (Iterable[int]): 3D-shape of the dipole kernel array.
             If not a 3D array, the function fails.
         origin (float|tuple[float]): Relative position of the origin.
             Values are in the [0, 1] interval.

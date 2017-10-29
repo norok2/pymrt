@@ -26,8 +26,9 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 import pymrt.segmentation
+import pymrt.correction
 
-from pymrt.recipes.generic import fix_magnitude_bias, voxel_curve_fit
+from pymrt.recipes.generic import voxel_curve_fit
 from pymrt.recipes import t1, b1t
 
 
@@ -109,7 +110,7 @@ def triple_special1(
         tr,
         n_tr=2,
         sign=1,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -243,7 +244,7 @@ def triple_special2(
         sign=1,
         max_iter=64,
         threshold=1e-8,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -382,7 +383,7 @@ def triple(
         tr2,
         tr3,
         sign=1,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the parameters of the FLASH signal at fixed echo time.
 
@@ -504,7 +505,7 @@ def vfa(
         fas,
         trs,
         eta_fa_arr=None,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the parameters of the FLASH signal using variable flip angles.
 
@@ -539,9 +540,9 @@ def vfa(
     This is a closed-form solution.
 
     Args:
-        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
-        fas (iterable[int|float]): The flip angles in deg.
-        trs (iterable[int|float]): The repetition times in time units.
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (Iterable[int|float]): The flip angles in deg.
+        trs (Iterable[int|float]): The repetition times in time units.
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
             If None, a significant bias may still be present.
         prepare (callable|None): Input array preparation.
@@ -615,7 +616,7 @@ def fit_multipolyfit(
         arrs,
         fas,
         trs,
-        prepare=fix_magnitude_bias,
+        prepare=mrt.correction.fix_bias_rician,
         full=False):
     """
     Fit the parameters of the FLASH signal at fixed echo time.
@@ -623,9 +624,9 @@ def fit_multipolyfit(
     This is an iterative optimization fit.
 
     Args:
-        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
-        fas (iterable[int|float]): The flip angles in deg.
-        trs (iterable[int|float]): The repetition times in time units.
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (Iterable[int|float]): The flip angles in deg.
+        trs (Iterable[int|float]): The repetition times in time units.
 
 
     Returns:
@@ -644,7 +645,7 @@ def fit_leasq(
         fas,
         trs,
         eta_fa_arr=None,
-        prepare=fix_magnitude_bias,
+        prepare=mrt.correction.fix_bias_rician,
         optim='trf',
         init=(1000, 1e4, 1.0),
         bounds=((10.0, 1e-2, 0.01), (5000.0, 1e10, 1.99)),
@@ -686,9 +687,9 @@ def fit_leasq(
     This is an iterative optimization fit.
 
     Args:
-        arrs (iterable[np.ndarray]): The input signal arrays in arb.units
-        fas (iterable[int|float]): The flip angles in deg.
-        trs (iterable[int|float]): The repetition times in time units.
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        fas (Iterable[int|float]): The flip angles in deg.
+        trs (Iterable[int|float]): The repetition times in time units.
 
 
     Returns:

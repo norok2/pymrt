@@ -209,7 +209,7 @@ def filter_n_1(
     If the metadata is None, it is automatically calculated.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_filepath (str): Output file path
         func (callable): Filtering function
@@ -241,14 +241,14 @@ def filter_n_m(
     Interface to generic n-m filter:
     filter(in_filepaths) -> out_filepaths
 
-    Note that the function must return an iterable of tuples with the output
+    Note that the function must return an Iterable of tuples with the output
     array and the its corresponding metadata.
     If the metadata is None, it is automatically calculated.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata is taken from the last item.
-        out_filepaths (iterable[str]): List of output file paths
+        out_filepaths (Iterable[str]): List of output file paths
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
             func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
@@ -279,13 +279,13 @@ def filter_n_x(
     Interface to generic n-x filter:
     calculation(i_filepaths) -> o_filepaths
 
-    Note that the function must return an iterable of tuples with the output
+    Note that the function must return an Iterable of tuples with the output
     array and the its corresponding metadata.
     If the metadata is None, it is automatically calculated.
     The number of output image is not known in advance.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_dirpath (str): Output file path template.
         func (callable): Filtering function
@@ -341,7 +341,7 @@ def simple_filter_n_1(
     filter(in_filepaths) -> out_filepath
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The shape of each array must be identical.
             The metadata is taken from the last item.
         out_filepath (str): Output file path.
@@ -380,7 +380,7 @@ def simple_filter_nn_1(
     filter(in_filepaths) -> out_filepath
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata is taken from the last item.
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
@@ -415,7 +415,7 @@ def simple_filter_1_m(
     Args:
         in_filepath (str): Input file path
             The metadata information is taken from the input.
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -442,9 +442,9 @@ def simple_filter_n_m(
     filter(in_filepaths) -> out_filepaths
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -480,9 +480,9 @@ def simple_filter_nn_m(
     This is useful when the number of input arrays must be forced.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function
@@ -561,9 +561,9 @@ def simple_filter_n_x(
     Note that the number of output image is not known in advance.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(list[arr], *args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function.
@@ -589,9 +589,9 @@ def simple_filter_nn_x(
     Note that the number of output image is not known in advance.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(*args, *kwargs) -> list[ndarray]
         *args (tuple): Positional arguments passed to the filtering function.
@@ -612,7 +612,7 @@ def stack(
     Join images together.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
+        in_filepaths (Iterable[str]): List of input file paths.
             The metadata information is taken from the last item.
         out_filepath (str): Output file path.
         axis (int): Joining axis of orientation.
@@ -642,7 +642,7 @@ def split(
             Must be a valid index for the input shape
 
     Returns:
-        out_filepaths (iterable[str]): List of output file paths.
+        out_filepaths (Iterable[str]): List of output file paths.
     """
     # todo: refactor to use simple_filter_n_y
     if not out_dirpath or not os.path.exists(out_dirpath):
@@ -680,11 +680,11 @@ def frame(
     Args:
         in_filepath (str): Input file path.
         out_filepath (str): Output file path.
-        borders (int|float|iterable[int|float]): The border size(s).
+        borders (int|float|Iterable[int|float]): The border size(s).
             If int, this is in units of pixels.
             If float, this is proportional to the initial array shape.
             If int or float, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
+            If Iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
         background (int|float): The background value to be used for the frame.
@@ -710,9 +710,9 @@ def reframe(
     Args:
         in_filepath (str): Input file path
         out_filepath (str): Output file path
-        new_shape (int|iterable[int]): The shape of the output array.
+        new_shape (int|Iterable[int]): The shape of the output array.
             If int, uses the same value for all dimensions.
-            If iterable, the size must match `arr` dimensions.
+            If Iterable, the size must match `arr` dimensions.
             Additionally, each value of `new_shape` must be greater than or
             equal to the corresponding dimensions of `arr`.
         background (int|float): The background value to be used for the frame.
@@ -741,9 +741,9 @@ def multi_reframe(
         - the support space / field-of-view will change
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
-        out_filepath (iterable[str]): The output file path.
-        new_shape (iterable[int]): The new base shape of the arrays.
+        in_filepaths (Iterable[str]): List of input file paths.
+        out_filepath (Iterable[str]): The output file path.
+        new_shape (Iterable[int]): The new base shape of the arrays.
         background (int|float|complex): The background value for the frame.
         dtype (data-type): Desired output data-type.
             If None, its guessed from dtype of arrs.
@@ -773,15 +773,15 @@ def zoom(
     Args:
         in_filepath (str): Input file path.
         out_filepath (str): Output file path.
-        factors (int|float|iterable[int|float]): The zoom factor(s).
+        factors (int|float|Iterable[int|float]): The zoom factor(s).
             If int or float, uses isotropic factor along all axes.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             Values larger than 1 increase `arr` size along the axis.
             Values smaller than 1 decrease `arr` size along the axis.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from the `zoom`
             parameter.
@@ -821,13 +821,13 @@ def resample(
         in_filepath (str): Input file path.
         out_filepath (str): Output file path.
         new_shape (tuple[int|None]): New dimensions of the array.
-        aspect (callable|iterable[callable]|None): Zoom shape manipulation.
+        aspect (callable|Iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
             This is passed to `pymrt.geometry.shape2zoom()`.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from `new_shape`.
         interp_order (int|None): Order of the spline interpolation.
@@ -866,14 +866,14 @@ def multi_resample(
         - the support space / field-of-view will NOT change.
 
     Args:
-        in_filepaths (iterable[str]): List of input file paths.
-        out_filepath (iterable[str]): The output file path.
-        new_shape (iterable[int]): The new shape of the arrays.
+        in_filepaths (Iterable[str]): List of input file paths.
+        out_filepath (Iterable[str]): The output file path.
+        new_shape (Iterable[int]): The new shape of the arrays.
         lossless (bool): allow for lossy resampling.
-        window (int|iterable[int]|None): Uniform pre-filter window size.
+        window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
-            If iterable, its size must match the number of dims of `arr`.
+            If Iterable, its size must match the number of dims of `arr`.
             If int, uses an isotropic window with the specified size.
             If None, the window is calculated automatically from `new_shape`.
         interp_order (int|None): Order of the spline interpolation.
@@ -1135,7 +1135,7 @@ def plot_histogram1d_list(
     Uses the function: `plot.histogram1d_list()`
 
     Args:
-        in_filepaths (iterable[str]): The list of input file paths
+        in_filepaths (Iterable[str]): The list of input file paths
         mask_filepath (str): The mask file path
         *args (tuple): Positional arguments passed to the plot function
         **kwargs (dict): Keyword arguments passed to the plot function

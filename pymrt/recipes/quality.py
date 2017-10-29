@@ -131,7 +131,7 @@ def snr_multi_acq(
     Calculate the
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays.
+        arrs (Iterable[np.ndarray]): The input arrays.
         remove_bias (bool): Remove bias in the signal from the noise mean.
 
     Returns:
@@ -172,7 +172,7 @@ def psnr_multi_acq(
     Calculate the
 
     Args:
-        arrs (iterable[np.ndarray]): The input test array.
+        arrs (Iterable[np.ndarray]): The input test array.
         remove_bias (bool): Remove bias in the signal from the noise mean.
 
     Returns:
@@ -322,8 +322,8 @@ def separate_signals(
 
     Args:
         arr (np.ndarray): The input array.
-        method (iterable[float]|str|callable): The separation method.
-            If iterable[float], the specified thresholds value are used.
+        method (Iterable[float]|str|callable): The separation method.
+            If Iterable[float], the specified thresholds value are used.
             If str, the thresholds are estimated using
             `segmentation.auto_thresholds()` with its `method` parameter set
             to `method`.
@@ -333,7 +333,7 @@ def separate_signals(
              - 'median': use the median value of the signal.
              - 'otsu': use the Otsu threshold.
             If callable, the signature must be:
-            f(np.ndarray, *args, **kwargs) -> iterable[float]
+            f(np.ndarray, *args, **kwargs) -> Iterable[float]
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -393,7 +393,7 @@ def contrasts(arrs):
     and :math:`i,j` indexes run through all possible arrays combinations.
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays.
+        arrs (Iterable[np.ndarray]): The input arrays.
 
     Returns:
         results (tuple[float]): The pair-wise contrast values.
@@ -414,10 +414,10 @@ def combine_contrasts(
     Calculate the contrast by combining the pair-wise contrast values.
 
     Args:
-        contrast_values (iterable[float]): The pair-wise contrast values.
+        contrast_values (Iterable[float]): The pair-wise contrast values.
         method (callable): The pair-wise contrasts combination method.
             The signature must be:
-            f(iterable, *args, **kwargs) -> float
+            f(Iterable, *args, **kwargs) -> float
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -437,10 +437,10 @@ def contrast(
     Calculate the contrast by combining the pair-wise contrast values.
 
     Args:
-        arrs (iterable[np.ndarray]): The input arrays
+        arrs (Iterable[np.ndarray]): The input arrays
         method (callable): The pair-wise contrasts combination method.
             The signature must be:
-            f(iterable, *args, **kwargs) -> float
+            f(Iterable, *args, **kwargs) -> float
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 

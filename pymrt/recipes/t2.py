@@ -25,6 +25,7 @@ import scipy.optimize  # SciPy: Optimization and root finding
 # :: Local Imports
 import pymrt as mrt
 # import pymrt.utils
+import pymrt.correction
 
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -34,7 +35,7 @@ from pymrt import msg, dbg
 from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
-    fix_magnitude_bias, fix_phase_interval, rate_to_time, time_to_rate,
+    fix_phase_interval, rate_to_time, time_to_rate,
     func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_curve_fit,
     fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
     fit_exp_tau_loglin)
@@ -47,7 +48,7 @@ def fit_multiecho_mono(
         echo_times_mask=None,
         method='quadr',
         inverted=False,
-        prepare=fix_magnitude_bias):
+        prepare=mrt.correction.fix_bias_rician):
     """
     Calculate the mono-exponential fit for T2 data.
 
@@ -57,9 +58,9 @@ def fit_multiecho_mono(
         arr (np.ndarray): The input array in arb.units.
             The echo time must vary in the last dimension and must match the
             length of `echo_times`.
-        echo_times (iterable): The echo times in time units.
+        echo_times (Iterable): The echo times in time units.
             The number of points must match the last shape size of arr.
-        echo_times_mask (iterable[bool]|None): Determine the echo times to use.
+        echo_times_mask (Iterable[bool]|None): Determine the echo times to use.
             If None, all will be used.
         method (str): Determine the fitting method to use.
             Accepted values are:

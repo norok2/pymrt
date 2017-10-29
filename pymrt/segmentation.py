@@ -71,7 +71,7 @@ def threshold_relative(
 
     Args:
         arr (np.ndarray): The input array.
-        values (float|iterable[float]): The relative threshold value(s).
+        values (float|Iterable[float]): The relative threshold value(s).
             Values must be in the [0, 1] range.
 
     Returns:
@@ -98,7 +98,7 @@ def threshold_percentile(
 
     Args:
         arr (np.ndarray): The input array.
-        values (float|iterable[float]): The percentile value(s).
+        values (float|Iterable[float]): The percentile value(s).
             Values must be in the [0, 1] range.
 
     Returns:
@@ -122,9 +122,9 @@ def threshold_mean_std(
 
     Args:
         arr (np.ndarray): The input array.
-        std_steps (iterable[int|float]): The st.dev. multiplication step(s).
+        std_steps (Iterable[int|float]): The st.dev. multiplication step(s).
             These are usually values between -2 and 2.
-        mean_steps (iterable[int|float]): The mean multiplication step(s).
+        mean_steps (Iterable[int|float]): The mean multiplication step(s).
             This is usually set to 1.
 
 
@@ -483,7 +483,7 @@ def threshold_rayleigh(
 
 
 # ======================================================================
-def threshold_optim(arr, interval=None):
+def threshold_optim(arr):
     """
     Calculate the optimal background threshold.
 
@@ -581,7 +581,7 @@ def auto_thresholds(
     else:  # if method not in methods:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
-    # ensures that the result is iterable
+    # ensures that the result is Iterable
     thresholds = tuple(mrt.utils.auto_repeat(thresholds, 1))
     return thresholds
 
@@ -624,7 +624,7 @@ def label_thresholds(
 
     Args:
         arr (np.ndarray): Array from which mask is created.
-        thresholds (iterable[int|float]): Value(s) for the threshold.
+        thresholds (Iterable[int|float]): Value(s) for the threshold.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['>', '<', '>=', '<=']
 
@@ -716,13 +716,13 @@ def clip_range(
 
     Args:
         arr (np.ndarray): The input array.
-        interval (iterable[int|float]): The values interval.
+        interval (Iterable[int|float]): The values interval.
             Must contain 2 items: (t1, t2)
             Values outside this range are set according to `out_values`.
-        out_values (int|float|iterable[int|float]|None): The replacing values.
+        out_values (int|float|Iterable[int|float]|None): The replacing values.
             If int or float, values outside the (t1, t2) range are replaced
             with `out_values`.
-            If iterable, must contain 2 items: (v1, v2), and values below `t1`
+            If Iterable, must contain 2 items: (v1, v2), and values below `t1`
             are replaced with `v1`, while values above `t2` are replaced with
             `v2`.
             If None, uses v1 = t1 and v2 = t2: values below `t1` are replaced
