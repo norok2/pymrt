@@ -249,9 +249,10 @@ def separate_multi_acq(
 # ======================================================================
 def separate_calib_region(
         arr,
-        signal_region=None,
-        noise_region=None,
-        region_shape=mrt.geometry.nd_cuboid):
+        s_region=None,
+        n_region=None,
+        region_shape=mrt.geometry.nd_cuboid,
+        region_shape_kws=None):
     """
     Separate signal from noise a calibration region.
 
@@ -261,12 +262,23 @@ def separate_calib_region(
 
     Args:
         arr (np.ndarray): The input array.
-        signal_region (Iterable[|float]): Region description.
-            T
-
-        region_shape (callable): Function for calculating the region masks.
-            The signature of the function is:
-            `f(shape,
+        s_region (Iterable[float|Iterable[float]]|None): The signal region.
+            If Iterable, it is passed as positional arguments to
+            `geometry.extrema_to_semisizes_position()`.
+            If None, a suitable region is guessed.
+        n_region (Iterable[float|Iterable[float]]|None): The noise region.
+            If Iterable, it is passed as positional arguments to
+            `geometry.extrema_to_semisizes_position()`.
+            If None, a suitable region is guessed.
+        region_shape (str): Shape of the calibration region.
+            Accepted values are:Function for calculating the region masks.
+            The signature of the function must accept three positional
+            arguments: shape, semisizes, position.
+            The last two arguments can be the output of:
+            `geometry.extrema_to_semisizes_position()`.
+            Suitable callable are:
+             - `geometry.nd_cuboid()`
+             - `geometry.nd_superellipsoid()`
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -275,16 +287,17 @@ def separate_calib_region(
                 - noise_arr: The noise array.
 
     """
-    if not signal_region:
+    # todo: fix implementation
+    if not s_region:
         raise NotImplementedError
-    if not noise_region:
+    if not n_region:
         raise NotImplementedError
     s_semisizes, s_position = mrt.geometry.extrema_to_semisizes_position(
-        *signal_region, num=arr.ndim)
+        *s_region, num=arr.ndim)
     signal_arr = arr[
         region_shape(arr.shape, s_semisizes, s_position)]
     n_semisizes, n_position = mrt.geometry.extrema_to_semisizes_position(
-        *noise_region, num=arr.ndim)
+        *n_region, num=arr.ndim)
     noise_arr = arr[
         region_shape(arr.shape, n_semisizes, n_position)]
     return signal_arr, noise_arr
@@ -724,11 +737,14 @@ def estimate_noise_sigma_separated(
 def estimate_noise_sigma(
         arr,
         dwt_kws=None,
-        method='calib_region',
+        method='otsu',
         *args,
         **kwargs):
     """
-    Estimate of the noise standard deviation from signal/noise separation.
+    Optimal estimate of the noise standard deviation.
+
+    This is obtained by calculating the DWT noise sigma estimate on a region
+    containing mostly noise.
 
     Args:
         arr (np.ndarray): The input array.
@@ -798,9 +814,9 @@ def fix_bias_rician(
     sigma = estimate_noise_sigma(arr, **method_kws)
 
     # sigma *= (np.sqrt(2.0 / (4 - np.pi)))  # correct for Rice factor
-    print('sigma={}, min={}, max= {}, mean={}, std={}, median={}'.format(
-        sigma, np.min(arr), np.max(arr), np.mean(arr), np.std(arr),
-        np.median(arr)))  # DEBUG
+    # print('sigma={}, min={}, max= {}, mean={}, std={}, median={}'.format(
+    #     sigma, np.min(arr), np.max(arr), np.mean(arr), np.std(arr),
+    #     np.median(arr)))  # DEBUG
     arr = arr ** 2 - sigma ** 2
     if positive:
         arr = np.sqrt(np.abs(arr))
