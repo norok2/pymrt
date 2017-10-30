@@ -181,7 +181,77 @@ def denoise(
 
 
 # ======================================================================
-def separate_test_retest(
+def sn_split_signals(
+        arr,
+        method='otsu',
+        *args,
+        **kwargs):
+    """
+    Separate N signal components according to threshold(s).
+
+    Args:
+        arr (np.ndarray): The input array.
+        method (Iterable[float]|str|callable): The separation method.
+            If Iterable[float], the specified thresholds value are used.
+            If str, the thresholds are estimated using
+            `segmentation.auto_thresholds()` with its `method` parameter set
+            to `method`.
+            Additional accepted values:
+             - 'mean': use the mean value of the signal.
+             - 'midval': use the middle of the values range.
+             - 'median': use the median value of the signal.
+             - 'otsu': use the Otsu threshold.
+            If callable, the signature must be:
+            f(np.ndarray, *args, **kwargs) -> Iterable[float]
+        *args: Positional arguments passed to `method()`.
+        **kwargs: Keyword arguments passed to `method()`.
+
+    Returns:
+        result (tuple[np.ndarray]): The tuple
+            contains:
+                - signal1_arr: The first signal component array.
+                - signal2_arr: The second signal component array.
+
+    Examples:
+        >>> arr = np.array((0, 0, 1, 1, 1, 1, 0, 0))
+        >>> sn_split_signals(arr)
+        (array([0, 0, 0, 0]), array([1, 1, 1, 1]))
+        >>> arr = np.arange(10)
+        >>> sn_split_signals(arr, method=(2, 6))
+        (array([0, 1]), array([2, 3, 4, 5]), array([6, 7, 8, 9]))
+    """
+    if isinstance(method, str):
+        if method == 'mean':
+            thresholds = np.mean(arr)
+        elif method == 'midval':
+            thresholds = mrt.segmentation.threshold_relative(arr, 0.5)
+        elif method == 'median':
+            thresholds = mrt.segmentation.threshold_percentile(arr, 0.5)
+        else:
+            thresholds = mrt.segmentation.auto_thresholds(
+                arr, method, dict(kwargs))
+    elif callable(method):
+        thresholds = method(arr, *args, **kwargs)
+    else:
+        thresholds = tuple(method)
+
+    thresholds = mrt.utils.auto_repeat(thresholds, 1)
+
+    masks = []
+    full_mask = np.ones(arr.shape, dtype=bool)
+    last_threshold = np.min(arr)
+    for i, threshold in enumerate(sorted(thresholds)):
+        mask = arr < threshold
+        mask *= arr >= last_threshold
+        masks.append(mask)
+        full_mask -= mask
+        last_threshold = threshold
+
+    return tuple(arr[mask] for mask in masks) + (arr[full_mask],)
+
+
+# ======================================================================
+def sn_split_test_retest(
         test_arr,
         retest_arr):
     """
@@ -213,7 +283,7 @@ def separate_test_retest(
 
 
 # ======================================================================
-def separate_multi_acq(
+def sn_split_multi_acq(
         arrs,
         remove_bias=True):
     """
@@ -247,7 +317,7 @@ def separate_multi_acq(
 
 
 # ======================================================================
-def separate_calib_region(
+def sn_split_calib_region(
         arr,
         s_region=None,
         n_region=None,
@@ -304,7 +374,7 @@ def separate_calib_region(
 
 
 # ======================================================================
-def separate_optim(arr):
+def sn_split_optim(arr):
     """
     Separate signal from noise using optimal peak thresholding.
 
@@ -328,7 +398,7 @@ def separate_optim(arr):
 
 
 # ======================================================================
-def separate_otsu(
+def sn_split_otsu(
         arr,
         corrections=(1.0, 0.2)):
     """
@@ -362,7 +432,7 @@ def separate_otsu(
 
 
 # ======================================================================
-def separate_relative(
+def sn_split_relative(
         arr,
         thresholds=(0.75, 0.25)):
     """
@@ -401,7 +471,7 @@ def separate_relative(
 
 
 # ======================================================================
-def separate_percentile(
+def sn_split_percentile(
         arr,
         thresholds=(0.75, 0.25)):
     """
@@ -440,7 +510,7 @@ def separate_percentile(
 
 
 # ======================================================================
-def separate_mean_std(
+def sn_split_mean_std(
         arr,
         std_steps=(-1, -2),
         mean_steps=1,
@@ -480,7 +550,7 @@ def separate_mean_std(
 
 
 # ======================================================================
-def separate_thresholds(
+def sn_split_thresholds(
         arr,
         signal_threshold='otsu',
         noise_threshold=None,
@@ -555,7 +625,7 @@ def separate_thresholds(
 
 
 # ======================================================================
-def separate_denoise(
+def sn_split_denoise(
         arr,
         method='gaussian',
         method_kws=None):
@@ -584,7 +654,7 @@ def separate_denoise(
 
 
 # ======================================================================
-def separate(
+def sn_split(
         arr,
         method='auto',
         *args,
@@ -595,23 +665,23 @@ def separate(
     Args:
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
-            If str, uses the `separate_` functions from this module.
+            If str, uses the `sn_split_` functions from this module.
             Accepted values are:
              - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
-             - 'optim': Uses `separate_optim()`.
-             - 'otsu': Uses `separate_otsu()`.
+             - 'optim': Uses `sn_split_optim()`.
+             - 'otsu': Uses `sn_split_otsu()`.
                 Only works for positive values.
-             - 'relative': Uses `separate_relative()`.
+             - 'relative': Uses `sn_split_relative()`.
                 Only works for positive values.
-             - 'percentile': Uses `separate_percentile()`.
+             - 'percentile': Uses `sn_split_percentile()`.
                 Only works for positive values.
-             - 'mean_std': Uses `separate_mean_std()`.
+             - 'mean_std': Uses `sn_split_mean_std()`.
                 Only works for positive values.
-             - 'thresholds': Uses `separate_thresholds()`.
+             - 'thresholds': Uses `sn_split_thresholds()`.
                 Only works for positive values.
-             - 'calib_region': Uses `separate_calib_region()`.
+             - 'calib_region': Uses `sn_split_calib_region()`.
                 Specify the calibration regions directly.
-             - 'denoise': Uses `separate_denoise()`.
+             - 'denoise': Uses `sn_split_denoise()`.
                 Useful when no noise calibration region is present.
             If callable, the signature must be:
             f(np.ndarray, *args, **kwargs) -> (np.ndarray, np.ndarray)
@@ -637,25 +707,25 @@ def separate(
     method = method.lower()
     if method == 'auto':
         if np.all(arr) >= 0.0:
-            method = separate_optim
+            method = sn_split_optim
         else:
-            method = separate_denoise
+            method = sn_split_denoise
     elif method == 'optim':
-        method = separate_optim
+        method = sn_split_optim
     elif method == 'otsu':
-        method = separate_otsu
+        method = sn_split_otsu
     elif method == 'relative':
-        method = separate_relative
+        method = sn_split_relative
     elif method == 'percentile':
-        method = separate_percentile
+        method = sn_split_percentile
     elif method == 'mean_std':
-        method = separate_mean_std
+        method = sn_split_mean_std
     elif method == 'thresholds':
-        method = separate_thresholds
+        method = sn_split_thresholds
     elif method == 'calib_region':
-        method = separate_calib_region
+        method = sn_split_calib_region
     elif method == 'denoise':
-        method = separate_denoise
+        method = sn_split_denoise
     else:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
@@ -709,7 +779,7 @@ def estimate_noise_sigma_dwt(
 
 
 # ======================================================================
-def estimate_noise_sigma_separated(
+def estimate_noise_sigma_sn_split(
         arr,
         method='auto',
         *args,
@@ -720,7 +790,7 @@ def estimate_noise_sigma_separated(
     Args:
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
-            This is passed to `separate()`
+            This is passed to `sn_split()`
             See `separated()` for more information.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
@@ -728,7 +798,7 @@ def estimate_noise_sigma_separated(
     Returns:
         sigma (float): The estimate of the noise standard deviation.
     """
-    signal_arr, noise_arr = separate(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = sn_split(arr, method, *args, **kwargs)
     sigma = np.std(noise_arr)
     return sigma
 
@@ -751,7 +821,7 @@ def estimate_noise_sigma(
         dwt_kws (dict|None): Keyword parameters for noise sigma DWT.
             This is passed to `estimate_noise_sigma_dwt()`.
         method (str): The signal/noise estimation method.
-            This is passed to `separate()`
+            This is passed to `sn_split()`
             See `separated()` for more information.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
@@ -759,7 +829,7 @@ def estimate_noise_sigma(
     Returns:
         sigma (float): The estimate of the noise standard deviation.
     """
-    signal_arr, noise_arr = separate(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = sn_split(arr, method, *args, **kwargs)
     if dwt_kws is None:
         dwt_kws = {}
     sigma = estimate_noise_sigma_dwt(noise_arr, **dwt_kws)
@@ -786,7 +856,7 @@ def fix_bias_rician(
         method (str): Sigma noise estimation method.
             Accepted values are:
              - 'best': `estimate_noise_sigma()`
-             - 'separated': `estimate_noise_sigma_separated()`
+             - 'separated': `estimate_noise_sigma_sn_split()`
              - 'region': `sigma_noise_region()`
         method_kws (dict|None): Keyword parameters for the sigma estimate.
             These are passed to the corresponding function.

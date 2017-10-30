@@ -286,7 +286,8 @@ def rho(
             Non-bijective parts of rho are masked out (set to NaN).
         mode (str): Signal calculation mode.
             Accepted values are:
-             - 'p-ratio', 'uni', 'pseudo-ratio', 'uniform': use the pseudo-ratio
+             - 'p-ratio', 'uni', 'pseudo-ratio', 'uniform': use the
+             pseudo-ratio
                :math:`\\rho = \\frac{s_1 s_2}{s_1^2 + s_2^2}`
              - 'ratio', 'div': calculate the ratio
                :math:`\\rho = \\frac{s_1}{s_2}`
@@ -318,6 +319,70 @@ def rho(
 
 
 # ======================================================================
+def calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k=0.5, check=True):
+    """
+    Compute delay times T_D from sampling times T_I.
+
+    Args:
+        ti (Iterable[float]): The sampling times in time units.
+        tr_seq (float): The repetition time of the sequence in time units.
+        tr_gre (float|Iterable[float]): The repetition times in time units.
+            If Iterable, must match the length of `ti`.
+        n_gre (int|Iterable[int]): The number of k-space lines in #.
+            If Iterable, must match the length of `ti`.
+        center_k (float|Iterable[float]): The position of the k-space center.
+            Value(s) must be in the [0, 1] range.
+            If Iterable, must match the length of `ti`
+        check (bool): Check if results are valid.
+
+    Returns:
+        td (tuple[float]): The delay times in time units.
+            Matches the length of `ti` plus one.
+
+    Raises:
+        ValueError: If resulting `td` values are negative.
+
+    Examples:
+        >>> ti = [500, 2500]
+        >>> tr_seq = 5000
+        >>> tr_gre = [2, 5]
+        >>> n_gre = [50, 100]
+        >>> center_k = [0.8, 0.2]
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k)
+        (420.0, 1880.0, 2100.0)
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre)
+        (450.0, 1700.0, 2250.0)
+        >>> ti = [1000, 3000]
+        >>> tr_seq = 6000
+        >>> tr_gre = 20
+        >>> n_gre = 100
+        >>> center_k = [0.5, 0.5]
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k)
+        (0.0, 0.0, 2000.0)
+    """
+    n_ti = len(ti)
+    tr_gre = np.array(mrt.utils.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(mrt.utils.auto_repeat(n_gre, n_ti, check=True))
+    center_k = np.array(mrt.utils.auto_repeat(center_k, n_ti, check=True))
+    tr_block = tr_gre * n_gre
+    before_t = tr_block * center_k
+    after_t = tr_block * (1 - center_k)
+    inner_t_block = before_t[1:] + after_t[:-1]
+    # print(tr_block, before_t, after_t, inner_t_block)  # DEBUG
+    td = (
+        ((ti[0] - before_t[0]),) +
+        tuple(np.diff(ti) - inner_t_block) +
+        ((tr_seq - ti[-1] - after_t[-1]),))
+    # internal checksum
+    assert (np.sum(td) + np.sum(tr_block) == tr_seq)
+    if check:
+        if any(x < 0.0 for x in td):
+            raise ValueError(
+                'Negative delay times detected: {}'.format(td))
+    return td
+
+
+# ======================================================================
 def acq_to_seq_params(
         ti,
         tr_gre,
@@ -328,39 +393,46 @@ def acq_to_seq_params(
         part_fourier_factors=1.0,
         n_dim=3,
         sl_pe_swap=False,
-        pe_correction=(np.pi / 4, 1),
-        center_k_correction=0.5,
+        pe_fix=(np.pi / 4, 1),
+        center_k=0.5,
         bandwidths=None):
     """
     Determine the sequence parameters from the acquisition parameters.
 
     Args:
-        ti (tuple[int]): The inversion times TI of the sequence in ms.
-        tr_gre (float): The repetition time TR_GRE of the GRE block in ms.
-        tr_seq (int): The repetition time TR_seq of the sequence in ms.
-        matrix_sizes (int|tuple[int]):
-        grappa_factors (int|tuple[int]):
-        grappa_refs (tuple[int]
-        part_fourier_factors (tuple[float]):
+        ti (Iterable[int]): The sampling times of the sequence in time units.
+            For MP2RAGE these are also called the inversion times.
+        tr_gre (float|Iterable[float]): The repetition times in time units.
+            If Iterable, must match the length of `ti`.
+        tr_seq (float): The repetition time of the sequence in time units.
+        matrix_sizes (int|Iterable[int]):
+        grappa_factors (int|Iterable[int]):
+        grappa_refs (Iterable[int]
+        part_fourier_factors (Iterable[float]):
         sl_pe_swap (bool):
         n_dim (int|None):
-        pe_correction (tuple[float]): Correct for the number of k-space lines.
-            This factor determines how many k-space lines are actually acquired
-            in the k-space for the phase encoding directions.
-            This could be different from 1, for example with elliptical k-space
-            coverage.
-        center_k_correction (float): Correct for the k-space center position.
+        pe_fix (Iterable[float]): Fix for the number of k-space lines.
+            This factor determines how many k-space lines are actually
+            acquired in the k-space for the phase encoding directions.
+            This could be different from 1, for example with elliptical
+            k-space coverage.
+        center_k (float|Iterable[float]): Fix for the k-space center position.
             This factor determines where the k-space central line is actually
             acquired within the GRE block.
             This parameter affects the accessible inversion times.
         bandwidths (tuple[int]|None): readout bandwidth in Hz/px
-
 
     Returns:
         result (tuple[dict]): The tuple
             contains:
              - seq_params (dict): The sequence parameters for rho calculation.
              - extra_info (dict): Additional sequence information.
+
+    Raises:
+        ValueError: If the calculation will fail.
+            This happens when:
+             - The length of `ti` is not 2;
+             - The computed delay times become negative.
 
     Examples:
         >>> seq_kws, extra_info = acq_to_seq_params(
@@ -373,8 +445,8 @@ def acq_to_seq_params(
         ...     part_fourier_factors=(1.0, 6 / 8, 6 / 8),
         ...     sl_pe_swap=True,
         ...     n_dim=None,
-        ...     pe_correction=(np.pi / 4, 1),
-        ...     center_k_correction=0.5,
+        ...     pe_fix=(np.pi / 4, 1),
+        ...     center_k=0.5,
         ...     bandwidths=None)
         >>> print(sorted(seq_kws.items()))
         [('n_gre', 87), ('td0', 573.75), ('td1', 660.0), ('td2', 3286.25),\
@@ -411,34 +483,32 @@ def acq_to_seq_params(
         pe2 = None
 
     n_gre = k_space_lines(
-        int(matrix_sizes[pe1] * pe_correction[0]),
+        int(matrix_sizes[pe1] * pe_fix[0]),
         part_fourier_factors[pe1],
         grappa_factors[pe1], grappa_refs[pe1])
     if bandwidths:
         min_tr_gre = round(
             sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]), 2)
         assert (tr_gre >= min_tr_gre)
-    t_gre_block = n_gre * tr_gre
-    center_k = part_fourier_factors[pe1] / 2 * center_k_correction
-    td = ((ti[0] - center_k * t_gre_block),) + \
-         tuple(np.diff(ti) - t_gre_block) + \
-         ((tr_seq - ti[-1] - (1 - center_k) * t_gre_block),)
+    center_k = part_fourier_factors[pe1] / 2 * center_k
+
+    td = calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k, check=True)
+
     seq_params = dict(
         n_gre=n_gre, tr_gre=tr_gre, td0=td[0], td1=td[1], td2=td[2])
     extra_info = dict(
         t_acq=tr_seq * 1e-3 * (k_space_lines(
-            int(matrix_sizes[pe2] * pe_correction[1]),
+            int(matrix_sizes[pe2] * pe_fix[1]),
             part_fourier_factors[pe2],
             grappa_factors[pe2], grappa_refs[pe2]) if pe2 else 1))
 
-    if any(x < 0.0 for x in td):
-        raise ValueError('Invalid sequence parameters: {}'.format(seq_params))
     return seq_params, extra_info
 
 
 # ======================================================================
 def test_signal():
     import matplotlib.pyplot as plt
+
 
     t1 = np.linspace(50, 5000, 5000)
     s = rho(t1=t1, **_SEQ_PARAMS, bijective=True)

@@ -1519,7 +1519,7 @@ def histogram2d(
         bins=None,
         array_interval=None,
         hist_interval=((0.0, 1.0), (0.0, 1.0)),
-        use_separate_interval=False,
+        use_sn_split_interval=False,
         aspect=None,
         scale='linear',
         hist_val_interval=None,
@@ -1571,7 +1571,7 @@ def histogram2d(
             tuple of
             float is interpreted as the (min, max) for the x-axis, and the
             second tuple of float is for the y-axis.
-        use_separate_interval (bool): Generate 'array_interval' separately.
+        use_sn_split_interval (bool): Generate 'array_interval' separately.
             If set, the array_interval is generated as:
             ((min(array1), max(array1)), (min(array2), max(array2)).
             Otherwise, uses information for both arrays to determine a common
@@ -1629,7 +1629,7 @@ def histogram2d(
 
     # setup array range
     if not array_interval:
-        if use_separate_interval:
+        if use_sn_split_interval:
             array_interval = (
                 (np.nanmin(arr1), np.nanmax(arr1)),
                 (np.nanmin(arr2), np.nanmax(arr2)))
@@ -1843,7 +1843,8 @@ def bar_chart(
     set_ticks = ax.set_xticks if is_hor else ax.set_yticks
     set_ticklabels = ax.set_xticklabels if is_hor else ax.set_yticklabels
     if groups is not None:
-        set_ticks(indices + bar_width / 2)
+        print(indices)
+        set_ticks(indices + bar_width * len(groups) / 2)
         set_ticklabels(groups)
     else:
         set_ticks(np.arange(num_series) * bar_width)

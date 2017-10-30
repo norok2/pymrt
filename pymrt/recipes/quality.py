@@ -254,7 +254,8 @@ def snr(
         >>> round(val)
         20.0
     """
-    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = mrt.correction.sn_split(
+        arr, method, *args, **kwargs)
     return _snr(signal_arr, noise_arr)
 
 
@@ -307,78 +308,9 @@ def psnr(
         >>> round(val)
         18.0
     """
-    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = mrt.correction.sn_split(
+        arr, method, *args, **kwargs)
     return _psnr(signal_arr, noise_arr)
-
-
-# ======================================================================
-def separate_signals(
-        arr,
-        method='otsu',
-        *args,
-        **kwargs):
-    """
-    Separate N signal components according to threshold(s).
-
-    Args:
-        arr (np.ndarray): The input array.
-        method (Iterable[float]|str|callable): The separation method.
-            If Iterable[float], the specified thresholds value are used.
-            If str, the thresholds are estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
-            to `method`.
-            Additional accepted values:
-             - 'mean': use the mean value of the signal.
-             - 'midval': use the middle of the values range.
-             - 'median': use the median value of the signal.
-             - 'otsu': use the Otsu threshold.
-            If callable, the signature must be:
-            f(np.ndarray, *args, **kwargs) -> Iterable[float]
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
-
-    Returns:
-        result (tuple[np.ndarray]): The tuple
-            contains:
-                - signal1_arr: The first signal component array.
-                - signal2_arr: The second signal component array.
-
-    Examples:
-        >>> arr = np.array((0, 0, 1, 1, 1, 1, 0, 0))
-        >>> separate_signals(arr)
-        (array([0, 0, 0, 0]), array([1, 1, 1, 1]))
-        >>> arr = np.arange(10)
-        >>> separate_signals(arr, method=(2, 6))
-        (array([0, 1]), array([2, 3, 4, 5]), array([6, 7, 8, 9]))
-    """
-    if isinstance(method, str):
-        if method == 'mean':
-            thresholds = np.mean(arr)
-        elif method == 'midval':
-            thresholds = mrt.segmentation.threshold_relative(arr, 0.5)
-        elif method == 'median':
-            thresholds = mrt.segmentation.threshold_percentile(arr, 0.5)
-        else:
-            thresholds = mrt.segmentation.auto_thresholds(
-                arr, method, dict(kwargs))
-    elif callable(method):
-        thresholds = method(arr, *args, **kwargs)
-    else:
-        thresholds = tuple(method)
-
-    thresholds = mrt.utils.auto_repeat(thresholds, 1)
-
-    masks = []
-    full_mask = np.ones(arr.shape, dtype=bool)
-    last_threshold = np.min(arr)
-    for i, threshold in enumerate(sorted(thresholds)):
-        mask = arr < threshold
-        mask *= arr >= last_threshold
-        masks.append(mask)
-        full_mask -= mask
-        last_threshold = threshold
-
-    return tuple(arr[mask] for mask in masks) + (arr[full_mask],)
 
 
 # ======================================================================
@@ -475,7 +407,7 @@ def cnr(
     Args:
         arr (np.ndarray): The input array.
         ss_method (float|str|callable): Signal sources separation.
-            See `separate_signals()` for more details.
+            See `sn_split_signals()` for more details.
         sn_method (str|callable): The signal/noise estimation method.
             See `signal_noise()` for more details.
         ss_kws: Keyword arguments passed to `ss_method()`.
@@ -499,7 +431,7 @@ def cnr(
         45.0
     """
     signal_arr, noise_arr = correction(arr, sn_method, **sn_kws)
-    signal_arrs = separate_signals(signal_arr, ss_method, **ss_kws)
+    signal_arrs = sn_split_signals(signal_arr, ss_method, **ss_kws)
     return _cnr(contrast(signal_arrs), noise_arr)
 
 
