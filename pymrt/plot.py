@@ -1843,7 +1843,6 @@ def bar_chart(
     set_ticks = ax.set_xticks if is_hor else ax.set_yticks
     set_ticklabels = ax.set_xticklabels if is_hor else ax.set_yticklabels
     if groups is not None:
-        print(indices)
         set_ticks(indices + bar_width * len(groups) / 2)
         set_ticklabels(groups)
     else:
