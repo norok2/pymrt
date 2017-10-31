@@ -1820,7 +1820,6 @@ def bar_chart(
         is_hor = True
 
     if not is_hor:
-        series = series
         ax.invert_yaxis()
 
     if limits is not None:
