@@ -105,6 +105,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
     if not os.path.isfile(cache_filepath) or not use_cache:
         print('Solving MP2RAGE equations. May take some time.')
         print('Caching results: {}'.format(use_cache))
+
         s1, s2 = sym.symbols('s1 s2')
         m0, mz_ss = sym.symbols('m0 mz_ss')
         n_gre, tr_gre = sym.symbols('n_gre tr_gre')

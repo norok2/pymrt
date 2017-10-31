@@ -189,6 +189,8 @@ def double_flash(
     """
     Calculate the flip angle efficiency from two FLASH acquisitions.
 
+    This method is sensitive to T1 except for tr1, tr2 >> T1.
+
     Uses the ratio between two FLASH images provided some conditions are met.
 
     Most notably, the following cases are covered:
@@ -250,7 +252,6 @@ def double_flash(
     arr1 = prepare(arr1) if prepare else arr1.astype(float)
     arr2 = prepare(arr2) if prepare else arr2.astype(float)
 
-    # todo: try to see if signal ratios can be avoided
     if approx:
         approx = approx.lower()
 
@@ -265,40 +266,28 @@ def double_flash(
     same_fa = np.isclose(fa1, fa2)
     double_fa = np.isclose(2, m_fa)
 
+    eta_fa_arr = None
     with np.errstate(divide='ignore', invalid='ignore'):
         # double angle methods
         if double_fa and same_tr:
             if approx == 'long_tr':
                 eta_fa_arr = arr2 / arr1 / 2
             elif approx == 'short_tr' and t1_arr is not None:
-                warnings.warn('This method is not accurate.')
-                eta_fa_arr = (arr1 / arr2)
-                eta_fa_arr = (
-                    (eta_fa_arr + sign * np.sqrt(
-                        (eta_fa_arr - 2) ** 2 +
-                        6 * (eta_fa_arr - 1) * (tr / t1_arr) +
-                        2 * (1 - eta_fa_arr) * (tr / t1_arr) ** 2)) /
-                    (2 * (1 - eta_fa_arr) * (1 + tr / t1_arr)))
+                eta_fa_arr = (np.sqrt(
+                    arr1 ** 2 * (1 + (2 * tr) / t1_arr) +
+                    (2 * arr2 * (arr2 - arr1)) * (1 + tr / t1_arr) +
+                    2 * arr2 * (arr2 - arr1)) - arr1 * (1 + tr / t1_arr)) / \
+                             (2 * (arr2 - arr1))
             elif t1_arr is not None:
-                warnings.warn('This method is not accurate.')
                 eta_fa_arr = (np.sqrt(
                     arr1 ** 2 * np.exp((2 * tr) / t1_arr) +
                     (2 * arr2 * (arr2 - arr1)) * np.exp(tr / t1_arr) +
                     2 * arr2 * (arr2 - arr1)) - arr1 * np.exp(tr / t1_arr)) / \
                              (2 * (arr2 - arr1))
-                # eta_fa_arr = (arr1 / arr2)
-                # eta_fa_arr = (
-                #     (eta_fa_arr + sign * np.sqrt(
-                #         eta_fa_arr ** 2
-                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)
-                #         + 2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr) ** 2))
-                #     / (2 * (eta_fa_arr - 1) * np.exp(-tr / t1_arr)))
-            else:
-                eta_fa_arr = None
 
-        # same-angle method (variable tr)
+        # same-angle methods (variable tr)
         elif same_fa:
-            if approx == 'short_tr':
+            if approx == 'short_tr' and t1_arr is not None:
                 eta_fa_arr = (arr1 / arr2)
                 eta_fa_arr = (
                     (1 - n_tr * eta_fa_arr) /
@@ -312,13 +301,11 @@ def double_flash(
                     (arr2 - arr1 +
                      arr1 * np.exp(tr2 / t1_arr) -
                      arr2 * np.exp(tr1 / t1_arr)))
-            else:
-                eta_fa_arr = None
 
         if eta_fa_arr is None:
-            warnings.warn(
-                'Unsupported fa1, fa2, tr1, tr2 combination for B1T.'
-                'Fallback to 1.')
+            text = 'Unsupported parameter combination. ' \
+                   'Fallback to `eta_fa_arr=1`.'
+            warnings.warn(text)
             eta_fa_arr = np.full_like(arr1, fa)
 
     eta_fa_arr = np.real(np.arccos(eta_fa_arr))

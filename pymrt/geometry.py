@@ -896,6 +896,7 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
 def nd_gradient(
         gen_ranges,
         dtype=float,
+        dense=False,
         generators=np.linspace,
         generators_kws=None):
     """
@@ -910,6 +911,10 @@ def nd_gradient(
             indicate the number of samples.
         dtype (data-type): Desired output data-type.
             See `np.ndarray()` for more.
+        dense (bool): Generate dense results.
+            If True, the results have full sizes.
+            Otherwise, constant dimensions are keept to size of 1,
+            which ensures them being broadcast-safe.
         generators (callable|Iterable[callable]): The range generator(s).
             A generator must have signature:
             f(any, any, int, **kws) -> Iterable
@@ -927,72 +932,88 @@ def nd_gradient(
 
 
     Returns:
-        arr (np.ndarray): The n-dim gradient array.
+        arrs (list[np.ndarray]): The broadcast-safe n-dim gradient arrays.
+            The actual shape depend on `dense`.
 
     Examples:
-        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)))
-        array([[[ 0., -2.],
-                [ 0.,  2.]],
+        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2))):
+        ...     print(arr)
+        [[ 0.]
+         [ 1.]]
+        [[-2.  2.]]
+        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), dense=True):
+        ...     print(arr)
+        [[ 0.  0.]
+         [ 1.  1.]]
+        [[-2.  2.]
+         [-2.  2.]]
+        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), int, True):
+        ...     print(arr)
+        [[ 0.  0.]
+         [ 1.  1.]]
+        [[-2.  2.]
+         [-2.  2.]]
+        >>> for arr in nd_gradient(
+        ...         ((0, 1, 2), (-2, 2, 2)), float, True, np.logspace):
+        ...     print(arr)
+        [[  1.   1.]
+         [ 10.  10.]]
+        [[  1.00000000e-02   1.00000000e+02]
+         [  1.00000000e-02   1.00000000e+02]]
+        >>> for arr in nd_gradient(
+        ...         ((0, 1, 2), (-2, 2, 2)), float, True,
+        ...         (np.linspace, np.logspace)):
+        ...     print(arr)
+        [[ 0.  0.]
+         [ 1.  1.]]
+        [[  1.00000000e-02   1.00000000e+02]
+         [  1.00000000e-02   1.00000000e+02]]
+        >>> for arr in nd_gradient(
+        ...         ((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, True):
+        ...     print(arr)
+        [[[ 0.  0.]
+          [ 0.  0.]
+          [ 0.  0.]]
         <BLANKLINE>
-               [[ 1., -2.],
-                [ 1.,  2.]]])
-        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)), int)
-        array([[[ 0, -2],
-                [ 0,  2]],
+         [[ 1.  1.]
+          [ 1.  1.]
+          [ 1.  1.]]]
+        [[[-1. -1.]
+          [ 0.  0.]
+          [ 1.  1.]]
         <BLANKLINE>
-               [[ 1, -2],
-                [ 1,  2]]])
-        >>> nd_gradient(((0, 1, 2), (-2, 2, 2)), float, np.logspace)
-        array([[[  1.00000000e+00,   1.00000000e-02],
-                [  1.00000000e+00,   1.00000000e+02]],
+         [[-1. -1.]
+          [ 0.  0.]
+          [ 1.  1.]]]
+        [[[-2.  2.]
+          [-2.  2.]
+          [-2.  2.]]
         <BLANKLINE>
-               [[  1.00000000e+01,   1.00000000e-02],
-                [  1.00000000e+01,   1.00000000e+02]]])
-        >>> nd_gradient(
-        ...     ((0, 1, 2), (-2, 2, 2)), float, (np.linspace, np.logspace))
-        array([[[  0.00000000e+00,   1.00000000e-02],
-                [  0.00000000e+00,   1.00000000e+02]],
-        <BLANKLINE>
-               [[  1.00000000e+00,   1.00000000e-02],
-                [  1.00000000e+00,   1.00000000e+02]]])
-        >>> nd_gradient(((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, np.linspace)
-        array([[[[ 0, -1, -2],
-                 [ 0, -1,  2]],
-        <BLANKLINE>
-                [[ 0,  0, -2],
-                 [ 0,  0,  2]],
-        <BLANKLINE>
-                [[ 0,  1, -2],
-                 [ 0,  1,  2]]],
-        <BLANKLINE>
-        <BLANKLINE>
-               [[[ 1, -1, -2],
-                 [ 1, -1,  2]],
-        <BLANKLINE>
-                [[ 1,  0, -2],
-                 [ 1,  0,  2]],
-        <BLANKLINE>
-                [[ 1,  1, -2],
-                 [ 1,  1,  2]]]])
+         [[-2.  2.]
+          [-2.  2.]
+          [-2.  2.]]]
     """
     num_gens = len(gen_ranges)
-    generators = mrt.utils.auto_repeat(generators, num_gens, check=True)
-    generators_kws = mrt.utils.auto_repeat(generators_kws, num_gens,
-                                           check=True)
+    generators = mrt.utils.auto_repeat(
+        generators, num_gens, check=True)
+    generators_kws = mrt.utils.auto_repeat(
+        generators_kws, num_gens, check=True)
 
-    base_shape = tuple(num for start, stop, num in gen_ranges)
-    shape = base_shape + (num_gens,)
+    shape = tuple(num for start, stop, num in gen_ranges)
 
-    arr = np.empty(shape, dtype=dtype)
+    arrs = []
     for i, ((start, stop, num), generator, generator_kws) in \
             enumerate(zip(gen_ranges, generators, generators_kws)):
-        extend = tuple(n for j, n in enumerate(base_shape) if j != i) + (num,)
         if generator_kws is None:
             generator_kws = {}
-        gradient = np.array(
+        arr = np.array(
             generator(start, stop, num, **generator_kws), dtype=dtype)
-        arr[..., i] = np.moveaxis(np.broadcast_to(gradient, extend), -1, i)
-    return arr
+        new_shape = tuple(n if j == i else 1 for j, n in enumerate(shape))
+        arr = arr.reshape(new_shape)
+        if dense:
+            arr = np.zeros(shape) + arr
+        arrs.append(arr)
+    return arrs
 
 
 # ======================================================================

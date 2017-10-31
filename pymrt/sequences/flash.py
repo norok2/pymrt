@@ -134,15 +134,19 @@ def _simplify_cos(expr):
 
 
 # ======================================================================
-def _prepare_multi_flash(use_cache=CFG['use_cache']):
+def _prepare_triple_flash_approx(use_cache=CFG['use_cache']):
     """Solve the combination of FLASH images analytically."""
 
-    cache_filepath = os.path.join(DIRS['cache'], 'multi_flash.cache')
+    cache_filepath = os.path.join(
+        DIRS['cache'], 'flash_triple_approx.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
+        print('Solving Triple FLASH Approx equations. May take some time.')
+        print('Caching results: {}'.format(use_cache))
+
         s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0 = sym.symbols(
-            's m0 fa tr t1 te t2s eta_fa eta_m0')
+            's m0 fa tr t1 te t2s eta_fa eta_m0', positive=True)
         s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
-            's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3')
+            's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3', positive=True)
         n = sym.symbols('n')
         eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
         eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
@@ -151,77 +155,13 @@ def _prepare_multi_flash(use_cache=CFG['use_cache']):
 
         def ratio_expr(x):
             return x[0] / x[1]
-            # return x[0] * x[1] / (x[0] + x[1])
 
         eq_r21 = _eq_expr(eq_2, eq_1, expr=ratio_expr).expand().trigsimp()
         eq_r31 = _eq_expr(eq_3, eq_1, expr=ratio_expr).expand().trigsimp()
 
         # tr1, tr2, tr3 << t1 approximation
-        # double fa, tr_ratio
-        print('\n', ': Double FA, Short TR')
-        double_fa_short_tr = {
-            fa1: fa, fa2: 2 * fa, fa3: fa,
-            tr1: tr, tr2: tr, tr3: n * tr}
-
-        eq_ar21_ = eq_r21.subs(double_fa_short_tr)
-        for tr_ in (tr, n * tr):
-            eq_ar21_ = eq_ar21_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
-        eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
-
-        eq_ar31_ = eq_r31.subs(double_fa_short_tr)
-        for tr_ in (tr, n * tr):
-            eq_ar31_ = eq_ar31_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
-        eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
-
-        print(eq_ar21_)
-        print(eq_ar31_)
-        # double_fa_short_tr_result = sym.solve(
-        #     (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
-        # for j, exprs in enumerate(double_fa_short_tr_result):
-        #     print('SOLUTION: ', j + 1)
-        #     for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
-        #         print(name)
-        #         print(expr)
-
-        # tr1, tr2, tr3 << t1 approximation
-        # half fa, tr_ratio
-        print('\n', ': Half FA, Short TR')
-        half_fa_short_tr = {
-            fa1: fa, fa2: 2 * fa, fa3: 2 * fa,
-            tr1: tr, tr2: tr, tr3: n * tr}
-
-        eq_ar21_ = eq_r21.subs(half_fa_short_tr)
-        for tr_ in (tr, n * tr):
-            eq_ar21_ = eq_ar21_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
-        eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
-
-        eq_ar31_ = eq_r31.subs(half_fa_short_tr)
-        for tr_ in (tr, n * tr):
-            eq_ar31_ = eq_ar31_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
-        eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
-
-        print(eq_ar21_)
-        print(eq_ar31_)
-        # half_fa_short_tr_result = sym.solve(
-        #     (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
-        # for j, exprs in enumerate(half_fa_short_tr_result):
-        #     print()
-        #     print('solution: ', j + 1)
-        #     for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
-        #         print(name)
-        #         print(expr)
-
-        # tr1, tr2, tr3 << t1 approximation
         # fa1, fa2, fa3 ~ 0 approximation
-        print('\n', ': Small FA, Short TR')
+        print('\n', 'Approx: Small FA, Short TR')
         eq_ar21_ = eq_r21.copy()
         for tr_ in tr1, tr2, tr3:
             eq_ar21_ = eq_ar21_.subs(
@@ -246,29 +186,245 @@ def _prepare_multi_flash(use_cache=CFG['use_cache']):
 
         print(eq_ar21_)
         print(eq_ar31_)
-        small_fa_short_tr_result = sym.solve(
+        result = sym.nonlinsolve(
             (eq_ar21_, eq_ar31_), (t1, eta_fa))
-        for j, exprs in enumerate(small_fa_short_tr_result):
+        for j, exprs in enumerate(result):
             print()
             print('solution: ', j + 1)
             for name, expr in zip(('t1', 'eta_fa'), exprs):
                 print(name)
                 print(expr)
+        t1_ = tuple(exprs[0] for exprs in result)
+        eta_fa_ = tuple(exprs[1] for exprs in result)
 
-        # quit()
-        # pickles = ()
-        # with open(cache_filepath, 'wb') as cache_file:
-        #     pickle.dump(pickles, cache_file)
+        pickles = (
+            s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0,
+            s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3,
+            t1_, eta_fa_)
+        with open(cache_filepath, 'wb') as cache_file:
+            pickle.dump(pickles, cache_file)
     else:
         with open(cache_filepath, 'rb') as cache_file:
             pickles = pickle.load(cache_file)
-    # result = np.vectorize(sym.lambdify(*pickles))
+    print(pickles)
+    # result = sym.lambdify(*pickles)
     # return result
 
 
 # ======================================================================
+def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
+    """Solve the combination of FLASH images analytically."""
+
+    cache_filepath = os.path.join(
+        DIRS['cache'], 'flash_triple_special1.cache')
+    if not os.path.isfile(cache_filepath) or not use_cache:
+        print('Solving Triple FLASH Special1 equations. May take some time.')
+        print('Caching results: {}'.format(use_cache))
+
+        s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0 = sym.symbols(
+            's m0 fa tr t1 te t2s eta_fa eta_m0')
+        s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
+            's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3')
+        n = sym.symbols('n')
+        eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
+        eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
+        eq_2 = eq.subs({s: s2, fa: fa2, tr: tr2})
+        eq_3 = eq.subs({s: s3, fa: fa3, tr: tr3})
+
+        def ratio_expr(x):
+            return x[0] / x[1]
+
+        eq_r21 = _eq_expr(eq_2, eq_1, expr=ratio_expr).expand().trigsimp()
+        eq_r31 = _eq_expr(eq_3, eq_1, expr=ratio_expr).expand().trigsimp()
+
+        # tr1, tr2, tr3 << t1 approximation
+        # double fa, tr_ratio
+        print('\n', 'Special1: Double FA, Short TR')
+        double_fa_short_tr = {
+            fa1: fa, fa2: 2 * fa, fa3: fa,
+            tr1: tr, tr2: tr, tr3: n * tr}
+
+        eq_ar21_ = eq_r21.subs(double_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar21_ = eq_ar21_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
+
+        eq_ar31_ = eq_r31.subs(double_fa_short_tr)
+        for tr_ in (tr, n * tr):
+            eq_ar31_ = eq_ar31_.subs(
+                exp(-tr_ / t1),
+                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+        eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
+
+        print(eq_ar21_)
+        print(eq_ar31_)
+        double_fa_short_tr_result = sym.solve(
+            (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+        for j, exprs in enumerate(double_fa_short_tr_result):
+            print('SOLUTION: ', j + 1)
+            for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
+                print(name)
+                print(expr)
+
+        print('THE END!')
+
+        pickles = (
+            s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0,
+            s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3,
+            double_fa_short_tr_result)
+        with open(cache_filepath, 'wb') as cache_file:
+            pickle.dump(pickles, cache_file)
+    else:
+        with open(cache_filepath, 'rb') as cache_file:
+            pickles = pickle.load(cache_file)
+    print(pickles)
+    # result = sym.lambdify(*pickles)
+    # return result
+
+
+# # ======================================================================
+# def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
+#     """Solve the combination of FLASH images analytically."""
+#
+#     cache_filepath = os.path.join(
+#         DIRS['cache'], 'flash_triple_special1.cache')
+#     if not os.path.isfile(cache_filepath) or not use_cache:
+#         print('Solving Triple FLASH special1 equations. May take some time.')
+#         print('Caching results: {}'.format(use_cache))
+#
+#         s, m0, fa, tr, t1, te, t2s, eta_fa, eta_m0 = sym.symbols(
+#             's m0 fa tr t1 te t2s eta_fa eta_m0')
+#         s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
+#             's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3')
+#         n = sym.symbols('n')
+#         eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
+#         eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
+#         eq_2 = eq.subs({s: s2, fa: fa2, tr: tr2})
+#         eq_3 = eq.subs({s: s3, fa: fa3, tr: tr3})
+#
+#         def ratio_expr(x):
+#             return x[0] / x[1]
+#
+#         eq_r21 = _eq_expr(eq_2, eq_1, expr=ratio_expr).expand().trigsimp()
+#         eq_r31 = _eq_expr(eq_3, eq_1, expr=ratio_expr).expand().trigsimp()
+#
+#         # tr1, tr2, tr3 << t1 approximation
+#         # double fa, tr_ratio
+#         print('\n', ': Double FA, Short TR')
+#         double_fa_short_tr = {
+#             fa1: fa, fa2: 2 * fa, fa3: fa,
+#             tr1: tr, tr2: tr, tr3: n * tr}
+#
+#         eq_ar21_ = eq_r21.subs(double_fa_short_tr)
+#         for tr_ in (tr, n * tr):
+#             eq_ar21_ = eq_ar21_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
+#
+#         eq_ar31_ = eq_r31.subs(double_fa_short_tr)
+#         for tr_ in (tr, n * tr):
+#             eq_ar31_ = eq_ar31_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
+#
+#         print(eq_ar21_)
+#         print(eq_ar31_)
+#         double_fa_short_tr_result = sym.solve(
+#             (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+#         for j, exprs in enumerate(double_fa_short_tr_result):
+#             print('SOLUTION: ', j + 1)
+#             for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
+#                 print(name)
+#                 print(expr)
+#
+#         quit()
+#
+#         # tr1, tr2, tr3 << t1 approximation
+#         # half fa, tr_ratio
+#         print('\n', ': Half FA, Short TR')
+#         half_fa_short_tr = {
+#             fa1: fa, fa2: 2 * fa, fa3: 2 * fa,
+#             tr1: tr, tr2: tr, tr3: n * tr}
+#
+#         eq_ar21_ = eq_r21.subs(half_fa_short_tr)
+#         for tr_ in (tr, n * tr):
+#             eq_ar21_ = eq_ar21_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
+#
+#         eq_ar31_ = eq_r31.subs(half_fa_short_tr)
+#         for tr_ in (tr, n * tr):
+#             eq_ar31_ = eq_ar31_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
+#
+#         print(eq_ar21_)
+#         print(eq_ar31_)
+#         # half_fa_short_tr_result = sym.solve(
+#         #     (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+#         # for j, exprs in enumerate(half_fa_short_tr_result):
+#         #     print()
+#         #     print('solution: ', j + 1)
+#         #     for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
+#         #         print(name)
+#         #         print(expr)
+#
+#         # tr1, tr2, tr3 << t1 approximation
+#         # fa1, fa2, fa3 ~ 0 approximation
+#         print('\n', ': Small FA, Short TR')
+#         eq_ar21_ = eq_r21.copy()
+#         for tr_ in tr1, tr2, tr3:
+#             eq_ar21_ = eq_ar21_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         for fa_ in fa1, fa2, fa3:
+#             for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+#                 eq_ar21_ = eq_ar21_.subs(
+#                     fa_expr,
+#                     fa_expr.series(eta_fa * fa_, n=3).removeO())
+#
+#         eq_ar31_ = eq_r31.copy()
+#         for tr_ in tr1, tr2, tr3:
+#             eq_ar31_ = eq_ar31_.subs(
+#                 exp(-tr_ / t1),
+#                 exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+#         for fa_ in fa1, fa2, fa3:
+#             for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+#                 eq_ar31_ = eq_ar31_.subs(
+#                     fa_expr,
+#                     fa_expr.series(eta_fa * fa_, n=3).removeO())
+#
+#         print(eq_ar21_)
+#         print(eq_ar31_)
+#         # small_fa_short_tr_result = sym.solve(
+#         #     (eq_ar21_, eq_ar31_), (t1, eta_fa))
+#         # for j, exprs in enumerate(small_fa_short_tr_result):
+#         #     print()
+#         #     print('solution: ', j + 1)
+#         #     for name, expr in zip(('t1', 'eta_fa'), exprs):
+#         #         print(name)
+#         #         print(expr)
+#
+#         print('THE END!')
+#         # quit()
+#         # pickles = ()
+#         # with open(cache_filepath, 'wb') as cache_file:
+#         #     pickle.dump(pickles, cache_file)
+#     else:
+#         with open(cache_filepath, 'rb') as cache_file:
+#             pickles = pickle.load(cache_file)
+#     # result = sym.lambdify(*pickles)
+#     # return result
+
+# ======================================================================
 # :: defines the mp2rage signal expression
-# _rho = _prepare_multi_flash()
+# _rho = _prepare_triple_flash_approx()
 
 
 # ======================================================================

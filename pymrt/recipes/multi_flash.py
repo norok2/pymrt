@@ -30,7 +30,7 @@ import pymrt.correction
 
 from pymrt.recipes.generic import voxel_curve_fit
 from pymrt.recipes import t1, b1t
-
+from pymrt.sequences import flash
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
@@ -372,7 +372,7 @@ def triple_special2(
 
 
 # ======================================================================
-def triple(
+def triple_approx(
         arr1,
         arr2,
         arr3,
@@ -394,7 +394,7 @@ def triple(
 
     Assumes that the following approximations are valid:
      - `tr` (`tr1`, `tr2`, `tr3`) is much smaller compared to `t1`;
-     - `fa` (`fa1, `fa2`, `fa3`) is close to zero.
+     - `fa` (`fa1`, `fa2`, `fa3`) is close to zero.
 
     Given the following expression for the FLASH signal:
 
@@ -455,9 +455,10 @@ def triple(
     fa1 = np.deg2rad(fa1)
     fa2 = np.deg2rad(fa2)
     fa3 = np.deg2rad(fa3)
-    arr1 = (prepare(arr1) if prepare else arr1).astype(np.double)
-    arr2 = (prepare(arr2) if prepare else arr2).astype(np.double)
-    arr3 = (prepare(arr3) if prepare else arr3).astype(np.double)
+    arr1 = (prepare(arr1) if prepare else arr1).astype(float)
+    arr2 = (prepare(arr2) if prepare else arr2).astype(float)
+    arr3 = (prepare(arr3) if prepare else arr3).astype(float)
+
     with np.errstate(divide='ignore', invalid='ignore'):
         t1_arr = tr1 * tr2 * tr3 * (
             (fa2 ** 2 - fa1 ** 2) * fa3 * arr1 * arr2 + arr3 * (

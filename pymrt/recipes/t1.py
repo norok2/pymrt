@@ -167,7 +167,7 @@ def double_flash(
         fa2,
         tr1,
         tr2,
-        eta_fa_arr=None,
+        eta_fa_arr=1,
         approx=None,
         inverted=False,
         prepare=mrt.correction.fix_bias_rician):
@@ -199,8 +199,7 @@ def double_flash(
         T_1 = -\\frac{T_R}{\\log(X)}
 
     Note: a similar expression may be derived for different repetition times
-    and
-    identical flip angles, but this produces inaccurate results.
+    and identical flip angles.
 
     This is a closed-form solution.
 
@@ -220,8 +219,10 @@ def double_flash(
         fa2 (int|float): The second nominal flip angle in deg.
         tr1 (int|float): The first repetition time in time units.
         tr2 (int|float): The second repetition time in time units.
-        eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
-            If None, a significant bias may still be present.
+        eta_fa_arr (int|float|np.ndarray): The flip angle efficiency in #.
+            If int or float, it is assumed constant throught the inputs.
+            If np.ndarray, its shape must match the shape of both `arr1` and
+            `arr2`.
         approx (str|None): Determine the approximation to use.
             Accepted values:
              - `short_tr`: assumes tr1, tr2 << min(T1)
@@ -235,8 +236,9 @@ def double_flash(
     Returns:
         t1_arr (np.ndarray): The calculated T1 map in time units.
     """
-    if eta_fa_arr is None:
-        eta_fa_arr = 1
+    arr1 = prepare(arr1) if prepare else arr1.astype(float)
+    arr2 = prepare(arr2) if prepare else arr2.astype(float)
+
     if approx:
         approx = approx.lower()
 
@@ -251,6 +253,7 @@ def double_flash(
     same_fa = np.isclose(fa1, fa2)
 
     if eta_fa_arr is None:
+        warnings.warn('This method is sensitive to B1+.')
         eta_fa_arr = 1
     fa1 *= eta_fa_arr
     fa2 *= eta_fa_arr
@@ -273,7 +276,6 @@ def double_flash(
 
     else:
         if approx == 'short_tr' and same_fa:
-            warnings.warn('This method is not accurate.')
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * n_tr * (
                     np.cos(fa) * (arr2 - arr1) /
@@ -281,8 +283,8 @@ def double_flash(
                      (1 - np.cos(fa)) * n_tr * arr1))
         else:
             warnings.warn(
-                'Unsupported fa1, fa2, tr1, tr2 combination for T1.'
-                'Fallback to 1.')
+                'Unsupported parameter combination. '
+                'Fallback to `t1_arr=1`.')
             t1_arr = np.ones_like(arr1)
 
     if inverted:
