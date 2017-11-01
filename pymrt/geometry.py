@@ -767,7 +767,8 @@ def nd_superellipsoid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes, indexes))
+        n_dim = mrt.utils.combine_iter_len(
+            (shape, position, semisizes, indexes))
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
@@ -1149,6 +1150,7 @@ def frame(
 def reframe(
         arr,
         new_shape,
+        position=0.5,
         background=0.0):
     """
     Add a frame to an array by centering the input array into a new shape.
@@ -1160,6 +1162,16 @@ def reframe(
             If Iterable, the size must match `arr` dimensions.
             Additionally, each value of `new_shape` must be greater than or
             equal to the corresponding dimensions of `arr`.
+        position (int|float|Iterable[int|float]): Position within new shape.
+            Determines the position of the array within the new shape.
+            If int or float, it is considered the same in all dimensions,
+            otherwise its length must match the number of dimensions of the
+            array.
+            If int or Iterable of int, the values are absolute and must be
+            less than or equal to the difference between the shape of the array
+            and the new shape.
+            If float or Iterable of float, the values are relative and must be
+            in the [0, 1] range.
         background (int|float): The background value to be used for the frame.
 
     Returns:
@@ -1171,17 +1183,45 @@ def reframe(
 
     See Also:
         frame()
+
+    Examples:
+        >>> arr = np.ones((2, 3))
+        >>> reframe(arr, (4, 5))
+        array([[ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  1.,  1.,  1.,  0.],
+               [ 0.,  1.,  1.,  1.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.]])
+        >>> reframe(arr, (4, 5), 0)
+        array([[ 1.,  1.,  1.,  0.,  0.],
+               [ 1.,  1.,  1.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.]])
+        >>> reframe(arr, (4, 5), (2, 0))
+        array([[ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.],
+               [ 1.,  1.,  1.,  0.,  0.],
+               [ 1.,  1.,  1.,  0.,  0.]])
+        >>> reframe(arr, (4, 5), (0.0, 1.0))
+        array([[ 0.,  0.,  1.,  1.,  1.],
+               [ 0.,  0.,  1.,  1.,  1.],
+               [ 0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.]])
     """
-    if arr.ndim != len(new_shape):
-        raise IndexError('number of dimensions must match')
-    elif any([old > new for old, new in zip(arr.shape, new_shape)]):
+    new_shape = mrt.utils.auto_repeat(new_shape, arr.ndim, check=True)
+    position = mrt.utils.auto_repeat(position, arr.ndim, check=True)
+    if any([old > new for old, new in zip(arr.shape, new_shape)]):
         raise ValueError('new shape cannot be smaller than the old one.')
+    position = [
+        int(round((new - old) * x_i)) if isinstance(x_i, float) else x_i
+        for old, new, x_i in zip(arr.shape, new_shape, position)]
+    if any([old + x_i > new
+            for old, new, x_i in zip(arr.shape, new_shape, position)]):
+        raise ValueError(
+            'Incompatible `new_shape`, `array shape` and `position`.')
     result = np.full(new_shape, background)
-    borders = [
-        round((new - old) / 2.0) for old, new in zip(arr.shape, new_shape)]
     inner = [
-        slice(border, border + dim, None)
-        for dim, border in zip(arr.shape, borders)]
+        slice(offset, offset + dim, None)
+        for dim, offset in zip(arr.shape, position)]
     result[inner] = arr
     return result
 
