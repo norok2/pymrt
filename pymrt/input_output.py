@@ -51,6 +51,11 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
+
+from nibabel.spatialimages import (
+    HeaderDataError, HeaderTypeError, ImageDataError)
+
+
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
@@ -133,8 +138,15 @@ def save(
         if '_header' in kwargs:
             kwargs['header'] = kwargs['_header']
             kwargs.pop('_header')
-    obj = img_type(arr, *(args if args else ()), **(kwargs if kwargs else {}))
-    obj.to_filename(out_filepath)
+    try:
+        obj = img_type(
+            arr, *(args if args else ()), **(kwargs if kwargs else {}))
+    except (HeaderDataError, HeaderTypeError, ImageDataError):
+        raise ValueError('Could not create a NiBabel object.')
+    else:
+        obj.to_filename(out_filepath)
+
+
 
 
 # ======================================================================
