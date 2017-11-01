@@ -344,7 +344,7 @@ def flatten(
         >>> ll = [[1, 2, 3], [4, 5, 6], [7], [8, 9]]
         >>> list(flatten(ll))
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        >>> list(flatten(ll)) == list(itertools.chain.from_Iterable(ll))
+        >>> list(flatten(ll)) == list(itertools.chain.from_iterable(ll))
         True
         >>> ll = [ll, ll]
         >>> list(flatten(ll))
@@ -1842,7 +1842,7 @@ def unsqueeze(
             If None, a valid set axis is generated from `shape` when this is
             defined and the shape can be matched by `unsqueezing()`.
             If int or Iterable, specified how singletons are added.
-            This depends on the value of `reverse`.
+            This depends on the value of `complement`.
             If `shape` is not None, the `axis` and `shape` parameters must be
             consistent.
             Values must be in the range [-(ndim+1), ndim+1]
@@ -1856,14 +1856,14 @@ def unsqueeze(
             If `axis` is not None, the `axis` and `shape` parameters must be
             consistent.
             At least one of `axis` and `shape` must be specified.
-        reverse (bool): Interpret `axis` parameter as its complementary.
+        complement (bool): Interpret `axis` parameter as its complementary.
             If True, the dims of the input array are placed at the positions
             indicated by `axis`, and singletons are placed everywherelse and
             the `axis` length must be equal to the number of dimensions of the
             input array; the `shape` parameter cannot be `None`.
             If False, the singletons are added at the position(s) specified by
             `axis`.
-            If `axis` is None, `reverse` has no effect.
+            If `axis` is None, `complement` has no effect.
 
     Returns:
         arr (np.ndarray): The reshaped array.
@@ -1904,7 +1904,7 @@ def unsqueeze(
         ValueError: Incompatible `[0, 2, 4]` axis and `7` shape for array of\
  shape (2, 3, 4)
 
-        It is possible to reverse the meaning to `axis` to add singletons
+        It is possible to complement the meaning to `axis` to add singletons
         everywhere except where specified (but requires `shape` to be defined
         and the length of `axis` must match the array dims):
 
@@ -1914,12 +1914,12 @@ def unsqueeze(
         >>> arr_ = unsqueeze(arr, (0, 2, 4), complement=True)
         Traceback (most recent call last):
           ...
-        ValueError: When `reverse` is True, `shape` cannot be None.
+        ValueError: When `complement` is True, `shape` cannot be None.
         >>> arr_ = unsqueeze(arr, (0, 2), 10, True)
         Traceback (most recent call last):
           ...
-        ValueError: When `reverse` is True, the length of axis (2) must match\
- the num of dims of array (3).
+        ValueError: When `complement` is True, the length of axis (2) must\
+ match the num of dims of array (3).
 
         Axes values must be valid:
 
@@ -2436,8 +2436,8 @@ def listdir(
 
 # ======================================================================
 def iflistdir(
-        dirpath,
         patterns='*',
+        dirpath='.',
         unix_style=True,
         re_kws=None,
         walk_kws=None):
@@ -2476,8 +2476,8 @@ def iflistdir(
 
 # ======================================================================
 def flistdir(
-        dirpath,
         patterns='*',
+        dirpath='.',
         unix_style=True,
         re_kws=None,
         walk_kws=None):
@@ -2497,10 +2497,10 @@ def flistdir(
     Returns:
         filepaths (list[str]): The matched filepaths.
     """
-    return [item for item in iflistdir(
-        dirpath,
-        patterns=patterns, unix_style=unix_style, re_kws=re_kws,
-        walk_kws=walk_kws)]
+    return [
+        item for item in iflistdir(
+            patterns=patterns, dirpath=dirpath, unix_style=unix_style,
+            re_kws=re_kws, walk_kws=walk_kws)]
 
 
 # ======================================================================
@@ -2835,6 +2835,38 @@ def change_ext(
     root, ext = split_ext(
         root, ext, case_sensitive, auto_multi_ext)
     filepath = root + (add_extsep(new_ext) if new_ext else '')
+    return filepath
+
+
+# ======================================================================
+def next_filepath(
+        filepath,
+        out_template='{basepath}__{counter}{ext}',
+        verbose=D_VERB_LVL):
+    """
+    Generate a non-existing filepath if current exists.
+
+    Args:
+        filepath (str): The input filepath.
+        out_template (str): Template for the output filepath.
+            The following variables are available for interpolation:
+             - `dirpath`: The directory of the input.
+             - `base`: The input base file name without extension.
+             - `ext`: The input file extension (with leading separator).
+             - `basepath`: The input filepath without extension.
+
+    Returns:
+        filepath (str)
+    """
+    if os.path.exists(filepath):
+        msg('OLD: {}'.format(filepath), verbose, VERB_LVL['high'])
+        dirpath, base, ext = split_path(filepath)
+        basepath = os.path.join(dirpath, base)
+        counter = 0
+        while os.path.exists(filepath):
+            counter += 1
+            filepath = out_template.format_map(locals())
+        msg('NEW: {}'.format(filepath), verbose, VERB_LVL['medium'])
     return filepath
 
 

@@ -142,7 +142,7 @@ def _to_patterns(name, exts):
 
 # ======================================================================
 def _get_single(dirpath, name, exts):
-    filepaths = mrt.utils.flistdir(dirpath, _to_patterns(name, exts))
+    filepaths = mrt.utils.flistdir(_to_patterns(name, exts), dirpath)
     if len(filepaths) == 1:
         filepath = filepaths[0]
     elif len(filepaths) > 1:
@@ -299,14 +299,15 @@ def _reco_from_fid(
                         ('compression_kws', dict((('k_svd', 'quad_weight'),))),
                         ('split_axis', None),)
                 else:
-                    coils_combine_kws=(
+                    coils_combine_kws = (
                         ('method', 'multi_svd'),
                         ('compression', None),
                         ('split_axis', None),)
                     # coils_combine_kws = (
                     #     ('method', 'adaptive_iter'),
                     #     ('method_kws', dict((('block', 8),))),
-                    #     ('compression_kws', dict((('k_svd', 'quad_weight'),))),
+                    #     ('compression_kws', dict((('k_svd', 'quad_weight'),
+                    # ))),
                     #     ('split_axis', images_axis),)
                 combined_arr = coils.combine(
                     arr, coil_axis=coil_axis,
@@ -411,7 +412,7 @@ def batch_extract(
     elif isinstance(allowed_ext, str):
         allowed_ext = (allowed_ext,)
     fid_filepaths = sorted(
-        mrt.utils.flistdir(dirpath, _to_patterns(fid_name, allowed_ext)))
+        mrt.utils.flistdir(_to_patterns(fid_name, allowed_ext), dirpath))
 
     for fid_filepath in sorted(fid_filepaths):
         msg('FID: {}'.format(fid_filepath),
@@ -428,10 +429,10 @@ def batch_extract(
 
         dseq_filepaths = sorted(
             mrt.utils.flistdir(
-                fid_dirpath, _to_patterns(dseq_name, allowed_ext)))
+                _to_patterns(dseq_name, allowed_ext), fid_dirpath))
         reco_filepaths = sorted(
             mrt.utils.flistdir(
-                fid_dirpath, _to_patterns(reco_name, allowed_ext)))
+                _to_patterns(reco_name, allowed_ext), fid_dirpath))
 
         acqp_s, acqp, acqp_c = jcampdx.read(acqp_filepath)
         method_s, method, method_c = jcampdx.read(method_filepath)
