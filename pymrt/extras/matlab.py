@@ -175,7 +175,11 @@ def auto_convert(
 
                 if do_save:
                     msg('Saving: {}'.format(out_filepath), verbose, D_VERB_LVL)
-                    mrt.input_output.save(out_filepath, arr, **save_kws)
+                    try:
+                        mrt.input_output.save(out_filepath, arr, **save_kws)
+                    except ValueError:
+                        msg('W: Saving failed!'.format(out_filepath), verbose,
+                            D_VERB_LVL)
                 else:
                     msg('Skip: {}'.format(out_filepath), verbose, D_VERB_LVL)
 
