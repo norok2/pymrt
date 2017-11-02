@@ -56,7 +56,10 @@ License
 This work is licensed through the terms and conditions of the
 `GPLv3+ <http://www.gnu.org/licenses/gpl-3.0.html>`_
 The use of this software for scientific purpose leading to a publication
-should be acknowledged through citation of the upcoming paper.
+should be acknowledged through citation of the following reference:
+
+**Metere, R., Möller, H.E., 2017. PyMRT and DCMPI: Two New Python Packages for MRI Data Analysis, #3816: Proceedings of the 25th Annual Meeting & Exhibition of the International Society for Magnetic Resonance in Medicine (ISMRM), Honolulu, Hawaii, USA.**
+
 
 Acknowledgements
 ----------------
