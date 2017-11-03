@@ -83,13 +83,13 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_p / #', default=0.96, start=0, stop=1, step=0.01)),
+        label='η_p / 1', default=0.96, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
-        label='α_p / #', default=180, start=-180, stop=180, step=5)),
+        label='α_p / deg', default=180, start=-180, stop=180, step=5)),
     ('eta_fa', dict(
-        label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
+        label='η_α / 1', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
-        label='Δη_α / #', default=0.1, start=0, stop=1, step=0.05)),
+        label='Δη_α / 1', default=0.1, start=0, stop=1, step=0.05)),
 
     ('t1_start', dict(
         label='T1_start / ms', default=50, start=1, stop=1000, step=10)),
@@ -126,13 +126,13 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='GRAPPA_ref_sl / #', default=0, start=0, stop=256, step=1)),
 
     ('part_fourier_factor_ro', dict(
-        label='part.Fourier_ro / #', default=8 / 8, start=4 / 8, stop=8 / 8,
+        label='part.Fourier_ro / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
         step=1 / 8)),
     ('part_fourier_factor_pe', dict(
-        label='part.Fourier_pe / #', default=8 / 8, start=4 / 8, stop=8 / 8,
+        label='part.Fourier_pe / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
         step=1 / 8)),
     ('part_fourier_factor_sl', dict(
-        label='part.Fourier_sl / #', default=8 / 8, start=4 / 8, stop=8 / 8,
+        label='part.Fourier_sl / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
         step=1 / 8)),
 
     ('tr_seq', dict(
@@ -154,13 +154,13 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=5.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_inv / #', default=0.96, start=0, stop=1, step=0.01)),
+        label='η_p / 1', default=0.96, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
-        label='α_p / #', default=180, start=-180, stop=180, step=5)),
+        label='α_p / deg', default=180, start=-180, stop=180, step=5)),
     ('eta_fa', dict(
-        label='η_α / #', default=1.0, start=0, stop=1, step=0.01)),
+        label='η_α / 1', default=1.0, start=0, stop=1, step=0.01)),
     ('d_eta_fa', dict(
-        label='Δη_α / #', default=0.1, start=0, stop=1, step=0.05)),
+        label='Δη_α / 1', default=0.1, start=0, stop=1, step=0.05)),
 
     ('t1_start', dict(
         label='T1_start / ms', default=50, start=0, stop=1000, step=10)),
