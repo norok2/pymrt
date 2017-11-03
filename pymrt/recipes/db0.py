@@ -132,7 +132,7 @@ def fit_phase(
     Gradient-Recalled Echo (GRE) type pulse sequence.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb.units.
+        phs_arr (np.ndarray): The input array in arb. units.
             The sampling time Ti varies in the last dimension.
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.

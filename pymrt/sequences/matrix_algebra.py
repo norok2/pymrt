@@ -819,7 +819,7 @@ class SpinModel(object):
         Base constructor of the spin model class.
 
         Args:
-            s0 (float): signal magnitude scaling in arb.units.
+            s0 (float): signal magnitude scaling in arb. units.
             mc (ndarray[float]): magnetization concentration ratios in one units.
             w0 (ndarray[float]): resonance angular frequencies in rad/s.
             r1 (ndarray[float]): longitudinal relaxation rates in Hz.

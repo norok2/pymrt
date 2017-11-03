@@ -53,14 +53,14 @@ def _flash_signal(
             Units must be the same as `t1`.
         t1_ (int|float|np.ndarray): The longitudinal relaxation in time units.
             The units match those of `tr`.
-        xi (int|float|np.ndarray): The amplitude factor in arb.units.
+        xi (int|float|np.ndarray): The amplitude factor in arb. units.
             Contains information on the spin density `m0`, the coil
             sensitivity (proportional to `b1r`) and units transformation
             factors.
         eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
 
     Returns:
-        s_arr (np.ndarray): The signal array in arb.units.
+        s_arr (np.ndarray): The signal array in arb. units.
             The shape of the array is (N), where N is the number of signals
             to fit.
     """
@@ -85,14 +85,14 @@ def _flash_signal_fit(
             times in time units (matching those of `t1`).
         t1_ (float): The longitudinal relaxation in time units.
             The units match those of `tr`.
-        xi (float): The amplitude factor in arb.units.
+        xi (float): The amplitude factor in arb. units.
             Contains information on the spin density `m0`, the coil
             sensitivity (proportional to `b1r`) and units transformation
             factors.
         eta_fa (float): The flip angle efficiency in one units.
 
     Returns:
-        s_arr (np.ndarray): The signal array in arb.units.
+        s_arr (np.ndarray): The signal array in arb. units.
             The shape of the array is (N), where N is the number of signals
             to fit.
     """
@@ -541,7 +541,7 @@ def vfa(
     This is a closed-form solution.
 
     Args:
-        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb. units.
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in one units.
@@ -625,7 +625,7 @@ def fit_multipolyfit(
     This is an iterative optimization fit.
 
     Args:
-        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb. units.
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
 
@@ -688,7 +688,7 @@ def fit_leasq(
     This is an iterative optimization fit.
 
     Args:
-        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb. units.
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
 

@@ -99,7 +99,7 @@ def signal(
     :math:`T_1` is the longitudinal relaxation time.
 
     Args:
-        m0 (int|float|np.ndarray): The bulk magnetization M0 in arb.units.
+        m0 (int|float|np.ndarray): The bulk magnetization M0 in arb. units.
             This includes both spin density and all additional experimental
             factors (coil contribution, electronics calibration, etc.).
         fa (int|float|np.ndarray): The flip angle in rad.

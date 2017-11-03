@@ -67,7 +67,7 @@ def phs_to_dphs_multi(
     Calculate the polynomial components of the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb.units.
+        phs_arr (np.ndarray): The input array in arb. units.
             The sampling time Ti varies in the last dimension.
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
@@ -137,7 +137,7 @@ def phs_to_dphs(
     Calculate the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb.units.
+        phs_arr (np.ndarray): The input array in arb. units.
             The sampling time Ti varies in the last dimension.
             Arbitrary units are accepted, will be automatically converted to
             radians under the assumption that data is wrapped.
@@ -177,7 +177,7 @@ def dphs_to_phs(
     Calculate the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb.units.
+        phs_arr (np.ndarray): The input array in arb. units.
             The sampling time Ti varies in the last dimension.
         tis (Iterable|int|float): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.

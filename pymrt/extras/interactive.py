@@ -21,7 +21,7 @@ Examples:
     >>> import numpy as np
     >>> interactives = collections.OrderedDict([
     ...     ('a', dict(
-    ...         label='a (arb.units)',
+    ...         label='a (arb. units)',
     ...         default=10, start=-100, stop=100, step=0.01)), ])
     >>> def plot_func(
     ...         fig,
@@ -37,8 +37,8 @@ Examples:
     ...     else:
     ...         ax.set_title(title)
     ...     finally:
-    ...         ax.set_xlabel(r'x (arb.units)')
-    ...         ax.set_ylabel(r'y (arb.units)')
+    ...         ax.set_xlabel(r'x (arb. units)')
+    ...         ax.set_ylabel(r'y (arb. units)')
     ...         ax.legend()
     ...     return ax
     >>> mpl_plot(plot_func, interactives, title='Test')

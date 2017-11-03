@@ -61,9 +61,9 @@ def afi(
     90°, otherwise a flip angle efficiency above 1 cannot be measured.
 
     Args:
-        arr1 (np.ndarray): The first input array in arb.units.
+        arr1 (np.ndarray): The first input array in arb. units.
             Contains the signal with :math:`T_{R,1}`.
-        arr2 (np.ndarray): The second input array in arb.units.
+        arr2 (np.ndarray): The second input array in arb. units.
             Contains the signal with :math:`T_{R,2}`.
         n_tr (int|float): The repetition times ratio in one units.
             This is defined as :math:`n = \\frac{T_{R,2}}{T_{R,1}}`.
@@ -130,9 +130,9 @@ def double_rare(
     This is a closed-form solution.
 
     Args:
-        arr1 (np.ndarray): The first input array in arb.units.
+        arr1 (np.ndarray): The first input array in arb. units.
             Contains the signal with flip angle `fa`.
-        arr2 (np.ndarray): The second input array in arb.units.
+        arr2 (np.ndarray): The second input array in arb. units.
             Contains the signal with flip angle `2 * fa`.
         fa (int|float): The flip angle in deg.
             This is the flip angle of the first acquisition.
@@ -211,11 +211,11 @@ def double_flash(
     Time units must be consistent.
 
     Args:
-        arr1 (np.ndarray): The second input array in arb.units.
+        arr1 (np.ndarray): The second input array in arb. units.
             This is a FLASH image acquired with the nominal flip angle
             specified in the `flip_angle` parameter.
             `arr1` and `arr2` shapes must match.
-        arr2 (np.ndarray): The first input array in arb.units.
+        arr2 (np.ndarray): The first input array in arb. units.
             This is a FLASH image acquired with the double the nominal
             flip angle specified in the `flip_angle` parameter.
             `arr1` and `arr2` shapes must match.

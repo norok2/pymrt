@@ -55,7 +55,7 @@ def fit_multiecho_mono(
     This is also suitable for T2* data from multi-echo FLASH acquisitions.
 
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The echo time must vary in the last dimension and must match the
             length of `echo_times`.
         echo_times (Iterable): The echo times in time units.

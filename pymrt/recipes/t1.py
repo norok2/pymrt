@@ -207,11 +207,11 @@ def double_flash(
     Time units must be consistent.
     
     Args:
-        arr1 (np.ndarray): The first input array in arb.units.
+        arr1 (np.ndarray): The first input array in arb. units.
             This is a FLASH array acquired with:
                 - the nominal flip angle specified in the `fa1` parameter;
                 - the repetition time specified in the `tr` parameter.
-        arr2 (np.ndarray): The second input array in arb.units.
+        arr2 (np.ndarray): The second input array in arb. units.
             This is a FLASH array acquired with:
                 - the nominal flip angle specified in the `fa2` parameter;
                 - the repetition time specified in the `tr` parameter.
@@ -308,7 +308,7 @@ def multi_flash(
     If the different TR are used for the acquisitions, assumes all TRs << T1.
 
     Args:
-        arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
+        arrs (Iterable[np.ndarray]): The input signal arrays in arb. units.
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
         eta_fa_arr (np.ndarray|None): The flip angle efficiency in one units.

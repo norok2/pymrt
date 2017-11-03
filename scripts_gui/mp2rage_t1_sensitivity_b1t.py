@@ -233,7 +233,7 @@ def plot_rho_t1_mp2rage_seq(
             expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
             expression = None
-        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
+        ax.set_xlabel(r'$\rho={}$ / arb. units'.format(expression))
         ax.legend()
     return ax
 
@@ -328,7 +328,7 @@ def plot_rho_t1_mp2rage_acq(
             expression = r'\frac{T_{I,2}}{T_{I,1}}'
         else:
             expression = None
-        ax.set_xlabel(r'$\rho={}$ / arb.units'.format(expression))
+        ax.set_xlabel(r'$\rho={}$ / arb. units'.format(expression))
         ax.legend()
     return ax
 

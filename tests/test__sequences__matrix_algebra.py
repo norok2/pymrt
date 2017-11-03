@@ -315,7 +315,7 @@ def check_z_spectrum(
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
         ax.set_ylabel('Frequency offset / Hz (log10 scale)')
-        ax.set_zlabel('Signal Intensity / arb.units')
+        ax.set_zlabel('Signal Intensity / arb. units')
         ax.plot_surface(
             X, Y, data, cmap=mpl.cm.plasma,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
@@ -431,7 +431,7 @@ def check_fit_spin_model(
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
         ax.set_ylabel('Frequency offset / Hz (log10 scale)')
-        ax.set_zlabel('Signal Intensity / arb.units')
+        ax.set_zlabel('Signal Intensity / arb. units')
         ax.plot_surface(
             X, Y, exact, cmap=plt.cm.hot,
             rstride=1, cstride=1, linewidth=0.005, antialiased=False)

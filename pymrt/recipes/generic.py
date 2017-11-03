@@ -239,11 +239,11 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     """
     Convert magnitude and phase arrays into a complex array.
 
-    It can automatically correct for arb.units in the phase.
+    It can automatically correct for arb. units in the phase.
 
     Args:
-        mag_arr (np.ndarray): The magnitude image array in arb.units.
-        phs_arr (np.ndarray): The phase image array in rad or arb.units.
+        mag_arr (np.ndarray): The magnitude image array in arb. units.
+        phs_arr (np.ndarray): The phase image array in rad or arb. units.
             The values range is automatically corrected to radians.
             The wrapped data is expected.
             If units are radians, i.e. data is in the [-π, π) range,
@@ -253,7 +253,7 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
             If True, `phs_arr` is corrected with `fix_phase_interval()`.
 
     Returns:
-        cx_arr (np.ndarray): The complex image array in arb.units.
+        cx_arr (np.ndarray): The complex image array in arb. units.
 
     See Also:
         pymrt.computation.fix_phase_interval
@@ -306,7 +306,7 @@ def fit_exp_loglin(
     Fit exponential decay to data using the log-linear method.
 
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -331,7 +331,7 @@ def fit_exp_loglin(
         results (dict): The calculated information.
             If full is True, more information is available.
             Standard content:
-            - `s0` contains the amplitude of the exponential in arb.units.
+            - `s0` contains the amplitude of the exponential in arb. units.
             - `tau_{i}` for i=1,...,num contain the higher order fit terms.
               Units are determined by the units of `tis`.
     """
@@ -385,7 +385,7 @@ def fit_exp_curve_fit(
     Fit exponential decay to data using the log-linear method.
 
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -410,7 +410,7 @@ def fit_exp_curve_fit(
         results (dict): The calculated information.
             If full is True, more information is available.
             Standard content:
-            - `s0` contains the amplitude of the exponential in arb.units.
+            - `s0` contains the amplitude of the exponential in arb. units.
             - `tau_{i}` for i=1,...,num contain the higher order fit terms.
               Units are determined by the units of `tis`.
     """
@@ -474,7 +474,7 @@ def fit_exp_tau_quad(
     This is a closed-form solution.
     
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -561,7 +561,7 @@ def fit_exp_tau_quadr(
     This is a closed-form solution.
     
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -656,7 +656,7 @@ def fit_exp_tau_diff(
     This is a closed-form solution.
     
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -725,7 +725,7 @@ def fit_exp_tau_arlo(
     This is a closed-form solution.
 
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -798,7 +798,7 @@ def fit_exp_tau_loglin(
     Fit exponential decay to data using the log-linear method.
 
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.
@@ -836,7 +836,7 @@ def fit_exp_tau(
     The actual algorithm to be used is determined from the data itself.
     
     Args:
-        arr (np.ndarray): The input array in arb.units.
+        arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
         tis (Iterable): The sampling times T_i in time units.
             The number of points must match the last shape size of arr.

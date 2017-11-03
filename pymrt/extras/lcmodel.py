@@ -157,9 +157,9 @@ def read_output(
               - `extra`
              The spectral data are stored respectively in:
               - `data_cs`: the chemical shift in ppm (the x-axis);
-              - `data_s`: the spectrum in arb.units (the y-axis);
-              - `data_fit`: the spectrum obtained from the fitting in arb.units;
-              - `data_bg`: the background of the spectrum  in arb.units.
+              - `data_s`: the spectrum in arb. units (the y-axis);
+              - `data_fit`: the spectrum obtained from fitting in arb. units;
+              - `data_bg`: the background of the spectrum  in arb. units.
     """
     content = {}
     with open(filepath, 'r') as file:
