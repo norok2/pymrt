@@ -65,7 +65,7 @@ def afi(
             Contains the signal with :math:`T_{R,1}`.
         arr2 (np.ndarray): The second input array in arb.units.
             Contains the signal with :math:`T_{R,2}`.
-        n_tr (int|float): The repetition times ratio in #.
+        n_tr (int|float): The repetition times ratio in one units.
             This is defined as :math:`n = \\frac{T_{R,2}}{T_{R,1}}`.
         fa (int|float): The flip angle in deg.
         prepare (callable|None): Input array preparation.
@@ -74,7 +74,7 @@ def afi(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
             This is the :math:`\\eta_\\alpha` factor.
 
     References:
@@ -144,7 +144,7 @@ def double_rare(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
             This is the :math:`\\eta_\\alpha` factor.
 
     Notes:
@@ -246,7 +246,7 @@ def double_flash(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
             This is the :math:`\\eta_\\alpha` factor.
     """
     arr1 = prepare(arr1) if prepare else arr1.astype(float)
@@ -363,7 +363,7 @@ def mp2rage_rho(
              `sequences.mp2rage.rho()`.
 
     Returns:
-        eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
 
     References:
         1) Marques, J.P., Kober, T., Krueger, G., van der Zwaag, W.,

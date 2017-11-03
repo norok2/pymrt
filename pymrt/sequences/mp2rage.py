@@ -277,8 +277,8 @@ def rho(
         td2 (float|np.ndarray): Third delay in ms.
             This is the time between the end of the second GRE block and the
             beginning of the preparation pulse.
-        fa_p (float|np.ndarray): Flip angle of the preparation pulse in deg.
-        eta_p (float|np.ndarray): Efficiency of the preparation pulse in #.
+        fa_p (float|np.ndarray): Flip angle of the preparation in deg.
+        eta_p (float|np.ndarray): Efficiency of the preparation in one units.
         t1 (float|np.ndarray): Longitudinal relaxation time in ms.
         eta_fa (float|np.ndarray): Efficiency of the RF excitation.
             This only affects the excitation inside the GRE blocks.

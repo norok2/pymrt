@@ -60,7 +60,7 @@ def mp2rage_rho(
             used and the values must be in the (-0.5, 0.5) range.
             If `use_ratio` is True, the ratio s1/s2 is used and the values are
             not bound.    
-        eta_fa_arr (int|float|np.array): Flip angle efficiency in #.
+        eta_fa_arr (int|float|np.array): Flip angle efficiency in one units.
             This is equivalent to the normalized B1T field.
             If np.ndarray, it must have the same shape as `rho_arr`.
             If int or float, the flip angle efficiency is assumed to be
@@ -219,7 +219,7 @@ def double_flash(
         fa2 (int|float): The second nominal flip angle in deg.
         tr1 (int|float): The first repetition time in time units.
         tr2 (int|float): The second repetition time in time units.
-        eta_fa_arr (int|float|np.ndarray): The flip angle efficiency in #.
+        eta_fa_arr (int|float|np.ndarray): The flip angle efficiency in one units.
             If int or float, it is assumed constant throught the inputs.
             If np.ndarray, its shape must match the shape of both `arr1` and
             `arr2`.
@@ -311,7 +311,7 @@ def multi_flash(
         arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
-        eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray|None): The flip angle efficiency in one units.
             If None, a significant bias may still be present.
         method (str): Determine the fitting method to use.
             Accepted values are:

@@ -111,9 +111,9 @@ def signal(
             Units must be the same as `t2s`.
         t2s (int|float|np.ndarray): The transverse relaxation in time units.
             Units must be the same as `te`.
-        eta_fa (int|float|np.ndarray): The flip angle efficiency in #.
+        eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
             This is proportional to the coil transmit field :math:`B_1^+`.
-        eta_m0 (int|float|np.ndarray): The spin density efficiency in #.
+        eta_m0 (int|float|np.ndarray): The spin density efficiency in one units.
             This is proportional to the coil receive field :math:`B_1^-`.
 
     Returns:

@@ -85,7 +85,7 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_p / 1', default=0.0, start=0, stop=1, step=0.01)),
+        label='η_p / one units', default=0.0, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
         label='α_p / deg', default=0, start=-180, stop=180, step=5)),
 
@@ -97,9 +97,11 @@ SEQ_INTERACTIVES = collections.OrderedDict([
         label='T1_num / ms', default=9, start=2, stop=32, step=1)),
 
     ('eta_fa_start', dict(
-        label='η_α_start / 1', default=0.05, start=0.0, stop=2, step=0.05)),
+        label='η_α_start / one units',
+        default=0.05, start=0.0, stop=2, step=0.05)),
     ('eta_fa_stop', dict(
-        label='η_α_stop / 1', default=1.8, start=0.0, stop=2, step=0.05)),
+        label='η_α_stop / one units',
+        default=1.8, start=0.0, stop=2, step=0.05)),
     ('eta_fa_num', dict(
         label='η_α_num / #', default=256, start=2, stop=1024, step=16)),
 ])
@@ -131,14 +133,14 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='GRAPPA_ref_sl / #', default=0, start=0, stop=256, step=1)),
 
     ('part_fourier_factor_ro', dict(
-        label='part.Fourier_ro / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_ro / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
     ('part_fourier_factor_pe', dict(
-        label='part.Fourier_pe / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_pe / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
     ('part_fourier_factor_sl', dict(
-        label='part.Fourier_sl / 1', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_sl / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
 
     ('tr_seq', dict(
         label='TR_seq / ms', default=610, start=0, stop=10000, step=10)),
@@ -159,7 +161,7 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='α_2 / deg', default=20.0, start=0.05, stop=22.0, step=0.05)),
 
     ('eta_p', dict(
-        label='η_p / 1', default=0.0, start=0, stop=1, step=0.01)),
+        label='η_p / one units', default=0.0, start=0, stop=1, step=0.01)),
     ('fa_p', dict(
         label='α_p / deg', default=0, start=-180, stop=180, step=5)),
 
@@ -171,9 +173,11 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='T1_num / ms', default=9, start=2, stop=32, step=1)),
 
     ('eta_fa_start', dict(
-        label='η_α_start / 1', default=0.05, start=0.0, stop=2, step=0.05)),
+        label='η_α_start / one units', default=0.05, start=0.0, stop=2,
+        step=0.05)),
     ('eta_fa_stop', dict(
-        label='η_α_stop / 1', default=1.8, start=0.0, stop=2, step=0.05)),
+        label='η_α_stop / one units', default=1.8, start=0.0, stop=2,
+        step=0.05)),
     ('eta_fa_num', dict(
         label='η_α_num / #', default=256, start=2, stop=1024, step=16)),
 ])
@@ -209,7 +213,7 @@ def plot_rho_b1t_mp2rage_seq(
         ax.set_title(title)
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
-        ax.set_ylabel(r'$\eta_\alpha$ / 1')
+        ax.set_ylabel(r'$\eta_\alpha$ / one units')
         if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
         if params['mode'] == 'p-ratio':
@@ -287,7 +291,7 @@ def plot_rho_b1t_mp2rage_acq(
         ax.set_title('\n'.join((acq_to_seq_info, title)))
     finally:
         ax.set_ylim(params['eta_fa_start'], params['eta_fa_stop'])
-        ax.set_ylabel(r'$\eta_\alpha$ / 1')
+        ax.set_ylabel(r'$\eta_\alpha$ / one units')
         if params['mode'] == 'p-ratio':
             ax.set_xlim(mp2rage.PSEUDO_RATIO_INTERVAL)
         if params['mode'] == 'p-ratio':

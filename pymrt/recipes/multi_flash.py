@@ -57,7 +57,7 @@ def _flash_signal(
             Contains information on the spin density `m0`, the coil
             sensitivity (proportional to `b1r`) and units transformation
             factors.
-        eta_fa (int|float|np.ndarray): The flip angle efficiency in #.
+        eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
 
     Returns:
         s_arr (np.ndarray): The signal array in arb.units.
@@ -89,7 +89,7 @@ def _flash_signal_fit(
             Contains information on the spin density `m0`, the coil
             sensitivity (proportional to `b1r`) and units transformation
             factors.
-        eta_fa (float): The flip angle efficiency in #.
+        eta_fa (float): The flip angle efficiency in one units.
 
     Returns:
         s_arr (np.ndarray): The signal array in arb.units.
@@ -165,7 +165,7 @@ def triple_special1(
         tr (int|float): The base repetition time in time units.
             This is the repetition time for `arr1` and `arr2`, while the
             repetition time for `arr3` must be `n * tr`.
-        n_tr (int|float): The repetition times ratio in #.
+        n_tr (int|float): The repetition times ratio in one units.
             This is the repetition times ratio, obtained dividing the
             repetition time of `arr3` by the repetition time of `arr1`.
         sign (int|float): Select one of the two solution for the equations.
@@ -182,7 +182,7 @@ def triple_special1(
                The units of `t1_arr` are defined by the units of `tr`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
                This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa = np.deg2rad(fa)
@@ -301,7 +301,7 @@ def triple_special2(
         tr (int|float): The base repetition time in time units.
             This is the repetition time for `arr1` and `arr2`, while the
             repetition time for `arr3` must be `n * tr`.
-        n_tr (int|float): The repetition times ratio in #.
+        n_tr (int|float): The repetition times ratio in one units.
             This is the repetition times ratio, obtained dividing the
             repetition time of `arr3` by the repetition time of `arr1`.
         sign (int|float): Select one of the two solution for the equations.
@@ -323,7 +323,7 @@ def triple_special2(
                The units of `t1_arr` are defined by the units of `tr`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
                This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa = np.deg2rad(fa)
@@ -449,7 +449,7 @@ def triple_approx(
                The units of `t1_arr` are defined by the units of `tr`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
                This is proportional to the coil transmit field :math:`B_1^+`.
     """
     fa1 = np.deg2rad(fa1)
@@ -544,7 +544,7 @@ def vfa(
         arrs (Iterable[np.ndarray]): The input signal arrays in arb.units
         fas (Iterable[int|float]): The flip angles in deg.
         trs (Iterable[int|float]): The repetition times in time units.
-        eta_fa_arr (np.ndarray|None): The flip angle efficiency in #.
+        eta_fa_arr (np.ndarray|None): The flip angle efficiency in one units.
             If None, a significant bias may still be present.
         prepare (callable|None): Input array preparation.
             Must have the signature: f(np.ndarray) -> np.ndarray.
@@ -700,7 +700,7 @@ def fit_leasq(
                The units of `t1_arr` are defined by the units of `tr`.
              - xi_arr (np.ndarray): The signal factor in arb. units.
                This is :math:`\\eta_{m_0} m_0 e^{-\\frac{T_E}{T_2^*}`.
-             - eta_fa_arr (np.ndarray): The flip angle efficiency in #.
+             - eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
                This is proportional to the coil transmit field :math:`B_1^+`.
     """
     assert (len(arrs) == len(fas) == len(trs))
