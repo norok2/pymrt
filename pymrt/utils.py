@@ -2079,8 +2079,8 @@ def unsqueeze(
         # generate the new shape from axis, ndim and shape
         new_shape = []
         i, j = 0, 0
-        for l in range(ndim):
-            if i < len(axis) and l == axis[i] or j >= arr.ndim:
+        for m in range(ndim):
+            if i < len(axis) and m == axis[i] or j >= arr.ndim:
                 new_shape.append(1)
                 i += 1
             else:
