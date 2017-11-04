@@ -420,6 +420,60 @@ def uniques(items):
 
 
 # ======================================================================
+def replace_iter(
+        items,
+        condition,
+        replace=None,
+        cycle=True):
+    """
+    Replace items matching a specific condition.
+
+    Args:
+        items (Iterable):
+        condition (callable):
+        replace (any|Iterable|callable): The replacement.
+            If Iterable, its elements are used for replacement.
+            If callable, it is applied to the elements matching `condition`.
+            Otherwise,
+        cycle (bool): Cycle through the replace.
+            If True and `replace` is Iterable, its elements are cycled through.
+            Otherwise `items` beyond last replacement are lost.
+
+    Yields:
+        item: The next item from items or its replacement.
+
+    Examples:
+        >>> ll = list(range(10))
+        >>> list(replace_iter(ll, lambda x: x % 2 == 0))
+        [None, 1, None, 3, None, 5, None, 7, None, 9]
+        >>> list(replace_iter(ll, lambda x: x % 2 == 0, lambda x: x ** 2))
+        [0, 1, 4, 3, 16, 5, 36, 7, 64, 9]
+        >>> list(replace_iter(ll, lambda x: x % 2 == 0, 100))
+        [100, 1, 100, 3, 100, 5, 100, 7, 100, 9]
+        >>> list(replace_iter(ll, lambda x: x % 2 == 0, range(10, 0, -1)))
+        [10, 1, 9, 3, 8, 5, 7, 7, 6, 9]
+        >>> list(replace_iter(ll, lambda x: x % 2 == 0, range(10, 8, -1)))
+        [10, 1, 9, 3, 10, 5, 9, 7, 10, 9]
+        >>> list(replace_iter(
+        ...     ll, lambda x: x % 2 == 0, range(10, 8, -1), False))
+        [10, 1, 9, 3]
+    """
+    if not callable(replace):
+        try:
+            replace = iter(replace)
+        except TypeError:
+            replace = (replace,)
+            cycle = True
+        if cycle:
+            replace = itertools.cycle(replace)
+    for item in items:
+        if not condition(item):
+            yield item
+        else:
+            yield replace(item) if callable(replace) else next(replace)
+
+
+# ======================================================================
 def combine_iter_len(
         items,
         combine=max):
@@ -1748,7 +1802,7 @@ def unsqueezing(
     (excepts for singletons) in the correct order.
 
     Warning! The generated shape may not be unique if some of the elements
-    from the source shape are present multiple timesin the target shape.
+    from the source shape are present multiple times in the target shape.
 
     Args:
         source_shape (Sequence): The source shape.
@@ -1834,7 +1888,6 @@ def unsqueeze(
     Add singletons to the shape of an array to broadcast-match a given shape.
 
     In some sense, this function implements the inverse of `numpy.squeeze()`.
-
 
     Args:
         arr (np.ndarray): The input array.
@@ -3565,8 +3618,8 @@ def check_redo(
     Check if input files are newer than output files, to force calculation.
 
     Args:
-        in_filepaths (Iterable[str]|None): Input filepaths for computation.
-        out_filepaths (Iterable[str]): Output filepaths for computation.
+        in_filepaths (str|Iterable[str]|None): Input filepaths for computation.
+        out_filepaths (str|Iterable[str]): Output filepaths for computation.
         force (bool): Force computation to be re-done.
         verbose (int): Set level of verbosity.
         makedirs (bool): Create output dirpaths if not existing.
@@ -3580,6 +3633,12 @@ def check_redo(
             Only if `no_empty_input` is True.
         IOError: If any of the input files do not exist.
     """
+    # generate singleton list from str argument
+    if isinstance(in_filepaths, str):
+        in_filepaths = [in_filepaths]
+    if isinstance(out_filepaths, str):
+        out_filepaths = [out_filepaths]
+
     # check if output exists
     if not force:
         for out_filepath in out_filepaths:
