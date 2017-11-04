@@ -1060,7 +1060,8 @@ def apply_mask(
         arr,
         mask,
         borders=None,
-        background=0.0):
+        background=0.0,
+        unsqueeze=True):
     """
     Apply a mask to an array.
 
@@ -1069,33 +1070,62 @@ def apply_mask(
     Args:
         arr (np.ndarray): The input array.
         mask (np.ndarray): The mask array.
+            The shape of `arr` and `mask` must be identical, broadcastable
+            through `np.broadcast_to()`, or unsqueezable using
+            `utils.unsqueeze()`.
         borders (int|float|tuple[int|float]|None): The border size(s).
             If None, the border is not modified.
             Otherwise, a border is added to the masked array.
             If int, this is in units of pixels.
             If float, this is proportional to the initial array shape.
-            If int or float, uses the same value for all dimensions.
+            If int or float, uses the same value for all dimensions,
+            unless `unsqueezing` is set to True, in which case, the same value
+            is used only for non-singletons, while 0 is used for singletons.
             If Iterable, the size must match `arr` dimensions.
             If 'use_longest' is True, use the longest dimension for the
             calculations.
         background (int|float): The value used for masked-out pixels.
+        unsqueeze (bool): Unsqueeze mask to input.
+            If True, uses `utils.unsqueeze()` on mask.
+            Only effective when `arr` and `mask` shapes do not match and
+            are not already broadcastable.
+            Otherwise, shapes must match or be broadcastable.
 
     Returns:
         arr (np.ndarray): The output array.
             Values outside of the mask are set to background.
             Array shape may have changed (depending on `borders`).
 
+    Raises:
+        ValueError: If the mask and array shapes are not compatible.
+
     See Also:
         frame()
     """
     mask = mask.astype(bool)
+    if arr.ndim > mask.ndim and unsqueeze:
+        old_shape = mask.shape
+        mask = mrt.utils.unsqueeze(mask, shape=arr.shape)
+        if isinstance(borders, (int, float)):
+            borders = [borders if dim != 1 else 0 for dim in mask.shape]
+        elif len(borders) == len(old_shape):
+            borders = list(
+                mrt.utils.replace_iter(
+                    mask.shape, lambda x: x == 1, borders))
     arr = arr.copy()
-    arr[~mask] = background
-    if borders is not None:
-        container = sp.ndimage.find_objects(mask.astype(int))[0]
-        if container:
-            arr = arr[container]
-        arr = frame(arr, borders, background)
+    if arr.shape != mask.shape:
+        mask = np.broadcast_to(mask, arr.shape)
+    if arr.shape == mask.shape:
+        arr[~mask] = background
+        if borders is not None:
+            container = sp.ndimage.find_objects(mask.astype(int))[0]
+            if container:
+                arr = arr[container]
+            arr = frame(arr, borders, background)
+    else:
+        raise ValueError(
+            'Cannot apply mask shaped `{}` to array shaped `{}`.'.format(
+                mask.shape, arr.shape))
     return arr
 
 
@@ -1138,7 +1168,7 @@ def frame(
                 round(border * dim) for dim, border in zip(arr.shape, borders)]
     result = np.full(
         [dim + 2 * border for dim, border in zip(arr.shape, borders)],
-        background)
+        background, dtype=arr.dtype)
     inner = [
         slice(border, border + dim, None)
         for dim, border in zip(arr.shape, borders)]
