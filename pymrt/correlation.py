@@ -277,6 +277,7 @@ def register_ants(
         verbose=D_VERB_LVL):
     return
 
+
 # ======================================================================
 def register_fsl(
         in_filepath,
@@ -582,8 +583,6 @@ def calc_correlation(
         in2_filepath,
         out_filepath,
         mask_filepath=None,
-        mask_nan=True,
-        mask_inf=True,
         removes=None,
         val_interval=None,
         trunc=None,
@@ -650,15 +649,8 @@ def calc_correlation(
         mask *= (img1 < val_interval[1])
         mask *= (img2 > val_interval[0])
         mask *= (img2 < val_interval[1])
-        if not removes:
+        if removes is None:
             removes = []
-        if mask_nan:
-            if np.nan not in removes:
-                removes.append(np.nan)
-        if mask_inf:
-            for x in (np.inf, -np.inf):
-                if x not in removes:
-                    removes.append(x)
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
         d_dict = mrt.utils.calc_stats(d_arr, removes)
@@ -686,8 +678,8 @@ def calc_correlation(
         num_ratio = num / num_tot
         # save results to csv
         filenames = [
-            mrt.utils.change_ext(os.path.basename(path), '',
-                                 mrt.utils.EXT['niz'])
+            mrt.utils.change_ext(
+                os.path.basename(path), '', mrt.utils.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
@@ -1233,9 +1225,7 @@ def comparing(
         out_dirpath='comparing',
         mask_filepath=None,
         skip_equal=True,
-        mask_nan=True,
-        mask_inf=True,
-        mask_vals=None,
+        removes=None,
         val_interval=None,
         trunc=None,
         diff_prefix='diff',
@@ -1288,8 +1278,8 @@ def comparing(
         skip_equal=True, skip_symmetric=True,
         diff_prefix='diff', corr_prefix='corr')
     for in_filepath, ref_filepath, diff_filepath, corr_filepath in cmp_list:
-        if not mask_vals:
-            mask_vals = [0.0]
+        if not removes:
+            removes = [np.nan, np.inf, -np.inf, 0.0]
         if use_mp:
             # parallel
             # calc difference
@@ -1301,7 +1291,7 @@ def comparing(
             proc_result = pool.apply_async(
                 calc_correlation,
                 (in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                 mask_nan, mask_inf, mask_vals, val_interval, trunc,
+                 removes, val_interval, trunc,
                  force, verbose))
             proc_result_list.append(proc_result)
         else:
@@ -1310,7 +1300,7 @@ def comparing(
                 in_filepath, ref_filepath, diff_filepath, force, verbose)
             calc_correlation(
                 in_filepath, ref_filepath, corr_filepath, mask_filepath,
-                mask_nan, mask_inf, mask_vals, val_interval, trunc,
+                removes, val_interval, trunc,
                 force, verbose)
     if use_mp:
         res_list = []
@@ -1439,8 +1429,8 @@ def check_correlation(
                         ref, tmp_path, verbose=verbose, force=force,
                         **reg_info['calc_mask'])
                 mask_filepath = mrt.utils.realpath(mask_filepath)
-            else:
-                mask_filepath = None
+            # else:
+            #     mask_filepath = None
             msg('I: {}'.format(mask_filepath), verbose, VERB_LVL['high'])
             msg('I: {}'.format(sources), verbose, VERB_LVL['high'])
             if mask_filepath in sources:
