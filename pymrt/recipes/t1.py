@@ -153,6 +153,7 @@ def mp2rage_rho(
             (rho.ravel(), (np.zeros_like(rho) + eta_fa).ravel()),
             (np.zeros_like(rho) + t1).ravel(),
             (rho_arr.ravel(), eta_fa_arr.ravel()))
+        t1_arr = t1_arr.reshape(rho_arr.shape)
 
     if inverted:
         t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')

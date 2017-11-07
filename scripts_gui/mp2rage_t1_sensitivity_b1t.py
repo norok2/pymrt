@@ -126,14 +126,24 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='GRAPPA_ref_sl / #', default=0, start=0, stop=256, step=1)),
 
     ('part_fourier_factor_ro', dict(
-        label='part.Fourier_ro / one units', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_ro / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
     ('part_fourier_factor_pe', dict(
-        label='part.Fourier_pe / one units', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_pe / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
     ('part_fourier_factor_sl', dict(
-        label='part.Fourier_sl / one units', default=8 / 8, start=4 / 8, stop=8 / 8,
-        step=1 / 8)),
+        label='part.Fourier_sl / one units',
+        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
+
+    ('k_lines_fix_ro', dict(
+        label='k-space Fix Factor RO / one units',
+        default=1.0, start=0.5, stop=1.0, step=0.01)),
+    ('k_lines_fix_pe', dict(
+        label='k-space Fix Factor PE / one units',
+        default=np.pi / 4, start=0.5, stop=1.0, step=0.01)),
+    ('k_lines_fix_sl', dict(
+        label='k-space Fix Factor SL / one units',
+        default=1.0, start=0.5, stop=1.0, step=0.01)),
 
     ('tr_seq', dict(
         label='TR_seq / ms', default=8000, start=0, stop=10000, step=10)),
@@ -265,6 +275,10 @@ def plot_rho_t1_mp2rage_acq(
                 params['part_fourier_factor_pe'],
                 params['part_fourier_factor_sl'],),
             sl_pe_swap=params['sl_pe_swap'],
+            k_lines_fix=(
+                params['k_lines_fix_ro'],
+                params['k_lines_fix_pe'],
+                params['k_lines_fix_sl']),
             tr_seq=params['tr_seq'],
             ti=(params['ti1'], params['ti2']),
             tr_gre=params['tr_gre'])

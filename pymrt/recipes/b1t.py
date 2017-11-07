@@ -425,5 +425,6 @@ def mp2rage_rho(
             (rho.ravel(), (np.zeros_like(rho) + t1).ravel()),
             (np.zeros_like(rho) + eta_fa).ravel(),
             (rho_arr.ravel(), t1_arr.ravel()))
+        eta_fa_arr = eta_fa_arr.reshape(rho_arr.shape)
 
     return eta_fa_arr

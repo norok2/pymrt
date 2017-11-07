@@ -108,7 +108,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
 
         s1, s2 = sym.symbols('s1 s2')
         m0, mz_ss = sym.symbols('m0 mz_ss')
-        n_gre, tr_gre = sym.symbols('n_gre tr_gre')
+        n_gre, tr_gre, k_gre = sym.symbols('n_gre tr_gre k_gre')
         fa1, fa2 = sym.symbols('fa1 fa2')
         td0, td1, td2 = sym.symbols('td0 td1 td2')
         fa_p, eta_p = sym.symbols('fa_p eta_p')
@@ -145,15 +145,16 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         #         _mz_0rf(
         #             _mz_p(mz_ss, fa_p, eta_p),
         #             t1, td0, m0),
-        #         t1, n_gre / 2 - 1, tr_gre, fa1, m0, eta_fa))
+        #         t1, n_gre * k_gre - 1, tr_gre, fa1, m0, eta_fa))
         # s1_ = sym.simplify(sym.solve(eqn_s1, s1)[0])
 
         # expression from paper (omitted: b1r * e2 * m0 * sin(fa1 * eta_fa))
         s1_ = (
             (_mz_p(mz_ss, fa_p, eta_p) / m0 * ea +
-             (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1) + (
-                (1 - e1) * (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre / 2 - 1)) /
-                (1 - cos(fa1 * eta_fa) * e1)))
+             (1 - ea)) * (cos(fa1 * eta_fa) * e1) ** (n_gre * k_gre - 1) +
+            ((1 - e1) *
+             (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre * k_gre - 1)) /
+             (1 - cos(fa1 * eta_fa) * e1)))
         print('s1: {}'.format(s1_))
 
         # : signal for TI2
@@ -167,15 +168,16 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         #                     t1, td0, m0),
         #                 t1, n_gre, tr_gre, fa1, m0, eta_fa),
         #             t1, td1, m0),
-        #         t1, n_gre / 2 - 1, tr_gre, fa2, m0, eta_fa))
+        #         t1, n_gre * k_gre - 1, tr_gre, fa2, m0, eta_fa))
         # s2_ = sym.simplify(sym.solve(eqn_s2, s2)[0])
 
         # expression from paper (omitted: b1r * e2 * m0 * sin(fa2 * eta_fa))
         s2_ = (
             ((mz_ss / m0) - (1 - ec)) /
-            (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre / 2)) -
-            (1 - e1) * ((cos(fa2 * eta_fa) * e1) ** (-n_gre / 2) - 1) /
-            (1 - cos(fa2 * eta_fa) * e1))
+            (ec * (cos(fa2 * eta_fa) * e1) ** (n_gre * (1 - k_gre))) -
+            ((1 - e1) *
+             ((cos(fa2 * eta_fa) * e1) ** (-n_gre * (1 - k_gre)) - 1) /
+             (1 - cos(fa2 * eta_fa) * e1)))
         print('s2: {}'.format(s2_))
 
         # include factors that do not vanish in the ratio
@@ -200,7 +202,8 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         print('inverse-ratio: {}'.format(i_ratio_))
 
         params = (
-            n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
+            n_gre, tr_gre, k_gre, fa1, fa2, td0, td1, td2,
+            fa_p, eta_p, t1, eta_fa)
         with open(cache_filepath, 'wb') as cache_file:
             pickle.dump((params, p_ratio_, ratio_, i_ratio_), cache_file)
     else:
@@ -242,6 +245,7 @@ def _bijective_part(arr, mask_val=np.nan):
 def rho(
         n_gre,
         tr_gre,
+        k_gre,
         fa1,
         fa2,
         td0,
@@ -265,7 +269,8 @@ def rho(
 
     Args:
         n_gre (int|np.ndarray): Number n of r.f. pulses in each GRE block.
-        tr_gre (float|np.ndarray): repetition time of GRE pulses in ms.
+        tr_gre (float|np.ndarray): Repetition time of GRE pulses in ms.
+        k_gre (float|np.ndarray): Fraction of r.f. pulses before sampling.
         fa1 (float|np.ndarray): Flip angle of the first GRE block in deg.
         fa2 (float|np.ndarray): Flip angle fa2 of the second GRE block in deg.
         td0 (float|np.ndarray): First delay in ms.
@@ -384,6 +389,71 @@ def calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k=0.5, check=True):
 
 
 # ======================================================================
+def calc_td_to_ti(td, tr_gre, n_gre, k_gre=0.5, check=True):
+    """
+    Compute sampling times T_I from delay times T_D.
+
+    Args:
+        ti (Iterable[float]): The sampling times in time units.
+        tr_seq (float): The repetition time of the sequence in time units.
+        tr_gre (float|Iterable[float]): The repetition times in time units.
+            If Iterable, must match the length of `ti`.
+        n_gre (int|Iterable[int]): The number of k-space lines in #.
+            If Iterable, must match the length of `ti`.
+        center_k (float|Iterable[float]): The position of the k-space center.
+            Value(s) must be in the [0, 1] range.
+            If Iterable, must match the length of `ti`
+        check (bool): Check if results are valid.
+
+    Returns:
+        td (tuple[float]): The delay times in time units.
+            Matches the length of `ti` plus one.
+
+    Raises:
+        ValueError: If resulting `td` values are negative.
+
+    Examples:
+        >>> ti = [500, 2500]
+        >>> tr_seq = 5000
+        >>> tr_gre = [2, 5]
+        >>> n_gre = [50, 100]
+        >>> center_k = [0.8, 0.2]
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k)
+        (420.0, 1880.0, 2100.0)
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre)
+        (450.0, 1700.0, 2250.0)
+        >>> ti = [1000, 3000]
+        >>> tr_seq = 6000
+        >>> tr_gre = 20
+        >>> n_gre = 100
+        >>> center_k = [0.5, 0.5]
+        >>> calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k)
+        (0.0, 0.0, 2000.0)
+    """
+    raise NotImplementedError
+    n_ti = len(ti)
+    tr_gre = np.array(mrt.utils.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(mrt.utils.auto_repeat(n_gre, n_ti, check=True))
+    k_gre = np.array(mrt.utils.auto_repeat(k_gre, n_ti, check=True))
+    tr_block = tr_gre * n_gre
+    before_t = tr_block * k_gre
+    after_t = tr_block * (1 - k_gre)
+    inner_t_block = before_t[1:] + after_t[:-1]
+    # print(tr_block, before_t, after_t, inner_t_block)  # DEBUG
+    td = (
+        ((ti[0] - before_t[0]),) +
+        tuple(np.diff(ti) - inner_t_block) +
+        ((tr_seq - ti[-1] - after_t[-1]),))
+    # internal checksum
+    assert (np.sum(td) + np.sum(tr_block) == tr_seq)
+    if check:
+        if any(x < 0.0 for x in td):
+            raise ValueError(
+                'Negative delay times detected: {}'.format(td))
+    return td
+
+
+# ======================================================================
 def acq_to_seq_params(
         ti,
         tr_gre,
@@ -394,8 +464,8 @@ def acq_to_seq_params(
         part_fourier_factors=1.0,
         n_dim=3,
         sl_pe_swap=False,
-        pe_fix=(np.pi / 4, 1),
-        center_k=0.5,
+        k_gre=0.5,
+        k_lines_fix=1.0,
         bandwidths=None):
     """
     Determine the sequence parameters from the acquisition parameters.
@@ -406,21 +476,21 @@ def acq_to_seq_params(
         tr_gre (float|Iterable[float]): The repetition times in time units.
             If Iterable, must match the length of `ti`.
         tr_seq (float): The repetition time of the sequence in time units.
+        k_gre (float|Iterable[float]): Factor for k-space center position.
+            This factor determines where the k-space central line is actually
+            acquired within the GRE block.
+            This parameter affects the accessible inversion times.
         matrix_sizes (int|Iterable[int]):
         grappa_factors (int|Iterable[int]):
         grappa_refs (Iterable[int]
         part_fourier_factors (Iterable[float]):
         sl_pe_swap (bool):
         n_dim (int|None):
-        pe_fix (Iterable[float]): Fix for the number of k-space lines.
+        k_lines_fix (Iterable[float]): Fix for the number of k-space lines.
             This factor determines how many k-space lines are actually
             acquired in the k-space for the phase encoding directions.
             This could be different from 1, for example with elliptical
             k-space coverage.
-        center_k (float|Iterable[float]): Fix for the k-space center position.
-            This factor determines where the k-space central line is actually
-            acquired within the GRE block.
-            This parameter affects the accessible inversion times.
         bandwidths (tuple[int]|None): readout bandwidth in Hz/px
 
     Returns:
@@ -446,8 +516,8 @@ def acq_to_seq_params(
         ...     part_fourier_factors=(1.0, 6 / 8, 6 / 8),
         ...     sl_pe_swap=True,
         ...     n_dim=None,
-        ...     pe_fix=(np.pi / 4, 1),
-        ...     center_k=0.5,
+        ...     k_lines_fix=(np.pi / 4, 1),
+        ...     sample_k=0.5,
         ...     bandwidths=None)
         >>> print(sorted(seq_kws.items()))
         [('n_gre', 87), ('td0', 573.75), ('td1', 660.0), ('td2', 3286.25),\
@@ -456,9 +526,9 @@ def acq_to_seq_params(
         [('t_acq', 1536.0)]
     """
 
-    def k_space_lines(size, part_fourier, grappa, grappa_refs):
+    def k_space_lines(size, part_fourier, grappa, refs):
         return int(size / grappa * part_fourier) + \
-               int(np.ceil(grappa_refs * (grappa - 1) / grappa))
+               int(np.ceil(refs * (grappa - 1) / grappa))
 
     if len(ti) != 2:
         raise ValueError('Exactly two inversion times must be used.')
@@ -483,23 +553,23 @@ def acq_to_seq_params(
         pe1 = 1
         pe2 = None
 
+    n_k = int(matrix_sizes[pe1] * k_lines_fix[pe1])
     n_gre = k_space_lines(
-        int(matrix_sizes[pe1] * pe_fix[0]),
-        part_fourier_factors[pe1],
-        grappa_factors[pe1], grappa_refs[pe1])
+        n_k, part_fourier_factors[pe1], grappa_factors[pe1], grappa_refs[pe1])
     if bandwidths:
         min_tr_gre = round(
             sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]), 2)
         assert (tr_gre >= min_tr_gre)
-    center_k = part_fourier_factors[pe1] / 2 * center_k
+    # k_gre = (1 - k_gre / part_fourier_factors[pe1])
+    k_gre = (n_k - n_gre) / ((1 + k_gre) * n_k - n_gre)
 
-    td = calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k, check=True)
+    td = calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, k_gre, check=True)
 
     seq_params = dict(
         n_gre=n_gre, tr_gre=tr_gre, td0=td[0], td1=td[1], td2=td[2])
     extra_info = dict(
         t_acq=tr_seq * 1e-3 * (k_space_lines(
-            int(matrix_sizes[pe2] * pe_fix[1]),
+            int(matrix_sizes[pe2] * k_lines_fix[pe2]),
             part_fourier_factors[pe2],
             grappa_factors[pe2], grappa_refs[pe2]) if pe2 else 1))
 
