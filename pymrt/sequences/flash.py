@@ -424,7 +424,7 @@ def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
 
 # ======================================================================
 # :: defines the mp2rage signal expression
-_rho = _prepare_triple_flash_approx()
+# _rho = _prepare_triple_flash_approx()
 
 
 # ======================================================================

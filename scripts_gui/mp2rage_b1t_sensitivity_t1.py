@@ -150,7 +150,7 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='TI_2 / ms', default=380, start=0, stop=10000, step=10)),
 
     ('tr_gre', dict(
-        label='TR_GRE / ms', default=6, start=1, stop=128, step=0.1)),
+        label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
 
     ('sl_pe_swap', dict(
         label='Swap PE/SL', default=False)),
@@ -236,10 +236,6 @@ def plot_rho_b1t_mp2rage_acq(
         title=TITLE.split(':')[1].strip()):
     ax = fig.gca()
     try:
-        if params['use_rho']:
-            mp2rage_rho = mp2rage.rho
-        else:
-            mp2rage_rho = mp2rage.ratio
         eta_fa_arr = np.linspace(
             params['eta_fa_start'], params['eta_fa_stop'],
             params['eta_fa_num'])
