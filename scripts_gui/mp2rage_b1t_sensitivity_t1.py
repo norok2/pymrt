@@ -63,7 +63,7 @@ from pymrt import elapsed, report
 TITLE = __doc__.strip().split('\n')[0][:-1]
 SEQ_INTERACTIVES = collections.OrderedDict([
     ('mode', dict(
-        label='ρ expression', default='p-ratio',
+        label='ρ expression', default='ratio',
         values=('ratio', 'p-ratio', 'i-ratio'))),
 
     ('n_gre', dict(
@@ -108,7 +108,7 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 
 ACQ_INTERACTIVES = collections.OrderedDict([
     ('mode', dict(
-        label='ρ expression', default='p-ratio',
+        label='ρ expression', default='ratio',
         values=('ratio', 'p-ratio', 'i-ratio'))),
 
     ('matrix_size_ro', dict(
@@ -133,25 +133,35 @@ ACQ_INTERACTIVES = collections.OrderedDict([
         label='GRAPPA_ref_sl / #', default=0, start=0, stop=256, step=1)),
 
     ('part_fourier_factor_ro', dict(
-        label='part.Fourier_ro / one units',
-        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
+        label='part.Fourier_ro / (#/8)', default=8, start=4, stop=8, step=1)),
     ('part_fourier_factor_pe', dict(
-        label='part.Fourier_pe / one units',
-        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
+        label='part.Fourier_pe / (#/8)', default=8, start=4, stop=8, step=1)),
     ('part_fourier_factor_sl', dict(
-        label='part.Fourier_sl / one units',
-        default=8 / 8, start=4 / 8, stop=8 / 8, step=1 / 8)),
+        label='part.Fourier_sl / (#/8)', default=8, start=4, stop=8, step=1)),
+
+    ('k_lines_fix_ro', dict(
+        label='k-space Fix Factor RO / one units',
+        default=1.0, start=0.5, stop=1.0, step=0.01)),
+    ('k_lines_fix_pe', dict(
+        label='k-space Fix Factor PE / one units',
+        default=1.0, start=0.5, stop=1.0, step=0.01)),
+    ('k_lines_fix_sl', dict(
+        label='k-space Fix Factor SL / one units',
+        default=1.0, start=0.5, stop=1.0, step=0.01)),
 
     ('tr_seq', dict(
-        label='TR_seq / ms', default=610, start=0, stop=10000, step=10)),
+        label='TR_seq / ms', default=800, start=0, stop=10000, step=10)),
     ('ti1', dict(
-        label='TI_1 / ms', default=80, start=0, stop=10000, step=10)),
+        label='TI_1 / ms', default=200, start=0, stop=10000, step=10)),
     ('ti2', dict(
-        label='TI_2 / ms', default=380, start=0, stop=10000, step=10)),
+        label='TI_2 / ms', default=600, start=0, stop=10000, step=10)),
 
     ('tr_gre', dict(
         label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
-
+    ('k_gre', dict(
+        label='k_GRE / one units',
+        default=0.5, start=0.0, stop=1.0, step=0.05)),
+    
     ('sl_pe_swap', dict(
         label='Swap PE/SL', default=False)),
 
@@ -196,7 +206,8 @@ def plot_rho_b1t_mp2rage_seq(
         t1_arr = np.linspace(
             params['t1_start'], params['t1_stop'], params['t1_num'])
         kws_names = (
-            'mode', 'n_gre', 'tr_gre', 'td0', 'td1', 'td2', 'fa1', 'fa2',
+            'mode', 'n_gre', 'tr_gre', 'k_gre',
+            'td0', 'td1', 'td2', 'fa1', 'fa2',
             'eta_p', 'fa_p')
         seq_kws = {name: params[name] for name in kws_names}
         seq_kws['eta_fa'] = eta_fa_arr
@@ -255,13 +266,18 @@ def plot_rho_b1t_mp2rage_acq(
                 params['grappa_ref_pe'],
                 params['grappa_ref_sl'],),
             part_fourier_factors=(
-                params['part_fourier_factor_ro'],
-                params['part_fourier_factor_pe'],
-                params['part_fourier_factor_sl'],),
+                params['part_fourier_factor_ro'] / 8,
+                params['part_fourier_factor_pe'] / 8,
+                params['part_fourier_factor_sl'] / 8,),
             sl_pe_swap=params['sl_pe_swap'],
+            k_lines_fix=(
+                params['k_lines_fix_ro'],
+                params['k_lines_fix_pe'],
+                params['k_lines_fix_sl'],),
             tr_seq=params['tr_seq'],
             ti=(params['ti1'], params['ti2']),
-            tr_gre=params['tr_gre'])
+            tr_gre=params['tr_gre'],
+            k_gre=params['k_gre'])
 
         seq_kws_str = ', '.join(
             sorted(['{}={:.2f}'.format(k, v) for k, v in seq_kws.items()]))
