@@ -40,6 +40,7 @@ from __future__ import (
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
 import pickle  # Python object serialization
+import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -318,7 +319,7 @@ def rho(
     else:
         rho_func = None
     result = rho_func(
-        n_gre, tr_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
+        n_gre, tr_gre, k_gre, fa1, fa2, td0, td1, td2, fa_p, eta_p, t1, eta_fa)
     if bijective:
         result = _bijective_part(result)
     return result
@@ -516,8 +517,8 @@ def acq_to_seq_params(
         ...     part_fourier_factors=(1.0, 6 / 8, 6 / 8),
         ...     sl_pe_swap=True,
         ...     n_dim=None,
-        ...     k_lines_fix=(np.pi / 4, 1),
-        ...     sample_k=0.5,
+        ...     k_lines_fix=(1.0, 1.0, 1.0),
+        ...     k_gre=0.5,
         ...     bandwidths=None)
         >>> print(sorted(seq_kws.items()))
         [('n_gre', 87), ('td0', 573.75), ('td1', 660.0), ('td2', 3286.25),\
@@ -526,12 +527,21 @@ def acq_to_seq_params(
         [('t_acq', 1536.0)]
     """
 
-    def k_space_lines(size, part_fourier, grappa, refs):
-        return int(size / grappa * part_fourier) + \
-               int(np.ceil(refs * (grappa - 1) / grappa))
+    def k_space_lines(size, k, part_fourier, grappa, refs):
+        size_ = (size * part_fourier / grappa)
+        refs_ = (refs * (grappa - 1) / grappa)
+        n_ = int(size_ + refs_)
+        # n_ = mrt.utils.num_align(n_, 2, 'lower')
+        k_ = size * k / grappa * (2 * part_fourier - 1) / n_
+        # print(n_, k_, size, k, part_fourier, grappa, refs)  # DEBUG
+        return n_, k_
 
     if len(ti) != 2:
         raise ValueError('Exactly two inversion times must be used.')
+
+    text = 'WARNING! MP2RAGE: the computation of sequence parameters ' \
+           'from the acquisition parameters depends on the implementation!'
+    warnings.warn(text)
 
     if not n_dim:
         n_dim = mrt.utils.combine_iter_len(
@@ -545,6 +555,8 @@ def acq_to_seq_params(
         grappa_refs, n_dim, check=True)
     part_fourier_factors = mrt.utils.auto_repeat(
         part_fourier_factors, n_dim, check=True)
+    k_lines_fix = mrt.utils.auto_repeat(
+        k_lines_fix, n_dim, check=True)
 
     if n_dim == 3:
         pe1 = 1 if sl_pe_swap else 2
@@ -553,25 +565,23 @@ def acq_to_seq_params(
         pe1 = 1
         pe2 = None
 
-    n_k = int(matrix_sizes[pe1] * k_lines_fix[pe1])
-    n_gre = k_space_lines(
-        n_k, part_fourier_factors[pe1], grappa_factors[pe1], grappa_refs[pe1])
+    n_gre, k_gre = k_space_lines(
+        int(matrix_sizes[pe1] * k_lines_fix[pe1]), k_gre,
+        part_fourier_factors[pe1], grappa_factors[pe1], grappa_refs[pe1])
     if bandwidths:
         min_tr_gre = round(
             sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]), 2)
         assert (tr_gre >= min_tr_gre)
-    # k_gre = (1 - k_gre / part_fourier_factors[pe1])
-    k_gre = (n_k - n_gre) / ((1 + k_gre) * n_k - n_gre)
-
     td = calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, k_gre, check=True)
-
     seq_params = dict(
-        n_gre=n_gre, tr_gre=tr_gre, td0=td[0], td1=td[1], td2=td[2])
+        n_gre=n_gre, tr_gre=tr_gre, k_gre=k_gre,
+        td0=td[0], td1=td[1], td2=td[2])
+    n_tr, k_center = (k_space_lines(
+        int(matrix_sizes[pe2] * k_lines_fix[pe2]), k_gre,
+        part_fourier_factors[pe2],
+        grappa_factors[pe2], grappa_refs[pe2]) if pe2 else 1)
     extra_info = dict(
-        t_acq=tr_seq * 1e-3 * (k_space_lines(
-            int(matrix_sizes[pe2] * k_lines_fix[pe2]),
-            part_fourier_factors[pe2],
-            grappa_factors[pe2], grappa_refs[pe2]) if pe2 else 1))
+        t_acq=tr_seq * 1e-3 * n_tr)
 
     return seq_params, extra_info
 
