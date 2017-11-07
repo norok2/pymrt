@@ -85,7 +85,6 @@ import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt as mrt
 import pymrt.utils
 import pymrt.naming
 import pymrt.geometry
