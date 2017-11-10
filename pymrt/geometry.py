@@ -1108,7 +1108,7 @@ def apply_mask(
         mask = mrt.utils.unsqueeze(mask, shape=arr.shape)
         if isinstance(borders, (int, float)):
             borders = [borders if dim != 1 else 0 for dim in mask.shape]
-        elif len(borders) == len(old_shape):
+        elif borders is not None and len(borders) == len(old_shape):
             borders = list(
                 mrt.utils.replace_iter(
                     mask.shape, lambda x: x == 1, borders))
