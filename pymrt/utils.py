@@ -3348,9 +3348,11 @@ def significant_figures(
         >>> significant_figures(12345678, 4)
         '12350000'
         >>> significant_figures(1234567890, 4)
-        '1.235e+09'
+        '1.235e+9'
         >>> significant_figures(-0.1234, 1)
         '-0.1'
+        >>> significant_figures(0.0001, 2)
+        '1.0e-4'
 
     See Also:
         The 'decimal' Python standard module.
@@ -3358,19 +3360,19 @@ def significant_figures(
     val = float(val)
     num = int(num)
     order = int(np.floor(np.log10(abs(val)))) if abs(val) != 0.0 else 0
-    dec = num - order - 1  # if abs(order) < abs(num) else 0
-    if order >= num + keep_zeros:
-        typ = 'g'
-        prec = num
-    elif num + keep_zeros > abs(order) > num:
-        typ = 'f'
+    prec = num - order - 1
+    ofm = ''
+    val = round(val, prec)
+    if abs(prec) > keep_zeros:
+        val = val * 10 ** (-order)
+        prec = num - 1
+        ofm = 'e{:+d}'.format(order)
+    elif prec < 0:
         prec = 0
-    else:  # if num >= abs(order) >= 0:
-        typ = 'f'
-        prec = max(dec, 0)
-    # print('val={}, num={}, ord={}, dec={}, typ={}, prec={}'.format(
-    #     val, num, order, dec, typ, prec))  # DEBUG
-    val = '{:.{prec}{typ}}'.format(round(val, dec), prec=prec, typ=typ)
+
+    # print('val={}, num={}, ord={}, prec={}, ofm={}'.format(
+    #     val, num, order, prec, ofm))  # DEBUG
+    val = '{val:.{prec}f}{ofm}'.format(val=val, prec=prec, ofm=ofm)
     return val
 
 
@@ -3404,7 +3406,7 @@ def format_value_error(
         >>> format_value_error(12345.6, 78.9, 2)
         ('12346', '79')
         >>> format_value_error(12345.6, 0)
-        ('12345.60', '0.0')
+        ('12345.6', '0.0')
         >>> format_value_error(12345.6, 0, 0)
         ('12346', '0')
         >>> format_value_error(12345.6, 67)
@@ -3414,15 +3416,17 @@ def format_value_error(
         >>> format_value_error(1234567890.0, 123456.0)
         ('1234570000', '120000')
         >>> format_value_error(1234567890.0, 1234567.0)
-        ('1.2346e+09', '1.2e+06')
+        ('1.2346e+9', '1.2e+6')
         >>> format_value_error(-0.470, 1.722)
         ('-0.5', '1.7')
+        >>> format_value_error(0.0025, 0.0001)
+        ('2.50e-3', '1.0e-4')
     """
     val = float(val)
     err = float(err)
-    num = int(num)
-    val_order = np.ceil(np.log10(np.abs(val))) if val != 0 else 0
-    err_order = np.ceil(np.log10(np.abs(err))) if err != 0 else 0
+    num = int(num) if num != 0 else 1
+    val_order = int(np.floor(np.log10(np.abs(val)))) if val != 0 else 0
+    err_order = int(np.floor(np.log10(np.abs(err)))) if err != 0 else 0
     try:
         # print('val_order={}, err_order={}, num={}'.format(
         #     val_order, err_order, num))  # DEBUG
