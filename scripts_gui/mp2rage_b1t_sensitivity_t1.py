@@ -71,6 +71,9 @@ SEQ_INTERACTIVES = collections.OrderedDict([
 
     ('tr_gre', dict(
         label='TR_GRE / ms', default=6.0, start=1, stop=128, step=0.1)),
+    ('k_gre', dict(
+        label='k_GRE / one units',
+        default=0.5, start=0.0, stop=1.0, step=0.05)),
 
     ('td0', dict(
         label='T_D0 / ms', default=0, start=0, stop=10000, step=10)),
