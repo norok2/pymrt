@@ -1997,8 +1997,12 @@ def subplots(
     if subplot_kws is None:
         subplot_kws = ({},) * (num_row * num_col)
     else:
-        subplot_kws = \
-            tuple(subplot_kws) + ({},) * (num_row * num_col - len(subplot_kws))
+        subplot_kws = tuple(subplot_kws)
+        subplot_kws += ({},) * (num_row * num_col - len(subplot_kws))
+        if swap_filling:
+            subplot_kws = tuple(
+                np.ravel(np.transpose(
+                    np.array(subplot_kws).reshape((num_col, num_row)))))
 
     axs = [
         fig.add_subplot(gs[n], **subplot_kws[n])
