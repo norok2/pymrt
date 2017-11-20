@@ -233,7 +233,6 @@ def quick_3d(arr, values_range=None):
         # using Matplotlib
         from skimage import measure
 
-
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
         # zz, xx, yy = array.nonzero()
@@ -345,6 +344,8 @@ def multi(
         dy_lbls=None,
         x_label=None,
         y_label=None,
+        x_limits=None,
+        y_limits=None,
         twin_indexes=None,
         shared_axis='y',
         groups=None,
@@ -408,13 +409,15 @@ def multi(
         dy_arrs = tuple(np.zeros_like(y_arr) for y_arr in y_arrs)
     y_lbls = ('_nolegend_',) * num if y_lbls is None else y_lbls
     dy_lbls = ('_nolegend_',) * num if dy_lbls is None else dy_lbls
+    twin_indexes = () if twin_indexes is None else twin_indexes
     plotters = (x_arrs, y_arrs, dy_arrs, y_lbls, dy_lbls)
 
     # : set twin axes
-    if shared_axis == 'y':
-        twin_ax = ax.twiny()
-    elif shared_axis == 'x':
-        twin_ax = ax.twinx()
+    if len(twin_indexes) > 0:
+        if shared_axis == 'y':
+            twin_ax = ax.twiny()
+        else:  # if shared_axis == 'x':
+            twin_ax = ax.twinx()
     else:
         twin_ax = None
 
@@ -459,12 +462,10 @@ def multi(
             y_ls, dy_ls = method.split('+')
             handles.extend(
                 _ax.plot(
-                    x_arr, y_arr, linestyle=y_ls, color=color,
-                    label=y_lbl))
+                    x_arr, y_arr, linestyle=y_ls, color=color, label=y_lbl))
             handles.extend(
                 _ax.plot(
-                    x_arr, dy_arr, linestyle=dy_ls, color=color,
-                    label=dy_lbl))
+                    x_arr, dy_arr, linestyle=dy_ls, color=color, label=dy_lbl))
 
         elif method == 'errorbars':
             _ax.errorbar(
@@ -487,7 +488,10 @@ def multi(
 
     # setup title and labels
     if title:
-        ax.set_title(title.format_map(locals()))
+        if twin_ax is None:
+            ax.set_title(title.format_map(locals()))
+        else:
+            twin_ax.set_title(title.format_map(locals()))
 
     # include additional text
     if more_texts is not None:
@@ -766,7 +770,6 @@ def sample2d(
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 
-
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -1004,7 +1007,6 @@ def sample3d_view2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
