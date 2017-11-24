@@ -1842,14 +1842,23 @@ def bar_chart(
             yerr=bar_err if is_hor else None,
             color=next(colors))
         bcs.append(bc)
-    set_ticks = ax.set_xticks if is_hor else ax.set_yticks
-    set_ticklabels = ax.set_xticklabels if is_hor else ax.set_yticklabels
+    the_axis = ax.xaxis if is_hor else ax.yaxis
     if groups is not None:
-        set_ticks(indices + (len(series) - 1) * bar_width / 2)
-        set_ticklabels(groups)
+        the_axis.set_ticks(
+            np.arange(num_groups + 1) - bar_width * 3 / 4, minor=False)
+        the_axis.set_ticks(
+            np.arange(num_groups) + (len(series) - 1) * bar_width / 2,
+            minor=True)
+        the_axis.set_ticklabels([], minor=False)
+        the_axis.set_ticklabels(groups, minor=True)
     else:
-        set_ticks(np.arange(num_series) * bar_width)
-        set_ticklabels(series)
+        the_axis.set_ticks(
+            np.arange(num_series + 1) * bar_width - bar_width / 2,
+            minor=False)
+        the_axis.set_ticks(
+            np.arange(num_series) * bar_width, minor=True)
+        the_axis.set_ticklabels([], minor=False)
+        the_axis.set_ticklabels(series, minor=True)
     if x_label:
         ax.set_xlabel(x_label)
     if y_label:
