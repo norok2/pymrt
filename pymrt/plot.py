@@ -346,6 +346,7 @@ def multi(
         y_label=None,
         x_limits=None,
         y_limits=None,
+        twin_limits=None,
         twin_indexes=None,
         shared_axis='y',
         groups=None,
@@ -370,6 +371,9 @@ def multi(
         dy_lbls ():
         x_label ():
         y_label ():
+        x_limits ():
+        y_limits ():
+        twin_limits ():
         twin_indexes ():
         shared_axis ():
         groups ():
@@ -485,6 +489,17 @@ def multi(
 
     if legend_kws is not None:
         ax.legend(handles=handles, **dict(legend_kws))
+
+    # set limits
+    if x_limits is not None:
+        ax.set_xlim(x_limits)
+    if y_limits is not None:
+        ax.set_ylim(y_limits)
+    if twin_limits is not None:
+        if shared_axis == 'x':
+            twin_ax.set_ylim(twin_limits)
+        else:
+            twin_ax.set_xlim(twin_limits)
 
     # setup title and labels
     if title:
