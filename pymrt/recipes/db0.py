@@ -144,3 +144,34 @@ def fit_phase(
         db0_arr (np.ndarray): The relative field array in ppb
     """
     return dphs_to_db0(phs.phs_to_dphs(phs_arr, tis, tis_mask), b0)
+
+import pymrt as mrt
+import pymrt.input_output
+from pymrt.recipes.generic import fix_phase_interval
+s = '/home/raid1/metere/hd4/data/siemens/RME^ECM_Exp03/PMB_Thal_L+R_2017-04-04_16-30_7T_Magnetom/niz/s011__ME-FLASH-3D_res333_fast.nii.gz'
+o = '/home/raid1/metere/data_sandbox/ecm_mri/exp03/b0.nii.gz'
+flash_tes = [3.32, 10.27, 17.22, 24.17, 31.12, 38.07]  # ms
+b0 = 297218209 / GAMMA_BAR['1H']
+phs_arr, meta = mrt.input_output.load(s, meta=True)
+phs_arr = fix_phase_interval(phs_arr)
+db0_arr = fit_phase(phs_arr, flash_tes, b0=b0)
+mrt.input_output.save(o, db0_arr, **meta)
+print(o)
+
+
+import pymrt as mrt
+import pymrt.input_output
+import pymrt.geometry
+from pymrt.recipes.generic import fix_phase_interval
+s = '/home/raid1/metere/hd4/data/siemens/RME^ECM_Exp03/PMB_Thal_L+R_2017-04-04_16-30_7T_Magnetom/niz/s039__B0-ME-FLASH-3D_res1.00.nii.gz'
+o = '/home/raid1/metere/data_sandbox/ecm_mri/exp03/b0_i.nii.gz'
+flash_tes = [1.31, 4.03]  # ms
+b0 = 297218209 / GAMMA_BAR['1H']
+base_shape = (192,) * 3
+phs_arr, meta = mrt.input_output.load(s, meta=True)
+phs_arr = fix_phase_interval(phs_arr)
+db0_arr = fit_phase(phs_arr[..., :2], flash_tes[:2], b0=b0)
+db0_arr = mrt.geometry.resample(db0_arr, base_shape)
+mrt.input_output.save(o, db0_arr, **meta)
+print(o)
+

@@ -58,36 +58,24 @@ def phs_to_dphs_multi(
         phs_arr,
         tis,
         tis_mask=None,
-        unwrap=None,
         poly_deg=1,
-        full=False,
-        exp_factor=None,
-        zero_cutoff=None):
+        full=False):
     """
     Calculate the polynomial components of the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb. units.
+        phs_arr (np.ndarray): The input array in rad.
             The sampling time Ti varies in the last dimension.
+            The data is assumed to be already unwrapped.
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
         tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
-        unwrap (bool|callable|None): Determine unwrapping method.
-            If None, no unwrapping or fixing is performed (assume units is rad).
-            If False, data is not unwrapped but values range fix is performed.
-            If True, both N-dim unwrapping of data and values range fix are
-            performed.
-            If callable, the data is preprocessed through.
-            If values range fix is required, please consider
-            including it in the callable through `fix_interval()`.
         poly_deg (int): The degree of the polynomial to fit.
             For monoexponential fits, use num=1.
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
-        exp_factor (float|None):
-        zero_cutoff (float|None):
 
     Returns:
         results (dict):
@@ -95,20 +83,9 @@ def phs_to_dphs_multi(
     y_arr = np.array(phs_arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
-
-    # unwrap along the time evolution
-    if isinstance(unwrap, callable):
-        y_arr = unwrap(y_arr)
-    elif unwrap is None:
-        pass
-    elif unwrap:
-        y_arr = fix_interval(y_arr)
-        y_arr = unwrap_laplacian(y_arr, post_func=None)
-    else:
-        y_arr = fix_interval(y_arr)
 
     assert (x_arr.size == y_arr.shape[-1])
 
@@ -132,6 +109,8 @@ def phs_to_dphs(
         phs_arr,
         tis,
         tis_mask,
+        unwrap='sorting_path',
+        unwrap_kws=None,
         units='ms'):
     """
     Calculate the phase variation from phase data.
@@ -153,31 +132,75 @@ def phs_to_dphs(
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
+    #todo: fix documentation
     if isinstance(units, str):
         if units == 'ms':
             units = 1e-3
         else:
             warnings.warn('Invalid units `{units}`'.format_map(locals()))
             units = 1
-    tis = np.array(mrt.utils.auto_repeat(tis)) * units
-    if len(tis) > 1:
-        dphs_arr = \
-            phs_to_dphs_multi(phs_arr, tis, tis_mask, poly_deg=1)['dphs_1']
-    else:
+    tis = np.array(mrt.utils.auto_repeat(tis, 1)) * units
+
+    if unwrap is not None:
+        phs_arr = unwrapping(phs_arr, unwrap, unwrap_kws)
+
+    if len(tis) == 1:
         dphs_arr = phs_arr / tis[0]
+    else:
+        dphs_arr = \
+            phs_to_dphs_multi(
+                phs_arr, tis, tis_mask, poly_deg=1)['dphs_1'][..., 0]
+
     return dphs_arr
 
+
+# ======================================================================
+def cx2_to_dphs(
+        arr1,
+        arr2,
+        d_ti,
+        unwrap='laplacian',
+        unwrap_kws=None,
+        units='ms'):
+    """
+    Calculate the phase variation from two complex data.
+
+    Args:
+        phs_arr (np.ndarray): The input array in arb. units.
+            The sampling time Ti varies in the last dimension.
+            Arbitrary units are accepted, will be automatically converted to
+            radians under the assumption that data is wrapped.
+            Do not provide unwrapped data.
+        d_ti (Iterable|int|float): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        units (str|float|int): Units of measurement of Ti.
+            If str, the following will be accepted: 'ms'
+            If int or float, the conversion factor will be multiplied to `ti`.
+
+    Returns:
+        dphs_arr (np.ndarray): The phase variation in rad/s.
+    """
+    #todo: fix documentation
+    dphs_arr = arr1 * arr2.conj()
+    dphs_arr = np.arctan2(np.imag(dphs_arr), np.real(dphs_arr))
+    
+    if unwrap is not None:
+        dphs_arr = unwrapping(dphs_arr, unwrap, unwrap_kws)
+
+    return dphs_arr / d_ti
 
 # ======================================================================
 def dphs_to_phs(
         dphs_arr,
         tis,
-        phs0_arr=None):
+        phs0_arr=0):
     """
     Calculate the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb. units.
+        phs_arr (np.ndarray): The input array in rad.
             The sampling time Ti varies in the last dimension.
         tis (Iterable|int|float): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
@@ -190,21 +213,17 @@ def dphs_to_phs(
     Returns:
         phs_arr (np.ndarray): The phase array in rad.
     """
-    tis = np.array(mrt.utils.auto_repeat(tis))
-    phs_arr = np.zeros(dphs_arr.shape + (len(tis),))
-    for i, ti in enumerate(tis):
-        phs_arr[..., i] = dphs_arr * ti
+    #todo: fix documentation
+    shape = dphs_arr.shape
+    tis = np.array(
+        mrt.utils.auto_repeat(tis)).reshape((1,) * len(shape) + (-1,))
+    dphs_arr = dphs_arr.reshape(shape + (1,))
+    return dphs_arr * tis + phs0_arr
 
 
 # ======================================================================
 def unwrap_laplacian(
         arr,
-        pre_func=fix_interval,
-        pre_args=None,
-        pre_kws=None,
-        post_func=fix_offset,
-        post_args=None,
-        post_kws=None,
         pad_width=0):
     """
     Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
@@ -218,30 +237,18 @@ def unwrap_laplacian(
     phi = IL(L(phi)) = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
 
     Args:
-        arr (np.ndarray): The multi-dimensional array to unwrap.
-        pre_func (callable|None): Preprocessing function for the input.
-        pre_args (Iterable|None): Positional arguments of preprocess function.
-        pre_kws (Iterable|None): Keyword arguments of preprocess function.
-        post_func (callable|None): Postprocessing function for the output.
-        post_args (Iterable|None): Positional arguments of postprocess function.
-        post_kws (Iterable|None): Keyword arguments of postprocess function.
+        arr (np.ndarray): The input array.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to the maximum size.
 
     Returns:
-        arr (np.ndarray): The multi-dimensional unwrapped array.
+        arr (np.ndarray): The unwrapped array.
 
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
-    if pre_func:
-        arr = pre_func(
-            arr,
-            *(pre_args if pre_args else ()),
-            **(pre_kws if pre_kws else {}))
-
     if pad_width:
         shape = arr.shape
         pad_width = mrt.utils.auto_pad_width(pad_width, shape)
@@ -266,23 +273,12 @@ def unwrap_laplacian(
     arr = np.real(ifftn(arr))
 
     arr = arr[mask]
-    if post_func:
-        arr = post_func(
-            arr,
-            *(post_args if post_args else ()),
-            **(post_kws if post_kws else {}))
     return arr
 
 
 # ======================================================================
 def unwrap_sorting_path(
         arr,
-        pre_func=fix_interval,
-        pre_args=None,
-        pre_kws=None,
-        post_func=fix_offset,
-        post_args=None,
-        post_kws=None,
         unwrap_axes=(0, 1, 2),
         wrap_around=False,
         seed=0):
@@ -294,13 +290,7 @@ def unwrap_sorting_path(
     If higher dimensionality input, loop through extra dimensions.
 
     Args:
-        arr (np.ndarray): The multi-dimensional array to unwrap.`
-        pre_func (callable|None): Preprocessing function for the input.
-        pre_args (Iterable|None): Positional arguments of preprocess function.
-        pre_kws (Iterable|None): Keyword arguments of preprocess function.
-        post_func (callable|None): Postprocessing function for the output.
-        post_args (Iterable|None): Positional arguments of postprocess function.
-        post_kws (Iterable|None): Keyword arguments of postprocess function.
+        arr (np.ndarray): The input array.
         unwrap_axes (tuple[int]): Axes along which unwrapping is performed.
             Must have length 2 or 3.
         wrap_around (bool|Iterable[bool]|None): Circular unwrapping.
@@ -309,19 +299,13 @@ def unwrap_sorting_path(
             See also: skimage.restoration.unwrap_phase.
 
     Returns:
-        arr (np.ndarray): The multi-dimensional unwrapped array.
+        arr (np.ndarray): The unwrapped array.
 
     See Also:
         skimage.restoration.unwrap_phase
         Herraez, M. A. et al. (2002). Journal Applied Optics 41(35): 7437.
     """
     from skimage.restoration import unwrap_phase
-
-    if pre_func:
-        arr = pre_func(
-            arr,
-            *(pre_args if pre_args else ()),
-            **(pre_kws if pre_kws else {}))
 
     if unwrap_axes:
         loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
@@ -330,10 +314,44 @@ def unwrap_sorting_path(
         loop_gen = [slice(None)] * arr.ndim
     for indexes in itertools.product(*loop_gen):
         arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
+    return arr
 
-    if post_func:
-        arr = post_func(
-            arr,
-            *(post_args if post_args else ()),
-            **(post_kws if post_kws else {}))
+
+# ======================================================================
+def unwrapping(
+        arr,
+        method,
+        method_kws=None):
+    """
+    Perform phase unwrapping.
+
+    Multi-dimensional inputs are supported.
+
+    Args:
+        arr (np.ndarray): The input array.  
+        method (str): The unwrapping method.
+            Accepted values are:
+             - 'laplacian': uses `unwrap_laplacian()`.
+             - 'sorting_path': uses `unwrap_sorting_path()`.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
+
+    Returns:
+        arr (np.ndarray): The unwrapped array.
+    """
+    method = method.lower()
+    if method_kws is None:
+        method_kws = {}
+    if method == 'laplacian':
+        method = unwrap_laplacian
+    elif method == 'sorting_path':
+        method = unwrap_sorting_path
+    elif method == 'region_merge':
+        raise NotImplementedError
+    elif method == 'laplacian_corrected':
+        raise NotImplementedError
+    else:
+        text = 'Unknown unwrapping method `{}`'.format(method)
+        warnings.warn(text)
+    if callable(method):
+        arr = method(arr, **method_kws)
     return arr
