@@ -103,7 +103,7 @@ def denoise(
              - 'bilateral': `skimage.restoration.denoise_bilateral()`
                (only works with 2D images)
              - 'dwt': `dwt_filter()`
-        method_kws (dict|None): Keyword parameters for the denoising.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         mode (str): Complex calculation mode.
@@ -636,7 +636,7 @@ def sn_split_denoise(
         arr (np.ndarray): The input array.
         method (str): Denoising method.
             This is passed to `denoise()`
-        method_kws (dict|None): Keyword parameters for the denoising.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
 
@@ -858,7 +858,7 @@ def fix_bias_rician(
              - 'best': `estimate_noise_sigma()`
              - 'separated': `estimate_noise_sigma_sn_split()`
              - 'region': `sigma_noise_region()`
-        method_kws (dict|None): Keyword parameters for the sigma estimate.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         positive (bool): Force result to be positive.

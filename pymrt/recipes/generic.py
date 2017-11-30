@@ -340,7 +340,7 @@ def fit_exp_loglin(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -419,7 +419,7 @@ def fit_exp_curve_fit(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -496,7 +496,7 @@ def fit_exp_tau_quad(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -592,7 +592,7 @@ def fit_exp_tau_quadr(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -679,7 +679,7 @@ def fit_exp_tau_diff(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -756,7 +756,7 @@ def fit_exp_tau_arlo(
     y_arr = np.array(arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
-    if tis_mask:
+    if tis_mask is not None:
         y_arr = y_arr[..., tis_mask]
         x_arr = x_arr[tis_mask]
 
@@ -1017,7 +1017,7 @@ def voxel_curve_fit(
         post_args (list):
         post_kwargs (dict):
         method (str): Method to use for the curve fitting procedure.
-        method_kws (dict): Keyword parameters passed to the fitting procedure.
+        method_kws (dict|None): Keyword arguments to pass to `method`.
 
     Returns:
         p_arr (np.ndarray) :
