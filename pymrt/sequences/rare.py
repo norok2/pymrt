@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Turbo Spin-Echo (TSE) signal expression library.
+Rapid Acquisition with Relaxation Enhancement (RARE) signal expression library.
 
-Calculate the analytical expression of the Turbo Spin-Echo (TSE) signal.
+Calculate the analytical expression for this sequence.
+Alternative names:
+ - Rapid Acquisition with Relaxation Enhancement (RARE)
+ - Turbo Spin Echo (TSE)
 """
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals)
+
 # ======================================================================
 # :: Python Standard Library Imports
 # import os  # Miscellaneous operating system interfaces
@@ -44,7 +48,6 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import scipy.constants  # SciPy: Mathematical and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.constants  # SciPy: Constants
-
 
 # :: Local Imports
 import pymrt as mrt
@@ -95,8 +98,8 @@ def evolution(
     decay[0:2, 0:2] *= sym.exp(-duration * relaxation_transverse)
     decay[-1, -1] *= sym.exp(-duration * relaxation_longitudinal)
     recovery = sym.Matrix(
-            [0, 0, equilibrium_magnetization *
-             (1 - sym.exp(-duration * relaxation_longitudinal))])
+        [0, 0, equilibrium_magnetization *
+         (1 - sym.exp(-duration * relaxation_longitudinal))])
     excitation = rotation(flip_angle, rotation_plane)
     final_magnetization = decay * excitation * initial_magnetization + recovery
     return final_magnetization, excitation
@@ -118,20 +121,20 @@ def evolution_tse(
     equilibrium_magnetization = sym.Symbol('M_eq')
 
     tmp_magnetization, first_excitation = evolution(
-            initial_magnetization, flip_angle, (1, 2), refocus_interval,
-            relaxation_longitudinal, relaxation_transverse, resonance_offset,
-            equilibrium_magnetization)
+        initial_magnetization, flip_angle, (1, 2), refocus_interval,
+        relaxation_longitudinal, relaxation_transverse, resonance_offset,
+        equilibrium_magnetization)
 
     for i in range(turbo_factor - 1):
         tmp_magnetization, tmp_excitation = evolution(
-                tmp_magnetization, 2 * flip_angle, (1, 2), refocus_interval,
-                relaxation_longitudinal, relaxation_transverse,
-                resonance_offset, equilibrium_magnetization)
+            tmp_magnetization, 2 * flip_angle, (1, 2), refocus_interval,
+            relaxation_longitudinal, relaxation_transverse,
+            resonance_offset, equilibrium_magnetization)
     final_magnetization, tmp_excitation = evolution(
-            tmp_magnetization, (2 * flip_angle), (1, 2),
-            (repetition_time - turbo_factor * refocus_interval),
-            relaxation_longitudinal, relaxation_transverse, resonance_offset,
-            equilibrium_magnetization)
+        tmp_magnetization, (2 * flip_angle), (1, 2),
+        (repetition_time - turbo_factor * refocus_interval),
+        relaxation_longitudinal, relaxation_transverse, resonance_offset,
+        equilibrium_magnetization)
     # attempt some simplification
     # for i in range(num_dim):
     #     final_magnetization[i] = sym.factor(final_magnetization[i])
@@ -145,14 +148,14 @@ def steady_state(
         **evolution_kwargs):
     steady_state_magnetization_minus = magnetization('ss')
     evolution, first_excitation = evolution_func(
-            steady_state_magnetization_minus,
-            *evolution_args, **evolution_kwargs)
+        steady_state_magnetization_minus,
+        *evolution_args, **evolution_kwargs)
     eqn_steady_state = sym.Eq(steady_state_magnetization_minus, evolution)
     steady_state_solution = sym.solve(
-            eqn_steady_state, steady_state_magnetization_minus)
+        eqn_steady_state, steady_state_magnetization_minus)
     steady_state_magnetization_minus = sym.Matrix(
-            [steady_state_solution[item]
-             for item in steady_state_magnetization_minus])
+        [steady_state_solution[item]
+         for item in steady_state_magnetization_minus])
     steady_state_magnetization_plus = \
         first_excitation * steady_state_magnetization_minus
     return steady_state_magnetization_minus, steady_state_magnetization_plus
@@ -163,8 +166,8 @@ def magnetization(
         label='',
         num_dim=3):
     mag_vec = sym.Matrix(
-            [sym.Symbol('M_{}_{}'.format(label, i)) for i in
-             range(num_dim)])
+        [sym.Symbol('M_{}_{}'.format(label, i)) for i in
+         range(num_dim)])
     return mag_vec
 
 
