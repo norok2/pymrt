@@ -109,7 +109,7 @@ def phs_to_dphs(
         phs_arr,
         tis,
         tis_mask,
-        unwrap='sorting_path',
+        unwrap='laplacian',
         unwrap_kws=None,
         units='ms'):
     """
