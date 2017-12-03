@@ -41,6 +41,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import numeral  # Support for various integer-to-numeral (and back) conversion
+import seaborn as sns  # Seaborn: statistical data visualization
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -232,6 +233,7 @@ def quick_3d(arr, values_range=None):
     if arr.ndim == 3:
         # using Matplotlib
         from skimage import measure
+
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -785,6 +787,7 @@ def sample2d(
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 
+
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -959,7 +962,7 @@ def sample3d_view2d(
         # todo: fix this
         for i, v in enumerate(views):
             if v.shape[0] != views[0].shape[0] and \
-                            v.shape[1] != views[0].shape[1]:
+                    v.shape[1] != views[0].shape[1]:
                 views[i] = v.transpose()
 
         x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
@@ -1022,6 +1025,7 @@ def sample3d_view2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1884,6 +1888,37 @@ def bar_chart(
     if legend_kws is not None:
         ax.legend(tuple(bc[0] for bc in bcs), series, **dict(legend_kws))
     return data, fig
+
+
+# ======================================================================
+def heatmap(
+        table,
+        x_label=None,
+        y_label=None,
+        title=None,
+        tick_top=False,
+        ax=None,
+        **kwargs):
+    # create a new figure
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+    else:
+        fig = plt.gcf()
+
+    ax = sns.heatmap(table, ax=ax, **kwargs)
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    if tick_top:
+        ax.xaxis.tick_top()
+
+    if x_label:
+        ax.set_xlabel(x_label)
+    if y_label:
+        ax.set_ylabel(y_label)
+    if title:
+        ax.set_title(title)
+
+    return table, fig
 
 
 # ======================================================================
