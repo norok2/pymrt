@@ -505,6 +505,7 @@ def multi(
 
     # setup title and labels
     if title:
+        # y=1.10 if twin_ax is not None and shared_axis='y' else None
         if twin_ax is None:
             ax.set_title(title.format_map(locals()))
         else:
@@ -1896,7 +1897,7 @@ def heatmap(
         x_label=None,
         y_label=None,
         title=None,
-        tick_top=False,
+        tick_top=True,
         ax=None,
         **kwargs):
     # create a new figure
@@ -1916,7 +1917,7 @@ def heatmap(
     if y_label:
         ax.set_ylabel(y_label)
     if title:
-        ax.set_title(title)
+        ax.set_title(title, y=1.10 if tick_top else None)
 
     return table, fig
 
