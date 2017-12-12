@@ -866,6 +866,7 @@ def sample3d_view2d(
         array_interval=None,
         interpolation='nearest',
         ticks_limit=None,
+        frame=True,
         cmap=None,
         cbar_kws=None,
         cbar_txt=None,
@@ -1073,6 +1074,9 @@ def sample3d_view2d(
     if more_texts is not None:
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
+
+    if not frame:
+        ax.axis('off')
 
     # save plot
     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
