@@ -182,6 +182,7 @@ setup(
             'pymrt_geom_phantom=scripts_cli.geom_phantom:main',
             'pymrt_ernst_calc=scripts_cli.ernst_calc:main',
             'pymrt_unwrap=scripts_cli.unwrap:main',
+            'pymrt_coil_combine=scripts_cli.coil_combine:main',
 
             'pymrt_extract_nifti_bruker=scripts_cli.extract_nifti_bruker:main',
         ],

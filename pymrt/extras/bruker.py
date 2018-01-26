@@ -313,7 +313,7 @@ def _reco_from_fid(
                     arr, coil_axis=coil_axis,
                     verbose=verbose, **dict(coils_combine_kws))
 
-                qq_arr = coils.qq(arr, combined_arr)
+                qq_arr = coils.quality(arr, combined_arr)
                 mrt.input_output.save(fp.format(s='Q'), qq_arr)
                 arr = combined_arr
             if num_avg > 1:

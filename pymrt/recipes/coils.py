@@ -13,7 +13,8 @@ from __future__ import (
 # :: Python Standard Library Imports
 import itertools  # Functions creating iterators for efficient looping
 import warnings  # Warning control
-import collections  # Container datatypes
+# import collections  # Container datatypes
+import datetime  # Basic date and time types
 import multiprocessing  # Process-based parallelism
 
 # :: External Imports
@@ -126,10 +127,10 @@ def compress_svd(
         del inv_arr
 
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
-    eig_sort = np.argsort(eigvals)[::-1]
+    eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
     k_svd = mrt.utils.auto_num_components(
-        k_svd, eigvals[eig_sort] / np.max(eigvals), verbose=verbose)
+        k_svd, np.abs(eigvals[eig_sort]) / np.max(eigvals), verbose=verbose)
 
     arr = np.dot(arr, right_eigvects[:, eig_sort][:, :k_svd])
 
@@ -164,6 +165,8 @@ def compress(
     Returns:
         arr (np.ndarray): The compressed coil array.
     """
+    begin_time = datetime.datetime.now()
+
     methods = ('compress_svd',)
 
     msg('compression', verbose, VERB_LVL['debug'])
@@ -183,6 +186,11 @@ def compress(
     else:
         text = 'Unknown compression method. None performed.'
         warnings.warn(text)
+
+    end_time = datetime.datetime.now()
+    msg('ExecTime({}): {}'.format('coils.compress', end_time - begin_time),
+        verbose, D_VERB_LVL)
+
     return arr
 
 
@@ -475,6 +483,7 @@ def adaptive_iter(
         # combined == weighted
         combined = np.einsum('...i,i', arr, weights.conj())
         sens = np.zeros_like(arr, dtype=complex)
+        delta = 1.0
         for i in range(max_iter):
             last_combined = combined.copy() if threshold > 0 else combined
             sens = arr * combined[..., None].conj()
@@ -495,12 +504,13 @@ def adaptive_iter(
                 verbose, VERB_LVL['debug'], end=' ' if threshold else ', ',
                 flush=True)
             if threshold > 0:
+                last_delta = delta
                 delta = (
                     np.linalg.norm(combined - last_combined) /
                     np.linalg.norm(combined))
                 msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
                     end=', ' if i + 1 < max_iter else '.\n', flush=True)
-                if delta < threshold:
+                if delta < threshold or last_delta < delta:
                     break
 
     sens = np.swapaxes(sens, -1, coil_axis)
@@ -675,6 +685,8 @@ def multi_svd(
         num_proc (int|None): The number of parallel processes.
             If 1, the execution is sequential.
             If 0 or None, the number of workers is determined automatically.
+            Otherwise, uses the specified number of workers.
+            If the number of workers is > 1, the execution is in parallel.
         multi_axis (int): The echo dimension.
             The dimension of `arr` along which different echoes are stored.
         coil_axis (int): The coil dimension.
@@ -924,19 +936,19 @@ def combine(
             If str, uses the specified method as found in this module.
             Some methods require `ref` and/or `multi_axis` to be set in
             `methods_kws`.
-            Accepted values, not requiring `ref` or `multi_axis`, are:
+            Accepted values not requiring `ref` or `multi_axis` are:
              - 'complex_sum';
              - 'sum_of_squares';
              - 'adaptive';
              - 'block_adaptive';
              - 'adaptive_iter';
              - 'block_adaptive_iter';
-            Options requiring `ref` but not `multi_axis` are:
-
-            Options requiring `multi_axis` but not `ref` are:
+            Accepted values requiring `ref` but not `multi_axis` are:
+             Not implemented yet.
+            Accepted values requiring `multi_axis` but not `ref` are:
              - 'multi_svd': use `mul
-            Options requiring both `ref` and `multi_axis` are:
-
+            Accepted values requiring both `ref` and `multi_axis` are:
+             Not implemented yet.
 
         method_kws (dict|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `split_axis`, `verbose` are passed.
@@ -956,7 +968,7 @@ def combine(
     Returns:
         arr (np.ndarray): The combined array.
     """
-    elapsed('__' + combine.__name__)
+    begin_time = datetime.datetime.now()
 
     sens_methods = (
         'complex_sum', 'sum_of_squares',
@@ -965,7 +977,7 @@ def combine(
     methods = sens_methods + (
         'virtual_ref', 'multi_svd')
 
-    if compression is not None:
+    if compression:
         arr = compress(
             arr, method=compression, method_kws=compression_kws,
             coil_axis=coil_axis, verbose=verbose)
@@ -1022,15 +1034,19 @@ def combine(
                 arr, coil_axis=coil_axis, verbose=verbose, **dict(method_kws))
 
     if np.isclose(np.mean(np.abs(np.angle(combined))), 0.0, equal_nan=True):
+        combined = combined.astype(complex)
         msg('Adding summed phase.', verbose, VERB_LVL['medium'])
         combined *= np.exp(1j * np.angle(np.sum(arr, axis=coil_axis)))
-    elapsed(combine.__name__)
-    msg(report(only_last=True))
+
+    end_time = datetime.datetime.now()
+    msg('ExecTime({}): {}'.format('coils.combine', end_time - begin_time),
+        verbose, D_VERB_LVL)
+
     return combined
 
 
 # ======================================================================
-def qq(
+def quality(
         coils_arr,
         combined_arr,
         factor=100,
@@ -1060,5 +1076,6 @@ def qq(
     Returns:
         qq_arr (np.ndarray): The voxel-wise quality metric array.
     """
-    qq_arr = np.abs(combined_arr) / np.sum(np.abs(coils_arr), axis=coil_axis)
-    return factor * qq_arr
+    sum_arr = np.sum(np.abs(coils_arr), axis=coil_axis)
+    abs_arr = np.abs(combined_arr)
+    return factor * (abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))

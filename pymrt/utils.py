@@ -5929,8 +5929,8 @@ def auto_num_components(
     """
     Calculate the optimal number of principal components.
 
-    Effectively determine the Principal Component Analysis.
-    
+    Effectively executing a Principal Component Analysis.
+
     Args:
         k (int|float|str): The number of principal components.
             If int, the exact number is given. It must not exceed the size
@@ -5951,8 +5951,10 @@ def auto_num_components(
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
         q (Iterable[int|float|complex]|None): The values of the components.
             If None, `num` must be specified.
-            If
+            If Iterable, `num` must be None.
         num (int|None): The number of components.
+            If None, `q` must be specified.
+            If
         verbose (int): Set level of verbosity.
 
     Returns:
@@ -5969,6 +5971,7 @@ def auto_num_components(
         raise ValueError('At most one of `q` and `num` must not be `None`.')
     elif q is not None and num is None:
         q = np.array(q).ravel()
+        msg('q={}'.format(q), verbose, VERB_LVL['debug'])
         num = len(q)
 
     msg('k={}'.format(k), verbose, VERB_LVL['debug'])
@@ -6004,7 +6007,7 @@ def auto_num_components(
     if not 0 < k <= num:
         warnings.warn('`{}` is invalid. Using: `{}`.'.format(k, num))
         k = num
-    msg('k={}'.format(k), verbose, VERB_LVL['medium'])
+    msg('k/num={}/{}'.format(k, num), verbose, VERB_LVL['medium'])
     return k
 
 
