@@ -117,6 +117,8 @@ def save(
     """
     Save a NiBabel-supported image.
 
+    If the output directory does not exists, saving fails.
+
     Args:
         out_filepath (str): Output file path.
         arr (np.ndarray): Data to be stored.
