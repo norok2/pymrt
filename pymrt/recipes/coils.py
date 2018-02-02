@@ -130,7 +130,8 @@ def compress_svd(
     eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
     k_svd = mrt.utils.auto_num_components(
-        k_svd, np.abs(eigvals[eig_sort]) / np.max(eigvals), verbose=verbose)
+        k_svd, np.abs(eigvals[eig_sort]) / np.max(np.abs(eigvals)),
+        verbose=verbose)
 
     arr = np.dot(arr, right_eigvects[:, eig_sort][:, :k_svd])
 
