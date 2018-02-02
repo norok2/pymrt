@@ -769,21 +769,28 @@ def nd_superellipsoid(
     if not n_dim:
         n_dim = mrt.utils.combine_iter_len(
             (shape, position, semisizes, indexes))
+
     # check compatibility of given parameters
     shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
     position = mrt.utils.auto_repeat(position, n_dim, check=True)
     semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
     indexes = mrt.utils.auto_repeat(indexes, n_dim, check=True)
+
     # get correct position
     if rel_sizes:
         semisizes = rel2abs(shape, semisizes)
+    # print('Semisizes: {}'.format(semisizes))  # DEBUG
+    # print('Shape: {}'.format(shape))  # DEBUG
     position = mrt.utils.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
+    # print('Position: {}'.format(position))  # DEBUG
+
     # create the mask
     mask = np.zeros(shape, dtype=float)
     for x_i, semisize, index in zip(position, semisizes, indexes):
         mask += (np.abs(x_i / semisize) ** index)
     mask = mask <= 1.0
+
     return mask
 
 
