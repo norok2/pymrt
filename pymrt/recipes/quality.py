@@ -114,7 +114,7 @@ def _pcnr(
     :math:`P` denotes the power.
 
     Args:
-        contrast_val (float): The contrast value.
+        signal_arr (np.ndarray): The array containing the signal.
         noise_arr (np.ndarray): The array containing the noise.
 
     Returns:
@@ -157,9 +157,9 @@ def snr_multi_acq(
         153.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = correction.test_retest(*arrs)
+        signal_arr, noise_arr = correction.sn_split_test_retest(*arrs)
     else:
-        signal_arr, noise_arr = correction.multi_acq(
+        signal_arr, noise_arr = correction.sn_split_multi_acq(
             arrs, remove_bias=remove_bias)
     return _snr(signal_arr, noise_arr)
 
@@ -198,9 +198,9 @@ def psnr_multi_acq(
         255.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = correction.test_retest(*arrs)
+        signal_arr, noise_arr = correction.sn_split_test_retest(*arrs)
     else:
-        signal_arr, noise_arr = correction.multi_acq(
+        signal_arr, noise_arr = correction.sn_split_multi_acq(
             arrs, remove_bias=remove_bias)
     return _psnr(signal_arr, noise_arr)
 
@@ -430,8 +430,8 @@ def cnr(
         >>> round(val * 100)
         45.0
     """
-    signal_arr, noise_arr = correction(arr, sn_method, **sn_kws)
-    signal_arrs = sn_split_signals(signal_arr, ss_method, **ss_kws)
+    signal_arr, noise_arr = correction.sn_split(arr, sn_method, **sn_kws)
+    signal_arrs = correction.sn_split_signals(signal_arr, ss_method, **ss_kws)
     return _cnr(contrast(signal_arrs), noise_arr)
 
 
@@ -483,8 +483,76 @@ def pcnr(
         >>> round(val)
         4.0
     """
-    signal_arr, noise_arr = correction(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = correction.sn_split(arr, method, *args, **kwargs)
     return _pcnr(signal_arr, noise_arr)
+
+
+# ======================================================================
+def mean_squared_error(
+        arr1,
+        arr2):
+    """
+    Compute the mean squared error.
+
+    This is defined as:
+
+    .. math::
+        \\mathrm{MSE} = \\frac{\\sum_{i=0}^{N-1} (|x_{1,i} - x_{2,i}|)^2}{N}
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+
+    Returns:
+        mse (float|complex): The mean squared error.
+    """
+    return np.mean((arr1 - arr2) ** 2)
+
+
+# ======================================================================
+def mean_absolute_error(
+        arr1,
+        arr2):
+    """
+    Compute the mean absolute error.
+
+    This is defined as:
+
+    .. math::
+        \\mathrm{MSE} = \\frac{\\sum_{i=0}^{N-1} (|x_{1,i} - x_{2,i}|)^2}{N}
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+
+    Returns:
+        mae (float): The mean absolute error.
+
+    """
+    return np.mean(np.abs(arr1 - arr2))
+
+
+# ======================================================================
+def root_mean_squared_error(
+        arr1,
+        arr2):
+    """
+    Compute the root mean squared error.
+
+    This is defined as:
+
+    .. math::
+        \\mathrm{MSE} = \\frac{\\sum_{i=0}^{N-1} (|x_{1,i} - x_{2,i}|)^2}{N}
+
+    Args:
+        arr1 (np.ndarray): The first input array.
+        arr2 (np.ndarray): The second input array.
+
+    Returns:
+        mae (float|complex): The mean absolute error.
+
+    """
+    return np.sqrt(np.mean((arr1 - arr2) ** 2))
 
 
 # ======================================================================
