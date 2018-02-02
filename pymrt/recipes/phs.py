@@ -264,7 +264,7 @@ def unwrap_laplacian(
 
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    kk_2 = fftshift(mrt.utils._kk_2(arr.shape))
+    kk_2 = fftshift(mrt.utils.laplace_kernel(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
@@ -320,7 +320,7 @@ def unwrap_sorting_path(
 # ======================================================================
 def unwrapping(
         arr,
-        method,
+        method='sorting_path',
         method_kws=None):
     """
     Perform phase unwrapping.
