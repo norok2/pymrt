@@ -7,7 +7,7 @@ pymrt.utils: generic basic utilities.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -4319,22 +4319,29 @@ def grid_coord(
 
 
 # ======================================================================
-def _kk_2(
+def laplace_kernel(
         shape,
         factors=1):
     """
-    Calculate the k^2 kernel to be used for the Laplacian operators.
+    Calculate the kernel to be used for the Laplacian operators.
+
+    This is substantially `k^2`.
+
+    This is in the Fourier domain.
+    May require shifting and normalization before using in
+    Discrete Fourier Transform (DFT).
 
     Args:
         shape (Iterable[int]): The size of the array.
-        factors (Iterable[int|tuple]): The size conversion factors for each
-        dim.
+        factors (int|float|Iterable[int|float]): The size conversion factors.
+            If int or float, the same conversion factor is applied to all dims.
+            Otherwise, the Iterable length must match the length of shape.
 
     Returns:
-        arr (np.ndarray): The resulting array.
+        kk_2 (np.ndarray): The resulting kernel array.
 
     Examples:
-        >>> _kk_2((3, 3, 3))
+        >>> laplace_kernel((3, 3, 3))
         array([[[ 3.,  2.,  3.],
                 [ 2.,  1.,  2.],
                 [ 3.,  2.,  3.]],
@@ -4346,7 +4353,7 @@ def _kk_2(
                [[ 3.,  2.,  3.],
                 [ 2.,  1.,  2.],
                 [ 3.,  2.,  3.]]])
-        >>> _kk_2((3, 3, 3), np.sqrt(3))
+        >>> laplace_kernel((3, 3, 3), np.sqrt(3))
         array([[[ 1.        ,  0.66666667,  1.        ],
                 [ 0.66666667,  0.33333333,  0.66666667],
                 [ 1.        ,  0.66666667,  1.        ]],
@@ -4358,7 +4365,7 @@ def _kk_2(
                [[ 1.        ,  0.66666667,  1.        ],
                 [ 0.66666667,  0.33333333,  0.66666667],
                 [ 1.        ,  0.66666667,  1.        ]]])
-        >>> _kk_2((2, 2, 2), 0.6)
+        >>> laplace_kernel((2, 2, 2), 0.6)
         array([[[ 8.33333333,  5.55555556],
                 [ 5.55555556,  2.77777778]],
         <BLANKLINE>
@@ -4376,132 +4383,169 @@ def _kk_2(
 
 
 # ======================================================================
-def _kk(
+def gradient_kernels(
         shape,
+        dims=None,
         factors=1):
     """
-    Calculate the k kernel to be used for the gradient operators.
+    Calculate the kernel to be used for the gradient operators.
+
+    This is substantially: k
+
+    This is in the Fourier domain.
+    May require shifting and normalization before using in
+    Discrete Fourier Transform (DFT).
 
     Args:
         shape (Iterable[int]): The size of the array.
-        factors (Iterable[int|tuple]): The size conversion factors for each
-        dim.
+        dims (int|Iterable[int]): The direction of the gradient.
+            Values must be between `len(shape)` and `-len(shape)`.
+        factors (int|float|Iterable[int|float]): The size conversion factors.
+            If int or float, the same conversion factor is applied to all dims.
+            Otherwise, the Iterable length must match the length of shape.
 
     Returns:
-        arr (np.ndarray): The resulting array.
+        kks (tuple(np.ndarray)): The resulting kernel arrays.
 
     Examples:
-        >>> _kk((3, 3, 3))
-        array([[[ 1.73205081,  1.41421356,  1.73205081],
-                [ 1.41421356,  1.        ,  1.41421356],
-                [ 1.73205081,  1.41421356,  1.73205081]],
+        >>> gradient_kernels((2, 2))
+        (array([[-1, -1],
+               [ 0,  0]]), array([[-1,  0],
+               [-1,  0]]))
+        >>> gradient_kernels((2, 2, 2))
+        (array([[[-1, -1],
+                [-1, -1]],
         <BLANKLINE>
-               [[ 1.41421356,  1.        ,  1.41421356],
-                [ 1.        ,  0.        ,  1.        ],
-                [ 1.41421356,  1.        ,  1.41421356]],
+               [[ 0,  0],
+                [ 0,  0]]]), array([[[-1, -1],
+                [ 0,  0]],
         <BLANKLINE>
-               [[ 1.73205081,  1.41421356,  1.73205081],
-                [ 1.41421356,  1.        ,  1.41421356],
-                [ 1.73205081,  1.41421356,  1.73205081]]])
-        >>> _kk((3, 3, 3), np.sqrt(3))
-        array([[[ 1.        ,  0.81649658,  1.        ],
-                [ 0.81649658,  0.57735027,  0.81649658],
-                [ 1.        ,  0.81649658,  1.        ]],
+               [[-1, -1],
+                [ 0,  0]]]), array([[[-1,  0],
+                [-1,  0]],
         <BLANKLINE>
-               [[ 0.81649658,  0.57735027,  0.81649658],
-                [ 0.57735027,  0.        ,  0.57735027],
-                [ 0.81649658,  0.57735027,  0.81649658]],
+               [[-1,  0],
+                [-1,  0]]]))
+        >>> gradient_kernels((2, 2, 2), (1, 2))
+        (array([[[-1, -1],
+                [ 0,  0]],
         <BLANKLINE>
-               [[ 1.        ,  0.81649658,  1.        ],
-                [ 0.81649658,  0.57735027,  0.81649658],
-                [ 1.        ,  0.81649658,  1.        ]]])
-        >>> _kk((2, 2, 2), 0.6)
-        array([[[ 2.88675135,  2.3570226 ],
-                [ 2.3570226 ,  1.66666667]],
+               [[-1, -1],
+                [ 0,  0]]]), array([[[-1,  0],
+                [-1,  0]],
         <BLANKLINE>
-               [[ 2.3570226 ,  1.66666667],
-                [ 1.66666667,  0.        ]]])
+               [[-1,  0],
+                [-1,  0]]]))
+        >>> gradient_kernels((2, 2, 2), -1)
+        (array([[[-1,  0],
+                [-1,  0]],
+        <BLANKLINE>
+               [[-1,  0],
+                [-1,  0]]]),)
+        >>> gradient_kernels((2, 2), None, 3)
+        (array([[-0.33333333, -0.33333333],
+               [ 0.        ,  0.        ]]), array([[-0.33333333,  0.        ],
+               [-0.33333333,  0.        ]]))
     """
     kk_ = grid_coord(shape)
     if factors and factors != 1:
         factors = auto_repeat(factors, len(shape), check=True)
         kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
-    kk = np.zeros(shape)
-    for k_i, dim in zip(kk_, shape):
-        kk += (k_i ** 2)
-    return np.sqrt(kk)
+    if dims is None:
+        dims = range(len(shape))
+    else:
+        if isinstance(dims, int):
+            dims = (dims,)
+        dims = tuple(dim % len(shape) for dim in dims)
+    kks = tuple(
+        np.broadcast_to(k_i, shape)
+        for i, (k_i, dim) in enumerate(zip(kk_, shape))
+        if i in dims)
+    return kks
 
 
 # ======================================================================
-def gradient(
-        arr,
-        ft_factor=(2 * np.pi),
-        pad_width=0):
+def exp_gradient_kernels(
+        shape,
+        dims=None,
+        factors=1):
     """
-    Apply the gradient operator (in the Fourier domain).
+    Calculate the kernel to be used for the exponential gradient operators.
+
+    This is substantially: :math:`1 - \\exp(2\\pi\\i k)`
+
+    This is in the Fourier domain.
+    May require shifting and normalization before using in
+    Discrete Fourier Transform (DFT).
 
     Args:
-        arr (np.ndarray): The input array.
-        ft_factor (float): The Fourier factor for the gradient operator.
-            Should be either 1 or 2*pi, depending on DFT implementation.
-        pad_width (float|int): Size of the border to use.
-            This is useful for mitigating border effects.
-            If int, it is interpreted as absolute size.
-            If float, it is interpreted as relative to the maximum size.
+        shape (Iterable[int]): The size of the array.
+        dims (int|Iterable[int]): The direction of the gradient.
+            Values must be between `len(shape)` and `-len(shape)`.
+        factors (int|float|Iterable[int|float]): The size conversion factors.
+            If int or float, the same conversion factor is applied to all dims.
+            Otherwise, the Iterable length must match the length of shape.
 
     Returns:
-        arr (np.ndarray): The output array.
+        kks (tuple(np.ndarray)): The resulting kernel arrays.
+
+    Examples:
+        >>> exp_gradient_kernels((2, 2))
+        (array([[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+               [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]),\
+ array([[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+               [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]))
+        >>> exp_gradient_kernels((2, 2, 2))
+        (array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. -2.44929360e-16j,  0. -2.44929360e-16j]],
+        <BLANKLINE>
+               [[ 0. +0.00000000e+00j,  0. +0.00000000e+00j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
+        <BLANKLINE>
+               [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+        <BLANKLINE>
+               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]))
+        >>> exp_gradient_kernels((2, 2, 2), (1, 2))
+        (array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
+        <BLANKLINE>
+               [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+        <BLANKLINE>
+               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]))
+        >>> exp_gradient_kernels((2, 2, 2), -1)
+        (array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+        <BLANKLINE>
+               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]),)
+        >>> exp_gradient_kernels((2, 2), None, 3)
+        (array([[ 1.5+0.8660254j,  1.5+0.8660254j],
+               [ 0.0+0.j       ,  0.0+0.j       ]]),\
+ array([[ 1.5+0.8660254j,  0.0+0.j       ],
+               [ 1.5+0.8660254j,  0.0+0.j       ]]))
     """
-    if pad_width:
-        shape = arr.shape
-        pad_width = auto_pad_width(pad_width, shape)
-        # mask = [slice(borders, -borders)] * arr.ndim
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
-        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    kk_ = grid_coord(shape)
+    if factors and factors != 1:
+        factors = auto_repeat(factors, len(shape), check=True)
+        kk_ = [k_i / factor for k_i, factor in zip(kk_, factors)]
+    if dims is None:
+        dims = range(len(shape))
     else:
-        mask = [slice(None)] * arr.ndim
-    kk = fftshift(_kk(arr.shape, arr.shape))
-    arr = ((-1j * ft_factor) ** 2) * ifftn(kk * fftn(arr))
-    return arr[mask]
-
-
-# ======================================================================
-def inv_gradient(
-        arr,
-        ft_factor=(2 * np.pi),
-        pad_width=0,
-        singularity=0):
-    """
-    Apply the inverse gradient operator (in the Fourier domain).
-
-    The singularity in the origin is corrected using the value set in the
-    corresponding parameter.
-
-
-    Args:
-        arr (np.ndarray): The input array.
-        ft_factor (float): The Fourier factor for the gradient operator.
-            Should be either 1 or 2*pi, depending on DFT implementation.
-        pad_width (float|int): Size of the border to use.
-            This is useful for mitigating border effects.
-            If int, it is interpreted as absolute size.
-            If float, it is interpreted as relative to the maximum size.
-
-    Returns:
-        arr (np.ndarray): The output array.
-    """
-    if pad_width:
-        shape = arr.shape
-        pad_width = auto_pad_width(pad_width, shape)
-        # mask = [slice(borders, -borders)] * arr.ndim
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
-        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
-    else:
-        mask = [slice(None)] * arr.ndim
-    kk = fftshift(_kk(arr.shape, arr.shape))
-    kk[kk != 0] = 1.0 / kk[kk != 0]  # get the inverse
-    arr = ((-1j / ft_factor) ** 2) * ifftn(kk * fftn(arr))
-    return arr[mask]
+        if isinstance(dims, int):
+            dims = (dims,)
+        dims = tuple(dim % len(shape) for dim in dims)
+    kks = tuple(
+        np.broadcast_to((1.0 - np.exp(2j * np.pi * k_i)), shape)
+        for i, (k_i, dim) in enumerate(zip(kk_, shape))
+        if i in dims)
+    return kks
 
 
 # ======================================================================
@@ -4573,6 +4617,86 @@ def auto_pad_width(
 
 
 # ======================================================================
+def gradients(
+        arr,
+        dims=None,
+        ft_factor=(2 * np.pi),
+        pad_width=0):
+    """
+    Apply the gradient operator (in the Fourier domain).
+
+    Args:
+        arr (np.ndarray): The input array.
+        dims (int|Iterable[int]): The direction of the gradient.
+            Values must be between `len(shape)` and `-len(shape)`.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+
+    Returns:
+        arrs (np.ndarray): The output array.
+
+    See Also:
+        gradient_kernels()
+    """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    arrs = tuple(
+        (((-1j * ft_factor) ** 2) * ifftn(fftshift(kk) * fftn(arr)))[mask]
+        for kk in gradient_kernels(arr.shape, dims, arr.shape))
+    return arrs
+
+
+# ======================================================================
+def exp_gradients(
+        arr,
+        dims=None,
+        ft_factor=(2 * np.pi),
+        pad_width=0):
+    """
+    Apply the exponential gradient operator (in the Fourier domain).
+
+    Args:
+        arr (np.ndarray): The input array.
+        dims (int|Iterable[int]): The direction of the gradient.
+            Values must be between `len(shape)` and `-len(shape)`.
+        ft_factor (float): The Fourier factor for the gradient operator.
+            Should be either 1 or 2*pi, depending on DFT implementation.
+        pad_width (float|int): Size of the border to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+
+    Returns:
+        arrs (np.ndarray): The output array.
+
+    See Also:
+        exp_gradient_kernels()
+    """
+    if pad_width:
+        shape = arr.shape
+        pad_width = auto_pad_width(pad_width, shape)
+        # mask = [slice(borders, -borders)] * arr.ndim
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+    arrs = tuple(
+        (((-1j * ft_factor) ** 2) * ifftn(fftshift(kk) * fftn(arr)))[mask]
+        for kk in exp_gradient_kernels(arr.shape, dims, arr.shape))
+    return arrs
+
+
+# ======================================================================
 def laplacian(
         arr,
         ft_factor=(2 * np.pi),
@@ -4601,7 +4725,7 @@ def laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    kk_2 = fftshift(_kk_2(arr.shape, arr.shape))
+    kk_2 = fftshift(laplace_kernel(arr.shape, arr.shape))
     arr = ((1j * ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
     return arr[mask]
 
@@ -4634,7 +4758,7 @@ def inv_laplacian(
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * arr.ndim
-    kk_2 = fftshift(_kk_2(arr.shape, arr.shape))
+    kk_2 = fftshift(laplace_kernel(arr.shape, arr.shape))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
     arr = ((-1j / ft_factor) ** 2) * ifftn(kk_2 * fftn(arr))
     return arr[mask]
@@ -5673,27 +5797,30 @@ def filter_cx(
         filter_kws = {}
     if mode == 'cartesian':
         arr = (
-            filter_func(arr.real, *filter_args, **filter_kws) +
-            1j * filter_func(arr.imag, *filter_args, **filter_kws))
+                filter_func(arr.real, *filter_args, **filter_kws) +
+                1j * filter_func(arr.imag, *filter_args, **filter_kws))
     elif mode == 'polar':
         arr = (
-            filter_func(np.abs(arr), *filter_args, **filter_kws) *
-            np.exp(
-                1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
+                filter_func(np.abs(arr), *filter_args, **filter_kws) *
+                np.exp(
+                    1j * filter_func(np.angle(arr), *filter_args,
+                        **filter_kws)))
     elif mode == 'real':
         arr = (
-            filter_func(arr.real, *filter_args, **filter_kws) + 1j * arr.imag)
+                filter_func(arr.real, *filter_args,
+                    **filter_kws) + 1j * arr.imag)
     elif mode == 'imag':
         arr = (
-            arr.real + 1j * filter_func(arr.imag, *filter_args, **filter_kws))
+                arr.real + 1j * filter_func(arr.imag, *filter_args,
+            **filter_kws))
     elif mode == 'mag':
         arr = (
-            filter_func(np.abs(arr), *filter_args, **filter_kws) *
-            np.exp(1j * np.angle(arr)))
+                filter_func(np.abs(arr), *filter_args, **filter_kws) *
+                np.exp(1j * np.angle(arr)))
     elif mode == 'phs':
         arr = (
-            np.abs(arr) * np.exp(
-                1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
+                np.abs(arr) * np.exp(
+            1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
     else:
         warnings.warn(
             'Mode `{}` not known'.format(mode) + ' Using default.')
