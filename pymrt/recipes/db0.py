@@ -28,20 +28,18 @@ import pymrt as mrt
 # from pymrt import msg, dbg
 
 from pymrt.constants import GAMMA, GAMMA_BAR
-from pymrt.config import _B0
 
 from pymrt.recipes import phs
 from pymrt.recipes.phs import phs_to_dphs, dphs_to_phs
 
-# ======================================================================
-_TE = 20.0  # ms
 
+# todo: simple conversion of B0 to freq
 
 # ======================================================================
 def phs_to_db0(
         phs_arr,
-        b0=_B0,
-        tis=_TE,
+        b0,
+        tis,
         units='ms'):
     """
     Convert single echo phase to magnetic field variation.
@@ -51,7 +49,8 @@ def phs_to_db0(
     Args:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
         b0 (float): Main Magnetic Field B0 Strength in T.
-        tis (float): Echo Time in ms.
+        tis (Iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
 
     Returns:
         db0_arr (np.ndarray): The relative field array in ppb
@@ -63,8 +62,8 @@ def phs_to_db0(
 # ======================================================================
 def db0_to_phs(
         db0_arr,
-        b0=_B0,
-        te=_TE):
+        b0,
+        tis):
     """
     Convert magnetic field variation to single echo phase.
 
@@ -73,18 +72,20 @@ def db0_to_phs(
     Args:
         db0_arr (np.ndarray): The magnetic field variation in ppb.
         b0 (float): Main Magnetic Field B0 Strength in T
-        te (float): Echo Time in ms
+        tis (Iterable): The sampling times Ti in time units.
+            The number of points must match the last shape size of arr.
 
     Returns:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
     """
-    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=te)
+    #fixme
+    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=tis)
 
 
 # ======================================================================
 def dphs_to_db0(
         dphs_arr,
-        b0=_B0):
+        b0):
     """
     Convert phase variation to magnetic field variation.
 
@@ -103,7 +104,7 @@ def dphs_to_db0(
 # ======================================================================
 def db0_to_dphs(
         db0_arr,
-        b0=_B0):
+        b0):
     """
     Convert magnetic field variation to phase variation.
 
@@ -122,9 +123,9 @@ def db0_to_dphs(
 # ======================================================================
 def fit_phase(
         phs_arr,
+        b0,
         tis,
-        tis_mask=None,
-        b0=_B0):
+        tis_mask=None):
     """
     Calculate magnetic field variation from phase evolution.
 
