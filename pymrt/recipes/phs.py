@@ -7,7 +7,7 @@ pymrt.recipes.phs: phase manipulation algorithms.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -108,7 +108,7 @@ def phs_to_dphs_multi(
 def phs_to_dphs(
         phs_arr,
         tis,
-        tis_mask,
+        tis_mask=None,
         unwrap='laplacian',
         unwrap_kws=None,
         units='ms'):
@@ -125,14 +125,25 @@ def phs_to_dphs(
             The number of points must match the last shape size of arr.
         tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
+        unwrap (str|None): The unwrapping method.
+            If None, no unwrapping is performed.
+            If str, perform unwrapping using `pymrt.recipes.phs.unwrapping()`.
+            Accepted values are:
+             - 'auto': uses the best method for the given input.
+               If `len(tis) == 1` uses `unwrap_sorting_path()`, otherwise uses
+               `unwrap_laplacian()`.
+             - 'laplacian': uses `unwrap_laplacian()`.
+             - 'sorting_path': uses `unwrap_sorting_path()`.
+        unwrap_kws (dict|tuple|None): Additional keyword arguments.
+            These are passed to `pymrt.recipes.phs.unwrapping()`.
         units (str|float|int): Units of measurement of Ti.
-            If str, the following will be accepted: 'ms'
+            If str, the following will be accepted: 'ms'.
             If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    #todo: fix documentation
+    # todo: fix documentation
     if isinstance(units, str):
         if units == 'ms':
             units = 1e-3
@@ -182,14 +193,15 @@ def cx2_to_dphs(
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    #todo: fix documentation
+    # todo: fix documentation
     dphs_arr = arr1 * arr2.conj()
     dphs_arr = np.arctan2(np.imag(dphs_arr), np.real(dphs_arr))
-    
+
     if unwrap is not None:
         dphs_arr = unwrapping(dphs_arr, unwrap, unwrap_kws)
 
     return dphs_arr / d_ti
+
 
 # ======================================================================
 def dphs_to_phs(
@@ -213,7 +225,7 @@ def dphs_to_phs(
     Returns:
         phs_arr (np.ndarray): The phase array in rad.
     """
-    #todo: fix documentation
+    # todo: fix documentation
     shape = dphs_arr.shape
     tis = np.array(
         mrt.utils.auto_repeat(tis)).reshape((1,) * len(shape) + (-1,))
