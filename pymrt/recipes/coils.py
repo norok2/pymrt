@@ -157,7 +157,7 @@ def compress(
             Accepted values are:
              - 'compress_svd': use `compress_svd()`.
             If None, no coil compression is performed.
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `verbose` are passed.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
@@ -177,9 +177,7 @@ def compress(
 
     if method in methods:
         method = eval(method)
-
-    if not method_kws:
-        method_kws = dict()
+    method_kws = {} if method_kws is None else dict(method_kws)
 
     if callable(method):
         arr = method(
@@ -850,7 +848,7 @@ def sensitivity(
              - 'block_adaptive';
              - 'adaptive_iter';
              - 'block_adaptive_iter';
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis` and `split_axis` are passed to `method`.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
@@ -874,9 +872,7 @@ def sensitivity(
 
     method = method.lower()
     msg('method={}'.format(method), verbose, VERB_LVL['medium'])
-
-    if not method_kws:
-        method_kws = dict()
+    method_kws = {} if method_kws is None else dict(method_kws)
 
     if method in methods:
         method = eval(method)
@@ -951,7 +947,7 @@ def combine(
             Accepted values requiring both `ref` and `multi_axis` are:
              Not implemented yet.
 
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `split_axis`, `verbose` are passed.
         compression (callable|str|None): The compression method.
             This is passed as `method` to `compress`.
@@ -985,11 +981,9 @@ def combine(
 
     method = method.lower()
     msg('method={}'.format(method), verbose, VERB_LVL['medium'])
+    method_kws = {} if method_kws is None else dict(method_kws)
 
     has_sens = method in sens_methods
-
-    if not method_kws:
-        method_kws = dict()
 
     if method in methods:
         method = eval(method)

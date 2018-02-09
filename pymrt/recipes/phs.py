@@ -333,14 +333,13 @@ def unwrapping(
             Accepted values are:
              - 'laplacian': uses `unwrap_laplacian()`.
              - 'sorting_path': uses `unwrap_sorting_path()`.
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
     """
     method = method.lower()
-    if method_kws is None:
-        method_kws = {}
+    method_kws = {} if method_kws is None else dict(method_kws)
     if method == 'laplacian':
         method = unwrap_laplacian
     elif method == 'sorting_path':

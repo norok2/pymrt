@@ -103,7 +103,7 @@ def denoise(
              - 'bilateral': `skimage.restoration.denoise_bilateral()`
                (only works with 2D images)
              - 'dwt': `dwt_filter()`
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         mode (str): Complex calculation mode.
@@ -117,9 +117,7 @@ def denoise(
         arr (np.ndarray): The denoised array.
     """
     method = method.lower()
-    if method_kws is None:
-        method_kws = {}
-
+    method_kws = {} if method_kws is None else dict(method_kws)
     if method == 'gaussian':
         if 'sigma' not in method_kws:
             method_kws['sigma'] = 1.0
@@ -636,7 +634,7 @@ def sn_split_denoise(
         arr (np.ndarray): The input array.
         method (str): Denoising method.
             This is passed to `denoise()`
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
 
@@ -646,8 +644,7 @@ def sn_split_denoise(
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    if method_kws is None:
-        method_kws = {}
+    method_kws = {} if method_kws is None else dict(method_kws)
     signal_arr = denoise(arr, method, method_kws)
     noise_arr = arr - signal_arr
     return signal_arr, noise_arr
@@ -858,7 +855,7 @@ def fix_bias_rician(
              - 'best': `estimate_noise_sigma()`
              - 'separated': `estimate_noise_sigma_sn_split()`
              - 'region': `sigma_noise_region()`
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         positive (bool): Force result to be positive.
@@ -879,8 +876,7 @@ def fix_bias_rician(
     """
     arr = arr.astype(float)
 
-    if method_kws is None:
-        method_kws = {}
+    method_kws = {} if method_kws is None else dict(method_kws)
     sigma = estimate_noise_sigma(arr, **method_kws)
 
     # sigma *= (np.sqrt(2.0 / (4 - np.pi)))  # correct for Rice factor
