@@ -1154,6 +1154,7 @@ def linsolve_iter(
         tol=1e-8,
         x0_arr=None,
         preconditioner=None,
+        callback=None,
         method=None,
         method_kws=None,
         verbose=D_VERB_LVL):
@@ -1179,8 +1180,13 @@ def linsolve_iter(
             The exact use of this parameter varies from method to method.
         x0_arr (np.ndarray|None): The initial guess.
             If None, the default value for each method is used.
-        preconditioner (np.ndarray): The solution preconditioner.
-            The preconditioner should approximate :math:`A^{-1}`.
+        preconditioner (np.ndarray|LinearOperator): The preconditioner.
+            This is a linear operator that improves the numerical conditioning.
+            It should approximate :math:`A^{-1}`.
+        callback (callable|None): Function called at each iteration.
+            Must have the following signature: f(np.ndarray) -> Any|None
+            The first argument is the approximate solution for `x_arr` at
+            the given iteration step.
         method (str|None): Iterative algorithm to use.
             If None, this is determined automatically based on the problem.
             Accepted values are:
@@ -1213,6 +1219,7 @@ def linsolve_iter(
     Returns:
         x_arr (np.ndarray): The output array.
     """
+    # TODO: Add support for stopping condition
     show = verbose >= VERB_LVL['high']
     if method is None:
         if linear_operator.shape[0] != linear_operator.shape[1]:
@@ -1227,26 +1234,15 @@ def linsolve_iter(
     method = method.lower()
     method_kws = {} if method_kws is None else dict(method_kws)
 
-    if verbose >= VERB_LVL['high']:
-        msg('iter: ', verbose, end='')
-        i = 0
-
-        # -----------------------------------
-        def iter_callback(x_arr):
-            global i
-            i += 1
-            msg(str(i), end='')
-            return
-
-    else:
-        iter_callback = None
-
     if method == 'lsmr':
         if x0_arr is not None:
             text = 'Initial guess not used.'
             warnings.warn(text)
         if preconditioner is not None:
             text = 'Preconditionr operator `preconditioner` not used.'
+            warnings.warn(text)
+        if callback is not None:
+            text = 'Callback function `callback` not used.'
             warnings.warn(text)
 
         res = sp.sparse.linalg.lsmr(
@@ -1261,6 +1257,9 @@ def linsolve_iter(
         if preconditioner is not None:
             text = 'Preconditionr operator `preconditioner` not used.'
             warnings.warn(text)
+        if callback is not None:
+            text = 'Callback function `callback` not used.'
+            warnings.warn(text)
 
         res = sp.sparse.linalg.lsqr(
             linear_operator, const_term,
@@ -1270,50 +1269,53 @@ def linsolve_iter(
     elif method == 'bicg':
         res = sp.sparse.linalg.bicg(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'bicgstab':
         res = sp.sparse.linalg.bicgstab(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'cg':
         res = sp.sparse.linalg.cg(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'cgs':
         res = sp.sparse.linalg.cgs(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            maxiter=max_iter, callback=callback, **method_kws)
 
     elif method == 'gmres':
         res = sp.sparse.linalg.gmres(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'lgmres':
         res = sp.sparse.linalg.lgmres(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'qmr':
+        if preconditioner is not None:
+            text = 'Preconditionr operator `preconditioner` not used.'
+            warnings.warn(text)
         res = sp.sparse.linalg.qmr(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback,
+            maxiter=max_iter, **method_kws)
 
     elif method == 'minres':
         res = sp.sparse.linalg.minres(
             linear_operator, const_term,
-            tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=iter_callback, **method_kws)
+            tol=tol, x0=x0_arr, callback=callback, M=preconditioner,
+            maxiter=max_iter, **method_kws)
 
     else:
         text = 'Unknown unwrapping method `{}`'.format(method)
