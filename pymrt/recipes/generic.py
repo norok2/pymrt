@@ -1202,10 +1202,10 @@ def linsolve_iter(
                Requires an endomorphism (square matrix).
              - 'lgmres': uses `scipy.sparse.linalg.lgmres()`.
                Requires an endomorphism (square matrix).
-             - 'qmr': uses `scipy.sparse.linalg.lsmr()`.
+             - 'qmr': uses `scipy.sparse.linalg.qmr()`.
                Requires an endomorphism (square matrix), and
                computing :math:`Ax` and :math:`A^Hb`.
-             - 'minres': uses `scipy.sparse.linalg.lsmr()`.
+             - 'minres': uses `scipy.sparse.linalg.minres()`.
                Requires an endomorphism (square matrix).
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
         verbose (int): Set level of verbosity.
@@ -1213,11 +1213,6 @@ def linsolve_iter(
     Returns:
         x_arr (np.ndarray): The output array.
     """
-    # generic solvers: lsqr, lsmr
-    # square solvers: bicg, bicgstab, gmres, lgmres
-    # self-adjoint positive solvers: cg, minres
-
-    method_kws = {} if method_kws is None else dict(method_kws)
     show = verbose >= VERB_LVL['high']
     if method is None:
         if linear_operator.shape[0] != linear_operator.shape[1]:
@@ -1230,6 +1225,21 @@ def linsolve_iter(
             else:
                 method = 'lsmr'
     method = method.lower()
+    method_kws = {} if method_kws is None else dict(method_kws)
+
+    if verbose >= VERB_LVL['high']:
+        msg('iter: ', verbose, end='')
+        i = 0
+
+        # -----------------------------------
+        def iter_callback(x_arr):
+            global i
+            i += 1
+            msg(str(i), end='')
+            return
+
+    else:
+        iter_callback = None
 
     if method == 'lsmr':
         if x0_arr is not None:
@@ -1261,58 +1271,49 @@ def linsolve_iter(
         res = sp.sparse.linalg.bicg(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'bicgstab':
         res = sp.sparse.linalg.bicgstab(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'cg':
         res = sp.sparse.linalg.cg(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'cgs':
         res = sp.sparse.linalg.cgs(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'gmres':
         res = sp.sparse.linalg.gmres(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'lgmres':
-        if show:
-            msg('LGMRES-iter: ', verbose, end='')
-            i = 0
-
-            def show(xk):
-                global i
-                i += 1
-                msg(str(i), end='')
-
         res = sp.sparse.linalg.lgmres(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, callback=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'qmr':
         res = sp.sparse.linalg.qmr(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     elif method == 'minres':
         res = sp.sparse.linalg.minres(
             linear_operator, const_term,
             tol=tol, x0=x0_arr, M=preconditioner,
-            maxiter=max_iter, show=show, **method_kws)
+            maxiter=max_iter, callback=iter_callback, **method_kws)
 
     else:
         text = 'Unknown unwrapping method `{}`'.format(method)
