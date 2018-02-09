@@ -7,7 +7,7 @@ pymrt.recipes.generic: generic computation algorithms.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -24,6 +24,8 @@ import pywt as pw  # PyWavelets - Wavelet Transforms in Python
 import scipy.integrate  # SciPy: Integration and ODEs
 import scipy.optimize  # SciPy: Optimization and root finding
 import scipy.stats  # SciPy: Statistical functions
+import scipy.sparse  # SciPy: Sparse Matrices
+import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 
 # :: Local Imports
 import pymrt as mrt
@@ -31,7 +33,7 @@ import pymrt.utils
 import pymrt.segmentation
 
 from pymrt import INFO, DIRS
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
 
@@ -200,7 +202,7 @@ def cx_div(
         result (float|complex|np.ndarray): The pseud-ratio array.
     """
     result = arr1 * arr2 / (
-        np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
+            np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
         result = mrt.utils.scale(result, values_interval, (-0.5, 0.5))
     return result
@@ -1017,7 +1019,7 @@ def voxel_curve_fit(
         post_args (list):
         post_kwargs (dict):
         method (str): Method to use for the curve fitting procedure.
-        method_kws (dict|None): Keyword arguments to pass to `method`.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:
         p_arr (np.ndarray) :
@@ -1059,9 +1061,7 @@ def voxel_curve_fit(
             method = 'curve_fit_parallel_map'
         elif fit_params:
             method = 'poly'
-
-    if not method_kws:
-        method_kws = {}
+    method_kws = {} if method_kws is None else dict(method_kws)
 
     if method == 'curve_fit_sequential':
         for i in range(num_voxels):
@@ -1144,6 +1144,181 @@ def voxel_curve_fit(
         p_arr = post_func(p_arr, *post_args, **post_kwargs)
 
     return p_arr
+
+
+# ======================================================================
+def linsolve_iter(
+        linear_operator,
+        const_term,
+        max_iter=None,
+        tol=1e-8,
+        x0_arr=None,
+        preconditioner=None,
+        method=None,
+        method_kws=None,
+        verbose=D_VERB_LVL):
+    """
+    Iterative solve for x the linear system: Ax = b
+
+    More in general, this will look for:
+
+    .. math::
+        argmin_x ||Ax - b||_2^2
+
+    Eventual regularization terms must be included in the definition of the
+    linear operator :math:`A` and the constant term :math:`b`.
+
+    Args:
+        linear_operator (np.ndarray|LinearOperator): The linear operator A.
+            The `scipy.sparse.linalg.LinearOperator()` must be used when
+            the linear operator :math:`A` is not explicitly known.
+        const_term (np.ndarray): The constant term b.
+        max_iter (int|None): The maximum number of iterations.
+            If None, the default value for each method is used.
+        tol (float): The iteration tolerance.
+            The exact use of this parameter varies from method to method.
+        x0_arr (np.ndarray|None): The initial guess.
+            If None, the default value for each method is used.
+        preconditioner (np.ndarray): The solution preconditioner.
+            The preconditioner should approximate :math:`A^{-1}`.
+        method (str|None): Iterative algorithm to use.
+            If None, this is determined automatically based on the problem.
+            Accepted values are:
+             - 'lsmr': uses `scipy.sparse.linalg.lsmr()`.
+               Requires computing :math:`Ax` and :math:`A^Hb`.
+             - 'lsqr': uses `scipy.sparse.linalg.lsqr()`.
+               Requires computing :math:`Ax` and :math:`A^Hb`.
+             - 'bicg': uses `scipy.sparse.linalg.bicg()`.
+               Requires an endomorphism (square matrix), and
+               computing :math:`Ax` and :math:`A^Hb`.
+             - 'bicgstab': uses `scipy.sparse.linalg.bicgstab()`.
+               Requires an endomorphism (square matrix).
+             - 'cg': uses `scipy.sparse.linalg.cg()`.
+               Requires a hermitian (:math:`A=A^H`), positive definite
+               endomorphism (square matrix).
+             - 'cgs': uses `scipy.sparse.linalg.cgs()`.
+               Requires an endomorphism (square matrix).
+             - 'gmres': uses `scipy.sparse.linalg.gmres()`.
+               Requires an endomorphism (square matrix).
+             - 'lgmres': uses `scipy.sparse.linalg.lgmres()`.
+               Requires an endomorphism (square matrix).
+             - 'qmr': uses `scipy.sparse.linalg.lsmr()`.
+               Requires an endomorphism (square matrix), and
+               computing :math:`Ax` and :math:`A^Hb`.
+             - 'minres': uses `scipy.sparse.linalg.lsmr()`.
+               Requires an endomorphism (square matrix).
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        x_arr (np.ndarray): The output array.
+    """
+    # generic solvers: lsqr, lsmr
+    # square solvers: bicg, bicgstab, gmres, lgmres
+    # self-adjoint positive solvers: cg, minres
+
+    method_kws = {} if method_kws is None else dict(method_kws)
+    show = verbose >= VERB_LVL['high']
+    if method is None:
+        if linear_operator.shape[0] != linear_operator.shape[1]:
+            method = 'lsqr'
+        else:
+            try:
+                linear_operator.dot(const_term)
+            except AttributeError:
+                method = 'lgmres'
+            else:
+                method = 'lsmr'
+    method = method.lower()
+
+    if method == 'lsmr':
+        if x0_arr is not None:
+            text = 'Initial guess not used.'
+            warnings.warn(text)
+        if preconditioner is not None:
+            text = 'Preconditionr operator `preconditioner` not used.'
+            warnings.warn(text)
+
+        res = sp.sparse.linalg.lsmr(
+            linear_operator, const_term,
+            atol=tol, btol=tol,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'lsqr':
+        if x0_arr is not None:
+            text = 'Initial guess `x0_arr` not used.'
+            warnings.warn(text)
+        if preconditioner is not None:
+            text = 'Preconditionr operator `preconditioner` not used.'
+            warnings.warn(text)
+
+        res = sp.sparse.linalg.lsqr(
+            linear_operator, const_term,
+            atol=tol, btol=tol,
+            iter_lim=max_iter, show=show, **method_kws)
+
+    elif method == 'bicg':
+        res = sp.sparse.linalg.bicg(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'bicgstab':
+        res = sp.sparse.linalg.bicgstab(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'cg':
+        res = sp.sparse.linalg.cg(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'cgs':
+        res = sp.sparse.linalg.cgs(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'gmres':
+        res = sp.sparse.linalg.gmres(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'lgmres':
+        if show:
+            msg('LGMRES-iter: ', verbose, end='')
+            i = 0
+
+            def show(xk):
+                global i
+                i += 1
+                msg(str(i), end='')
+
+        res = sp.sparse.linalg.lgmres(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, callback=show, **method_kws)
+
+    elif method == 'qmr':
+        res = sp.sparse.linalg.qmr(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    elif method == 'minres':
+        res = sp.sparse.linalg.minres(
+            linear_operator, const_term,
+            tol=tol, x0=x0_arr, M=preconditioner,
+            maxiter=max_iter, show=show, **method_kws)
+
+    else:
+        text = 'Unknown unwrapping method `{}`'.format(method)
+        raise ValueError(text)
+
+    return res[0]
 
 
 # ======================================================================
