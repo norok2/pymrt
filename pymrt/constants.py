@@ -46,3 +46,27 @@ GAMMA_BAR = collections.OrderedDict(  # Hz/T
     (key, 1 * val / (2 * pi)) for key, val in GAMMA.items())
 
 # ======================================================================
+# Magnetic Susceptibility Values (SI units)
+# See:
+#   - Schenck J.F. (1996), "The Role of Magnetic Susceptibility in Magnetic
+#     Resonance Imaging: MRI Magnetic Compatibility of the First and Second
+#     Kinds", Medical Physics 23 (6):815–850, DOI:10.1118/1.597854.
+#   - Arrighini G.P., Maestro M., Moccia R. (1968), "Magnetic Properties of
+#     Polyatomic Molecules. I. Magnetic Susceptibility of H2O, NH3, CH4, H2O2",
+#     The Journal of Chemical Physics 49 (2):882–889, DOI:10.1063/1.1670155.
+#   - Glick R.E. (1961), "ON THE DIAMAGNETIC SUSCEPTIBILITY OF GASES1", The
+#     Journal of Physical Chemistry 65 (9):1552–1555, DOI:10.1021/j100905a020.
+#   - Wapler M.C., Leupold J., Dragonu I., Elverfeld D. von, Zaitsev M.,
+#     Wallrabe U. (2014), "Magnetic Properties of Materials for MR Engineering,
+#     Micro-MR and Beyond", Journal of Magnetic Resonance 242 (May):233–242,
+#     DOI:10.1016/j.jmr.2014.02.005.
+#   - https://en.wikipedia.org/wiki/Magnetic_susceptibility
+CHI_V = collections.OrderedDict((  # ppb (SI units)
+    ('air@293K,101325Pa', +360),
+    ('water@293K,101325Pa', -9035),
+))
+CHI_V.update(
+    collections.OrderedDict((
+        ('air', CHI_V['air@293K,101325Pa']),
+        ('water', CHI_V['water@293K,101325Pa']),
+    )))
