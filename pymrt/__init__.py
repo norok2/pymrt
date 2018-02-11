@@ -13,7 +13,10 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-
+import datetime  # Basic date and time types
+# import inspect  # Inspect live objects
+import os  # Miscellaneous operating system interfaces
+import appdirs  # Determine appropriate platform-specific dirs
 
 # ======================================================================
 # :: Version
@@ -39,7 +42,7 @@ You are welcome to redistribute it under its terms and conditions.
 }
 
 # ======================================================================
-# :: supported verbosity levels
+# :: Supported Verbosity Levels
 VERB_LVL_NAMES = (
     'none', 'lowest', 'lower', 'low', 'medium', 'high', 'higher', 'highest',
     'warning', 'debug')
@@ -178,6 +181,7 @@ def dbg(obj, fmt=None):
     """
     import inspect
 
+
     outer_frame = inspect.getouterframes(inspect.currentframe())[1]
     name_str = outer_frame[4][0][:-1]
     msg(name_str, fmt=fmt, end=': ')
@@ -204,12 +208,8 @@ def elapsed(
     Returns:
         None.
     """
-    import datetime  # Basic date and time types
-    import inspect  # Inspect live objects
-    import os  # Miscellaneous operating system interfaces
-
     if name is None:
-        outer_frame = inspect.getouterframes(inspect.currentframe())[1]
+        # outer_frame = inspect.getouterframes(inspect.currentframe())[1]
         filename = __file__
         name = os.path.basename(filename)
 
@@ -235,8 +235,6 @@ def report(
     Returns:
         None.
     """
-    import datetime
-
     text = ''
     if not only_last:
         text += label + ('\n' if len(events) > 2 else '')
@@ -258,7 +256,8 @@ def report(
         name = events[_id][0]
         curr_elapsed = events[_id][1]
         prev_elapsed = events[_id - 1][1]
-        text += ('{!s:24s} {!s:>24s}'.format(name, curr_elapsed - prev_elapsed))
+        text += (
+            '{!s:24s} {!s:>24s}'.format(name, curr_elapsed - prev_elapsed))
     return text
 
 
@@ -286,9 +285,6 @@ def _app_dirs(
         >>> sorted(_app_dirs().keys())
         ['cache', 'config', 'data', 'log']
     """
-    import appdirs
-    import os
-
     dirpaths = dict((
         ('config', appdirs.user_config_dir(name, author, version)),
         ('cache', appdirs.user_cache_dir(name, author, version)),
