@@ -1003,7 +1003,10 @@ def _qsm_test(
 # ======================================================================
 def wip():
     import os
+    import datetime
     import pymrt.input_output
+
+    begin_time = datetime.datetime.now()
 
     force = False
 
@@ -1018,7 +1021,7 @@ def wip():
     phs_arr = mrt.input_output.load(phs_filepath)
     msk_arr = mrt.input_output.load(msk_filepath).astype(bool)
 
-    uphs_filepath = os.path.join(base_path, 'unwrap_bai_phs.nii.gz')
+    uphs_filepath = os.path.join(base_path, 'bai_uphs.nii.gz')
     if mrt.utils.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
@@ -1027,16 +1030,16 @@ def wip():
     else:
         uphs_arr = mrt.input_output.load(uphs_filepath)
 
-    dphs_filepath = os.path.join(base_path, 'dphs.nii.gz')
+    dphs_filepath = os.path.join(base_path, 'bai_dphs.nii.gz')
     if mrt.utils.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
-        dphs_arr = phs.phs_to_dphs(phs_arr)
+        dphs_arr = phs.phs_to_dphs(phs_arr, 20.0)
         mrt.input_output.save(dphs_filepath, uphs_arr)
     else:
         dphs_arr = mrt.input_output.load(dphs_filepath)
 
-    db0_filepath = os.path.join(base_path, 'db0.nii.gz')
+    db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
     if mrt.utils.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
 
@@ -1045,18 +1048,17 @@ def wip():
     else:
         db0_arr = mrt.input_output.load(db0_filepath)
 
-    # milf_filepath = os.path.join(base_path, 'milf_bai_phs.nii.gz')
-    # if mrt.utils.check_redo(uphs_filepath, milf_filepath, force):
+    # milf_filepath = os.path.join(base_path, 'bai_db0i_milf.nii.gz')
+    # if mrt.utils.check_redo(db0_filepath, milf_filepath, force):
     #     from pymrt.recipes import phs
     #
-    #     mask_arr = sp.ndimage.binary_erosion(msk_arr, iterations=6)
-    #     milf_arr = qsm_remove_background_milf(uphs_arr, mask_arr)
+    #     milf_arr = qsm_remove_background_milf(uphs_arr, msk_arr)
     #     mrt.input_output.save(milf_filepath, milf_arr)
     #     msg('MILF')
     # else:
     #     milf_arr = mrt.input_output.load(milf_filepath)
-    #
-    # sharp_filepath = os.path.join(base_path, 'sharp_bai_phs.nii.gz')
+
+    # sharp_filepath = os.path.join(base_path, 'bai_db0i_sharp.nii.gz')
     # if mrt.utils.check_redo(uphs_filepath, sharp_filepath, force):
     #     from pymrt.recipes import phs
     #     import scipy.ndimage
@@ -1070,6 +1072,18 @@ def wip():
     # else:
     #     sharp_arr = mrt.input_output.load(sharp_filepath)
 
+    chi_filepath = os.path.join(base_path, 'bai_chi_tfi.nii.gz')
+    if mrt.utils.check_redo(db0_filepath, chi_filepath, force):
+        from pymrt.recipes import db0
+
+        db0_arr = qsm_total_field_inversion(
+            db0_arr, mag_arr, msk_arr,
+            linsolve_iter_kws=dict(method='lsmr', max_iter=2048))
+        mrt.input_output.save(db0_filepath, db0_arr)
+    else:
+        db0_arr = mrt.input_output.load(db0_filepath)
+
+    msg('TotTime: {}'.format(datetime.datetime.now() - begin_time))
 
 # ======================================================================
 if __name__ == '__main__':
