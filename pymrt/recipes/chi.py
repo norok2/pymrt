@@ -601,6 +601,7 @@ def qsm_field2source_l2_iter(
         db0i_arr,
         mask_arr=None,
         weight_arr=None,
+        norm_regularization=None,
         grad_regularization=1.0e-1,
         preconditioner=False,
         threshold=1.0e-1,
@@ -657,6 +658,7 @@ def qsm_field2source_l2_iter(
             It has the same scaling units as `db0_arr` (e.g. ppm or ppb).
             Values are defined up to an aribitrary offset.
     """
+    # todo: norm regularization
     linsolve_iter_kws = {} \
         if linsolve_iter_kws is None else dict(linsolve_iter_kws)
     if mask_arr is None:
@@ -680,7 +682,8 @@ def qsm_field2source_l2_iter(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = mrt.utils.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape)
+    exp_ks = mrt.utils.exp_gradient_kernels(db0i_arr.shape, None,
+        db0i_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
         if threshold:
@@ -712,7 +715,11 @@ def qsm_field2source_l2_iter(
         return np.ravel(np.stack(ax_arrs, -1))
 
     # -----------------------------------
-    def _ahb(arr, mask_arr=mask_arr, dk=dk, exp_ks=exp_ks):
+    def _ahb(
+            arr,
+            mask_arr=mask_arr,
+            dk=dk,
+            exp_ks=exp_ks):
         """Computes the transposed linear operator."""
         o_arr = arr.reshape(x_shape)[..., 0]
         ahb_arrs = [
@@ -726,7 +733,11 @@ def qsm_field2source_l2_iter(
         return np.ravel(np.stack(ahb_arrs, -1))
 
     # -----------------------------------
-    def _aib(arr, mask_arr=mask_arr, dk_inv=dk_inv, exp_k_invs=exp_k_invs):
+    def _aib(
+            arr,
+            mask_arr=mask_arr,
+            dk_inv=dk_inv,
+            exp_k_invs=exp_k_invs):
         """Computes the inverse linear operator."""
         o_arr = arr.reshape(x_shape)[..., 0]
         aib_arrs = [
@@ -740,7 +751,7 @@ def qsm_field2source_l2_iter(
         return np.ravel(np.stack(aib_arrs, -1))
 
     const_term = np.ravel(
-        np.stack((db0i_arr,) + 3 * (np.zeros_like(db0i_arr),), -1))
+        np.stack((mask_arr * db0i_arr,) + 3 * (np.zeros_like(db0i_arr),), -1))
     x0_arr = _aib(const_term)
 
     linear_operator = sp.sparse.linalg.LinearOperator(
@@ -774,14 +785,15 @@ def qsm_total_field_inversion(
         weight_arr=None,
         mask_arr=None,
         precond_arr=None,
+        norm_regularization=None,
         grad_regularization=1.0e-1,
         threshold=1.0e-1,
         b0_direction=(0, 0, 1),
         theta=0.0,
         phi=0.0,
         linsolve_iter_kws=(
-                ('method', 'gmres'),
-                ('max_iter', 512)),
+                ('method', 'minres'),
+                ('max_iter', 128)),
         verbose=D_VERB_LVL):
     """
     Convert magnetic field variation to magnetic susceptibility.
@@ -884,7 +896,12 @@ def qsm_total_field_inversion(
         return np.ravel(np.stack(ax_arrs, -1))
 
     # -----------------------------------
-    def _ahb(arr, mask_arr=mask_arr, dk=dk, exp_ks=exp_ks):
+    def _ahb(
+            arr,
+            weight_arr=weight_arr,
+            mask_arr=mask_arr,
+            dk=dk,
+            exp_ks=exp_ks):
         """Computes the transposed linear operator."""
         o_arr = arr.reshape(x_shape)[..., 0]
         ahb_arrs = [
@@ -898,8 +915,8 @@ def qsm_total_field_inversion(
         return np.ravel(np.stack(ahb_arrs, -1))
 
     const_term = np.ravel(
-        np.stack((db0_arr,) + 3 * (np.zeros_like(db0_arr),), -1))
-    x0_arr = None  # TODO: compute approximate solution
+        np.stack((weight_arr * db0_arr,) + 3 * (np.zeros_like(db0_arr),), -1))
+    x0_arr = 1.0 / precond_arr
 
     linear_operator = sp.sparse.linalg.LinearOperator(
         (len(const_term),) * 2, matvec=_ax, rmatvec=_ahb)
@@ -1072,18 +1089,38 @@ def wip():
     # else:
     #     sharp_arr = mrt.input_output.load(sharp_filepath)
 
-    chi_filepath = os.path.join(base_path, 'bai_chi_tfi.nii.gz')
+    chi_filepath = os.path.join(base_path, 'bai_chi_ptfi_minres_i0128.nii.gz')
     if mrt.utils.check_redo(db0_filepath, chi_filepath, force):
         from pymrt.recipes import db0
 
-        db0_arr = qsm_total_field_inversion(
-            db0_arr, mag_arr, msk_arr,
-            linsolve_iter_kws=dict(method='lsmr', max_iter=2048))
-        mrt.input_output.save(db0_filepath, db0_arr)
+        mask = mag_arr > 0.5
+        w_arr = mag_arr ** 2
+        # 1 / (chi_x / chi_water)
+        # non-water is assumed to be air
+        pc_arr = np.full(mag_arr.shape, abs(CHI_V['water'] / CHI_V['air']))
+        # mask is assumed to be mostly water
+        pc_arr[mask] = abs(CHI_V['water'] / CHI_V['water'])
+
+        chi_arr = qsm_total_field_inversion(
+            db0_arr, w_arr, msk_arr, pc_arr,
+            linsolve_iter_kws=dict(method='minres', max_iter=128))
+        mrt.input_output.save(chi_filepath, chi_arr)
     else:
-        db0_arr = mrt.input_output.load(db0_filepath)
+        chi_arr = mrt.input_output.load(chi_filepath)
+
+    # chi_filepath = os.path.join(base_path, 'bai_chi_tfi_lsmr.nii.gz')
+    # if mrt.utils.check_redo(db0_filepath, chi_filepath, force):
+    #     from pymrt.recipes import db0
+    #
+    #     chi_arr = qsm_total_field_inversion(
+    #         db0_arr, mag_arr, msk_arr,
+    #         linsolve_iter_kws=dict(method='lsmr', max_iter=256))
+    #     mrt.input_output.save(chi_filepath, chi_arr)
+    # else:
+    #     chi_arr = mrt.input_output.load(chi_filepath)
 
     msg('TotTime: {}'.format(datetime.datetime.now() - begin_time))
+
 
 # ======================================================================
 if __name__ == '__main__':
