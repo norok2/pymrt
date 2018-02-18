@@ -7,7 +7,7 @@ pymrt.recipes.b0: dB0 magnetic field variation computation.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -63,7 +63,8 @@ def phs_to_db0(
 def db0_to_phs(
         db0_arr,
         b0,
-        tis):
+        tis,
+        phs0_arr=0):
     """
     Convert magnetic field variation to single echo phase.
 
@@ -78,8 +79,8 @@ def db0_to_phs(
     Returns:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
     """
-    #fixme
-    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=tis)
+
+    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=tis, phs0_arr=phs0_arr)
 
 
 # ======================================================================

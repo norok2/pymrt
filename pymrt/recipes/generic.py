@@ -834,7 +834,9 @@ def fit_exp_tau(
         tis_mask=None):
     """
     Mono-exponential decay fit.
-    
+
+    EXPERIMENTAL!
+
     The actual algorithm to be used is determined from the data itself.
     
     Args:

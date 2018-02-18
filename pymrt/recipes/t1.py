@@ -7,7 +7,7 @@ pymrt.recipes.t1: T1 longitudinal relaxation computation.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -80,7 +80,7 @@ def mp2rage_rho(
             the removal of non-bijective branches.
             This parameter may affect the precision of the estimation.
         mode (str): Select the array combination mode.
-            See `sequences.mp2rage.rho()` for more information.
+            See `pymrt.sequences.mp2rage.rho()` for more info.
         inverted (bool): Invert results to convert times to rates.
             Assumes that units of time is ms and units of rates is Hz.
         **params_kws: The acquisition parameters.

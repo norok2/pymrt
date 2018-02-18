@@ -21,7 +21,7 @@ Methods requiring both `ref` and `multi_axis` are:
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports

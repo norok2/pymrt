@@ -212,23 +212,19 @@ def dphs_to_phs(
     Calculate the phase variation from phase data.
 
     Args:
-        phs_arr (np.ndarray): The input array in rad.
+        dphs_arr (np.ndarray): The input array in rad.
             The sampling time Ti varies in the last dimension.
         tis (Iterable|int|float): The sampling times Ti in time units.
-            The number of points must match the last shape size of arr.
-        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
-            If None, all will be used.
-        units (str|float|int): Units of measurement of Ti.
-            If str, the following will be accepted: 'ms'
-            If int or float, the conversion factor will be multiplied to `ti`.
+            The number of points will match the last shape size of `phs_arr`.
+        phs0_arr (np.ndarray|int|float): The initial phase offset.
+            If int or float, a constant offset is used.
 
     Returns:
         phs_arr (np.ndarray): The phase array in rad.
     """
-    # todo: fix documentation
     shape = dphs_arr.shape
     tis = np.array(
-        mrt.utils.auto_repeat(tis)).reshape((1,) * len(shape) + (-1,))
+        mrt.utils.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
     dphs_arr = dphs_arr.reshape(shape + (1,))
     return dphs_arr * tis + phs0_arr
 
@@ -289,6 +285,81 @@ def unwrap_laplacian(
 
 
 # ======================================================================
+def unwrap_laplacian_corrected(
+        arr,
+        pad_width=0):
+    """
+    Super-fast multi-dimensional corrected Laplacian-based Fourier unwrapping.
+
+    EXPERIMENTAL!
+
+    Phase unwrapping by using the following equality:
+
+    L = (d / dx)^2
+
+    L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
+
+    phi = IL(L(phi)) = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
+
+    Args:
+        arr (np.ndarray): The input array.
+        pad_width (float|int): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+
+    Returns:
+        arr (np.ndarray): The unwrapped array.
+
+    See Also:
+        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+    """
+    raise NotImplementedError
+    if pad_width:
+        shape = arr.shape
+        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
+        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
+    else:
+        mask = [slice(None)] * arr.ndim
+
+    # from pymrt.base import laplacian, inv_laplacian
+    # from numpy import real, sin, cos
+    # arr = real(inv_laplacian(
+    #     cos(arr) * laplacian(sin(arr)) - sin(arr) * laplacian(cos(arr))))
+
+    cos_arr = np.cos(arr)
+    sin_arr = np.sin(arr)
+    kk_2 = fftshift(mrt.utils.laplace_kernel(arr.shape))
+    arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
+               sin_arr * ifftn(kk_2 * fftn(cos_arr)))
+    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
+    arr *= kk_2
+    del cos_arr, sin_arr, kk_2
+    arr = np.real(ifftn(arr))
+
+    arr = arr[mask]
+    return arr
+
+
+# ======================================================================
+def unwrap_region_merging(
+        arr):
+    """
+    Accurate unwrapping using a region-merging approach.
+
+    EXPERIMENTAL!
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def unwrap_sorting_path(
         arr,
         unwrap_axes=(0, 1, 2),
@@ -319,6 +390,7 @@ def unwrap_sorting_path(
     """
     from skimage.restoration import unwrap_phase
 
+
     if unwrap_axes:
         loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
                     for j, dim in enumerate(arr.shape)]
@@ -327,6 +399,23 @@ def unwrap_sorting_path(
     for indexes in itertools.product(*loop_gen):
         arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
     return arr
+
+
+# ======================================================================
+def unwrap_cnn(
+        arr):
+    """
+    Fast unwrapping using Convolutional Neural Networks.
+
+    EXPERIMENTAL!
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -356,10 +445,12 @@ def unwrapping(
         method = unwrap_laplacian
     elif method == 'sorting_path':
         method = unwrap_sorting_path
-    elif method == 'region_merge':
-        raise NotImplementedError
+    elif method == 'region_merging':
+        method = unwrap_region_merging
     elif method == 'laplacian_corrected':
-        raise NotImplementedError
+        method = unwrap_laplacian_corrected
+    elif method == 'cnn':
+        method = unwrap_cnn
     else:
         text = 'Unknown unwrapping method `{}`'.format(method)
         warnings.warn(text)

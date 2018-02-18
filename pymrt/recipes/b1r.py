@@ -2,12 +2,16 @@
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.b1t: relative B1- (or coil sensitivity) computation.
+
+EXPERIMENTAL!
+
+Note: this may have some overlap with `pymrt.recipes.coils`.
 """
 
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -30,4 +34,13 @@ from pymrt.recipes import t1
 
 # ======================================================================
 def receive_profile(arr):
+    """
+    EXPERIMENTAL!
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        arr (np.ndarray): The output array.
+    """
     raise NotImplementedError

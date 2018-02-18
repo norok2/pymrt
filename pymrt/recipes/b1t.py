@@ -7,7 +7,7 @@ pymrt.recipes.b1t: relative B1+ (or flip angle efficiency) computation.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -82,6 +82,7 @@ def afi(
           state: A method for rapid three-dimensional mapping of the
           transmitted radiofrequency field. Magn. Reson. Med. 57, 192–200.
           doi:10.1002/mrm.21120
+        - Steichter, M., 2018.
     """
     arr1 = prepare(arr1) if prepare else arr1.astype(complex)
     arr2 = prepare(arr2) if prepare else arr2.astype(complex)
@@ -353,7 +354,7 @@ def mp2rage_rho(
             the removal of non-bijective branches.
             This parameter may affect the precision of the estimation.
         mode (str): Select the array combination mode.
-            See `sequences.mp2rage.rho()` for more information.
+            See `pymrt.sequences.mp2rage.rho()` for more info.
         **params_kws: The acquisition parameters.
             This is filtered through `utils.split_func_kws()` for
             `sequences.mp2rage.acq_to_seq_params()` and the result

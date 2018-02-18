@@ -198,7 +198,7 @@ def read_stream(
              - 'float': float type (same as: 'f', 4B)
              - 'double': double type (same as: 'd', 8B)
              - 'str': c-str type (same as: 's', 'p')
-            See `struct` module for more information.
+            See Python's `struct` module for more information.
         num_blocks (int): The number of blocks to read.
         mode (str): Determine the byte order, size and alignment.
             Accepted values are:
@@ -1237,7 +1237,7 @@ def factorize_k(
              - 'alt1': factors are alternated before splitting;
              - 'optimal', 'similar', '!', '=': factors have the similar sizes.
         balanced (bool): Balance the number of primes in each factor.
-            See `chunks()` for more information.
+            See `pymrt.utils.chunks()` for more info.
 
     Returns:
         tuple (int): A listing of `k` factors of `num`.
@@ -3022,7 +3022,7 @@ def zopen(filepath, mode='rb', *args, **kwargs):
     Args:
         filepath (str): The file path.
         mode (str): The mode for file opening.
-            See `open()` for more information.
+            See `open()` for more info.
             If the `t` mode is not specified, `b` mode is assumed.
             If `t` mode is specified, the file cannot be compressed.
         *args (Iterable): Positional arguments passed to `open()`.
@@ -4892,7 +4892,7 @@ def auto_bins(
         arrs (Iterable[np.ndarray]): The input arrays.
         method (str|Iterable[str]|None): The method for calculating bins.
             If str, the same method is applied to both arrays.
-            See `auto_bin()` for available methods.
+            See `pymrt.utils.auto_bin()` for available methods.
         dim (int|None): The dimension of the histogram.
         combine (callable|None): Combine each bin using the combine function.
             combine(n_bins) -> n_bin
@@ -6162,13 +6162,13 @@ def avg(
     Args:
         arr (np.ndarray|Iterable): The input data.
         axis (int|Iterable[int]|None): Axis along which to compute.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         dtype (np.dtype|None): The data type of the result.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         out (np.ndarray|None):
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         weights (np.ndarray|Iterable|None): The weights.
             If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
@@ -6251,13 +6251,13 @@ def var(
     Args:
         arr (np.ndarray|Iterable): The input data.
         axis (int|Iterable[int]|None): Axis along which to compute.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         dtype (np.dtype|None): The data type of the result.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         out (np.ndarray|None):
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         weights (np.ndarray|Iterable|None): The weights.
             If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
@@ -6320,13 +6320,13 @@ def std(
     Args:
         arr (np.ndarray|Iterable): The input data.
         axis (int|Iterable[int]|None): Axis along which to compute.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         dtype (np.dtype|None): The data type of the result.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         out (np.ndarray|None):
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         weights (np.ndarray|Iterable|None): The weights.
             If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).
@@ -6373,13 +6373,13 @@ def gavg(
     Args:
         arr (np.ndarray|Iterable): The input data.
         axis (int|Iterable[int]|None): Axis along which to compute.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         dtype (np.dtype|None): The data type of the result.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         out (np.ndarray|None):
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         keepdims (bool): Keep reduced axis in the result as dims with size 1.
-            See `np.nansum()` for more information.
+            See `np.nansum()` for more info.
         weights (np.ndarray|Iterable|None): The weights.
             If np.ndarray or Iterable, the size must match with `arr`.
             If None, all wegiths are set to 1 (equivalent to no weighting).

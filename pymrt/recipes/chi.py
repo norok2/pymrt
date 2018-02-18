@@ -353,9 +353,14 @@ def qsm_remove_background_sharp(
     """
     Filter out the background component of the phase using SHARP.
 
-    SHARP is the Sophisticated Harmonic Artifact Reduction for Phase.
+    EXPERIMENTAL!
+
+    SHARP is the Sophisticated Harmonic Artifact Reduction for Phase data.
 
     Assumes that no sources are close to the boundary of the mask.
+
+    Both the original SHARP and the V-SHARP variant is implemented, and
+    can be chosen via the `radius` parameter.
 
     Args:
         db0_arr (np.ndarray): The magnetic field variation in ppb.
@@ -422,12 +427,14 @@ def qsm_remove_background_sharp(
 
 # ======================================================================
 def qsm_remove_background_pdf(
-        uphs_arr,
+        db0_arr,
         mask_arr,
         radius=0.01,
         threshold=np.spacing(1)):
     """
     Filter out the non-harmonic components of the magnetic field variation.
+
+    EXPERIMENTAL!
 
     Args:
         uphs_arr (np.ndarray): The input unwrapped phase in rad.
@@ -436,9 +443,8 @@ def qsm_remove_background_pdf(
         threshold (float): The deconvolution threshold.
 
     Returns:
-        phs_arr (np.ndarray): The SHARP filtered phase.
+        phs_arr (np.ndarray): The filtered phase.
     """
-    # todo: implement
     raise NotImplementedError
 
 
@@ -601,6 +607,7 @@ def qsm_field2source_l2_iter(
         db0i_arr,
         mask_arr=None,
         weight_arr=None,
+        norm_regularization=None,
         grad_regularization=1.0e-1,
         preconditioner=False,
         threshold=1.0e-1,
@@ -680,7 +687,8 @@ def qsm_field2source_l2_iter(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = mrt.utils.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape)
+    exp_ks = mrt.utils.exp_gradient_kernels(db0i_arr.shape, None,
+                                            db0i_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
         if threshold:
@@ -765,6 +773,15 @@ def qsm_field2source_l2_iter(
 # ======================================================================
 def qsm_single_step(
         db0_arr):
+    """
+    EXPERIMENTAL!
+
+    Args:
+        db0_arr:
+
+    Returns:
+
+    """
     raise NotImplementedError
 
 
@@ -784,7 +801,9 @@ def qsm_total_field_inversion(
                 ('max_iter', 512)),
         verbose=D_VERB_LVL):
     """
-    Convert magnetic field variation to magnetic susceptibility.
+    Compute the magnetic susceptibility using a total field inversion.
+
+    EXPERIMENTAL!
 
     This implements the so-called Threshold-based K-space Division (TKD).
     This requires that magnetic susceptibility sources are within the region
@@ -936,6 +955,23 @@ def qsm_superfast_dipole_inversion(
         b0_direction=(0, 0, 1),
         theta=0.0,
         phi=0.0):
+    """
+    EXPERIMENTAL
+
+    Args:
+        dphs_arr:
+        mask_arr:
+        sharp_radius:
+        sharp_threshold:
+        tkd_threshold:
+        b0:
+        b0_direction:
+        theta:
+        phi:
+
+    Returns:
+
+    """
     chi_arr = db0_to_chi(
         qsm_remove_background_sharp(
             db0.dphs_to_db0(dphs_arr, b0=b0),
@@ -947,13 +983,29 @@ def qsm_superfast_dipole_inversion(
 
 
 # ======================================================================
+def qsm_cnn(db0_arr):
+    """
+    Compute the magnetic susceptibility using convolutional neural networks.
+
+    EXPERIMENTAL!
+
+    Args:
+        db0_arr (np.array): The magnetic field variation in SI units.
+
+    Returns:
+        chi_arr (np.array): The magnetic susceptibility in SI units.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def qsm_preprocess(
         mag_arr,
         phs_arr,
         echo_times,
         echo_times_mask=None):
     """
-
+    EXPERIMENTAL!
 
     Args:
         mag_arr ():
@@ -977,13 +1029,7 @@ def qsm_preprocess(
 
 
 # ======================================================================
-def _qsm_test(
-        phs_arr,
-        mask_arr,
-        threshold,
-        theta,
-        phi,
-        radius=0.01):
+def wip():
     # one-step QSM.. need for bias field removal?
     # convert input angles to radians
     # theta = np.deg2rad(theta)
@@ -997,13 +1043,10 @@ def _qsm_test(
     # dd = 1 / (k_2 - cc)
     # dd = subst(dd)
     # chi_arr = np.abs(idftn(3 * k_2 * dd * dftn(phs_arr)))
-    raise NotImplementedError
 
-
-# ======================================================================
-def wip():
     import os
     import pymrt.input_output
+
 
     force = False
 
@@ -1022,6 +1065,7 @@ def wip():
     if mrt.utils.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
+
         uphs_arr = phs.unwrapping(phs_arr)
         mrt.input_output.save(uphs_filepath, uphs_arr)
     else:
@@ -1031,6 +1075,7 @@ def wip():
     if mrt.utils.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
+
         dphs_arr = phs.phs_to_dphs(phs_arr)
         mrt.input_output.save(dphs_filepath, uphs_arr)
     else:
@@ -1039,6 +1084,7 @@ def wip():
     db0_filepath = os.path.join(base_path, 'db0.nii.gz')
     if mrt.utils.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
+
 
         db0_arr = db0.dphs_to_db0(dphs_arr, b0=2.89362)
         mrt.input_output.save(db0_filepath, db0_arr)

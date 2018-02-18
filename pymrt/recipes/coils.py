@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.coils: Coil sensitivity and combination for phased array.
+
+Note: there may be some overlap with: `pymrt.recipes.b1r`.
 """
 
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -72,6 +74,34 @@ def combine_sens(
 
 
 # ======================================================================
+def compress_svde(
+        arr,
+        k_svd='quad_weight',
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
+    """
+    Compress the coil data using the SVD extended principal components.
+
+    EXPERIMENTAL!
+
+    This computes the SVD on the matrix obtained by putting side by side
+    the flattened single coil images.
+
+    Args:
+        arr (np.ndarray): The input array.
+        k_svd (int|float|str): The number of principal components.
+            See `pymrt.utils.optimal_num_components()` for more details.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        arr (np.ndarray): The compressed coil array.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def compress_svd(
         arr,
         k_svd='quad_weight',
@@ -90,7 +120,7 @@ def compress_svd(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `utils.optimal_num_components()` for more details.
+            See `pymrt.utils.optimal_num_components()` for more details.
         orthonormal: Uses the orthonormal approximation.
             Uses the pseudo-inverse, instead of the hermitian conjugate,
             to form the signal compression matrix.
@@ -489,8 +519,8 @@ def adaptive_iter(
             if filtering:
                 sens = mrt.utils.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
-                np.sqrt(np.sum(sens * sens.conj(), -1))
-                + epsilon)[..., None]
+                    np.sqrt(np.sum(sens * sens.conj(), -1))
+                    + epsilon)[..., None]
             combined = np.sum(sens.conj() * arr, -1)
             # include the additional phase
             weights = np.sum(sens * combined[..., None], other_axes)
@@ -505,8 +535,8 @@ def adaptive_iter(
             if threshold > 0:
                 last_delta = delta
                 delta = (
-                    np.linalg.norm(combined - last_combined) /
-                    np.linalg.norm(combined))
+                        np.linalg.norm(combined - last_combined) /
+                        np.linalg.norm(combined))
                 msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
                     end=', ' if i + 1 < max_iter else '.\n', flush=True)
                 if delta < threshold or last_delta < delta:
@@ -593,12 +623,16 @@ def block_subspace_fourier(
     """
     Coil sensitivity for the 'block_subspace_fourier' combination method.
 
+    EXPERIMENTAL!
+
     Args:
-        arr:
-        coil_axis:
+        arr (np.ndarray): The input array.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
         verbose (int): Set level of verbosity.
 
     Returns:
+        combined (np.ndarray): The combined data.
 
     References:
         - Gol Gungor, D., Potter, L.C., 2016. A subspace-based coil
@@ -617,18 +651,20 @@ def virtual_ref(
     """
     Coil sensitivity for the 'virtual_ref' combination method.
 
+    EXPERIMENTAL!
+
     Args:
         arr (np.ndarray): The input array.
         method (str): The method for determining the virtual reference.
             Accepted values are:
              - 'svd': Use the first component of SVD compression;
-             - 'svdo': Use the first component of SVD orthonormal compression;
-             - '
+             - 'svdo': Use the first component of SVD orthonormal compression.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
         verbose (int): Set level of verbosity.
 
     Returns:
+        combined (np.ndarray): The combined data.
 
     References:
         - Parker, D.L., Payne, A., Todd, N., Hadley, J.R., 2014. Phase
@@ -647,9 +683,7 @@ def multi_conjugate_hermitian(
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
@@ -738,9 +772,37 @@ def composer(
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
+
+    Args:
+        arr (np.ndarray): The input array.
+        ref (np.ndarray|str|None):
+            If np.ndarray, must be a complex reference data array.
+            The shape must match that of `arr`, except for `coil_axis` and,
+            optionally, `multi_axis` is that is set to None.
+        multi_axis (int|None): The multiple images dimension.
+            This can be the axis spanning, e.g.: repetitions, echoes, etc.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def aspire(
+        arr,
+        ref,
+        multi_axis=-2,
+        coil_axis=-1,
+        verbose=D_VERB_LVL):
+    """
+    Coil sensitivity for the 'conjugate_hermitian' combination method.
+
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
@@ -767,11 +829,9 @@ def snr_optimal_ref(
         coil_axis=-1,
         verbose=D_VERB_LVL):
     """
-    Coil sensitivity for the 'conjugate_hermitian' combination method.
+    Coil sensitivity for the SNR optimal with reference combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
@@ -801,9 +861,7 @@ def adaptive_ref(
     """
     Coil sensitivity for the 'conjugate_hermitian' combination method.
 
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
@@ -878,8 +936,8 @@ def sensitivity(
         method = eval(method)
     if not callable(method):
         text = (
-            'Unknown compression method `{}`. '.format(method) +
-            'Using fallback `complex_sum`.')
+                'Unknown compression method `{}`. '.format(method) +
+                'Using fallback `complex_sum`.')
         warnings.warn(text)
         method = block_adaptive_iter
 
@@ -951,7 +1009,8 @@ def combine(
             If None, only `coil_axis`, `split_axis`, `verbose` are passed.
         compression (callable|str|None): The compression method.
             This is passed as `method` to `compress`.
-        compression_kws (dict|None): Keyword arguments to pass to `compression`.
+        compression_kws (dict|None): Keyword arguments to pass to
+        `compression`.
             This is passed as `method_kwd` to `compress`.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
@@ -989,8 +1048,8 @@ def combine(
         method = eval(method)
     if not callable(method):
         text = (
-            'Unknown compression method `{}`. '.format(method) +
-            'Using fallback `complex_sum`.')
+                'Unknown compression method `{}`. '.format(method) +
+                'Using fallback `complex_sum`.')
         warnings.warn(text)
         method = complex_sum
         has_sens = True
@@ -1073,4 +1132,5 @@ def quality(
     """
     sum_arr = np.sum(np.abs(coils_arr), axis=coil_axis)
     abs_arr = np.abs(combined_arr)
-    return factor * (abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))
+    return factor * (
+                abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))

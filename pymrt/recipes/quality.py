@@ -7,7 +7,7 @@ pymrt.recipes.quality: quality assurance (QA) computations.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -225,7 +225,7 @@ def snr(
     Args:
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
-            See `signal_noise()` for more details.
+            See `pymrt.correction.sn_split()` for more details.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -279,7 +279,7 @@ def psnr(
     Args:
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
-            See `signal_noise()` for more details.
+            See `pymrt.correction.sn_split()` for more details.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -407,9 +407,9 @@ def cnr(
     Args:
         arr (np.ndarray): The input array.
         ss_method (float|str|callable): Signal sources separation.
-            See `sn_split_signals()` for more details.
+            See `pymrt.correction.sn_split_signals()` for more details.
         sn_method (str|callable): The signal/noise estimation method.
-            See `signal_noise()` for more details.
+            See `pymrt.correction.sn_split()` for more details.
         ss_kws: Keyword arguments passed to `ss_method()`.
         sn_kws: Keyword arguments passed to `sn_method()`.
 
@@ -454,7 +454,7 @@ def pcnr(
     Args:
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
-            See `signal_noise()` for more details.
+            See `pymrt.correction.sn_split()` for more details.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -560,11 +560,13 @@ def quick_check(arr):
     """
     Calculate all quality metrics that are fast to compute.
 
+    EXPERIMENTAL!
+
     Args:
-        arr:
+        arr (np.ndarray): The input array.
 
     Returns:
-
+        result (dict): The computed metrics.
     """
     raise NotImplementedError
 

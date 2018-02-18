@@ -7,7 +7,7 @@ pymrt.segmentation: generic simple segmentation
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -187,6 +187,8 @@ def threshold_otsu2(
     """
     Optimal foreground/background threshold value based on 2D Otsu's method.
 
+    EXPERIMENTAL!
+
     Args:
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
@@ -202,7 +204,6 @@ def threshold_otsu2(
           Histograms. IEEE Transactions on Systems, Man, and Cybernetics 9,
           62–66. doi:10.1109/TSMC.1979.4310076
     """
-    # todo: extend to multiple classes
     raise NotImplementedError
 
 
@@ -406,18 +407,17 @@ def threshold_twice_first_peak(arr):
 
 
 # ======================================================================
-def threshold_cum_hist_elbow(
-        arr,
-        on_error=0.0,
-        reverse=False):
+def threshold_cum_hist_elbow(arr):
     """
-    Find the item that separates
+    Calculate a threshold from the eventual elbow of the cumulative histogram.
+
+    EXPERIMENTAL!
 
     Args:
-        arr (np.ndarray):
+        arr (np.ndarray): The input array.
 
     Returns:
-
+        threshold (float): The threshold value.
     """
     raise NotImplementedError
 
@@ -691,11 +691,16 @@ def label_nested_structures(
     """
     Label nested structures incrementally.
 
-    This is useful for segmenting self-contained structures.
+    EXPERIMENTAL!
+
+    This is useful for segmenting structures that have the topology of
+    nested layers.
 
     Args:
-        arr:
-        seed:
+        arr (np.ndarray): The input array.
+        threshold (float): The thresholding.
+        seed (Iterable[int]|None): The initial seed for starting the layering.
+            If None, the center of `arr` is used.
 
     Returns:
 

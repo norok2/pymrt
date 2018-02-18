@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 pymrt.recipes.recon: Reconstruction techniques.
+
+EXPERIMENTAL!
 """
 
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -51,18 +53,18 @@ def k2r_space(
     The k-space is the spatial frequency (or raw) domain.
     The r-space is the spatial (or image) domain.
 
+    EXPERIMENTAL!
+
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The estimated coil sensitivity.
+        arr (np.ndarray): The output array.
     """
     if not axes:
         axes = tuple(range(arr.ndim))
-    raise NotImplemented
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -75,103 +77,79 @@ def r2k_space(
     The k-space is the spatial frequency (or raw) domain.
     The r-space is the spatial (or image) domain.
 
+    EXPERIMENTAL!
+
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The estimated coil sensitivity.
+        arr (np.ndarray): The output array.
     """
     if not axes:
         axes = tuple(range(arr.ndim))
-    raise NotImplemented
+    raise NotImplementedError
 
 
 # ======================================================================
 def grappa(
         arr):
     """
-    Coil sensitivity for the 'sum_of_squares' combination method.
-
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The estimated coil sensitivity.
+        arr (np.ndarray): The output array.
     """
-    raise NotImplemented
+    raise NotImplementedError
 
 
 # ======================================================================
 def sense(
         arr):
     """
-    Coil sensitivity for the 'sum_of_squares' combination method.
-
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The estimated coil sensitivity.
+        arr (np.ndarray): The output array.
     """
-    raise NotImplemented
+    raise NotImplementedError
 
 
 # ======================================================================
 def espirit(
         arr):
     """
-    Coil sensitivity for the 'sum_of_squares' combination method.
-
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The estimated coil sensitivity.
+        arr (np.ndarray): The output array.
     """
-    raise NotImplemented
+    raise NotImplementedError
 
 
 # ======================================================================
 def compressed_sensing(
         arr):
     """
-    Coil sensitivity for the 'sum_of_squares' combination method.
-
-    Note: the input itself is used as sensitivity. Therefore, this function
-    actually returns the same array used for input, and the `coil_axis`
-    parameter is left unused.
+    EXPERIMENTAL!
 
     Args:
         arr (np.ndarray): The input array.
             Data can be either in k-space or in image space.
-        coil_axis (int): The coil dimension.
-            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
-    raise NotImplemented
+    raise NotImplementedError

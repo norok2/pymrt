@@ -34,7 +34,7 @@ See Also:
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -390,9 +390,16 @@ def calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k=0.5, check=True):
 
 
 # ======================================================================
-def calc_td_to_ti(td, tr_gre, n_gre, k_gre=0.5, check=True):
+def calc_td_to_ti(
+        td,
+        tr_gre,
+        n_gre,
+        k_gre=0.5,
+        check=True):
     """
     Compute sampling times T_I from delay times T_D.
+
+    EXPERIMENTAL!
 
     Args:
         ti (Iterable[float]): The sampling times in time units.

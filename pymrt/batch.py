@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.computation: generic computation utilities for MRI data analysis.
-
-See Also:
-    pymrt.recipes
+pymrt.batch: utilities for batch computation.
 """
 
 # ======================================================================
 # :: Future Imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals, )
 
+# todo: get rid of obsolete code
 # todo: use kwargs instead of opts
 # todo: get rid of tty colorify
 
@@ -424,7 +420,8 @@ def fix_phase_interval(arr):
         array([-3.14159265, -2.24399475, -1.34639685, -0.44879895,  0.44879895,
                 1.34639685,  2.24399475,  3.14159265])
         >>> fix_phase_interval(np.array([-10, -5, 0, 5, 10]))
-        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  3.14159265])
+        array([-3.14159265, -1.57079633,  0.        ,  1.57079633,  
+        3.14159265])
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
@@ -542,7 +539,8 @@ def rho_to_t1_mp2rage(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This affects the precision of the MP2RAGE estimation.
-        eff_num (int): The base number of sampling points for the RF efficiency.
+        eff_num (int): The base number of sampling points for the RF 
+        efficiency.
             This affects the precision of the RF efficiency correction.
         **acq_params_kws (dict): The acquisition parameters.
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
@@ -551,6 +549,8 @@ def rho_to_t1_mp2rage(
         t1_arr (float|np.ndarray): The calculated T1 map for MP2RAGE.
     """
     from pymrt.sequences import mp2rage
+
+
     if eff_arr:
         # todo: implement B1T correction
         raise NotImplementedError('B1T correction is not yet implemented')
@@ -568,7 +568,8 @@ def rho_to_t1_mp2rage(
             t1 = t1[::-1]
         # check that rho values are strictly increasing
         if not np.all(np.diff(rho) > 0):
-            raise ValueError('MP2RAGE look-up table was not properly prepared.')
+            raise ValueError(
+                'MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
         if not mrt.utils.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
@@ -616,7 +617,8 @@ def t1_mp2rage(
             The actual number of sampling points is usually smaller, because of
             the removal of non-bijective branches.
             This affects the precision of the MP2RAGE estimation.
-        eff_num (int): The base number of sampling points for the RF efficiency.
+        eff_num (int): The base number of sampling points for the RF 
+        efficiency.
             This affects the precision of the RF efficiency correction.
         **acq_param_kws (dict): The acquisition parameters.
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
@@ -766,8 +768,10 @@ def voxel_curve_fit(
     Curve fitting for y = F(x, p)
 
     Args:
-        y_arr (np.ndarray): Dependent variable with x dependence in the n-th dim
-        x_arr (np.ndarray): Independent variable with same size as n-th dim of y
+        y_arr (np.ndarray): Dependent variable with x dependence in the n-th 
+        dim
+        x_arr (np.ndarray): Independent variable with same size as n-th dim 
+        of y
         fit_func (func):
         fit_params (list[float]):
         pre_func (func):

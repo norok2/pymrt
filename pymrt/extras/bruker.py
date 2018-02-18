@@ -3,13 +3,13 @@
 """
 PyMRT: parse Bruker raw data.
 
-The module is NumPy-aware.
+EXPERIMENTAL!
 """
 
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -375,17 +375,21 @@ def batch_extract(
         force=False,
         verbose=D_VERB_LVL):
     """
+    Extract images from experiment folder.
+
+    EXPERIMENTAL!
 
     Args:
-        dirpath ():
-        out_filename ():
-        out_dirpath ():
+        dirpath (str):
+        out_filename (str|None):
+        out_dirpath (str|None):
         custom_reco (str|None):
             Determines how results will be saved.
             Accepted values are:
              - 'mag_phs': saves magnitude and phase.
              - 're_im': saves real and imaginary parts.
              - 'cx': saves the complex data.
+        custom_reco_kws (dict|None):
         fid_name ():
         dseq_name ():
         acqp_name ():

@@ -8,7 +8,7 @@ PyMRT: configuration file
 # ======================================================================
 # :: Future Imports
 from __future__ import(
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # TODO: automagically find them?
 EXT_CMD = {

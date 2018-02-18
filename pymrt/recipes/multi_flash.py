@@ -7,7 +7,7 @@ pymrt.recipes.multi_flash: multiple simultaneous computation from FLASH signal.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -31,6 +31,7 @@ import pymrt.correction
 from pymrt.recipes.generic import voxel_curve_fit
 from pymrt.recipes import t1, b1t
 from pymrt.sequences import flash
+
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
@@ -193,25 +194,25 @@ def triple_special1(
         eta_fa_arr = (n_tr * arr2 * arr3 - n_tr * arr1 * arr2 - sign *
                       np.sqrt(
                           arr2 * (
-                              n_tr ** 2 * arr1 ** 2 * arr2 -
-                              2.0 * n_tr ** 2 * arr1 ** 2 * arr3 +
-                              n_tr ** 2 * arr2 * arr3 ** 2 +
-                              2.0 * n_tr * arr1 ** 2 * arr3 -
-                              2.0 * n_tr * arr1 * arr2 * arr3 +
-                              2.0 * n_tr * arr1 * arr3 ** 2 -
-                              2.0 * n_tr * arr2 * arr3 ** 2 -
-                              2.0 * arr1 * arr3 ** 2 +
-                              2.0 * arr2 * arr3 ** 2))) / (
-                         2 * arr3 * (
+                                  n_tr ** 2 * arr1 ** 2 * arr2 -
+                                  2.0 * n_tr ** 2 * arr1 ** 2 * arr3 +
+                                  n_tr ** 2 * arr2 * arr3 ** 2 +
+                                  2.0 * n_tr * arr1 ** 2 * arr3 -
+                                  2.0 * n_tr * arr1 * arr2 * arr3 +
+                                  2.0 * n_tr * arr1 * arr3 ** 2 -
+                                  2.0 * n_tr * arr2 * arr3 ** 2 -
+                                  2.0 * arr1 * arr3 ** 2 +
+                                  2.0 * arr2 * arr3 ** 2))) / (
+                             2 * arr3 * (
                              n_tr * arr1 - n_tr * arr2 - arr1 + arr2))
         eta_fa_arr = np.real(np.arccos(eta_fa_arr))
 
         t1_arr = n_tr * tr * (arr1 - arr3) * (
-            n_tr * arr2 * (arr1 - arr3) *
-            (n_tr * arr1 - n_tr * arr2 - arr1 + arr2) +
-            arr2 * (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) +
-            sign * (n_tr - 1.0) * (arr1 - arr2) * np.sqrt(
-                arr2 * (
+                n_tr * arr2 * (arr1 - arr3) *
+                (n_tr * arr1 - n_tr * arr2 - arr1 + arr2) +
+                arr2 * (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) +
+                sign * (n_tr - 1.0) * (arr1 - arr2) * np.sqrt(
+            arr2 * (
                     n_tr ** 2 * arr1 ** 2 * arr2 -
                     2.0 * n_tr ** 2 * arr1 ** 2 * arr3 +
                     n_tr ** 2 * arr2 * arr3 ** 2 +
@@ -221,15 +222,15 @@ def triple_special1(
                     2.0 * n_tr * arr2 * arr3 ** 2 -
                     2.0 * arr1 * arr3 ** 2 +
                     2.0 * arr2 * arr3 ** 2))) / (
-                     (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) *
-                     (3.0 * n_tr * arr1 * arr2 +
-                      2.0 * n_tr * arr1 * arr3 -
-                      4.0 * n_tr * arr2 * arr3 -
-                      2.0 * arr1 * arr3 + arr2 * arr3))
+                         (n_tr - 1.0) * (arr1 - arr2) * (n_tr * arr1 - arr3) *
+                         (3.0 * n_tr * arr1 * arr2 +
+                          2.0 * n_tr * arr1 * arr3 -
+                          4.0 * n_tr * arr2 * arr3 -
+                          2.0 * arr1 * arr3 + arr2 * arr3))
 
         xi_arr = arr3 / (
-            np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-n_tr * tr / t1_arr)) /
-            (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-n_tr * tr / t1_arr)))
+                np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-n_tr * tr / t1_arr)) /
+                (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-n_tr * tr / t1_arr)))
     return t1_arr, xi_arr, eta_fa_arr
 
 
@@ -364,8 +365,8 @@ def triple_special2(
         xi_arr = np.zeros_like(arr1, dtype=float)
         for arr, fa, tr in zip(arrs, fas, trs):
             xi_arr += arr / (
-                np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
-                (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
+                    np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
+                    (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
         xi_arr /= 3
 
     return t1_arr, xi_arr, eta_fa_arr
@@ -461,23 +462,23 @@ def triple_approx(
 
     with np.errstate(divide='ignore', invalid='ignore'):
         t1_arr = tr1 * tr2 * tr3 * (
-            (fa2 ** 2 - fa1 ** 2) * fa3 * arr1 * arr2 + arr3 * (
+                (fa2 ** 2 - fa1 ** 2) * fa3 * arr1 * arr2 + arr3 * (
                 (fa1 * fa3 ** 2 - fa1 * fa2 ** 2) * arr2 +
                 (fa1 ** 2 * fa2 - fa2 * fa3 ** 2) * arr1)) / (
-                     ((fa2 ** 2 * fa3 * arr1 * arr2 -
-                       fa1 * fa2 ** 2 * arr2 * arr3) * tr1 +
-                      (fa1 ** 2 * fa2 * arr1 * arr3 -
-                       fa1 ** 2 * fa3 * arr1 * arr2) * tr2) * tr3 +
-                     (fa1 * fa3 ** 2 * arr2 -
-                      fa2 * fa3 ** 2 * arr1) * arr3 * tr1 * tr2)
+                         ((fa2 ** 2 * fa3 * arr1 * arr2 -
+                           fa1 * fa2 ** 2 * arr2 * arr3) * tr1 +
+                          (fa1 ** 2 * fa2 * arr1 * arr3 -
+                           fa1 ** 2 * fa3 * arr1 * arr2) * tr2) * tr3 +
+                         (fa1 * fa3 ** 2 * arr2 -
+                          fa2 * fa3 ** 2 * arr1) * arr3 * tr1 * tr2)
 
         eta_fa_arr = (
-            fa1 * fa3 * arr1 * arr3 * tr2 * tr3 -
-            fa1 * fa2 * arr1 * arr2 * tr2 * tr3 -
-            fa2 * fa3 * arr2 * arr3 * tr1 * tr3 +
-            fa1 * fa2 * arr1 * arr2 * tr1 * tr3 +
-            fa2 * fa3 * arr2 * arr3 * tr1 * tr2 -
-            fa1 * fa3 * arr1 * arr3 * tr1 * tr2)
+                fa1 * fa3 * arr1 * arr3 * tr2 * tr3 -
+                fa1 * fa2 * arr1 * arr2 * tr2 * tr3 -
+                fa2 * fa3 * arr2 * arr3 * tr1 * tr3 +
+                fa1 * fa2 * arr1 * arr2 * tr1 * tr3 +
+                fa2 * fa3 * arr2 * arr3 * tr1 * tr2 -
+                fa1 * fa3 * arr1 * arr3 * tr1 * tr2)
         eta_fa_arr = sign * np.sqrt(2) * np.sqrt(
             (fa1 ** 2 * fa2 * arr1 * arr3 * tr2 * tr3) / eta_fa_arr -
             (fa1 ** 2 * fa3 * arr1 * arr2 * tr2 * tr3) / eta_fa_arr -
@@ -485,7 +486,7 @@ def triple_approx(
             (fa2 ** 2 * fa3 * arr1 * arr2 * tr1 * tr3) / eta_fa_arr +
             (fa1 * fa3 ** 2 * arr2 * arr3 * tr1 * tr2) / eta_fa_arr -
             (fa2 * fa3 ** 2 * arr1 * arr3 * tr1 * tr2) / eta_fa_arr) / (
-                         np.sqrt(fa1) * np.sqrt(fa2) * np.sqrt(fa3))
+                             np.sqrt(fa1) * np.sqrt(fa2) * np.sqrt(fa3))
 
         arrs = arr1, arr2, arr3
         fas = fa1, fa2, fa3
@@ -493,8 +494,8 @@ def triple_approx(
         xi_arr = np.zeros_like(arr1, dtype=float)
         for arr, fa, tr in zip(arrs, fas, trs):
             xi_arr += arr / (
-                np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
-                (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
+                    np.sin(fa * eta_fa_arr) * (1.0 - np.exp(-tr / t1_arr)) /
+                    (1.0 - np.cos(fa * eta_fa_arr) * np.exp(-tr / t1_arr)))
         xi_arr /= 3
 
     return t1_arr, xi_arr, eta_fa_arr
@@ -621,6 +622,8 @@ def fit_multipolyfit(
         full=False):
     """
     Fit the parameters of the FLASH signal at fixed echo time.
+
+    EXPERIMENTAL!
 
     This is an iterative optimization fit.
 

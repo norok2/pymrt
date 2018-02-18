@@ -7,7 +7,7 @@ pymrt.correction: signal/noise/bias-related corrections.
 # ======================================================================
 # :: Future Imports
 from __future__ import (
-    division, absolute_import, print_function, unicode_literals)
+    division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -108,7 +108,7 @@ def denoise(
             See the respective documentation for details.
         mode (str): Complex calculation mode.
             If `arr` is not complex, this parameter is ignored.
-            See `mode` parameter of `utils.filter_cx()` for more information.
+            See `mode` parameter of `pymrt.utils.filter_cx()` for more info.
 
     Raises:
         ValueError: If `method` is unknown.
@@ -324,9 +324,10 @@ def sn_split_calib_region(
     """
     Separate signal from noise a calibration region.
 
+    EXPERIMENTAL!
+
     Use a n-dim superellipsis or cuboid as calibration regions for signal
     and noise estimation.
-
 
     Args:
         arr (np.ndarray): The input array.
@@ -749,9 +750,9 @@ def estimate_noise_sigma_dwt(
     Args:
         arr (np.ndarray): The input array.
         wavelet (str|pw.Wavelet): The wavelet to use.
-            See `pw.dwtn()` and `pw.wavelist()` for more information.
+            See `pw.dwtn()` and `pw.wavelist()` for more info.
         mode (str): Signal extension mode.
-            See `pw.dwtn()` and `pw.Modes()` for more information.
+            See `pw.dwtn()` and `pw.Modes()` for more info.
         axes (Iterable[int]|None): Axes over which to perform the DWT.
             See `pw.dwtn()` for more info.
         estimator (callable): The estimator to use.
@@ -788,7 +789,6 @@ def estimate_noise_sigma_sn_split(
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
             This is passed to `sn_split()`
-            See `separated()` for more information.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
@@ -819,7 +819,6 @@ def estimate_noise_sigma(
             This is passed to `estimate_noise_sigma_dwt()`.
         method (str): The signal/noise estimation method.
             This is passed to `sn_split()`
-            See `separated()` for more information.
         *args: Positional arguments passed to `method()`.
         **kwargs: Keyword arguments passed to `method()`.
 
