@@ -13,9 +13,11 @@ Methods not requiring `ref` or `multi_axis` are:
 Methods requiring `ref` but not `multi_axis` are:
  Not implemented yet.
 Methods requiring `multi_axis` but not `ref` are:
- - 'multi_svd': use `mul
+ - 'multi_svd';
 Methods requiring both `ref` and `multi_axis` are:
  Not implemented yet.
+
+If unsure, use `block_adaptive_iter`.
 """
 
 # ======================================================================

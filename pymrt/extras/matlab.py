@@ -129,7 +129,7 @@ def auto_convert(
 
     Args:
         filepaths (Iterable[str]): List of filepaths to convert.
-            Can be easily combined with file listing functions from `utils`,
+            Can be combined with file listing functions from `pymrt.utils`,
             e.g. `iflistdir()`, `flistdir()`, `listdir()` (directly) or
             `iwalk2()`, `walk2()` (indirectly).
         out_template (str): Template for the output filepath.

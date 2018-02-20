@@ -192,7 +192,7 @@ def sn_split_signals(
         method (Iterable[float]|str|callable): The separation method.
             If Iterable[float], the specified thresholds value are used.
             If str, the thresholds are estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
             to `method`.
             Additional accepted values:
              - 'mean': use the mean value of the signal.
@@ -517,7 +517,7 @@ def sn_split_mean_std(
     """
     Separate signal from noise using a threshold combining mean and std.dev.
 
-    Thresholds are calculated using `segmentation.threshold_mean_std()`.
+    Thresholds are calculated using `pymrt.segmentation.threshold_mean_std()`.
 
     Signal/noise values interval depend on the `symmetric` parameter.
 
@@ -566,26 +566,26 @@ def sn_split_thresholds(
         arr (np.ndarray): The input array.
         signal_threshold (int|float|str|None): The noise threshold.
             If str, the threshold is estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
             to `signal_threshold`.
         noise_threshold (int|float|str|None): The noise threshold.
             If str, the threshold is estimated using
-            `segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
             to `noise_threshold`.
             If None, `noise_threshold` is set to `signal_threshold`.
         signal_kws (dict|None): Keyword parameters.
             If `signal_threshold` is str, the parameters are passed to
-            `segmentation.auto_thresholds()` for `signal_threshold`.
+            `pymrt.segmentation.auto_thresholds()` for `signal_threshold`.
         noise_kws (dict|None): Keyword parameters.
             If `noisel_threshold` is str, the parameters are passed to
-            `segmentation.auto_thresholds()` for `noise_threshold`.
+            `pymrt.segmentation.auto_thresholds()` for `noise_threshold`.
         signal_index (int|None): Select a specific threshold.
             The index is applied to the Iterable obtained from
-            `segmentation.auto_thresholds()` for `signal_threshold`.
+            `pymrt.segmentation.auto_thresholds()` for `signal_threshold`.
             If None, the first value is selected.
         noise_index (int|None): Select a specific threshold.
             The index is applied to the Iterable obtained from
-            `segmentation.auto_thresholds()` for `noise_threshold`.
+            `pymrt.segmentation.auto_thresholds()` for `noise_threshold`.
             If None, the first value is selected.
 
     Returns:
@@ -666,28 +666,28 @@ def sn_split(
             If str, uses the `sn_split_` functions from this module.
             Accepted values are:
              - 'auto': Uses 'optim' if positive, 'denoise' otherwise.
-             - 'optim': Uses `sn_split_optim()`.
-             - 'otsu': Uses `sn_split_otsu()`.
+             - 'optim': use `pymrt.correction.sn_split_optim()`.
+             - 'otsu': use `pymrt.correction.sn_split_otsu()`.
                 Only works for positive values.
-             - 'relative': Uses `sn_split_relative()`.
+             - 'relative': use `pymrt.correction.sn_split_relative()`.
                 Only works for positive values.
-             - 'percentile': Uses `sn_split_percentile()`.
+             - 'percentile': use `pymrt.correction.sn_split_percentile()`.
                 Only works for positive values.
-             - 'mean_std': Uses `sn_split_mean_std()`.
+             - 'mean_std': use `pymrt.correction.sn_split_mean_std()`.
                 Only works for positive values.
-             - 'thresholds': Uses `sn_split_thresholds()`.
+             - 'thresholds': use `pymrt.correction.sn_split_thresholds()`.
                 Only works for positive values.
-             - 'calib_region': Uses `sn_split_calib_region()`.
+             - 'calib_region': use `pymrt.correction.sn_split_calib_region()`.
                 Specify the calibration regions directly.
-             - 'denoise': Uses `sn_split_denoise()`.
+             - 'denoise': use `pymrt.correction.sn_split_denoise()`.
                 Useful when no noise calibration region is present.
             If callable, the signature must be:
             f(np.ndarray, *args, **kwargs) -> (np.ndarray, np.ndarray)
             where the input array is `arr` and the two returned arrays are:
              - the signal array
              - the noise array
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *args: Positional arguments passed to `pymrt.correction.method()`.
+        **kwargs: Keyword arguments passed to `pymrt.correction.method()`.
 
     Returns:
         result (tuple[np.ndarray]): The tuple

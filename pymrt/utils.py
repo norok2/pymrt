@@ -5271,7 +5271,7 @@ def gaussian_nd(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `utils.grid_coord()` internally.
+            Uses `pymrt.utils.grid_coord()` internally.
 
     Returns:
         arr (np.ndarray): The array containing the N-dim Gaussian.
@@ -5996,8 +5996,8 @@ def otsu_threshold(
         items (Iterable): The input items.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `utils.auto_bin()` method if set to None.
+            using `pymrt.utils.auto_bin()` with `method` set to `bins` if str,
+            and using the default `pymrt.utils.auto_bin()` method if set to None.
 
     Returns:
         threshold (float): The threshold value.
@@ -6070,11 +6070,11 @@ def auto_num_components(
             Accepted values are:
              - 'all': use all components.
              - 'full': same as 'all'.
-             - 'elbow': use `utils.marginal_sep_elbow()`.
-             - 'quad': use `utils.marginal_sep_quad()`.
-             - 'quad_weight': use `utils.marginal_sep_quad_weight()`.
-             - 'quad_inv_weight': use `utils.marginal_sep_quad_inv_weight()`.
-             - 'otsu': use `segmentation.threshold_otsu()`.
+             - 'elbow': use `pymrt.utils.marginal_sep_elbow()`.
+             - 'quad': use `pymrt.utils.marginal_sep_quad()`.
+             - 'quad_weight': use `pymrt.utils.marginal_sep_quad_weight()`.
+             - 'quad_inv_weight': use `pymrt.utils.marginal_sep_quad_inv_weight()`.
+             - 'otsu': use `pymrt.segmentation.threshold_otsu()`.
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
         q (Iterable[int|float|complex]|None): The values of the components.
             If None, `num` must be specified.

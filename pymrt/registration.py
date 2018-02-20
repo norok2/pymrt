@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.registration: generic simple registration
+pymrt.registration: generic simple registration.
 """
 
 # ======================================================================

@@ -84,7 +84,7 @@ def mp2rage_rho(
         inverted (bool): Invert results to convert times to rates.
             Assumes that units of time is ms and units of rates is Hz.
         **params_kws: The acquisition parameters.
-            This is filtered through `utils.split_func_kws()` for
+            This is filtered through `pymrt.utils.split_func_kws()` for
             `sequences.mp2rage.acq_to_seq_params()` and the result
             is passed to `sequences.mp2rage.rho()`.
             Its (key, value) pairs must be accepted by either

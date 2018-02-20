@@ -828,7 +828,7 @@ def resample(
     """
     Reshape the image to a new shape (different resolution / voxel size).
 
-    Warning: uses `scipy.ndimage.zoom` internally!
+    Warning: use `scipy.ndimage.zoom` internally!
     For downsampling applications, this might not be appropriate.
 
     Args:

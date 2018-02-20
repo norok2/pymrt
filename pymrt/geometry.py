@@ -692,12 +692,12 @@ def nd_cuboid(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `utils.grid_coord()` internally.
+            Uses `pymrt.utils.grid_coord()` internally.
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `semisizes` values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `rel2abs()` internally.
+            Uses `pymrt.geometry.rel2abs()` internally.
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
@@ -1079,7 +1079,7 @@ def apply_mask(
         mask (np.ndarray): The mask array.
             The shape of `arr` and `mask` must be identical, broadcastable
             through `np.broadcast_to()`, or unsqueezable using
-            `utils.unsqueeze()`.
+            `pymrt.utils.unsqueeze()`.
         borders (int|float|tuple[int|float]|None): The border size(s).
             If None, the border is not modified.
             Otherwise, a border is added to the masked array.
@@ -1093,7 +1093,7 @@ def apply_mask(
             calculations.
         background (int|float): The value used for masked-out pixels.
         unsqueeze (bool): Unsqueeze mask to input.
-            If True, uses `utils.unsqueeze()` on mask.
+            If True, use `pymrt.utils.unsqueeze()` on mask.
             Only effective when `arr` and `mask` shapes do not match and
             are not already broadcastable.
             Otherwise, shapes must match or be broadcastable.

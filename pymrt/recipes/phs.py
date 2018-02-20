@@ -130,10 +130,11 @@ def phs_to_dphs(
             If str, perform unwrapping using `pymrt.recipes.phs.unwrapping()`.
             Accepted values are:
              - 'auto': uses the best method for the given input.
-               If `len(tis) == 1` uses `unwrap_sorting_path()`, otherwise uses
-               `unwrap_laplacian()`.
-             - 'laplacian': uses `unwrap_laplacian()`.
-             - 'sorting_path': uses `unwrap_sorting_path()`.
+               If `len(tis) == 1`
+               use `pymrt.recipes.phs.unwrap_sorting_path()`, otherwise
+               use `pymrt.recipes.phs.unwrap_laplacian()`.
+             - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
+             - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
         unwrap_kws (dict|tuple|None): Additional keyword arguments.
             These are passed to `pymrt.recipes.phs.unwrapping()`.
         units (str|float|int): Units of measurement of Ti.
@@ -432,8 +433,8 @@ def unwrapping(
         arr (np.ndarray): The input array.  
         method (str): The unwrapping method.
             Accepted values are:
-             - 'laplacian': uses `unwrap_laplacian()`.
-             - 'sorting_path': uses `unwrap_sorting_path()`.
+             - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
+             - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:

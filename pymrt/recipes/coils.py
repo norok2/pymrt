@@ -185,7 +185,7 @@ def compress(
         method (str|None): The compression method.
             If str, uses the specified method as found in this module.
             Accepted values are:
-             - 'compress_svd': use `compress_svd()`.
+             - 'compress_svd': use `pymrt.recipes.coils.compress_svd()`.
             If None, no coil compression is performed.
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `verbose` are passed.
@@ -992,16 +992,17 @@ def combine(
             Some methods require `ref` and/or `multi_axis` to be set in
             `methods_kws`.
             Accepted values not requiring `ref` or `multi_axis` are:
-             - 'complex_sum';
-             - 'sum_of_squares';
-             - 'adaptive';
-             - 'block_adaptive';
-             - 'adaptive_iter';
-             - 'block_adaptive_iter';
+             - 'complex_sum': use `pymrt.recipes.coils.complex_sum()`;
+             - 'sum_of_squares': use `pymrt.recipes.coils.sum_of_squares()`;
+             - 'adaptive': use `pymrt.recipes.coils.adaptive()`;
+             - 'block_adaptive': use `pymrt.recipes.coils.block_adaptive()`;
+             - 'adaptive_iter': use `pymrt.recipes.coils.adaptive_iter()`;
+             - 'block_adaptive_iter': use
+               `pymrt.recipes.coils.block_adaptive_iter()`;
             Accepted values requiring `ref` but not `multi_axis` are:
              Not implemented yet.
             Accepted values requiring `multi_axis` but not `ref` are:
-             - 'multi_svd': use `mul
+             - 'multi_svd': use `pymrt.recipes.coils.mult_svd()`
             Accepted values requiring both `ref` and `multi_axis` are:
              Not implemented yet.
 
@@ -1133,4 +1134,4 @@ def quality(
     sum_arr = np.sum(np.abs(coils_arr), axis=coil_axis)
     abs_arr = np.abs(combined_arr)
     return factor * (
-                abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))
+            abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))

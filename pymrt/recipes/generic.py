@@ -1192,28 +1192,28 @@ def linsolve_iter(
         method (str|None): Iterative algorithm to use.
             If None, this is determined automatically based on the problem.
             Accepted values are:
-             - 'lsmr': uses `scipy.sparse.linalg.lsmr()`.
+             - 'lsmr': use `scipy.sparse.linalg.lsmr()`.
                Requires computing :math:`Ax` and :math:`A^Hb`.
-             - 'lsqr': uses `scipy.sparse.linalg.lsqr()`.
+             - 'lsqr': use `scipy.sparse.linalg.lsqr()`.
                Requires computing :math:`Ax` and :math:`A^Hb`.
-             - 'bicg': uses `scipy.sparse.linalg.bicg()`.
+             - 'bicg': use `scipy.sparse.linalg.bicg()`.
                Requires an endomorphism (square matrix), and
                computing :math:`Ax` and :math:`A^Hb`.
-             - 'bicgstab': uses `scipy.sparse.linalg.bicgstab()`.
+             - 'bicgstab': use `scipy.sparse.linalg.bicgstab()`.
                Requires an endomorphism (square matrix).
-             - 'cg': uses `scipy.sparse.linalg.cg()`.
+             - 'cg': use `scipy.sparse.linalg.cg()`.
                Requires a hermitian (:math:`A=A^H`), positive definite
                endomorphism (square matrix).
-             - 'cgs': uses `scipy.sparse.linalg.cgs()`.
+             - 'cgs': use `scipy.sparse.linalg.cgs()`.
                Requires an endomorphism (square matrix).
-             - 'gmres': uses `scipy.sparse.linalg.gmres()`.
+             - 'gmres': use `scipy.sparse.linalg.gmres()`.
                Requires an endomorphism (square matrix).
-             - 'lgmres': uses `scipy.sparse.linalg.lgmres()`.
+             - 'lgmres': use `scipy.sparse.linalg.lgmres()`.
                Requires an endomorphism (square matrix).
-             - 'qmr': uses `scipy.sparse.linalg.qmr()`.
+             - 'qmr': use `scipy.sparse.linalg.qmr()`.
                Requires an endomorphism (square matrix), and
                computing :math:`Ax` and :math:`A^Hb`.
-             - 'minres': uses `scipy.sparse.linalg.minres()`.
+             - 'minres': use `scipy.sparse.linalg.minres()`.
                Requires an endomorphism (square matrix).
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
         verbose (int): Set level of verbosity.
