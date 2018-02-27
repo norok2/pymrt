@@ -53,8 +53,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 from nibabel.spatialimages import (
-    HeaderDataError, HeaderTypeError, ImageDataError)
-
+    HeaderDataError, HeaderTypeError, ImageDataError, )
 
 # :: Local Imports
 import pymrt as mrt
@@ -147,8 +146,6 @@ def save(
         raise ValueError('Could not create a NiBabel object.')
     else:
         obj.to_filename(out_filepath)
-
-
 
 
 # ======================================================================
@@ -675,7 +672,7 @@ def split(
         out_filepath = os.path.join(
             out_dirpath,
             mrt.utils.change_ext(out_basename + '-' + i_str,
-                                 mrt.utils.EXT['niz'], ''))
+                mrt.utils.EXT['niz'], ''))
         save(out_filepath, image, **{k: v for k, v in meta.items()})
         out_filepaths.append(out_filepath)
     return out_filepaths
@@ -969,7 +966,7 @@ def find_objects(
 
     def _find_objects(array, structure, max_label):
         labels, masks = mrt.segmentation.find_objects(array, structure,
-                                                      max_label, False)
+            max_label, False)
         return labels
 
     simple_filter_1_1(
