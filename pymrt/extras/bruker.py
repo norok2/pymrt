@@ -545,12 +545,12 @@ if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
 
-    batch_extract(
-        '/home/raid1/metere/hd3/sandbox/hmri'
-        '/Specimen_170814_1_0_Study_20170814_080054/',
-        custom_reco='mag_phs',
-        verbose=VERB_LVL['debug'],
-        force=False)
+    # batch_extract(
+    #     '/home/raid1/metere/hd3/sandbox/hmri'
+    #     '/Specimen_170814_1_0_Study_20170814_080054/',
+    #     custom_reco='mag_phs',
+    #     verbose=VERB_LVL['debug'],
+    #     force=False)
 
 # ======================================================================
 elapsed(os.path.basename(__file__))
