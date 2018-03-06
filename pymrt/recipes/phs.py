@@ -109,8 +109,8 @@ def phs_to_dphs(
         phs_arr,
         tis,
         tis_mask=None,
-        unwrap='laplacian',
-        unwrap_kws=None,
+        unwrapping='laplacian',
+        unwrapping_kws=None,
         units='ms'):
     """
     Calculate the phase variation from phase data.
@@ -125,9 +125,9 @@ def phs_to_dphs(
             The number of points must match the last shape size of arr.
         tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
-        unwrap (str|None): The unwrapping method.
-            If None, no unwrapping is performed.
-            If str, perform unwrapping using `pymrt.recipes.phs.unwrapping()`.
+        unwrapping (str|None): The unwrap method.
+            If None, no unwrap is performed.
+            If str, perform unwrap using `pymrt.recipes.phs.unwrap()`.
             Accepted values are:
              - 'auto': uses the best method for the given input.
                If `len(tis) == 1`
@@ -135,8 +135,8 @@ def phs_to_dphs(
                use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
-        unwrap_kws (dict|tuple|None): Additional keyword arguments.
-            These are passed to `pymrt.recipes.phs.unwrapping()`.
+        unwrapping_kws (dict|tuple|None): Additional keyword arguments.
+            These are passed to `pymrt.recipes.phs.unwrap()`.
         units (str|float|int): Units of measurement of Ti.
             If str, the following will be accepted: 'ms'.
             If int or float, the conversion factor will be multiplied to `ti`.
@@ -153,8 +153,8 @@ def phs_to_dphs(
             units = 1
     tis = np.array(mrt.utils.auto_repeat(tis, 1)) * units
 
-    if unwrap is not None:
-        phs_arr = unwrapping(phs_arr, unwrap, unwrap_kws)
+    if unwrapping is not None:
+        phs_arr = unwrap(phs_arr, unwrapping, unwrapping_kws)
 
     if len(tis) == 1:
         dphs_arr = phs_arr / tis[0]
@@ -199,7 +199,7 @@ def cx2_to_dphs(
     dphs_arr = np.arctan2(np.imag(dphs_arr), np.real(dphs_arr))
 
     if unwrap is not None:
-        dphs_arr = unwrapping(dphs_arr, unwrap, unwrap_kws)
+        dphs_arr = unwrap(dphs_arr, unwrap, unwrap_kws)
 
     return dphs_arr / d_ti
 
@@ -235,9 +235,9 @@ def unwrap_laplacian(
         arr,
         pad_width=0):
     """
-    Super-fast multi-dimensional Laplacian-based Fourier unwrapping.
+    Super-fast multi-dimensional Laplacian-based Fourier unwrap.
 
-    Phase unwrapping by using the following equality:
+    Phase unwrap by using the following equality:
 
     L = (d / dx)^2
 
@@ -290,11 +290,11 @@ def unwrap_laplacian_corrected(
         arr,
         pad_width=0):
     """
-    Super-fast multi-dimensional corrected Laplacian-based Fourier unwrapping.
+    Super-fast multi-dimensional corrected Laplacian-based Fourier unwrap.
 
     EXPERIMENTAL!
 
-    Phase unwrapping by using the following equality:
+    Phase unwrap by using the following equality:
 
     L = (d / dx)^2
 
@@ -347,7 +347,7 @@ def unwrap_laplacian_corrected(
 def unwrap_region_merging(
         arr):
     """
-    Accurate unwrapping using a region-merging approach.
+    Accurate unwrap using a region-merging approach.
 
     EXPERIMENTAL!
 
@@ -375,9 +375,9 @@ def unwrap_sorting_path(
 
     Args:
         arr (np.ndarray): The input array.
-        unwrap_axes (tuple[int]): Axes along which unwrapping is performed.
+        unwrap_axes (tuple[int]): Axes along which unwrap is performed.
             Must have length 2 or 3.
-        wrap_around (bool|Iterable[bool]|None): Circular unwrapping.
+        wrap_around (bool|Iterable[bool]|None): Circular unwrap.
             See also: skimage.restoration.unwrap_phase.
         seed (int|None): Randomization seed.
             See also: skimage.restoration.unwrap_phase.
@@ -406,7 +406,7 @@ def unwrap_sorting_path(
 def unwrap_cnn(
         arr):
     """
-    Fast unwrapping using Convolutional Neural Networks.
+    Fast unwrap using Convolutional Neural Networks.
 
     EXPERIMENTAL!
 
@@ -420,18 +420,18 @@ def unwrap_cnn(
 
 
 # ======================================================================
-def unwrapping(
+def unwrap(
         arr,
-        method='sorting_path',
+        method='laplacian',
         method_kws=None):
     """
-    Perform phase unwrapping.
+    Perform phase unwrap.
 
     Multi-dimensional inputs are supported.
 
     Args:
         arr (np.ndarray): The input array.  
-        method (str): The unwrapping method.
+        method (str): The unwrap method.
             Accepted values are:
              - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
@@ -453,7 +453,7 @@ def unwrapping(
     elif method == 'cnn':
         method = unwrap_cnn
     else:
-        text = 'Unknown unwrapping method `{}`'.format(method)
+        text = 'Unknown unwrap method `{}`'.format(method)
         warnings.warn(text)
     if callable(method):
         arr = method(arr, **method_kws)

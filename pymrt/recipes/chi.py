@@ -1084,7 +1084,7 @@ def wip():
         from pymrt.recipes import phs
 
 
-        uphs_arr = phs.unwrapping(phs_arr)
+        uphs_arr = phs.unwrap(phs_arr)
         mrt.input_output.save(uphs_filepath, uphs_arr)
     else:
         uphs_arr = mrt.input_output.load(uphs_filepath)

@@ -1320,7 +1320,7 @@ def linsolve_iter(
             maxiter=max_iter, **method_kws)
 
     else:
-        text = 'Unknown unwrapping method `{}`'.format(method)
+        text = 'Unknown iterative solver method `{}`'.format(method)
         raise ValueError(text)
 
     return res[0]

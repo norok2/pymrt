@@ -15,10 +15,11 @@ Several algorithms are available:
 - laplacian [Ref: Schofield, Marvin A., and Yimei Zhu. “Fast Phase
   Unwrapping Algorithm for Interferometric Applications.” Optics Letters 28,
   no. 14 (July 15, 2003): 1194–96. doi:10.1364/OL.28.001194.]
-- merge-optim [Ref: Jenkinson, Mark. “Fast, Automated, N-Dimensional
-  Phase-Unwrapping Algorithm.” Magnetic Resonance in Medicine 49, no. 1
-  (January 1, 2003): 193–97. doi:10.1002/mrm.10354.]
 """
+# - merge-optim [Ref: Jenkinson, Mark. “Fast, Automated, N-Dimensional
+#   Phase-Unwrapping Algorithm.” Magnetic Resonance in Medicine 49, no. 1
+#   (January 1, 2003): 193–97. doi:10.1002/mrm.10354.]
+# """
 
 # ======================================================================
 # :: Future Imports
@@ -47,10 +48,20 @@ METHODS = ('sorting-path', 'laplacian', 'merge-optim')
 
 
 # ======================================================================
+def _unwrap(arr, method, fix_interval, fix_offset, **kws):
+    if fix_interval:
+        arr = phs.fix_interval(arr)
+    if fix_offset:
+        arr = phs.fix_offset(arr)
+    return method(arr, **kws)
+
+# ======================================================================
 def unwrap(
         in_filepath,
         out_filepath,
         method,
+        fix_interval,
+        fix_offset,
         options=None,
         force=False,
         verbose=D_VERB_LVL):
@@ -59,40 +70,20 @@ def unwrap(
     msg('Method: {}'.format(method))
     if mrt.utils.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
-            if options is not None:
-                options = json.loads(options)
-            else:
-                options = {}
-            if 'pre_func' not in options:
-                options['pre_func'] = phs.fix_interval
-            if 'post_func' not in options:
-                options['post_func'] = phs.fix_offset
-            mrt.input_output.simple_filter_1_1(
-                in_filepath, out_filepath,
-                phs.unwrap_sorting_path, **options)
+            method = phs.unwrap_sorting_path
         elif method == 'laplacian':
-            if options is not None:
-                options = json.loads(options)
-            else:
-                options = {}
-            if 'pre_func' not in options:
-                options['pre_func'] = phs.fix_interval
-            if 'post_func' not in options:
-                options['post_func'] = phs.fix_offset
-            mrt.input_output.simple_filter_1_1(
-                in_filepath, out_filepath,
-                phs.unwrap_laplacian, **options)
-        elif method == 'merge-optim':
-            msg('W: method supported through FSL')
-            ext_cmd = EXT_CMD['fsl/5.0/prelude']
-            cmd_args = {
-                'p': in_filepath,
-                'o': out_filepath}
-            cmd = ' '.join(
-                [ext_cmd] +
-                ['-{} {}'.format(k, v) for k, v in cmd_args.items()] +
-                [options])
-            mrt.utils.execute(cmd, verbose=verbose)
+            method = phs.unwrap_laplacian
+        else:
+            msg('WW: method `{}` not supported.'.format(method))
+
+        if options is not None:
+            options = json.loads(options)
+        else:
+            options = {}
+
+        mrt.input_output.simple_filter_1_1(
+            in_filepath, out_filepath,
+            _unwrap, *(method, fix_interval, fix_offset), **options)
 
 
 # ======================================================================
@@ -139,6 +130,14 @@ def handle_arg():
         '-m', '--method', metavar='STR',
         default='sorting-path',
         help=' [%(default)s]')
+    arg_parser.add_argument(
+        '-n', '--fix_interval',
+        action='store_true',
+        help='Fix the interval of input values [%(default)s]')
+    arg_parser.add_argument(
+        '-t', '--fix_offset',
+        action='store_true',
+        help='Fix the offset of output values [%(default)s]')
     arg_parser.add_argument(
         '-x', '--options', metavar='STR',
         default=None,
