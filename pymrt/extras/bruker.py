@@ -239,7 +239,7 @@ def _reco_from_fid(
         msg('num_coils={}'.format(num_coils), verbose, VERB_LVL['debug'])
 
         try:
-            fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test_{s}.nii.gz'
+            # fp = '/home/raid1/metere/hd3/sandbox/hmri/_/test_{s}.nii.gz'
 
             msg('fid_size={}'.format(arr.size), verbose, VERB_LVL['debug'])
             fid_shape = (
@@ -314,17 +314,17 @@ def _reco_from_fid(
                     verbose=verbose, **dict(coils_combine_kws))
 
                 qq_arr = coils.quality(arr, combined_arr)
-                mrt.input_output.save(fp.format(s='Q'), qq_arr)
+                # mrt.input_output.save(fp.format(s='Q'), qq_arr)
                 arr = combined_arr
             if num_avg > 1:
                 arr = np.sum(arr, axis=avg_axis)
             if num_rep > 1:
                 arr = np.sum(arr, axis=rep_axis)
 
-            mrt.input_output.save(fp.format(s='M'), np.abs(arr))
-            print('MAG')
-            mrt.input_output.save(fp.format(s='P'), np.angle(arr))
-            print('PHS')
+            # mrt.input_output.save(fp.format(s='M'), np.abs(arr))
+            # print('MAG')
+            # mrt.input_output.save(fp.format(s='P'), np.angle(arr))
+            # print('PHS')
 
         # except ValueError:
         except NotImplementedError as e:
