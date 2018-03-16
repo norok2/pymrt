@@ -234,7 +234,6 @@ def quick_3d(arr, values_range=None):
         # using Matplotlib
         from skimage import measure
 
-
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
         # zz, xx, yy = array.nonzero()
@@ -761,9 +760,9 @@ def sample2d(
         array_interval = mrt.utils.minmax(arr)
     if not cmap:
         if not mrt.utils.is_same_sign(array_interval):
-            cmap = mpl.cm.RdBu_r
+            cmap = mpl.cm.get_cmap('RdBu_r')
         else:
-            cmap = mpl.cm.gray_r
+            cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
         if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
@@ -787,7 +786,6 @@ def sample2d(
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1001,9 +999,9 @@ def sample3d_view2d(
         array_interval = mrt.utils.minmax(arr)
     if not cmap:
         if not mrt.utils.is_same_sign(array_interval):
-            cmap = mpl.cm.RdBu_r
+            cmap = mpl.cm.get_cmap('RdBu_r')
         else:
-            cmap = mpl.cm.gray_r
+            cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
         if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
@@ -1028,7 +1026,6 @@ def sample3d_view2d(
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 
-
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
@@ -1037,7 +1034,7 @@ def sample3d_view2d(
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
                 cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
-                             rotation=90)
+                    rotation=90)
             else:
                 cbar.set_label(cbar_txt)
 
@@ -1091,8 +1088,201 @@ def sample3d_view2d(
 
 
 # ======================================================================
-def sample2d_multi():
-    pass
+def sample2d_multi(
+        arrs,
+        alphas=1.0,
+        axis=None,
+        index=None,
+        title=None,
+        array_interval=None,
+        ticks_limit=None,
+        interpolation='nearest',
+        orientation=None,
+        flip_ud=False,
+        flip_lr=False,
+        cmaps=None,
+        cbar_kws=None,
+        cbar_txt=None,
+        text_color=None,
+        resolution=None,
+        size_info=None,
+        more_texts=None,
+        ax=None,
+        save_filepath=None,
+        save_kws=None,
+        force=False,
+        verbose=D_VERB_LVL):
+    """
+
+    EXPERIMENTAL!
+
+
+    Args:
+        arrs ():
+        alphas ():
+        axis ():
+        index ():
+        title ():
+        array_interval ():
+        ticks_limit ():
+        interpolation ():
+        orientation ():
+        flip_ud ():
+        flip_lr ():
+        cmaps ():
+        cbar_kws ():
+        cbar_txt ():
+        text_color ():
+        resolution ():
+        size_info ():
+        more_texts ():
+        ax ():
+        save_filepath ():
+        save_kws ():
+        force ():
+        verbose ():
+
+    Returns:
+
+    """
+    # todo: transpose/swapaxes/moveaxes/rollaxes
+    data_dim = 2
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+
+    assert all([arr.shape == arrs[0].shape for arr in arrs])
+
+    # prepare data
+    if axis is None:
+        axis = np.argsort(arrs[0].shape)[:-data_dim]
+    else:
+        axis = mrt.utils.auto_repeat(axis, 1)
+    if index is not None:
+        index = mrt.utils.auto_repeat(index, 1)
+        if len(index) != len(axis):
+            raise IndexError(
+                'Mismatching number of axis ({num_axis}) and index '
+                '({num_index})'.format(
+                    num_axis=len(axis), num_index=len(index)))
+
+    # prepare plot
+    if title:
+        ax.set_title(title)
+    ax.set_aspect('equal')
+
+    for arr, alpha, cmap in zip(arrs, alphas, cmaps):
+        if arr.ndim - len(axis) == data_dim:
+            data = mrt.utils.ndim_slice(arr, axis, index)
+        elif arr.ndim == data_dim:
+            data = arr
+        else:
+            raise IndexError(
+                'Mismatching dimensions ({dim}) and axis ({num_axes}): '
+                '{dim} - {num_axes} != {data_dim}'.format(
+                    dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
+        if ((orientation == 'transpose') or
+                (orientation == 'landscape' and data.shape[0] > data.shape[
+                    1]) or
+                (orientation == 'portrait' and data.shape[0] < data.shape[1])):
+            data = data.transpose()
+        if orientation == 'rot90':
+            data = np.rot90(data)
+        if flip_ud:
+            data = data[::-1, :]
+        if flip_lr:
+            data = data[:, ::-1]
+        print(np.sum(data))
+
+        if array_interval is None:
+            array_interval = mrt.utils.minmax(arr)
+        if not cmap:
+            if not mrt.utils.is_same_sign(array_interval):
+                cmap = mpl.cm.get_cmap('RdBu_r')
+            else:
+                cmap = mpl.cm.get_cmap('gray_r')
+        if not text_color:
+            if not mrt.utils.is_same_sign(array_interval):
+                text_color = 'k'
+            else:
+                text_color = 'k'
+
+        # plot data
+        plot = ax.imshow(
+            data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
+            interpolation=interpolation)
+
+        # plot ticks in plotting axes
+        if ticks_limit is not None:
+            if ticks_limit > 0:
+                ax.locator_params(nbins=ticks_limit)
+            else:
+                ax.set_xticks([])
+                ax.set_yticks([])
+
+    # set colorbar
+    if cbar_kws is not None:
+        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
+        if cbar_txt is not None:
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            if only_extremes:
+                cbar.ax.text(
+                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
+            else:
+                cbar.set_label(cbar_txt)
+
+    # print resolution information and draw a ruler
+    if size_info is not None and resolution is not None:
+        if size_info >= 0.0:
+            # print resolution information
+            if resolution[0] == resolution[1] == resolution[2]:
+                x = resolution[0]
+                res_str = '{} {} iso.'.format(str(x), 'mm')
+            else:
+                res_str = 'x'.join([str(x) for x in resolution[0:3]]) \
+                          + ' ' + 'mm'
+            ax.text(
+                0.975, 0.975, res_str, rotation=0, color=text_color,
+                horizontalalignment='right', verticalalignment='top',
+                transform=ax.transAxes)
+        if size_info != 0.0:
+            res = resolution[1]
+            size_info_size = round(abs(size_info) * (data.shape[1] * res), -1)
+            size_info_str = '{} {}'.format(size_info_size, 'mm')
+            size_info_px = size_info_size / res
+            ax.text(
+                0.025, 0.050, size_info_str, rotation=0, color=text_color,
+                horizontalalignment='left', verticalalignment='bottom',
+                transform=ax.transAxes)
+            ax.plot(
+                (data.shape[1] * 0.025,
+                 data.shape[1] * 0.025 + size_info_px),
+                (data.shape[0] * 0.965, data.shape[0] * 0.965),
+                color=text_color, linewidth=2.5)
+
+    # include additional text
+    if more_texts is not None:
+        for text_kws in more_texts:
+            ax.text(**dict(text_kws))
+
+    # save plot
+    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        if save_kws is None:
+            save_kws = {}
+        fig.savefig(save_filepath, **dict(save_kws))
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
+
+    return data, fig
 
 
 # ======================================================================
@@ -1166,9 +1356,9 @@ def sample2d_anim(
         array_interval = mrt.utils.minmax(array)
     if not cmap:
         if not mrt.utils.is_same_sign(array_interval):
-            cmap = mpl.cm.RdBu_r
+            cmap = mpl.cm.get_cmap('RdBu_r')
         else:
-            cmap = mpl.cm.gray_r
+            cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
         if not mrt.utils.is_same_sign(array_interval):
             text_color = 'k'
@@ -1201,7 +1391,7 @@ def sample2d_anim(
         if size_info != 0.0:
             res = resolution[1]
             size_info_size = round(abs(size_info) * (sample.shape[1] * res),
-                                   -1)
+                -1)
             size_info_str = '{} {}'.format(size_info_size, 'mm')
             size_info_px = size_info_size / res
             ax.text(
@@ -1732,7 +1922,7 @@ def histogram2d(
     if bisector:
         ax.autoscale(False)
         ax.plot(array_interval[0], array_interval[1], bisector,
-                label='bisector')
+            label='bisector')
     if stats_kws is not None:
         mask = np.ones_like(arr1 * arr2).astype(bool)
         mask *= (arr1 > array_interval[0][0]).astype(bool)
