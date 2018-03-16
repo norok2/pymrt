@@ -45,8 +45,9 @@ import seaborn as sns  # Seaborn: statistical data visualization
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-import matplotlib.cm
-import matplotlib.gridspec
+import matplotlib.cm  # Matplotlib's colormaps
+import matplotlib.colors  # Matplotlib's colors
+import matplotlib.gridspec  # Matplotlib's grid specifications
 import matplotlib.animation as anim  # Matplotlib's animations
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.optimize  # SciPy: Optimization Algorithms
@@ -117,6 +118,30 @@ def _color_series(
         else:
             min_ = 1.0 / (num * (np.abs(asym) + 1.0) + 1.0)
     return [mpl.cm.get_cmap(name)(x) for x in np.linspace(min_, max_, num)]
+
+
+# ======================================================================
+def _transparent_cmaps_from_colors(
+        color,
+        threshold=0.0):
+    return mpl.colors.LinearSegmentedColormap.from_list(
+        'my_cmap_{}'.format(color),
+        [(0.00, (0, 0, 0, 0)),
+         (threshold, mpl.colors.to_rgba(color, alpha=0)),
+         (1.00, mpl.colors.to_rgba(color, alpha=1))])
+
+
+# ======================================================================
+def _manage_ticks_limit(ticks_limit, ax):
+    # plot ticks in plotting axes
+    if ticks_limit is not None:
+        if ticks_limit > 0:
+            ax.locator_params(nbins=ticks_limit)
+        elif ticks_limit == 0:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        else:
+            ax.set_axis_off()
 
 
 # ======================================================================
@@ -233,6 +258,7 @@ def quick_3d(arr, values_range=None):
     if arr.ndim == 3:
         # using Matplotlib
         from skimage import measure
+
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -775,17 +801,12 @@ def sample2d(
         data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
         interpolation=interpolation)
 
-    # plot ticks in plotting axes
-    if ticks_limit is not None:
-        if ticks_limit > 0:
-            ax.locator_params(nbins=ticks_limit)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+    _manage_ticks_limit(ticks_limit, ax)
 
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1014,17 +1035,12 @@ def sample3d_view2d(
         view, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
         interpolation=interpolation)
 
-    # plot ticks in plotting axes
-    if ticks_limit is not None:
-        if ticks_limit > 0:
-            ax.locator_params(nbins=ticks_limit)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+    _manage_ticks_limit(ticks_limit, ax)
 
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1034,7 +1050,7 @@ def sample3d_view2d(
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
                 cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
-                    rotation=90)
+                             rotation=90)
             else:
                 cbar.set_label(cbar_txt)
 
@@ -1094,7 +1110,7 @@ def sample2d_multi(
         axis=None,
         index=None,
         title=None,
-        array_interval=None,
+        array_intervals=None,
         ticks_limit=None,
         interpolation='nearest',
         orientation=None,
@@ -1155,6 +1171,11 @@ def sample2d_multi(
         fig = plt.gcf()
 
     assert all([arr.shape == arrs[0].shape for arr in arrs])
+    num_arrs = len(arrs)
+    alphas = mrt.utils.auto_repeat(alphas, num_arrs, False, True)
+    cmaps = mrt.utils.auto_repeat(cmaps, num_arrs, False, True)
+    array_intervals = mrt.utils.auto_repeat(
+        array_intervals, num_arrs, False, True)
 
     # prepare data
     if axis is None:
@@ -1169,12 +1190,15 @@ def sample2d_multi(
                 '({num_index})'.format(
                     num_axis=len(axis), num_index=len(index)))
 
-    # prepare plot
+    # plot title
     if title:
         ax.set_title(title)
+    _manage_ticks_limit(ticks_limit, ax)
+    # aspect ratio
     ax.set_aspect('equal')
 
-    for arr, alpha, cmap in zip(arrs, alphas, cmaps):
+    for arr, alpha, cmap, array_interval in \
+            zip(arrs, alphas, cmaps, array_intervals):
         if arr.ndim - len(axis) == data_dim:
             data = mrt.utils.ndim_slice(arr, axis, index)
         elif arr.ndim == data_dim:
@@ -1195,7 +1219,6 @@ def sample2d_multi(
             data = data[::-1, :]
         if flip_lr:
             data = data[:, ::-1]
-        print(np.sum(data))
 
         if array_interval is None:
             array_interval = mrt.utils.minmax(arr)
@@ -1215,17 +1238,10 @@ def sample2d_multi(
             data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
             interpolation=interpolation)
 
-        # plot ticks in plotting axes
-        if ticks_limit is not None:
-            if ticks_limit > 0:
-                ax.locator_params(nbins=ticks_limit)
-            else:
-                ax.set_xticks([])
-                ax.set_yticks([])
-
     # set colorbar
     if cbar_kws is not None:
         from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -1368,12 +1384,7 @@ def sample2d_anim(
     if (orientation == 'portrait' and sample.shape[0] < sample.shape[1]) or \
             (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
         sample = sample.transpose()
-    if ticks_limit is not None:
-        if ticks_limit > 0:
-            ax.locator_params(nbins=ticks_limit)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+    _manage_ticks_limit(ticks_limit, ax)
 
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
@@ -1391,7 +1402,7 @@ def sample2d_anim(
         if size_info != 0.0:
             res = resolution[1]
             size_info_size = round(abs(size_info) * (sample.shape[1] * res),
-                -1)
+                                   -1)
             size_info_str = '{} {}'.format(size_info_size, 'mm')
             size_info_px = size_info_size / res
             ax.text(
@@ -1699,12 +1710,7 @@ def histogram1d_list(
     # create the legend for the first line.
     ax.legend(**(legend_kws if legend_kws is not None else {}))
     # fine-tune ticks
-    if ticks_limit is not None:
-        if ticks_limit > 0:
-            ax.locator_params(nbins=ticks_limit)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+    _manage_ticks_limit(ticks_limit, ax)
     # setup title and labels
     if title:
         ax.set_title(title.format_map(locals()))
@@ -1922,7 +1928,7 @@ def histogram2d(
     if bisector:
         ax.autoscale(False)
         ax.plot(array_interval[0], array_interval[1], bisector,
-            label='bisector')
+                label='bisector')
     if stats_kws is not None:
         mask = np.ones_like(arr1 * arr2).astype(bool)
         mask *= (arr1 > array_interval[0][0]).astype(bool)
@@ -1946,12 +1952,7 @@ def histogram2d(
     if labels[1]:
         ax.set_ylabel(labels[1].format_map(locals()))
     # fine-tune ticks
-    if ticks_limit is not None:
-        if ticks_limit > 0:
-            ax.locator_params(nbins=ticks_limit)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+    _manage_ticks_limit(ticks_limit, ax)
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
