@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MP2RAGE pulse sequence library.
+pymrt.sequences.mp2rage: MP2RAGE pulse sequence library.
 
 Calculate the analytical expression of MP2RAGE signal rho and related
 functions.
@@ -130,7 +130,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
                     t1, n_gre, tr_gre, fa2, m0, eta_fa),
                 t1, td2, m0))
         mz_ss_ = sym.factor(sym.solve(eqn_mz_ss, mz_ss)[0])
-        print('mz_ss: {}'.format(mz_ss_))
+        # print('mz_ss: {}'.format(mz_ss_))  # DEBUG
 
         # convenient exponentials
         e1 = exp(-tr_gre / t1)
@@ -156,7 +156,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
             ((1 - e1) *
              (1 - (cos(fa1 * eta_fa) * e1) ** (n_gre * k_gre - 1)) /
              (1 - cos(fa1 * eta_fa) * e1)))
-        print('s1: {}'.format(s1_))
+        # print('s1: {}'.format(s1_))  # DEBUG
 
         # : signal for TI2
         # eqn_s2 = sym.Eq(
@@ -179,7 +179,7 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
             ((1 - e1) *
              ((cos(fa2 * eta_fa) * e1) ** (-n_gre * (1 - k_gre)) - 1) /
              (1 - cos(fa2 * eta_fa) * e1)))
-        print('s2: {}'.format(s2_))
+        # print('s2: {}'.format(s2_))  # DEBUG
 
         # include factors that do not vanish in the ratio
         # (still omitted factors: b1r * e2 * m0)
@@ -198,9 +198,9 @@ def _prepare_mp2rage(use_cache=CFG['use_cache']):
         i_ratio_ = sym.factor(
             i_ratio_.subs({s1: s1_, s2: s2_}).subs({mz_ss: mz_ss_}))
 
-        print('pseudo-ratio: {}'.format(p_ratio_))
-        print('ratio: {}'.format(ratio_))
-        print('inverse-ratio: {}'.format(i_ratio_))
+        # print('pseudo-ratio: {}'.format(p_ratio_))  # DEBUG
+        # print('ratio: {}'.format(ratio_))  # DEBUG
+        # print('inverse-ratio: {}'.format(i_ratio_))  # DEBUG
 
         params = (
             n_gre, tr_gre, k_gre, fa1, fa2, td0, td1, td2,
