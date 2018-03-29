@@ -160,7 +160,7 @@ def main():
     kws.pop('quiet')
     pml.check_correlation(**kws)
 
-    elapsed(os.path.basename(__file__))
+    elapsed(__file__[len(DIRS['base']) + 1:])
     msg(report())
 
 

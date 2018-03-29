@@ -260,7 +260,7 @@ def main():
             plot_flash_ernst_angle_fa_tr,
             filtered_interactives, title=TITLE, about=__doc__)
 
-    elapsed(os.path.basename(__file__))
+    elapsed(__file__[len(DIRS['base']) + 1:])
     msg(report())
 
 

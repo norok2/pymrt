@@ -553,4 +553,4 @@ if __name__ == '__main__':
     #     force=False)
 
 # ======================================================================
-elapsed(os.path.basename(__file__))
+elapsed(__file__[len(DIRS['base']) + 1:])

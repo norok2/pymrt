@@ -11,6 +11,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
 # import itertools  # Functions creating iterators for efficient looping
 import warnings  # Warning control
 import collections  # Container datatypes
@@ -1063,7 +1064,6 @@ def wip():
     import datetime
     import pymrt.input_output
 
-
     begin_time = datetime.datetime.now()
 
     force = False
@@ -1083,7 +1083,6 @@ def wip():
     if mrt.utils.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
-
         uphs_arr = phs.unwrap(phs_arr)
         mrt.input_output.save(uphs_filepath, uphs_arr)
     else:
@@ -1093,7 +1092,6 @@ def wip():
     if mrt.utils.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
-
         dphs_arr = phs.phs_to_dphs(phs_arr, 20.0)
         mrt.input_output.save(dphs_filepath, uphs_arr)
     else:
@@ -1102,7 +1100,6 @@ def wip():
     db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
     if mrt.utils.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
-
 
         db0_arr = db0.dphs_to_db0(dphs_arr, b0=2.89362)
         mrt.input_output.save(db0_filepath, db0_arr)
@@ -1167,12 +1164,13 @@ def wip():
 
 
 # ======================================================================
-if __name__ == '__main__':
-    # import doctest
-    #
-    # msg(__doc__.strip())
-    # doctest.testmod()
-    wip()
+elapsed(__file__[len(DIRS['base']) + 1:])
 
-else:
-    elapsed()
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())
+    wip()

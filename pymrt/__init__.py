@@ -181,7 +181,6 @@ def dbg(obj, fmt=None):
     """
     import inspect
 
-
     outer_frame = inspect.getouterframes(inspect.currentframe())[1]
     name_str = outer_frame[4][0][:-1]
     msg(name_str, fmt=fmt, end=': ')
@@ -221,7 +220,11 @@ def elapsed(
 # ======================================================================
 def report(
         events=_EVENTS,
-        label='\nElapsed Time(s): ',
+        title='Elapsed Time(s)',
+        labels=('Label', 'Duration / s', 'Cum. Duration / s'),
+        max_col_widths=(36, 20, 20),
+        title_sep='=',
+        label_sep='-',
         only_last=False):
     """
     Print quick-and-dirty elapsed times between named event points.
@@ -229,35 +232,60 @@ def report(
     Args:
         events (list[(str,datetime.datetime)]): A list of named time points.
             Each event is a 2-tuple: (label, time).
-        label (str): heading of the elapsed time table.
+        title (str): heading of the elapsed time table.
+        labels (Iterable[str]): Labels for the report.
+            Three elements are expected.
+        max_col_widths (Iterable[int]): Maximum width of columns in the report.
+            Three elements are expected.
+        title_sep (str): The separator used to underline the title.
+        label_sep (str): The separator used to underline the labels.
         only_last (bool): print only the last event (useful inside a loop).
 
     Returns:
         None.
     """
-    text = ''
-    if not only_last:
-        text += label + ('\n' if len(events) > 2 else '')
-        first_elapsed = events[0][1]
-        for i in range(len(events) - 1):
-            _id = i + 1
+    text = '\n'
+    if events:
+        if not only_last and len(events) > 2:
+            fmt = '{{!s:{}s}}  {{!s:>{}s}}  {{!s:>{}s}}\n'.format(
+                *max_col_widths)
+            title_sep = ((title_sep * len(title))[:len(title)] + '\n') \
+                if title_sep else ''
+            text += title + (
+                '\n' + title_sep + '\n' if len(events) > 2 else ': ')
+
+            if labels and len(events) > 2:
+                text += (fmt.format(*labels))
+
+            if label_sep:
+                text += (fmt.format(
+                    *[(label_sep * max_col_width)[:max_col_width]
+                      for max_col_width in max_col_widths]))
+
+            first_elapsed = events[0][1]
+            for i in range(len(events) - 1):
+                _id = i + 1
+                name = events[_id][0]
+                curr_elapsed = events[_id][1]
+                prev_elapsed = events[_id - 1][1]
+                diff_first = curr_elapsed - first_elapsed
+                diff_last = curr_elapsed - prev_elapsed
+                if diff_first == diff_last:
+                    diff_first = '-'
+                text += (fmt.format(
+                    name[:max_col_widths[0]], diff_last, diff_first))
+        elif len(events) > 1:
+            fmt = '{{!s:{}s}}  {{!s:>{}s}}'.format(*max_col_widths)
+            _id = -1
             name = events[_id][0]
             curr_elapsed = events[_id][1]
             prev_elapsed = events[_id - 1][1]
-            diff_first = curr_elapsed - first_elapsed
-            diff_last = curr_elapsed - prev_elapsed
-            if diff_first == diff_last:
-                diff_first = '-'
-            text += (
-                '{!s:24s} {!s:>24s}, {!s:>24s}'.format(
-                    name, diff_last, diff_first))
-    else:
-        _id = -1
-        name = events[_id][0]
-        curr_elapsed = events[_id][1]
-        prev_elapsed = events[_id - 1][1]
-        text += (
-            '{!s:24s} {!s:>24s}'.format(name, curr_elapsed - prev_elapsed))
+            text += (fmt.format(name, curr_elapsed - prev_elapsed))
+        else:
+            events = None
+
+    if not events:
+        text += 'No ' + title.lower() + ' to report!'
     return text
 
 
@@ -283,9 +311,10 @@ def _app_dirs(
 
     Examples:
         >>> sorted(_app_dirs().keys())
-        ['cache', 'config', 'data', 'log']
+        ['base', 'cache', 'config', 'data', 'log']
     """
     dirpaths = dict((
+        ('base', os.path.dirname(__file__)),
         ('config', appdirs.user_config_dir(name, author, version)),
         ('cache', appdirs.user_cache_dir(name, author, version)),
         ('data', appdirs.user_data_dir(name, author, version)),
@@ -301,11 +330,12 @@ def _app_dirs(
 DIRS = _app_dirs()
 
 # ======================================================================
+elapsed()
+
+# ======================================================================
 if __name__ == '__main__':
-    import doctest
+    import doctest  # Test interactive Python examples
 
     msg(__doc__.strip())
     doctest.testmod()
-
-else:
-    elapsed()
+    msg(report())

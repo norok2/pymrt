@@ -54,9 +54,11 @@ from sympy import pi, exp, sin, cos
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-from pymrt import DIRS
+from pymrt import INFO, DIRS
+# from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import msg, dbg
+from pymrt import elapsed, report
 from pymrt.config import CFG
-from pymrt import msg
 
 # ======================================================================
 # :: Default values
@@ -528,8 +530,8 @@ def acq_to_seq_params(
         ...     k_gre=0.5,
         ...     bandwidths=None)
         >>> print(sorted(seq_kws.items()))
-        [('n_gre', 87), ('td0', 573.75), ('td1', 660.0), ('td2', 3286.25),\
- ('tr_gre', 20.0)]
+        [('k_gre', 0.2962962962962963), ('n_gre', 108), ('td0', 260.0),\
+ ('td1', 240.0), ('td2', 3180.0), ('tr_gre', 20.0)]
         >>> print(sorted(extra_info.items()))
         [('t_acq', 1536.0)]
     """
@@ -625,5 +627,6 @@ def test_signal():
 
 # ======================================================================
 if __name__ == '__main__':
-    test_signal()
+    # test_signal()
     msg(__doc__.strip())
+    msg(report())

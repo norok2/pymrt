@@ -11,6 +11,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
 # import itertools  # Functions creating iterators for efficient looping
 import collections  # Container datatypes
 import warnings  # Warning control
@@ -1327,11 +1328,13 @@ def linsolve_iter(
 
 
 # ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    import doctest
+    import doctest  # Test interactive Python examples
 
     msg(__doc__.strip())
     doctest.testmod()
-
-else:
-    elapsed()
+    msg(report())
+    wip()

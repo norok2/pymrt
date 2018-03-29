@@ -11,7 +11,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-# import os  # Miscellaneous operating system interfaces
+import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
 # import time  # Time access and conversions
@@ -54,9 +54,11 @@ import scipy.signal  # SciPy: Signal Processing
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-from pymrt import INFO
-from pymrt import VERB_LVL, D_VERB_LVL
+# from pymrt import INFO, DIRS
+# from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
+from pymrt import elapsed, report
+from pymrt.config import CFG
 
 
 # TODO: implement other types of segmentations?
@@ -802,6 +804,12 @@ def auto_mask(
 
 
 # ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
     msg(__doc__.strip())
     doctest.testmod()
+    msg(report())

@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt/sequences/matrix_algebra: solver of the Bloch-McConnell equations.
-"""
+pymrt.sequences.matrix_algebra: solver of the Bloch-McConnell equations.
 
-# todo: add references
+Computes the signal by solving the Bloch-McConnell equations for multiple
+spin systems with exchange, using the matrix algebra approach.
+
+See Also:
+ - Allard P., Helgstrand M., Härd T. (1997), "A Method for Simulation of
+   NOESY, ROESY, and Off-Resonance ROESY Spectra", Journal of Magnetic
+   Resonance 129 (1):19–29, DOI:10.1006/jmre.1997.1252.
+ - Müller D.K., Pampel A., Möller H.E. (2013), "Matrix-Algebra-Based
+   Calculations of the Time Evolution of the Binary Spin-Bath Model for
+   Magnetization Transfer", Journal of Magnetic Resonance 230 (May):88–97,
+   DOI:10.1016/j.jmr.2013.01.013.
+"""
 
 # ======================================================================
 # :: Future Imports
@@ -31,7 +41,6 @@ import itertools  # Functions creating iterators for efficient looping
 import warnings  # Warning control
 # import profile  # Deterministic Profiler
 import pickle  # Python object serialization
-
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -86,7 +95,7 @@ B0 = 7.0  # T
 # ======================================================================
 def superlorentz_integrand(x, t):
     """
-    Calculates the integrand of the superlorentzian.
+    Calculate the integrand of the superlorentzian.
 
     Args:
         x (ndarray[float]): The independent variable
@@ -146,6 +155,7 @@ def _prepare_superlorentz(
             result = pickle.load(cache_file)
     return result
 
+
 _SUPERLORENTZ = _prepare_superlorentz()
 mrt.utils.elapsed('Superlorentz Approx.')
 
@@ -182,7 +192,8 @@ def _sat_rate_lineshape(
     Args:
         r2 (float): The transverse relaxation rates in Hz.
         w0 (float): The resonance angular frequency in rad/s.
-        w_c (float): The carrier angular frequency of the pulse excitation in rad/s.
+        w_c (float): The carrier angular frequency of the pulse excitation in
+        rad/s.
         w1 (complex): The pulse excitation angular frequency in rad/s.
         lineshape (str): The lineshape of the Henkelman absorption term.
 
@@ -210,7 +221,7 @@ def _shape_normal(
         num_steps,
         truncation=(0.001, 0.001)):
     """
-    Computes the pulse shape for a truncated normal pulse.
+    Compute the pulse shape for a truncated normal pulse.
 
     This is equivalent to the Gaussian pulse shape with mean equal to 0.
 
@@ -237,7 +248,7 @@ def _shape_cauchy(
         num_steps,
         truncation=(0.001, 0.001)):
     """
-    Computes the pulse shape for a truncated Cauchy pulse.
+    Compute the pulse shape for a truncated Cauchy pulse.
 
     This is equivalent to the Lorentzian pulse with scale parameter
     equal to 1.
@@ -266,7 +277,7 @@ def _shape_gauss(
         sigma=0.1,
         mu=0.5):
     """
-    Computes the pulse shape for a Gaussian pulse.
+    Compute the pulse shape for a Gaussian pulse.
 
     Args:
         num_steps (int): The number of sample points.
@@ -289,7 +300,7 @@ def _shape_lorentz(
         gamma=0.1,
         mu=0.5):
     """
-    Computes the pulse shape for a Lorentzian pulse.
+    Compute the pulse shape for a Lorentzian pulse.
 
      Args:
         num_steps (int): The number of sample points.
@@ -316,7 +327,7 @@ def _shape_fermi(
         step=0.03,
         mu=0.5):
     """
-    Computes the pulse shape for a Fermi pulse.
+    Compute the pulse shape for a Fermi pulse.
 
     Args:
         num_steps (int): The number of sample points.
@@ -340,7 +351,7 @@ def _shape_sinc(
         num_steps,
         roots=(3.0, 3.0)):
     """
-    Computes the pulse shape for a sinc-shaped pulse.
+    Compute the pulse shape for a sinc-shaped pulse.
 
     Args:
         num_steps (int): The number of sample points.
@@ -359,7 +370,7 @@ def _shape_cos_sin(
         num_steps,
         roots=(1.0, 1.0)):
     """
-    Computes the pulse shape for a cos/sin pulse.
+    Compute the pulse shape for a cos/sin pulse.
 
     This should be used only for testing.
 
@@ -418,11 +429,12 @@ def dynamics_operator(
         w_c,
         w1):
     """
-    Calculate the Bloch-McConnell dynamics operator L.
+    Compute the Bloch-McConnell dynamics operator L.
 
     Args:
         spin_model (SpinModel): The spin model term of the dynamics operator.
-        w_c (float): The carrier angular frequency of the pulse excitation in rad/s.
+        w_c (float): The carrier angular frequency of the pulse excitation in
+        rad/s.
         w1 (complex): The pulse excitation angular frequency in rad/s.
 
     Returns:
@@ -456,7 +468,7 @@ def _propagator_sum(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator P assuming commutativity.
+    Compute the time-evolution propagator P assuming commutativity.
 
     The time evolution propagator expm(-L * Dt) can be estimated using:
         expm(sum(M_i)) = prod(expm(M_i))
@@ -481,7 +493,7 @@ def _propagator_sum_order1(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator P assuming quasi-commutativity.
+    Compute the time-evolution propagator P assuming quasi-commutativity.
 
     The time evolution propagator expm(-L * Dt) can be estimated using:
         expm(sum(M_i)) = prod(expm(M_i))
@@ -513,7 +525,7 @@ def _propagator_sum_sep(
         pulse_exc,
         spin_model):
     """
-    Calculate the time-evolution propagator P using a separated sum
+    Compute the time-evolution propagator P using a separated sum
     approximation.
 
     The time evolution propagator expm(-L * Dt) can be estimated assuming:
@@ -547,7 +559,7 @@ def _propagator_poly(
         fit_order=3,
         num_samples=None):
     """
-    Calculate the time-evolution propagator P using polynomial approximation.
+    Compute the time-evolution propagator P using polynomial approximation.
 
     The time evolution propagator expm(-L * Dt) is estimated with a (fast)
     element-wise polynomial fit, on exact values calculated over the w1 domain.
@@ -657,7 +669,7 @@ def _propagator_interp(
         method='cubic',
         num_samples=5):
     """
-    Calculate the time-evolution propagator P using interpolation.
+    Compute the time-evolution propagator P using interpolation.
 
     The time evolution propagator expm(-L * Dt) is estimated with a (fast)
     element-wise interpolation approximation, on exact values calculated
@@ -741,7 +753,7 @@ def _propagator_linear(
         spin_model,
         num_samples=32):
     """
-    Calculate the time-evolution propagator P using linear interpolation.
+    Compute the time-evolution propagator P using linear interpolation.
 
     The time evolution propagator expm(-L * Dt) is estimated with a (fast)
     element-wise linear interpolation approximation, on exact values calculated
@@ -829,7 +841,7 @@ def _propagator_reduced(
         spin_model,
         num_resamples=32):
     """
-    Calculate the time-evolution propagator P of a coarser pulse excitation.
+    Compute the time-evolution propagator P of a coarser pulse excitation.
 
     The time evolution propagator expm(-L * Dt) is estimated on an approximated
     pulse excitation, obtained by reducing the number of samples of the
@@ -883,7 +895,8 @@ class SpinModel(object):
 
         Args:
             s0 (float): The signal magnitude scaling in arb. units.
-            mc (ndarray[float]): The magnetization concentration ratios in one units.
+            mc (ndarray[float]): The magnetization concentration ratios in
+            one units.
             w0 (ndarray[float]): The resonance angular frequencies in rad/s.
             r1 (ndarray[float]): The longitudinal relaxation rates in Hz.
             r2 (ndarray[float]): The transverse relaxation rates in Hz.
@@ -1042,7 +1055,7 @@ class SpinModel(object):
 
     def dynamics_operator(self):
         """
-        Calculate L_spin: the excitation-independent part of the
+        Compute L_spin: the excitation-independent part of the
         Bloch-McConnell dynamics operator of the spin system.
 
         Returns:
@@ -1078,7 +1091,7 @@ class SpinModel(object):
 
     def kinetics_operator(self):
         """
-        Calculate the symmetric operator of the pool-pool exchange constants.
+        Compute the symmetric operator of the pool-pool exchange constants.
 
         Returns:
             k_op (np.ndarray): The kinetics operator K.
@@ -1220,7 +1233,7 @@ class PulseExc(object):
 
     def get_norm(self):
         """
-        Calculate the norm of the pulse excitation in rad.
+        Compute the norm of the pulse excitation in rad.
 
         Returns:
             norm (float): The norm of the pulse excitation.
@@ -1276,7 +1289,7 @@ class PulseExc(object):
             *args,
             **kwargs):
         """
-        Calculate the Bloch-McConnell propagator: expm(-L * Dt).
+        Compute the Bloch-McConnell propagator: expm(-L * Dt).
 
         L is the dynamics operator of the rf-excited spin system.
         Dt is a time interval where spin exchange dynamics is negligible.
@@ -1332,6 +1345,7 @@ class Spoiler(object):
     """
     Spoiler for eliminating T2*.
     """
+
     def __init__(
             self,
             efficiency=1.0):
@@ -1350,7 +1364,7 @@ class Spoiler(object):
             self,
             spin_model):
         """
-        Calculate the propagator of the spoiler with a specific efficiency.
+        Compute the propagator of the spoiler with a specific efficiency.
 
         The efficiency is expressed as the fraction of the transverse
         magnetization that is decoherenced as the result of the spoiling.
@@ -1386,6 +1400,7 @@ class Delay(PulseExc):
     """
     Delay after the pulse excitation.
     """
+
     def __init__(
             self,
             duration,
@@ -1417,6 +1432,7 @@ class PulseSequence:
     """
     The pulse excitation sequence.
     """
+
     def __init__(
             self,
             w_c=None,
@@ -1442,7 +1458,7 @@ class PulseSequence:
             self,
             spin_model):
         """
-        Computes the signal from the pulse sequence.
+        Compute the signal from the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
@@ -1473,6 +1489,7 @@ class PulseList(PulseSequence):
     """
     Pulse list for the pulse sequence.
     """
+
     def __init__(
             self,
             pulses,
@@ -1483,8 +1500,10 @@ class PulseList(PulseSequence):
 
         Args:
             pulses():
-            *args (Iterable): Positional arguments passed to 'PulseSequence.__init__().
-            **kwargs (dict): Keyword arguments passed to 'PulseSequence.__init__()'.
+            *args (Iterable): Positional arguments passed to
+            'PulseSequence.__init__().
+            **kwargs (dict): Keyword arguments passed to
+            'PulseSequence.__init__()'.
 
         Returns:
             None
@@ -1501,11 +1520,12 @@ class PulseList(PulseSequence):
             *args,
             **kwargs):
         """
-        Calculate the propagator of the pulse sequence.
+        Compute the propagator of the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to 'pulse_propagator()'.
+            *args (Iterable): Positional arguments passed to
+            'pulse_propagator()'.
             **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
 
         Returns:
@@ -1522,6 +1542,7 @@ class PulseTrain(PulseSequence):
     """
     Pulse train for the pulse sequence.
     """
+
     def __init__(
             self,
             kernel,
@@ -1534,8 +1555,10 @@ class PulseTrain(PulseSequence):
         Args:
             kernel:
             num_repetitions (int): The number of repetitions.
-            *args (Iterable): Positional arguments passed to 'PulseSequence.__init__()'.
-            **kwargs (dict): Keyword arguments passed to 'PulseSequence.__init__()'.
+            *args (Iterable): Positional arguments passed to
+            'PulseSequence.__init__()'.
+            **kwargs (dict): Keyword arguments passed to
+            'PulseSequence.__init__()'.
 
         Returns:
             None
@@ -1550,12 +1573,14 @@ class PulseTrain(PulseSequence):
             *args,
             **kwargs):
         """
-        Calculate the propagator of the pulse train.
+        Compute the propagator of the pulse train.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to 'self.kernel.propagator()'.
-            **kwargs (dict): Keyword arguments passed to 'self.kernel.propagator()'.
+            *args (Iterable): Positional arguments passed to
+            'self.kernel.propagator()'.
+            **kwargs (dict): Keyword arguments passed to
+            'self.kernel.propagator()'.
 
         Returns:
             y(ndarray[float]): The propagator.
@@ -1648,11 +1673,14 @@ class MtFlash(PulseTrain):
 #     {}      Sinc pulse
 #     ||      Rect pulse
 
+
+# ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
 # ======================================================================
 if __name__ == '__main__':
-    msg(__doc__.strip())
+    import doctest  # Test interactive Python examples
 
-    elapsed()
+    msg(__doc__.strip())
+    doctest.testmod()
     msg(report())
-    # profile.run('test_z_spectrum()', sort=1)
-    plt.show()

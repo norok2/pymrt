@@ -21,7 +21,6 @@ import collections  # Container datatypes
 import subprocess  # Subprocess management
 import inspect  # Inspect live objects
 import stat  # Interpreting stat() results
-import doctest  # Test interactive Python examples
 import shlex  # Simple lexical analysis
 import warnings  # Warning control
 import importlib  # The implementation of import
@@ -49,6 +48,7 @@ from scipy.fftpack import fftn, ifftn
 import pymrt as mrt
 
 # :: Local Imports
+from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -4500,11 +4500,13 @@ def exp_gradient_kernels(
                 [ 0. -2.44929360e-16j,  0. -2.44929360e-16j]],
         <BLANKLINE>
                [[ 0. +0.00000000e+00j,  0. +0.00000000e+00j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
+                -2.44929360e-16j,  0. -2.44929360e-16j],
                 [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
         <BLANKLINE>
                [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
+                -2.44929360e-16j,  0. +0.00000000e+00j],
                 [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
         <BLANKLINE>
                [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
@@ -4514,7 +4516,8 @@ def exp_gradient_kernels(
                 [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
         <BLANKLINE>
                [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
+                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
+                -2.44929360e-16j,  0. +0.00000000e+00j],
                 [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
         <BLANKLINE>
                [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
@@ -5997,7 +6000,8 @@ def otsu_threshold(
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
             using `pymrt.utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `pymrt.utils.auto_bin()` method if set to None.
+            and using the default `pymrt.utils.auto_bin()` method if set to
+            None.
 
     Returns:
         threshold (float): The threshold value.
@@ -6073,7 +6077,8 @@ def auto_num_components(
              - 'elbow': use `pymrt.utils.marginal_sep_elbow()`.
              - 'quad': use `pymrt.utils.marginal_sep_quad()`.
              - 'quad_weight': use `pymrt.utils.marginal_sep_quad_weight()`.
-             - 'quad_inv_weight': use `pymrt.utils.marginal_sep_quad_inv_weight()`.
+             - 'quad_inv_weight': use
+             `pymrt.utils.marginal_sep_quad_inv_weight()`.
              - 'otsu': use `pymrt.segmentation.threshold_otsu()`.
              - 'X%': set the threshold at 'X' percent of the largest eigenval.
         q (Iterable[int|float|complex]|None): The values of the components.
@@ -6639,9 +6644,12 @@ def euclid_dist(
 
 
 # ======================================================================
-if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
+elapsed(__file__[len(DIRS['base']) + 1:])
 
 # ======================================================================
-elapsed(os.path.basename(__file__))
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

@@ -409,7 +409,7 @@ def main():
             plot_rho_t1_mp2rage_acq,
             ACQ_INTERACTIVES, title=TITLE, about=__doc__)
 
-    elapsed(os.path.basename(__file__))
+    elapsed(__file__[len(DIRS['base']) + 1:])
     msg(report())
 
 

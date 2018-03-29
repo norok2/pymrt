@@ -33,6 +33,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+# import os  # Miscellaneous operating system interfaces
 import itertools  # Functions creating iterators for efficient looping
 import functools  # Higher-order functions and operations on callable objects
 import warnings  # Warning control
@@ -49,8 +50,9 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-import pymrt.plot as pmp
+import pymrt.plot
 
+from pymrt import INFO, DIRS
 from pymrt import elapsed, report
 from pymrt import msg, dbg
 
@@ -2147,30 +2149,36 @@ def _self_test_interactive():
 
     # :: 2D Tests
     # :: - shape test
-    pmp.quick(square(dim, l1, pos))
-    pmp.quick(rectangle(dim, (l1, l2), pos))
-    pmp.quick(rhombus(dim, (l1, l2), pos))
-    pmp.quick(circle(dim, l1, pos))
-    pmp.quick(ellipsis(dim, (l1, l2), pos))
+    mrt.plot.quick(square(dim, l1, pos))
+    mrt.plot.quick(rectangle(dim, (l1, l2), pos))
+    mrt.plot.quick(rhombus(dim, (l1, l2), pos))
+    mrt.plot.quick(circle(dim, l1, pos))
+    mrt.plot.quick(ellipsis(dim, (l1, l2), pos))
     # :: - Position test
-    pmp.quick(ellipsis(dim, (l1, l2), (0.2, 0.7)))
+    mrt.plot.quick(ellipsis(dim, (l1, l2), (0.2, 0.7)))
 
     # :: 3D Tests
     # :: - shape test
-    pmp.quick(cube(dim, l1, pos))
-    pmp.quick(cuboid(dim, (l1, l2, l3), pos))
-    pmp.quick(rhomboid(dim, (l1, l2, l3), pos))
-    pmp.quick(sphere(dim, l1, pos))
-    pmp.quick(ellipsoid(dim, (l1, l2, l3), pos))
-    pmp.quick(cylinder(dim, 2.0 * l1, l1, -1, pos))
+    mrt.plot.quick(cube(dim, l1, pos))
+    mrt.plot.quick(cuboid(dim, (l1, l2, l3), pos))
+    mrt.plot.quick(rhomboid(dim, (l1, l2, l3), pos))
+    mrt.plot.quick(sphere(dim, l1, pos))
+    mrt.plot.quick(ellipsoid(dim, (l1, l2, l3), pos))
+    mrt.plot.quick(cylinder(dim, 2.0 * l1, l1, -1, pos))
     # :: - Position test
-    pmp.quick(ellipsoid(dim, (l1, l2, l3), (0.0, 1.0, 0.5)))
+    mrt.plot.quick(ellipsoid(dim, (l1, l2, l3), (0.0, 1.0, 0.5)))
 
 
 # ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
     msg(__doc__.strip())
     doctest.testmod()
+    msg(report())
     # _self_test_interactive()
     # elapsed('self_test_interactive')
     # msg(report())
