@@ -2,4 +2,4 @@
 Authors
 =======
 
-Riccardo Metere <metere@cbs.mpg.de>
+Riccardo Metere <rick@metere.it>
