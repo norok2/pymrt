@@ -28,7 +28,7 @@ INFO = {
     'name': 'PyMRT',
     'author': 'PyMRT developers',
     'contrib': (
-        'Riccardo Metere <metere@cbs.mpg.de>',
+        'Riccardo Metere <rick@metere.it>',
     ),
     'copyright': 'Copyright (C) 2015-2017',
     'license': 'GNU General Public License version 3 or later (GPLv3+)',
