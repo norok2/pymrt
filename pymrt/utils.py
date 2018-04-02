@@ -758,7 +758,7 @@ def unique_permutations(
 
     Args:
         items (Iterable): The input items.
-        container (callable)
+        container (callable): The group container.
 
     Yields:
         items (Iterable): The next unique permutation of the items.
@@ -3898,11 +3898,11 @@ def scale(
         >>> scale(np.pi / 3, (0, 180), (0, np.pi))
         60.0
         >>> scale(np.arange(5), (0, 1))
-        array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ])
+        array([0.  , 0.25, 0.5 , 0.75, 1.  ])
         >>> scale(np.arange(6), (0, 10))
-        array([  0.,   2.,   4.,   6.,   8.,  10.])
+        array([ 0.,  2.,  4.,  6.,  8., 10.])
         >>> scale(np.arange(6), (0, 10), (0, 2))
-        array([  0.,   5.,  10.,  15.,  20.,  25.])
+        array([ 0.,  5., 10., 15., 20., 25.])
     """
     if in_interval:
         in_min, in_max = sorted(in_interval)
@@ -3968,7 +3968,7 @@ def midval(arr):
 
     Examples:
         >>> midval(np.array([0, 1, 2, 3, 4]))
-        array([ 0.5,  1.5,  2.5,  3.5])
+        array([0.5, 1.5, 2.5, 3.5])
     """
     return (arr[1:] - arr[:-1]) / 2.0 + arr[:-1]
 
@@ -3978,7 +3978,7 @@ def sgnlog(
         x,
         base=np.e):
     """
-    Signed logarithm of x: log(abs(x) * sign(x)
+    Signed logarithm of x: log(abs(x)) * sign(x)
 
     Args:
         x (float|ndarray): The input value(s)
@@ -3992,10 +3992,11 @@ def sgnlog(
         -2.0
         >>> sgnlog(-64, 2)
         -6.0
-        >>> sgnlog(100, 2)
-        6.6438561897747253
+        >>> np.isclose(sgnlog(100, 2), np.log2(100))
+        True
     """
-    return np.log(np.abs(x)) / np.log(base) * np.sign(x)
+    # log2 is faster than log, which is faster than log10
+    return np.log2(np.abs(x)) / np.log2(base) * np.sign(x)
 
 
 # ======================================================================
@@ -4028,28 +4029,28 @@ def sgnlogspace(
         >>> sgnlogspace(-10, 10, 5)
         array([-10. ,  -0.1,   0.1,   1. ,  10. ])
         >>> sgnlogspace(2, 10, 4)
-        array([  2.        ,   3.41995189,   5.84803548,  10.        ])
+        array([ 2.        ,  3.41995189,  5.84803548, 10.        ])
     """
     if not is_same_sign((start, stop)):
         bounds = (
-            (start, -(np.exp(-np.log(np.abs(start))))),
-            ((np.exp(-np.log(np.abs(stop)))), stop))
+            (start, -(2 ** (-np.log2(np.abs(start))))),
+            ((2 ** (-np.log2(np.abs(stop)))), stop))
         args_bounds = tuple(
-            tuple(np.log(np.abs(val)) / np.log(base) for val in arg_bounds)
+            tuple(np.log2(np.abs(val)) / np.log2(base) for val in arg_bounds)
             for arg_bounds in bounds)
         args_num = (num // 2, num - num // 2)
         args_sign = (np.sign(start), np.sign(stop))
         args_endpoint = True, endpoint
         logspaces = tuple(
-            np.logspace(*(arg_bounds + (arg_num, arg_endpoint, base))) \
-            * arg_sign
+            np.logspace(*(arg_bounds + (arg_num, arg_endpoint, base))) *
+            arg_sign
             for arg_bounds, arg_sign, arg_num, arg_endpoint
             in zip(args_bounds, args_sign, args_num, args_endpoint))
         samples = np.concatenate(logspaces)
     else:
         sign = np.sign(start)
-        logspace_bound = \
-            tuple(np.log(np.abs(val)) / np.log(base) for val in (start, stop))
+        logspace_bound = tuple(
+            np.log2(np.abs(val)) / np.log2(base) for val in (start, stop))
         samples = np.logspace(*(logspace_bound + (num, endpoint, base))) * sign
     return samples
 
@@ -4104,12 +4105,12 @@ def subst(
         array([  0, 100,   2, 300,   0, 100,   2, 300,   0, 100,   2, 300])
         >>> a = np.array([0.0, 1.0, np.inf, -np.inf, np.nan, -np.nan])
         >>> subst(a)
-        array([ 0.,  1.,  0.,  0.,  0.,  0.])
+        array([0., 1., 0., 0., 0., 0.])
         >>> a = np.array([0.0, 1.0, np.inf, 2.0, np.nan])
         >>> subst(a, ((np.inf, 0.0), (0.0, np.inf), (np.nan, 0.0)))
-        array([ inf,   1.,  inf,   2.,   0.])
+        array([inf,  1., inf,  2.,  0.])
         >>> subst(a, ((np.inf, 0.0), (np.nan, 0.0), (0.0, np.inf)))
-        array([ inf,   1.,  inf,   2.,  inf])
+        array([inf,  1., inf,  2., inf])
     """
     for k, v in pairs:
         if k is np.nan:
@@ -4137,7 +4138,7 @@ def ravel_clean(
     Examples:
         >>> a = np.array([0.0, 1.0, np.inf, -np.inf, np.nan, -np.nan])
         >>> ravel_clean(a)
-        array([ 0.,  1.])
+        array([0., 1.])
 
     See Also:
         utils.subst
@@ -4193,7 +4194,7 @@ def idftn(arr):
     Examples:
         >>> a = np.arange(2)
         >>> idftn(a)
-        array([ 0.5+0.j,  0.5+0.j])
+        array([0.5+0.j, 0.5+0.j])
         >>> print(np.allclose(a, idftn(dftn(a))))
         True
 
@@ -4310,8 +4311,8 @@ def grid_coord(
                [ 1.],
                [ 2.]]), array([[-2., -1.,  0.,  1.,  2.]])]
         >>> grid_coord((2, 3), position=(0.0, 0.0), use_int=False)
-        [array([[ 0.],
-               [ 1.]]), array([[ 0.,  1.,  2.]])]
+        [array([[0.],
+               [1.]]), array([[0., 1., 2.]])]
     """
     position = coord(shape, position, is_relative, use_int)
     grid = [slice(-x0, dim - x0) for x0, dim in zip(position, shape)]
@@ -4342,35 +4343,35 @@ def laplace_kernel(
 
     Examples:
         >>> laplace_kernel((3, 3, 3))
-        array([[[ 3.,  2.,  3.],
-                [ 2.,  1.,  2.],
-                [ 3.,  2.,  3.]],
+        array([[[3., 2., 3.],
+                [2., 1., 2.],
+                [3., 2., 3.]],
         <BLANKLINE>
-               [[ 2.,  1.,  2.],
-                [ 1.,  0.,  1.],
-                [ 2.,  1.,  2.]],
+               [[2., 1., 2.],
+                [1., 0., 1.],
+                [2., 1., 2.]],
         <BLANKLINE>
-               [[ 3.,  2.,  3.],
-                [ 2.,  1.,  2.],
-                [ 3.,  2.,  3.]]])
+               [[3., 2., 3.],
+                [2., 1., 2.],
+                [3., 2., 3.]]])
         >>> laplace_kernel((3, 3, 3), np.sqrt(3))
-        array([[[ 1.        ,  0.66666667,  1.        ],
-                [ 0.66666667,  0.33333333,  0.66666667],
-                [ 1.        ,  0.66666667,  1.        ]],
+        array([[[1.        , 0.66666667, 1.        ],
+                [0.66666667, 0.33333333, 0.66666667],
+                [1.        , 0.66666667, 1.        ]],
         <BLANKLINE>
-               [[ 0.66666667,  0.33333333,  0.66666667],
-                [ 0.33333333,  0.        ,  0.33333333],
-                [ 0.66666667,  0.33333333,  0.66666667]],
+               [[0.66666667, 0.33333333, 0.66666667],
+                [0.33333333, 0.        , 0.33333333],
+                [0.66666667, 0.33333333, 0.66666667]],
         <BLANKLINE>
-               [[ 1.        ,  0.66666667,  1.        ],
-                [ 0.66666667,  0.33333333,  0.66666667],
-                [ 1.        ,  0.66666667,  1.        ]]])
+               [[1.        , 0.66666667, 1.        ],
+                [0.66666667, 0.33333333, 0.66666667],
+                [1.        , 0.66666667, 1.        ]]])
         >>> laplace_kernel((2, 2, 2), 0.6)
-        array([[[ 8.33333333,  5.55555556],
-                [ 5.55555556,  2.77777778]],
+        array([[[8.33333333, 5.55555556],
+                [5.55555556, 2.77777778]],
         <BLANKLINE>
-               [[ 5.55555556,  2.77777778],
-                [ 2.77777778,  0.        ]]])
+               [[5.55555556, 2.77777778],
+                [2.77777778, 0.        ]]])
     """
     kk_ = grid_coord(shape)
     if factors and factors != 1:
@@ -4491,48 +4492,48 @@ def exp_gradient_kernels(
 
     Examples:
         >>> exp_gradient_kernels((2, 2))
-        (array([[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-               [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]),\
- array([[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
-               [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]))
+        (array([[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+               [0.+0.0000000e+00j, 0.+0.0000000e+00j]]),\
+ array([[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+               [0.-2.4492936e-16j, 0.+0.0000000e+00j]]))
         >>> exp_gradient_kernels((2, 2, 2))
-        (array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. -2.44929360e-16j,  0. -2.44929360e-16j]],
+        (array([[[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+                [0.-2.4492936e-16j, 0.-2.4492936e-16j]],
         <BLANKLINE>
-               [[ 0. +0.00000000e+00j,  0. +0.00000000e+00j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
-                -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
+               [[0.+0.0000000e+00j, 0.+0.0000000e+00j],
+                [0.+0.0000000e+00j, 0.+0.0000000e+00j]]]),\
+ array([[[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+                [0.+0.0000000e+00j, 0.+0.0000000e+00j]],
         <BLANKLINE>
-               [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
-                -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+               [[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+                [0.+0.0000000e+00j, 0.+0.0000000e+00j]]]),\
+ array([[[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]],
         <BLANKLINE>
-               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]))
+               [[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]]]))
         >>> exp_gradient_kernels((2, 2, 2), (1, 2))
-        (array([[[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]],
+        (array([[[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+                [0.+0.0000000e+00j, 0.+0.0000000e+00j]],
         <BLANKLINE>
-               [[ 0. -2.44929360e-16j,  0. -2.44929360e-16j],
-                [ 0. +0.00000000e+00j,  0. +0.00000000e+00j]]]), array([[[ 0.
-                -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+               [[0.-2.4492936e-16j, 0.-2.4492936e-16j],
+                [0.+0.0000000e+00j, 0.+0.0000000e+00j]]]),\
+ array([[[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]],
         <BLANKLINE>
-               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]))
+               [[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]]]))
         >>> exp_gradient_kernels((2, 2, 2), -1)
-        (array([[[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]],
+        (array([[[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]],
         <BLANKLINE>
-               [[ 0. -2.44929360e-16j,  0. +0.00000000e+00j],
-                [ 0. -2.44929360e-16j,  0. +0.00000000e+00j]]]),)
+               [[0.-2.4492936e-16j, 0.+0.0000000e+00j],
+                [0.-2.4492936e-16j, 0.+0.0000000e+00j]]]),)
         >>> exp_gradient_kernels((2, 2), None, 3)
-        (array([[ 1.5+0.8660254j,  1.5+0.8660254j],
-               [ 0.0+0.j       ,  0.0+0.j       ]]),\
- array([[ 1.5+0.8660254j,  0.0+0.j       ],
-               [ 1.5+0.8660254j,  0.0+0.j       ]]))
+        (array([[1.5+0.8660254j, 1.5+0.8660254j],
+               [0. +0.       j, 0. +0.       j]]),\
+ array([[1.5+0.8660254j, 0. +0.       j],
+               [1.5+0.8660254j, 0. +0.       j]]))
     """
     kk_ = grid_coord(shape)
     if factors and factors != 1:
@@ -5281,24 +5282,24 @@ def gaussian_nd(
 
     Examples:
         >>> gaussian_nd(8, 1)
-        array([ 0.00087271,  0.01752886,  0.12952176,  0.35207666,  0.35207666,
-                0.12952176,  0.01752886,  0.00087271])
+        array([0.00087271, 0.01752886, 0.12952176, 0.35207666, 0.35207666,
+               0.12952176, 0.01752886, 0.00087271])
         >>> gaussian_nd(9, 2)
-        array([ 0.02763055,  0.06628225,  0.12383154,  0.18017382,  0.20416369,
-                0.18017382,  0.12383154,  0.06628225,  0.02763055])
+        array([0.02763055, 0.06628225, 0.12383154, 0.18017382, 0.20416369,
+               0.18017382, 0.12383154, 0.06628225, 0.02763055])
         >>> gaussian_nd(3, 1, n_dim=2)
-        array([[ 0.07511361,  0.1238414 ,  0.07511361],
-               [ 0.1238414 ,  0.20417996,  0.1238414 ],
-               [ 0.07511361,  0.1238414 ,  0.07511361]])
+        array([[0.07511361, 0.1238414 , 0.07511361],
+               [0.1238414 , 0.20417996, 0.1238414 ],
+               [0.07511361, 0.1238414 , 0.07511361]])
         >>> gaussian_nd(7, 2, norm=None)
-        array([ 0.32465247,  0.60653066,  0.8824969 ,  1.        ,  0.8824969 ,
-                0.60653066,  0.32465247])
+        array([0.32465247, 0.60653066, 0.8824969 , 1.        , 0.8824969 ,
+               0.60653066, 0.32465247])
         >>> gaussian_nd(4, 2, 1.0, norm=None)
-        array([ 0.32465247,  0.60653066,  0.8824969 ,  1.        ])
+        array([0.32465247, 0.60653066, 0.8824969 , 1.        ])
         >>> gaussian_nd(3, 2, 5.0)
-        array([ 0.00982626,  0.10564222,  0.88453152])
+        array([0.00982626, 0.10564222, 0.88453152])
         >>> gaussian_nd(3, 2, 5.0, norm=None)
-        array([  3.72665317e-06,   4.00652974e-05,   3.35462628e-04])
+        array([3.72665317e-06, 4.00652974e-05, 3.35462628e-04])
     """
     if not n_dim:
         n_dim = combine_iter_len((shape, sigmas, position))
@@ -5345,22 +5346,22 @@ def moving_average(
 
     Examples:
         >>> moving_average(np.linspace(1, 9, 9), 1)
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
+        array([1., 2., 3., 4., 5., 6., 7., 8., 9.])
         >>> moving_average(np.linspace(1, 8, 8), 1)
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.])
+        array([1., 2., 3., 4., 5., 6., 7., 8.])
         >>> moving_average(np.linspace(1, 9, 9), 2)
-        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5,  8.5])
+        array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5])
         >>> moving_average(np.linspace(1, 8, 8), 2)
-        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5])
+        array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
         >>> moving_average(np.linspace(1, 9, 9), 5)
-        array([ 3.,  4.,  5.,  6.,  7.])
+        array([3., 4., 5., 6., 7.])
         >>> moving_average(np.linspace(1, 8, 8), 5)
-        array([ 3.,  4.,  5.,  6.])
+        array([3., 4., 5., 6.])
         >>> moving_average(np.linspace(1, 8, 8), [1, 1, 1])
-        array([ 2.,  3.,  4.,  5.,  6.,  7.])
+        array([2., 3., 4., 5., 6., 7.])
         >>> moving_average(np.linspace(1, 8, 8), [1, 0.2])
-        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
-                6.16666667,  7.16666667])
+        array([1.16666667, 2.16666667, 3.16666667, 4.16666667, 5.16666667,
+               6.16666667, 7.16666667])
     """
     arr = arr.ravel()
     if isinstance(weights, int):
@@ -5398,17 +5399,17 @@ def moving_mean(
 
     Examples:
         >>> moving_mean(np.linspace(1, 9, 9), 1)
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.])
+        array([1., 2., 3., 4., 5., 6., 7., 8., 9.])
         >>> moving_mean(np.linspace(1, 8, 8), 1)
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.])
+        array([1., 2., 3., 4., 5., 6., 7., 8.])
         >>> moving_mean(np.linspace(1, 9, 9), 2)
-        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5,  8.5])
+        array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5])
         >>> moving_mean(np.linspace(1, 8, 8), 2)
-        array([ 1.5,  2.5,  3.5,  4.5,  5.5,  6.5,  7.5])
+        array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
         >>> moving_mean(np.linspace(1, 9, 9), 5)
-        array([ 3.,  4.,  5.,  6.,  7.])
+        array([3., 4., 5., 6., 7.])
         >>> moving_mean(np.linspace(1, 8, 8), 5)
-        array([ 3.,  4.,  5.,  6.])
+        array([3., 4., 5., 6.])
     """
     arr = arr.ravel()
     arr = np.cumsum(arr)
@@ -5477,21 +5478,20 @@ def rolling_stat(
         ...      for n in range(num) for mode in ('valid', 'same', 'full')])
         True
         >>> rolling_stat(arr, 4, mode='same', borders=100)
-        array([ 50.75,  26.5 ,   2.5 ,   3.5 ,   4.5 ,   5.5 ,   6.5 ,  30.25])
+        array([50.75, 26.5 ,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 , 30.25])
         >>> rolling_stat(arr, 4, mode='full', borders='same')
-        array([ 1.  ,  1.25,  1.75,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 ,  7.25,
-                7.75,  8.  ])
+        array([1.  , 1.25, 1.75, 2.5 , 3.5 , 4.5 , 5.5 , 6.5 , 7.25, 7.75, 8.\
+  ])
         >>> rolling_stat(arr, 4, mode='full', borders='circ')
-        array([ 5.5,  4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5,  4.5,\
-  3.5])
+        array([5.5, 4.5, 3.5, 2.5, 3.5, 4.5, 5.5, 6.5, 5.5, 4.5, 3.5])
         >>> rolling_stat(arr, 4, mode='full', borders='sym')
-        array([ 1.75,  1.5 ,  1.75,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 ,  7.25,
-                7.5 ,  7.25])
+        array([1.75, 1.5 , 1.75, 2.5 , 3.5 , 4.5 , 5.5 , 6.5 , 7.25, 7.5 ,\
+ 7.25])
         >>> rolling_stat(arr, 4, mode='same', borders='circ')
-        array([ 4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5])
+        array([4.5, 3.5, 2.5, 3.5, 4.5, 5.5, 6.5, 5.5])
         >>> rolling_stat(arr, [1, 0.2])
-        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
-                6.16666667,  7.16666667])
+        array([1.16666667, 2.16666667, 3.16666667, 4.16666667, 5.16666667,
+               6.16666667, 7.16666667])
     """
     arr = arr.ravel()
     if isinstance(weights, int):
@@ -5605,15 +5605,14 @@ def running_stat(
         ...      for n in range(num) for mode in ('valid', 'same', 'full')])
         True
         >>> running_stat(arr, 4, mode='same', borders=100)
-        array([ 50.75,  26.5 ,   2.5 ,   3.5 ,   4.5 ,   5.5 ,   6.5 ,  30.25])
+        array([50.75, 26.5 ,  2.5 ,  3.5 ,  4.5 ,  5.5 ,  6.5 , 30.25])
         >>> running_stat(arr, 4, mode='same', borders='circ')
-        array([ 4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5])
+        array([4.5, 3.5, 2.5, 3.5, 4.5, 5.5, 6.5, 5.5])
         >>> running_stat(arr, 4, mode='full', borders='circ')
-        array([ 5.5,  4.5,  3.5,  2.5,  3.5,  4.5,  5.5,  6.5,  5.5,  4.5,\
-  3.5])
+        array([5.5, 4.5, 3.5, 2.5, 3.5, 4.5, 5.5, 6.5, 5.5, 4.5, 3.5])
         >>> running_stat(arr, [1, 0.2])
-        array([ 1.16666667,  2.16666667,  3.16666667,  4.16666667,  5.16666667,
-                6.16666667,  7.16666667])
+        array([1.16666667, 2.16666667, 3.16666667, 4.16666667, 5.16666667,
+               6.16666667, 7.16666667])
     """
     arr = arr.ravel()
     if isinstance(weights, int):
@@ -5807,15 +5806,15 @@ def filter_cx(
                 filter_func(np.abs(arr), *filter_args, **filter_kws) *
                 np.exp(
                     1j * filter_func(np.angle(arr), *filter_args,
-                        **filter_kws)))
+                                     **filter_kws)))
     elif mode == 'real':
         arr = (
                 filter_func(arr.real, *filter_args,
-                    **filter_kws) + 1j * arr.imag)
+                            **filter_kws) + 1j * arr.imag)
     elif mode == 'imag':
         arr = (
                 arr.real + 1j * filter_func(arr.imag, *filter_args,
-            **filter_kws))
+                                            **filter_kws))
     elif mode == 'mag':
         arr = (
                 filter_func(np.abs(arr), *filter_args, **filter_kws) *
@@ -6198,17 +6197,17 @@ def avg(
         >>> arr = np.arange(2 * 3 * 4, dtype=float).reshape((2, 3, 4))
         >>> weights = np.arange(4) + 1
         >>> avg(arr, weights=weights, axis=-1)
-        array([[  2.,   6.,  10.],
-               [ 14.,  18.,  22.]])
+        array([[ 2.,  6., 10.],
+               [14., 18., 22.]])
         >>> weights = np.arange(2 * 3).reshape((2, 3)) + 1
         >>> avg(arr, weights=weights, axis=(0, 1), removes=(1,))
-        array([ 13.33333333,  15.        ,  15.33333333,  16.33333333])
+        array([13.33333333, 15.        , 15.33333333, 16.33333333])
 
     See Also:
         var(), std()
     """
     arr = np.array(arr)
-    if np.issubdtype(arr.dtype, int):
+    if np.issubdtype(arr.dtype, np.dtype(int).type):
         arr = arr.astype(float)
     if weights is not None:
         weights = np.array(weights, dtype=float)
@@ -6288,11 +6287,11 @@ def var(
         >>> arr = np.arange(2 * 3 * 4, dtype=float).reshape((2, 3, 4))
         >>> weights = np.arange(4) + 1
         >>> var(arr, weights=weights, axis=-1)
-        array([[ 0.8,  0.8,  0.8],
-               [ 0.8,  0.8,  0.8]])
+        array([[0.8, 0.8, 0.8],
+               [0.8, 0.8, 0.8]])
         >>> weights = np.arange(2 * 3).reshape((2, 3)) + 1
         >>> var(arr, weights=weights, axis=(0, 1), removes=(1,))
-        array([ 28.44444444,  26.15384615,  28.44444444,  28.44444444])
+        array([28.44444444, 26.15384615, 28.44444444, 28.44444444])
     """
     arr = np.array(arr)
     if weights is not None:
@@ -6454,7 +6453,7 @@ def calc_stats(
         >>> d = calc_stats(a)
         >>> tuple(sorted(d.items()))
         (('avg', 99.5), ('max', 199), ('min', 0), ('num', 200),\
- ('std', 57.734305226615483), ('sum', 19900))
+ ('std', 57.73430522661548), ('sum', 19900))
     """
     stats_dict = {
         'avg': None, 'std': None,
@@ -6587,11 +6586,11 @@ def rel_err(
         >>> arr1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
         >>> arr2 = np.array([1.1, 2.1, 3.1, 4.1, 5.1, 6.1])
         >>> rel_err(arr1, arr2)
-        array([ 0.1       ,  0.05      ,  0.03333333,  0.025     ,  0.02      ,
-                0.01666667])
+        array([0.1       , 0.05      , 0.03333333, 0.025     , 0.02      ,
+               0.01666667])
         >>> rel_err(arr1, arr2, True)
-        array([ 0.0952381 ,  0.04878049,  0.03278689,  0.02469136,  0.01980198,
-                0.01652893])
+        array([0.0952381 , 0.04878049, 0.03278689, 0.02469136, 0.01980198,
+               0.01652893])
     """
     if arr2.dtype != np.complex:
         arr = (arr2 - arr1).astype(np.float)
@@ -6631,8 +6630,8 @@ def euclid_dist(
         >>> arr1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
         >>> arr2 = np.array([-1.0, -2.0, -3.0, -4.0, -5.0, -6.0])
         >>> euclid_dist(arr1, arr2)
-        array([ 1.41421356,  2.82842712,  4.24264069,  5.65685425,  7.07106781,
-                8.48528137])
+        array([1.41421356, 2.82842712, 4.24264069, 5.65685425, 7.07106781,
+               8.48528137])
         >>> euclid_dist(arr1, arr2, False)
         array([-1.41421356, -2.82842712, -4.24264069, -5.65685425, -7.07106781,
                -8.48528137])
