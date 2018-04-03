@@ -1387,7 +1387,7 @@ def gcd(*nums):
     Find the greatest common divisor (GCD) of a list of numbers.
 
     Args:
-        *nums (Iterable[int]): The input numbers.
+        *nums (*Iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the greatest common divisor (GCD).
@@ -1414,7 +1414,7 @@ def lcm(*nums):
     Find the least common multiple (LCM) of a list of numbers.
 
     Args:
-        *numbers (Iterable[int]): The input numbers.
+        *numbers (*Iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the least common multiple (LCM).
@@ -1518,7 +1518,7 @@ def merge_dicts(*dicts):
     Merge dictionaries into a new dict (new keys overwrite the old ones).
 
     Args:
-        dicts (args[dict]): Dictionaries to be merged together.
+        dicts (*Iterable[dict]): Dictionaries to be merged together.
 
     Returns:
         merged (dict): The merged dict (new keys overwrite the old ones).
@@ -1580,7 +1580,7 @@ def gen_p_ratio(*items):
         \\frac{1}{\\sum_{ij} \\frac{x_i}{x_j}}
 
     Args:
-        *items (Iterable[int|float|np.ndarray]): Input values.
+        *items (*Iterable[int|float|np.ndarray]): Input values.
 
     Returns:
         result: 1 / sum_ij [ x_i / x_j ]
@@ -2110,7 +2110,7 @@ def mdot(*arrs):
     Cumulative application of multiple `numpy.dot` operation.
 
     Args:
-        *arrs (tuple[ndarray]): Tuple of input arrays.
+        *arrs (*Iterable[ndarray]): The input arrays.
 
     Returns:
         arr (np.ndarray): The result of the tensor product.
@@ -2118,6 +2118,7 @@ def mdot(*arrs):
     Examples:
         >>>
     """
+    # todo: complete docs
     arr = arrs[0]
     for item in arrs[1:]:
         arr = np.dot(arr, item)
@@ -2128,12 +2129,23 @@ def mdot(*arrs):
 def ndot(
         arr,
         dim=-1,
-        step=1):
+        start=None,
+        stop=None,
+        step=None):
     """
     Cumulative application of `numpy.dot` operation over a given axis.
 
     Args:
         arr (np.ndarray): The input array.
+        dim (int): The dimension along which to operate.
+        start (int|None): The initial index for the dimension.
+            If None, uses the minimum or maximum value depending on the value of
+            `step`: if `step` is positive use minimum, otherwise maximum.
+        stop (int|None): The final index for the dimension.
+            If None, uses the minimum or maximum value depending on the value of
+            `step`: if `step` is positive use maximum, otherwise minimum.
+        step (int|None): The step for the dimension.
+            If None, uses unity step.
 
     Returns:
         prod (np.ndarray): The result of the tensor product.
@@ -2141,10 +2153,17 @@ def ndot(
     Examples:
         >>>
     """
+    # todo: complete docs
     if dim < 0:
         dim += arr.ndim
-    start = 0 if step > 0 else arr.shape[dim] - 1
-    stop = arr.shape[dim] if step > 0 else -1
+    if step is None:
+        step = 1
+        if start is not None and stop is not None and start > stop:
+            step = -1
+    if start is None:
+        start = 0 if step > 0 else arr.shape[dim] - 1
+    if stop is None:
+        stop = arr.shape[dim] if step > 0 else -1
     prod = arr[
         [slice(None) if j != dim else start for j in range(arr.ndim)]]
     for i in range(start, stop, step)[1:]:
@@ -2772,7 +2791,7 @@ def join_path(*args):
     Note that this is the inverse of `split_path()`.
 
     Args:
-        *args (Iterable[str]): The path elements to be concatenated.
+        *args (*Iterable[str]): The path elements to be concatenated.
             The last item is treated as the file extension.
 
     Returns:
@@ -5806,15 +5825,15 @@ def filter_cx(
                 filter_func(np.abs(arr), *filter_args, **filter_kws) *
                 np.exp(
                     1j * filter_func(np.angle(arr), *filter_args,
-                                     **filter_kws)))
+                        **filter_kws)))
     elif mode == 'real':
         arr = (
                 filter_func(arr.real, *filter_args,
-                            **filter_kws) + 1j * arr.imag)
+                    **filter_kws) + 1j * arr.imag)
     elif mode == 'imag':
         arr = (
                 arr.real + 1j * filter_func(arr.imag, *filter_args,
-                                            **filter_kws))
+            **filter_kws))
     elif mode == 'mag':
         arr = (
                 filter_func(np.abs(arr), *filter_args, **filter_kws) *
