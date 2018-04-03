@@ -14,15 +14,17 @@ import seaborn as sns
 
 import matplotlib.pyplot as plt
 
+import pymrt as mrt
 import pymrt.utils
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 from pymrt import elapsed, report
 
-from pymrt.sequences.matrix_algebra import \
-    dynamics_operator, SpinModel, PulseList, PulseExc, PulseTrain, Delay, \
-    Spoiler, MtFlash, B0, GAMMA, GAMMA_BAR
+from pymrt.sequences.matrix_algebra import (
+    GAMMA, GAMMA_BAR,
+    dynamics_operator, SpinModel, PulseSequence, Pulse, Delay, Spoiler,
+    PulseExc, ReadOut, MagnetizationPreparation, MtFlash, )
 
 
 # ======================================================================
@@ -162,17 +164,17 @@ def check_mt_sequence():
 
     num_repetitions = 300
 
-    mt_flash_kernel = PulseList([
+    mt_flash_kernel = PulseSequence([
         Delay(10.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(40.0e-3, 220.0, 4000, 'gauss', None,
-                        w_c + 50.0, 'poly', {'fit_order': 5}),
+        Pulse.shaped(40.0e-3, 220.0, 4000, 'gauss', None,
+            w_c + 50.0, 'poly', {'fit_order': 5}),
         Delay(20.0e-3),
         Spoiler(1.0),
-        PulseExc.shaped(10.0e-6, 90.0, 1, 'rect', None),
+        Pulse.shaped(10.0e-6, 90.0, 1, 'rect', None),
         Delay(30.0e-3)],
         b0=3.0)
-    mt_flash = PulseTrain(mt_flash_kernel, num_repetitions)
+    mt_flash = PulseSequenceRepeated(mt_flash_kernel, num_repetitions)
 
     signal = mt_flash.signal(spin_model)
 
@@ -186,7 +188,7 @@ def check_approx_propagator(
         spin_model=SpinModel(
             s0=100,
             mc=(0.8681, 0.1319),
-            w0=((GAMMA['1H'] * B0,) * 2),
+            w0=((GAMMA['1H'] * 7.0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
@@ -199,7 +201,7 @@ def check_approx_propagator(
         spin_model (SpinModel):
         flip_angles (float):
     """
-    w_c = GAMMA['1H'] * B0
+    w_c = spin_model.w0[0]
 
     modes = ['exact']
     modes.extend(['linear', 'reduced'])
@@ -230,7 +232,7 @@ def check_approx_propagator(
     }
     exact_p_ops = {}
     for shape, shape_kwargs in shapes.items():
-        pulse = PulseExc.shaped(
+        pulse = Pulse.shaped(
             40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c, 'exact', {})
         exact_p_ops[shape] = pulse.propagator(spin_model)
 
@@ -241,7 +243,7 @@ def check_approx_propagator(
             for values in itertools.product(*[mode_params[i] for i in names]):
                 kwargs_items.append({k: v for k, v in zip(names, values)})
             for kwargs in kwargs_items:
-                pulse = PulseExc.shaped(
+                pulse = Pulse.shaped(
                     40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c,
                     mode, kwargs)
                 begin_time = datetime.datetime.now()
@@ -257,15 +259,15 @@ def check_approx_propagator(
 # ======================================================================
 def check_z_spectrum(
         spin_model=SpinModel(
-            s0=1e8,
+            s0=1,
             mc=(0.8681, 0.1319),
-            w0=((GAMMA['1H'] * B0,) * 2),
+            w0=((GAMMA['1H'] * 7.0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        freqs=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
-        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 32)),
+        freqs=np.round(mrt.utils.sgnlogspace(50, 10000, 16)),
+        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 16)),
         plot_data=True,
         save_file=None):
     """
@@ -283,29 +285,29 @@ def check_z_spectrum(
         freq
 
     """
+    print('Checking Z-spectrum')
     w_c = spin_model.w0[0]
 
     flip_angles = amplitudes * 11.799 / 50.0
 
     mt_flash = MtFlash(
-        PulseList([
-            Delay(50.0e-3),
-            Spoiler(1.0),
-            PulseExc.shaped(10.0e-3, 90.0, 4000, 'gauss', {},
-                            0.0, 'poly', {'fit_order': 3}),
+        pulses=[
+            MagnetizationPreparation.shaped(
+                10.0e-3, 90.0, 4000, 'gauss', {}, 0.0, 'poly',
+                {'fit_order': 3}),
             Delay(1.0e-3),
             Spoiler(1.0),
             PulseExc.shaped(2.1e-3, 15.0, 1, 'rect', {}),
-            Delay(5.0e-3)],
-            w_c=w_c),
-        300)
+            ReadOut(55.0e-3, ),
+            Spoiler(1.0), ],
+        echo_times=np.array([5.0]) * 1e-3,
+        num_repetitions=300,
+        w_c=w_c,
+        freqs=freqs,
+        flip_angles=flip_angles)
+    mt_flash.prepare(spin_model)
 
-    data = np.zeros((len(freqs), len(amplitudes)))
-    for j, freq in enumerate(freqs):
-        for i, flip_angle in enumerate(flip_angles):
-            mt_flash.set_flip_angle(flip_angle)
-            mt_flash.set_freq(freq)
-            data[j, i] = mt_flash.signal(spin_model)
+    data = mt_flash.signal()[0, :, :]
 
     # plot results
     if plot_data:
@@ -359,18 +361,18 @@ def check_fit_spin_model(
     t_r = 70.0e-3
     w_c = 297220696
     mt_flash = MtFlash(
-        PulseList([
+        PulseSequence([
             Delay(
                 t_r - (t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 + 100e-6)),
             Spoiler(0.0),
             Delay(160.0e-6),
-            PulseExc.shaped(
+            Pulse.shaped(
                 20000.0e-6, 90.0, 0, '_from_GAUSS5120', {}, 0.0,
                 'linear', {'num_samples': 15}),
             Delay(160.0e-6 + 970.0e-6),
             Spoiler(1.0),
             Delay(160.0e-6),
-            PulseExc.shaped(100e-6, 30.0, 1, 'rect', {}),
+            Pulse.shaped(100e-6, 30.0, 1, 'rect', {}),
             Delay(t_e)],
             w_c=w_c),
         num_repetitions=100 * 100)

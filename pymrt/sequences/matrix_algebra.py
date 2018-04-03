@@ -88,9 +88,6 @@ from pymrt.config import CFG
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
-# Magnetic Field Strength
-B0 = 7.0  # T
-
 
 # ======================================================================
 def superlorentz_integrand(x, t):
@@ -433,8 +430,7 @@ def dynamics_operator(
 
     Args:
         spin_model (SpinModel): The spin model term of the dynamics operator.
-        w_c (float): The carrier angular frequency of the pulse excitation in
-        rad/s.
+        w_c (float): The carrier angular frequency of the excitation in rad/s.
         w1 (complex): The pulse excitation angular frequency in rad/s.
 
     Returns:
@@ -475,7 +471,7 @@ def _propagator_sum(
     which is only valid for commuting operators.
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
 
     Returns:
@@ -501,22 +497,22 @@ def _propagator_sum_order1(
         expm(sum(M_i) + sum([M_i, M_j]/2) = prod(expm(M_i))
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
 
     Returns:
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
-    l_op_list = []
+    l_ops = []
     for w1 in pulse_exc.w1_arr:
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
-        l_op_list.append(pulse_exc.dt * l_op)
-    l_op_sum = sum(l_op_list)
+        l_ops.append(pulse_exc.dt * l_op)
+    l_op_sum = sum(l_ops)
     # pseudo-first-order correction
-    comm_list = [
-        mrt.utils.commutator(l_op_list[i], l_op_list[i + 1]) / 2.0
-        for i in range(len(l_op_list[:-1]))]
-    comm_sum = sum(comm_list)
+    comms = [
+        mrt.utils.commutator(l_ops[i], l_ops[i + 1]) / 2.0
+        for i in range(len(l_ops[:-1]))]
+    comm_sum = sum(comms)
     return sp.linalg.expm(-(l_op_sum + comm_sum))
 
 
@@ -533,7 +529,7 @@ def _propagator_sum_sep(
         (L_i = L_free + L_w1_i)
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
 
     Returns:
@@ -565,7 +561,7 @@ def _propagator_poly(
     element-wise polynomial fit, on exact values calculated over the w1 domain.
 
     Args:
-        pulse_exc (PulseExc): The e.m. pulse pulse_exc to manipulate the spins.
+        pulse_exc (Pulse): The e.m. pulse pulse_exc to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
         fit_order (int): The order to be used for the polynomial fit.
         num_samples (int): The number of samples used for the polynomial fit.
@@ -606,8 +602,8 @@ def _propagator_poly(
         for i in range(spin_model.operator_dim):
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
-        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -657,8 +653,8 @@ def _propagator_poly(
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
-        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -676,7 +672,7 @@ def _propagator_interp(
     over the w1 domain.
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
         method (str): The method used by the interpolating function
             'sp.interpolate.griddata'.
@@ -703,9 +699,9 @@ def _propagator_interp(
                 p_op_arr[:, i, j] = sp.interpolate.griddata(
                     w1_approx, p_op_approx[i, j, :], _w1_arr,
                     method=method, fill_value=0.0)
-        p_op_list = [p_op_arr[j, :, :] for j in
-                     range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in
+                 range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -742,8 +738,8 @@ def _propagator_interp(
                     w1_approx, p_op_approx[i, j, :],
                     (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
                     method=method, fill_value=0.0)
-        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -760,7 +756,7 @@ def _propagator_linear(
     over the w1 domain. Assumes real and imaginary part to be independent.
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
         num_samples (int): Number of samples for the interpolation.
 
@@ -785,9 +781,9 @@ def _propagator_linear(
             for j in range(spin_model.operator_dim):
                 p_op_arr[:, i, j] = np.interp(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
-        p_op_list = [p_op_arr[j, :, :] for j in
-                     range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in
+                 range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -830,8 +826,8 @@ def _propagator_linear(
                     (np.abs(pulse_exc.w1_arr.real) +
                      np.abs(pulse_exc.w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
-        p_op_list = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_op_list[::-1])
+        p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
+        p_op = mrt.utils.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -848,7 +844,7 @@ def _propagator_reduced(
     original pulse excitation.
 
     Args:
-        pulse_exc (PulseExc): The em pulse excitation to manipulate the spins.
+        pulse_exc (Pulse): The em pulse excitation to manipulate the spins.
         spin_model (SpinModel): The model for the spin system.
         num_resamples (int): The number of samples for the reduced resampling.
 
@@ -862,17 +858,12 @@ def _propagator_reduced(
     for i in range(num_resamples):
         chunk = slice(chunk_marks[i], chunk_marks[i + 1])
         w1_reduced_arr[i] = np.mean(pulse_exc.w1_arr[chunk])
-    p_op_list = [
+    p_ops = [
         sp.linalg.expm(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return mrt.utils.mdot(*p_op_list[::-1])
-
-
-# ======================================================================
-def z_spectrum(spin_model, pulse_sequence, amplitudes, freqs):
-    pass
+    return mrt.utils.mdot(*p_ops[::-1])
 
 
 # ======================================================================
@@ -881,6 +872,7 @@ class SpinModel(object):
     Model of the spin system.
     """
 
+    # -----------------------------------
     def __init__(
             self,
             s0,
@@ -933,70 +925,8 @@ class SpinModel(object):
         self.k_op = self.kinetics_operator()
         self.ignore_k_transverse = True
         self.l_op = self.dynamics_operator()
-        self.m_eq = self.equilibrium_magnetization()
-        self.det = self.detector()
 
-    # @classmethod
-    # def serialized(
-    #         cls,
-    #         duration,
-    #         flip_angle=90.0,
-    #         num_steps=1,
-    #         shape='rect',
-    #         shape_kwargs=None,
-    #         w_c=None,
-    #         propagator_mode=None,
-    #         propagator_kwargs=None):
-    #     """
-    #     Generate a pulse excitation with a specific shape.
-    #
-    #     Args:
-    #         duration (float): duration of the pulse in s
-    #         flip_angle (float): flip angle of the excitation in deg
-    #         num_steps (int): number of sampling point for the pulse
-    #         shape (str): name of the desired pulse shape.
-    #             Note: a function named '_shape_[SHAPE]' must exist.
-    #                 [normal|cauchy|sinc|cos_sin]
-    #         shape_kwargs (dict|None): keyword arguments for the shape
-    # function
-    #         w_c (float): carrier angular frequency of the pulse excitation in
-    #             rad/s
-    #         propagator_mode (str): calculation mode for the
-    # propagator.
-    #             Note: a function named '_propagator_[MODE]' must exist.
-    #                 [sum|sum_order1|sum_sep|poly|interp|linear|reduced]
-    #         propagator_kwargs (dict|None): keyword arguments for the
-    #             propagator function
-    #
-    #     Returns:
-    #         pulse_exc (PulseExc): the generated pulse excitation
-    #     """
-    #     if shape_kwargs is None:
-    #         shape_kwargs = {}
-    #     if shape == 'gauss':
-    #         w1_arr = _shape_normal(num_steps, **shape_kwargs)
-    #     elif shape == 'lorentz':
-    #         w1_arr = _shape_cauchy(num_steps, **shape_kwargs)
-    #     elif shape == 'sinc':
-    #         w1_arr = _shape_sinc(num_steps, **shape_kwargs)
-    #     elif shape == 'rect':
-    #         w1_arr = np.array((1.0,) * num_steps)
-    #     else:
-    #         try:
-    #             shape_func = eval('_shape_' + shape)
-    #             w1_arr = shape_func(num_steps, **shape_kwargs)
-    #         except:
-    #             raise ValueError('{}: unknown shape'.format(shape))
-    #     self = cls(duration, w1_arr, w_c)
-    #     self.shape = shape
-    #     self.shape_kwargs = shape_kwargs
-    #     self.set_flip_angle(flip_angle)
-    #     if propagator_mode is not None:
-    #         self.propagator_mode = propagator_mode
-    #     if propagator_kwargs is not None:
-    #         self.propagator_kwargs = propagator_kwargs
-    #     return self
-
+    # -----------------------------------
     def equilibrium_magnetization(self):
         """
         Generate the equilibrium magnetization vector.
@@ -1025,6 +955,7 @@ class SpinModel(object):
             m_eq[pos] = m0z
         return m_eq
 
+    # -----------------------------------
     def detector(
             self,
             phase=pi / 2):
@@ -1053,6 +984,7 @@ class SpinModel(object):
         det *= exp(1j * phase)
         return det
 
+    # -----------------------------------
     def dynamics_operator(self):
         """
         Compute L_spin: the excitation-independent part of the
@@ -1089,6 +1021,7 @@ class SpinModel(object):
         l_op = np.delete(l_op, to_remove, 1)
         return l_op
 
+    # -----------------------------------
     def kinetics_operator(self):
         """
         Compute the symmetric operator of the pool-pool exchange constants.
@@ -1105,6 +1038,7 @@ class SpinModel(object):
             k_op[index[::-1]] = k
         return k_op
 
+    # -----------------------------------
     def __str__(self):
         text = 'SpinModel: '
         names = ['s0', 'm0', 'w0', 'r1', 'r2', 'k']
@@ -1114,16 +1048,18 @@ class SpinModel(object):
 
 
 # ======================================================================
-class PulseExc(object):
+class Pulse(object):
     """
     Pulse excitation interacting with the spin system.
     """
 
+    # -----------------------------------
     def __init__(
             self,
             duration,
             w1_arr=None,
-            w_c=None):
+            w_c=None,
+            label=None):
         """
         Base constructor of the pulse excitation class.
 
@@ -1151,8 +1087,10 @@ class PulseExc(object):
         self.is_real = np.isreal(w1_arr[0])
         self.is_imag = np.isreal(w1_arr[0] / 1j)
         self.propagator_mode = 'exact'
-        self.propagator_kwargs = {}
+        self.propagator_kwargs = dict()
+        self.label = label
 
+    # -----------------------------------
     @property
     def flip_angle(self):
         """
@@ -1165,6 +1103,7 @@ class PulseExc(object):
         """
         return np.rad2deg(self.norm)
 
+    # -----------------------------------
     @classmethod
     def shaped(
             cls,
@@ -1198,7 +1137,7 @@ class PulseExc(object):
                 propagator function.
 
         Returns:
-            pulse_exc (PulseExc): The generated pulse excitation.
+            pulse_exc (Pulse): The generated pulse excitation.
         """
         if shape_kwargs is None:
             shape_kwargs = {}
@@ -1231,6 +1170,7 @@ class PulseExc(object):
             self.propagator_kwargs = propagator_kwargs
         return self
 
+    # -----------------------------------
     def get_norm(self):
         """
         Compute the norm of the pulse excitation in rad.
@@ -1240,6 +1180,7 @@ class PulseExc(object):
         """
         return np.sum(np.abs(self.w1_arr * self.dt))
 
+    # -----------------------------------
     def set_norm(self, new_norm):
         """
         Set a new norm for the pulse excitation in rad.
@@ -1259,6 +1200,7 @@ class PulseExc(object):
         self.w1_arr = self.w1_arr * new_norm / self.norm
         self.norm = new_norm
 
+    # -----------------------------------
     def get_flip_angle(self):
         """
         Get the flip angle of the pulse excitation in deg.
@@ -1268,6 +1210,7 @@ class PulseExc(object):
         """
         return self.flip_angle
 
+    # -----------------------------------
     def set_flip_angle(self, new_flip_angle):
         """
         Set a new flip angle for the pulse excitation.
@@ -1283,6 +1226,7 @@ class PulseExc(object):
         """
         self.set_norm(np.deg2rad(new_flip_angle))
 
+    # -----------------------------------
     def propagator(
             self,
             spin_model,
@@ -1305,11 +1249,11 @@ class PulseExc(object):
         if not kwargs:
             kwargs = self.propagator_kwargs
         if self.propagator_mode == 'exact':
-            p_op_list = [
+            p_ops = [
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self.w1_arr]
-            p_op = mrt.utils.mdot(*p_op_list[::-1])
+            p_op = mrt.utils.mdot(*p_ops[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
@@ -1317,13 +1261,14 @@ class PulseExc(object):
             except NameError:
                 text = '{}: unknown approximation'.format(self.propagator_mode)
                 warnings.warn(text)
-                p_op_list = [
+                p_ops = [
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self.w1_arr]
-                p_op = mrt.utils.mdot(*p_op_list[::-1])
+                p_op = mrt.utils.mdot(*p_ops[::-1])
         return p_op
 
+    # -----------------------------------
     def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
@@ -1346,6 +1291,7 @@ class Spoiler(object):
     Spoiler for eliminating T2*.
     """
 
+    # -----------------------------------
     def __init__(
             self,
             efficiency=1.0):
@@ -1360,6 +1306,7 @@ class Spoiler(object):
         """
         self.efficiency = efficiency
 
+    # -----------------------------------
     def propagator(
             self,
             spin_model):
@@ -1387,6 +1334,7 @@ class Spoiler(object):
                 num_exact += 1
         return np.diag(p_op_diag)
 
+    # -----------------------------------
     def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         names = ['efficiency']
@@ -1396,11 +1344,12 @@ class Spoiler(object):
 
 
 # ======================================================================
-class Delay(PulseExc):
+class Delay(Pulse):
     """
     Delay after the pulse excitation.
     """
 
+    # -----------------------------------
     def __init__(
             self,
             duration,
@@ -1415,9 +1364,10 @@ class Delay(PulseExc):
         Returns:
             None
         """
-        PulseExc.__init__(self, duration, np.zeros(1), w_c)
+        Pulse.__init__(self, duration, np.zeros(1), w_c)
         self.shape = 'rect'
 
+    # -----------------------------------
     def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         names = ['duration', 'w_c']
@@ -1428,92 +1378,131 @@ class Delay(PulseExc):
 
 
 # ======================================================================
-class PulseSequence:
+class PulseExc(Pulse):
+    def __init__(
+            self,
+            *args,
+            **kwargs):
+        Pulse.__init__(self, *args, **kwargs)
+
+
+# ======================================================================
+class MagnetizationPreparation(Pulse):
+    def __init__(
+            self,
+            *args,
+            **kwargs):
+        Pulse.__init__(self, *args, **kwargs)
+
+
+# ======================================================================
+class ReadOut(Delay):
+    """
+    Read out block (a delay containing signal detection).
+    """
+
+    # -----------------------------------
+    def __init__(
+            self,
+            duration,
+            w_c=None):
+        """
+        Base constructor of the `ReadOut` class.
+
+        Args:
+            duration (float): The duration of the excitation pulse in s.
+            w_c (float|None): Carrier angular frequency of the pulse in rad/s.
+
+        Returns:
+            None
+        """
+        Pulse.__init__(self, duration, np.zeros(1), w_c)
+        self.shape = 'rect'
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}: '.format(self.__class__.__name__)
+        names = ['duration', 'w_c']
+        for name in names:
+            if hasattr(self, name):
+                text += '{}={}  '.format(name, getattr(self, name))
+        return text
+
+
+# ======================================================================
+class PulseSequence(object):
     """
     The pulse excitation sequence.
     """
 
+    # -----------------------------------
     def __init__(
             self,
+            pulses,
+            num_repetitions=1,
             w_c=None,
-            gamma=GAMMA['1H'],
-            b0=B0):
+            *args,
+            **kwargs):
         """
         Base constructor of the pulse sequence class.
 
         Args:
             w_c (float|None): Carrier angular frequency of the pulse in rad/s.
-            gamma (flaot): The gyromagnetic ratio in 1/(s*T)
-            b0 (float): The magnetic field strength in T.
         """
-        self.w_c = gamma * b0 if w_c is None else w_c
-
-    def propagator(
-            self,
-            *args,
-            **kwargs):
-        return ()
-
-    def signal(
-            self,
-            spin_model):
-        """
-        Compute the signal from the pulse sequence.
-
-        Args:
-            spin_model (SpinModel): The model for the spin system.
-
-        Returns:
-            y (ndarray[float]): The signal.
-
-        """
-        signal = mrt.utils.mdot(
-            spin_model.det, self.propagator(spin_model), spin_model.m_eq)
-        return np.abs(signal) * spin_model.s0
-
-    def __str__(self):
-        text = '{}'.format(self.__class__.__name__)
-        if hasattr(self, 'num_repetitions'):
-            text += ' (num_repetitions={})'.format(self.num_repetitions)
-        text += ':\n'
-        if hasattr(self, 'pulses'):
-            for pulse in self.pulses:
-                text += '  {}\n'.format(pulse)
-        if hasattr(self, 'kernel'):
-            text += '{}\n'.format(self.kernel)
-        return text
-
-
-# ======================================================================
-class PulseList(PulseSequence):
-    """
-    Pulse list for the pulse sequence.
-    """
-
-    def __init__(
-            self,
-            pulses,
-            *args,
-            **kwargs):
-        """
-        Base constructor of the pulse list class.
-
-        Args:
-            pulses():
-            *args (Iterable): Positional arguments passed to
-            'PulseSequence.__init__().
-            **kwargs (dict): Keyword arguments passed to
-            'PulseSequence.__init__()'.
-
-        Returns:
-            None
-        """
-        PulseSequence.__init__(self, *args, **kwargs)
         self.pulses = pulses
+        self.w_c = w_c
+        self.num_repetitions = num_repetitions
         for pulse in pulses:
             if hasattr(pulse, 'w_c') and pulse.w_c is None:
                 pulse.w_c = self.w_c
+        self.idx = dict()
 
+    # -----------------------------------
+    def get_unique_pulses(
+            self,
+            uniques):
+        """
+        Ensure certain pulse types are unique.
+
+        Args:
+            uniques (Iterable[str]): The class name of the unique pulse types.
+
+        Returns:
+            idx[dict]: Indices of the unique pulse types.
+        """
+        idx = dict()
+        pulse_types = [pulse.__class__.__name__ for pulse in self.pulses]
+        for unique in uniques:
+            indices = [i for i, x in enumerate(pulse_types) if x == unique]
+            if len(indices) > 1:
+                raise ValueError('Only one pulse can be `{}`.'.format(unique))
+            else:
+                idx[unique] = pulse_types.index(unique)
+        return idx
+
+    # -----------------------------------
+    def propagators(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        """
+        Compute the propagator of the pulse sequence.
+
+        Args:
+            spin_model (SpinModel): The model for the spin system.
+            *args (Iterable): Positional arguments passed to
+            'pulse_propagator()'.
+            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+
+        Returns:
+            y(ndarray[float]): The propagator.
+        """
+        return [
+            pulse.propagator(spin_model, *args, **kwargs)
+            for pulse in self.pulses]
+
+    # -----------------------------------
     def propagator(
             self,
             spin_model,
@@ -1531,79 +1520,98 @@ class PulseList(PulseSequence):
         Returns:
             y(ndarray[float]): The propagator.
         """
-        propagators = [
-            pulse.propagator(spin_model, *args, **kwargs)
-            for pulse in self.pulses]
-        return mrt.utils.mdot(*propagators[::-1])
+        return self._propagator(
+            self.propagators(spin_model, *args, **kwargs),
+            self.num_repetitions)
 
-
-# ======================================================================
-class PulseTrain(PulseSequence):
-    """
-    Pulse train for the pulse sequence.
-    """
-
-    def __init__(
-            self,
-            kernel,
-            num_repetitions,
-            *args,
-            **kwargs):
+    # -----------------------------------
+    @staticmethod
+    def _propagator(
+            p_ops,
+            num_repetitions):
         """
-        Base constructor of the pulse train class.
+        Compute the propagator of the pulse sequence.
 
         Args:
-            kernel:
-            num_repetitions (int): The number of repetitions.
+            spin_model (SpinModel): The model for the spin system.
             *args (Iterable): Positional arguments passed to
-            'PulseSequence.__init__()'.
-            **kwargs (dict): Keyword arguments passed to
-            'PulseSequence.__init__()'.
+            'pulse_propagator()'.
+            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
 
         Returns:
-            None
+            y(ndarray[float]): The propagator.
         """
-        PulseSequence.__init__(self, *args, **kwargs)
-        self.kernel = kernel
-        self.num_repetitions = num_repetitions
+        p_op = mrt.utils.mdot(*p_ops[::-1])
+        if num_repetitions > 1:
+            p_op = sp.linalg.fractional_matrix_power(p_op, num_repetitions)
+        return p_op
 
-    def propagator(
+    # -----------------------------------
+    def signal(
             self,
             spin_model,
             *args,
             **kwargs):
         """
-        Compute the propagator of the pulse train.
+        Compute the signal from the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to
-            'self.kernel.propagator()'.
-            **kwargs (dict): Keyword arguments passed to
-            'self.kernel.propagator()'.
 
         Returns:
-            y(ndarray[float]): The propagator.
+            y (ndarray[float]): The signal.
 
         """
-        return sp.linalg.fractional_matrix_power(
-            self.kernel.propagator(spin_model, *args, **kwargs),
-            self.num_repetitions)
+        p_op = self.propagator(spin_model, *args, **kwargs)
+        return self._signal(spin_model, p_op)
+
+    # -----------------------------------
+    @staticmethod
+    def _signal(
+            spin_model,
+            p_op):
+        """
+        Compute the signal from the pulse sequence.
+
+        Args:
+            spin_model (SpinModel): The model for the spin system.
+
+        Returns:
+            y (ndarray[float]): The signal.
+
+        """
+        return (
+                np.abs(mrt.utils.mdot(
+                    spin_model.detector(), p_op,
+                    spin_model.equilibrium_magnetization())) *
+                spin_model.s0)
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}'.format(self.__class__.__name__)
+        if hasattr(self, 'num_repetitions'):
+            text += ' (num_repetitions={})'.format(self.num_repetitions)
+        text += ':\n'
+        if hasattr(self, 'pulses'):
+            for pulse in self.pulses:
+                text += '  {}\n'.format(pulse)
+        if hasattr(self, 'kernel'):
+            text += '{}\n'.format(self.kernel)
+        return text
 
 
 # ======================================================================
-class MtFlash(PulseTrain):
+class Flash(PulseSequence):
+    # -----------------------------------
     def __init__(
             self,
-            kernel,
-            num_repetitions,
-            mt_pulse_index=None,
+            echo_times,
             *args,
             **kwargs):
         """
 
         Args:
-            kernel (PulseList): The list of pulses to be repeated.
+            kernel (PulseSequence): The list of pulses to be repeated.
             num_repetitions (:
             mt_pulse_index (int|None): Index of the MT pulse in the kernel.
                 If None, use the pulse with zero carrier frequency.
@@ -1613,39 +1621,104 @@ class MtFlash(PulseTrain):
         Returns:
 
         """
-        PulseTrain.__init__(self, kernel, num_repetitions, *args, **kwargs)
-        if mt_pulse_index is None:
-            for i, item in enumerate(kernel.pulses):
-                if hasattr(item, 'w_c') and item.w_c == 0.0:
-                    self.mt_pulse_index = i
-                    break
-        else:
-            self.mt_pulse_index = mt_pulse_index
+        PulseSequence.__init__(self, *args, **kwargs)
+        idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
+        if hasattr(self, 'idx'):
+            self.idx.update(idx)
+        self.echo_times = echo_times
+        self.base_p_ops = None
+        self.spin_model = None
 
-    def set_flip_angle(self, flip_angle):
+    # -----------------------------------
+    def prepare(self, spin_model):
+        self.spin_model = spin_model
+        self.base_p_ops = self.propagators(spin_model)
+        # todo: pre-compute p_ops for all possible combinations of echoes
+        pass
+
+    # -----------------------------------
+    def signal(self):
+
+        return None
+
+
+# ======================================================================
+class MtFlash(Flash):
+    # -----------------------------------
+    def __init__(
+            self,
+            freqs,
+            flip_angles,
+            *args,
+            **kwargs):
         """
 
         Args:
-            flip_angle:
+            kernel (PulseSequence): The list of pulses to be repeated.
+            num_repetitions (:
+            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
+                If None, use the pulse with zero carrier frequency.
+            *args:
+            **kwargs:
 
         Returns:
-            None
 
         """
-        self.kernel.pulses[self.mt_pulse_index].set_flip_angle(flip_angle)
+        Flash.__init__(self, *args, **kwargs)
+        idx = self.get_unique_pulses(('MagnetizationPreparation',))
+        if hasattr(self, 'idx'):
+            self.idx.update(idx)
+        self.mt_p_ops = None
 
-    def set_freq(self, freq):
-        """
+        for i, pulse in enumerate(self.pulses):
+            print(i, pulse)
 
-        Args:
-            freq:
 
-        Returns:
-            None
+    # -----------------------------------
+    def prepare(self, spin_model):
+        # todo: pre-compute p_ops for all possible combinations of freq/flip_angle/echoes
+        Flash.prepare()
+        mt_pulses = self.pulses[self.idx['MagnetizationPreparation']]
+        # self.mt_p_ops = [
+        #     self.pulses[
+        #         self.idx['MagnetizationPreparation']].propagator(spin_model)
+        #     for
+        # print(base_p_ops)
+        # print(mt_p_ops)
+        pass
 
-        """
-        self.kernel.pulses[self.mt_pulse_index].w_c = \
-            self.kernel.w_c + 2 * pi * freq
+
+    # -----------------------------------
+    def signal(self):
+        return
+
+    # # -----------------------------------
+    # def set_flip_angle(self, flip_angle):
+    #     """
+    #
+    #     Args:
+    #         flip_angle:
+    #
+    #     Returns:
+    #         None
+    #
+    #     """
+    #     self.pulses[self.idx['MagnetizationPreparation']].set_flip_angle(
+    #         flip_angle)
+    #
+    # # -----------------------------------
+    # def set_freq(self, freq):
+    #     """
+    #
+    #     Args:
+    #         freq:
+    #
+    #     Returns:
+    #         None
+    #
+    #     """
+    #     self.pulses[self.idx['MagnetizationPreparation']].w_c = \
+    #         self.w_c + 2 * pi * freq
 
 
 # ======================================================================
