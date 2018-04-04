@@ -113,4 +113,4 @@ tests/data/
 *.ico
 *.xbm
 _version.py
-
+.pytest_cache/
