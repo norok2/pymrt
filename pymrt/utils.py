@@ -1414,7 +1414,7 @@ def lcm(*nums):
     Find the least common multiple (LCM) of a list of numbers.
 
     Args:
-        *numbers (*Iterable[int]): The input numbers.
+        *nums (*Iterable[int]): The input numbers.
 
     Returns:
         gcd_val (int): The value of the least common multiple (LCM).
@@ -4091,6 +4091,34 @@ def minmax(arr):
         (0, 9)
     """
     return np.min(arr), np.max(arr)
+
+
+# ======================================================================
+def freq2afreq(val):
+    """
+    Convert frequency to angular frequency (not changing time units).
+
+    Args:
+        val (float): The input value.
+
+    Returns:
+        val (float): The output value.
+    """
+    return (2.0 * np.pi) * val
+
+
+# ======================================================================
+def afreq2freq(val):
+    """
+    Convert angular frequency to frequency (not changing time units).
+
+    Args:
+        val (float): The input value.
+
+    Returns:
+        val (float): The output value.
+    """
+    return val / (2.0 * np.pi)
 
 
 # ======================================================================
