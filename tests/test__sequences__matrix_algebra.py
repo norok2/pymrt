@@ -259,15 +259,15 @@ def check_approx_propagator(
 # ======================================================================
 def check_z_spectrum(
         spin_model=SpinModel(
-            s0=1,
+            s0=1e8,
             mc=(0.8681, 0.1319),
             w0=((GAMMA['1H'] * 7.0,) * 2),
             r1=(1.8, 1.0),
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        freqs=np.round(mrt.utils.sgnlogspace(50, 10000, 16)),
-        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 16)),
+        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 32)),
         plot_data=True,
         save_file=None):
     """
@@ -276,7 +276,7 @@ def check_z_spectrum(
     Args:
 
         spin_model (SpinModel):
-        freqs (ndarray[float]):
+        frequencies (ndarray[float]):
         amplitudes (ndarray[float]):
         plot_data (bool):
         save_file (string):
@@ -293,26 +293,27 @@ def check_z_spectrum(
     mt_flash = MtFlash(
         pulses=[
             MagnetizationPreparation.shaped(
-                10.0e-3, 90.0, 4000, 'gauss', {}, 0.0, 'poly',
+                10.0e-3, 90.0, 4000, 'gauss', {}, w_c, 'poly',
                 {'fit_order': 3}),
             Delay(1.0e-3),
             Spoiler(1.0),
             PulseExc.shaped(2.1e-3, 15.0, 1, 'rect', {}),
-            ReadOut(55.0e-3, ),
+            ReadOut(),
             Spoiler(1.0), ],
-        echo_times=np.array([5.0]) * 1e-3,
-        num_repetitions=300,
+        te=5.0e-3,
+        tr=70.0e-3,
+        n_r=300,
         w_c=w_c,
-        freqs=freqs,
-        flip_angles=flip_angles)
-    mt_flash.prepare(spin_model)
+        freqs=frequencies,
+        fas=flip_angles)
 
-    data = mt_flash.signal()[0, :, :]
+    mt_flash.prepare_signals(spin_model)
+    data = mt_flash.signals()
 
     # plot results
     if plot_data:
         sns.set_style('whitegrid')
-        X, Y = np.meshgrid(amplitudes, np.log10(freqs))
+        X, Y = np.meshgrid(amplitudes, np.log10(frequencies))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -322,8 +323,8 @@ def check_z_spectrum(
             X, Y, data, cmap=mpl.cm.plasma,
             rstride=1, cstride=1, linewidth=0.01, antialiased=False)
     if save_file:
-        np.savez(save_file, freqs, amplitudes, data)
-    return data, freqs, flip_angles
+        np.savez(save_file, frequencies, amplitudes, data)
+    return data, frequencies, flip_angles
 
 
 # ======================================================================

@@ -1095,13 +1095,22 @@ class Pulse(object):
     def flip_angle(self):
         """
         Returns:
-            flip_angle (float): The flip angle in deg of the pulse excitation.
+            flip_angle (float): The flip angle in deg.
 
             Mathematically, with the proper units, this is equivalent to the
             absolute norm of the array:
                 sum(abs(a_i))
         """
         return np.rad2deg(self.norm)
+
+    # -----------------------------------
+    @property
+    def carrier_freq(self):
+        """
+        Returns:
+            freq (float): The carrier frequency in Hz.
+        """
+        return mrt.utils.afreq2freq(self.w_c)
 
     # -----------------------------------
     @classmethod
@@ -1225,6 +1234,41 @@ class Pulse(object):
             None.
         """
         self.set_norm(np.deg2rad(new_flip_angle))
+        return self
+
+    # -----------------------------------
+    def set_carrier_freq(self, new_f_c):
+        """
+        Set a new carrier frequency for the pulse excitation.
+
+        This is equivalent to setting the norm (mind a scaling factor).
+        Note that this modifies the w1_arr.
+
+        Args:
+            new_flip_angle (float): The new flip angle of the pulse in deg.
+
+        Returns:
+            None.
+        """
+        self.w_c = mrt.utils.freq2afreq(new_f_c)
+        return self
+
+    # -----------------------------------
+    def shift_carrier_freq(self, delta_f_c):
+        """
+        Shift the carrier frequency for the pulse excitation.
+
+        This is equivalent to setting the norm (mind a scaling factor).
+        Note that this modifies the w1_arr.
+
+        Args:
+            new_flip_angle (float): The new flip angle of the pulse in deg.
+
+        Returns:
+            None.
+        """
+        self.w_c = self.w_c + mrt.utils.freq2afreq(delta_f_c)
+        return self
 
     # -----------------------------------
     def propagator(
@@ -1404,18 +1448,20 @@ class ReadOut(Delay):
     # -----------------------------------
     def __init__(
             self,
-            duration,
+            duration=None,
             w_c=None):
         """
         Base constructor of the `ReadOut` class.
 
         Args:
-            duration (float): The duration of the excitation pulse in s.
+            duration (float|None): The duration of the excitation pulse in s.
             w_c (float|None): Carrier angular frequency of the pulse in rad/s.
 
         Returns:
             None
         """
+        if duration is None:
+            duration = 0.0
         Pulse.__init__(self, duration, np.zeros(1), w_c)
         self.shape = 'rect'
 
@@ -1439,7 +1485,6 @@ class PulseSequence(object):
     def __init__(
             self,
             pulses,
-            num_repetitions=1,
             w_c=None,
             *args,
             **kwargs):
@@ -1451,7 +1496,6 @@ class PulseSequence(object):
         """
         self.pulses = pulses
         self.w_c = w_c
-        self.num_repetitions = num_repetitions
         for pulse in pulses:
             if hasattr(pulse, 'w_c') and pulse.w_c is None:
                 pulse.w_c = self.w_c
@@ -1520,15 +1564,13 @@ class PulseSequence(object):
         Returns:
             y(ndarray[float]): The propagator.
         """
-        return self._propagator(
-            self.propagators(spin_model, *args, **kwargs),
-            self.num_repetitions)
+        return self._propagator(self.propagators(spin_model, *args, **kwargs))
 
     # -----------------------------------
     @staticmethod
     def _propagator(
             p_ops,
-            num_repetitions):
+            num=1):
         """
         Compute the propagator of the pulse sequence.
 
@@ -1542,8 +1584,8 @@ class PulseSequence(object):
             y(ndarray[float]): The propagator.
         """
         p_op = mrt.utils.mdot(*p_ops[::-1])
-        if num_repetitions > 1:
-            p_op = sp.linalg.fractional_matrix_power(p_op, num_repetitions)
+        if num > 1:
+            p_op = sp.linalg.fractional_matrix_power(p_op, num)
         return p_op
 
     # -----------------------------------
@@ -1563,7 +1605,7 @@ class PulseSequence(object):
 
         """
         p_op = self.propagator(spin_model, *args, **kwargs)
-        return self._signal(spin_model, p_op)
+        return np.array(self._signal(spin_model, p_op))
 
     # -----------------------------------
     @staticmethod
@@ -1587,10 +1629,16 @@ class PulseSequence(object):
                 spin_model.s0)
 
     # -----------------------------------
+    @staticmethod
+    def _p_ops_subst(p_ops, idx, new_p_op):
+        p_ops[idx] = new_p_op
+        return p_ops
+
+    # -----------------------------------
     def __str__(self):
         text = '{}'.format(self.__class__.__name__)
         if hasattr(self, 'num_repetitions'):
-            text += ' (num_repetitions={})'.format(self.num_repetitions)
+            text += ' (num_repetitions={})'.format(self.n_r)
         text += ':\n'
         if hasattr(self, 'pulses'):
             for pulse in self.pulses:
@@ -1605,7 +1653,9 @@ class Flash(PulseSequence):
     # -----------------------------------
     def __init__(
             self,
-            echo_times,
+            te,
+            tr,
+            n_r=1,
             *args,
             **kwargs):
         """
@@ -1625,21 +1675,134 @@ class Flash(PulseSequence):
         idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
         if hasattr(self, 'idx'):
             self.idx.update(idx)
-        self.echo_times = echo_times
-        self.base_p_ops = None
-        self.spin_model = None
+        # handle repetition time
+        if tr is not None:
+            temp_tr = sum(
+                [pulse.duration if hasattr(pulse, 'duration') else 0.0
+                 for pulse in self.pulses])
+            if temp_tr < tr:
+                self.pulses[self.idx['ReadOut']].duration = tr - temp_tr
+            else:
+                text = (
+                    'Incompatible pulse sequence and '
+                    '`repetition_time={}`'.format(tr))
+                raise ValueError(text)
+        self.tr = tr
+        self.t_pexc = self.pulses[self.idx['PulseExc']].duration
+        self.t_ro = self.pulses[self.idx['ReadOut']].duration
+        # handle echo times
+        self.te = te
+        # ensure compatible echo_times and repetition_time
+        if any([t < 0
+                for t in self._pre_post_delays(
+                self.te, self.t_ro, self.t_pexc)]):
+            text = (
+                'Incompatible options '
+                '`echo_time={}` and `repetition_time={}`'.format(
+                    te, tr))
+            raise ValueError(text)
+        self.n_r = n_r
 
     # -----------------------------------
-    def prepare(self, spin_model):
+    @staticmethod
+    def _pre_post_delays(te, t_ro, t_pexc):
+        return t_ro - te + t_pexc / 2.0, te - t_pexc / 2.0
+
+    # -----------------------------------
+    @staticmethod
+    def _p_ops_reorder(p_ops, idx):
+        return p_ops[idx + 1:] + p_ops[:idx]
+
+    # -----------------------------------
+    def propagator(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        """
+        Compute the propagator of the pulse sequence.
+
+        Args:
+            spin_model (SpinModel): The model for the spin system.
+            *args (Iterable): Positional arguments passed to
+            'pulse_propagator()'.
+            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+
+        Returns:
+            y(ndarray[float]): The propagator.
+        """
+        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        pre_t, post_t = self._pre_post_delays(
+            self.te, self.t_ro, self.t_pexc)
+        p_ops = (
+                Delay(pre_t).propagator(spin_model, *args, **kwargs) +
+                self._p_ops_reorder(base_p_ops, self.idx['ReadOut']) +
+                Delay(post_t).propagator(spin_model, *args, **kwargs))
+        return self._propagator(p_ops, self.n_r)
+
+
+# ======================================================================
+class MeFlash(Flash):
+    # -----------------------------------
+    def __init__(
+            self,
+            tes,
+            *args,
+            **kwargs):
+        """
+
+        Args:
+            kernel (PulseSequence): The list of pulses to be repeated.
+            num_repetitions (:
+            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
+                If None, use the pulse with zero carrier frequency.
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        Flash.__init__(self, te=max(tes), *args, **kwargs)
+        # handle echo times
+        self.tes = tes
+        # ensure compatible echo_times and repetition_time
+        if any([t < 0
+                for te in self.tes
+                for t in self._pre_post_delays(te, self.t_ro, self.t_pexc)]):
+            text = (
+                'Incompatible options '
+                '`echo_time={}` and `repetition_time={}`'.format(
+                    tes, self.tr))
+            raise ValueError(text)
+        self.spin_model = None
+        self.base_p_ops = None
+        self.te_p_ops = None
+
+    # -----------------------------------
+    def prepare_signals(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        # todo: combine with `signals`
         self.spin_model = spin_model
         self.base_p_ops = self.propagators(spin_model)
-        # todo: pre-compute p_ops for all possible combinations of echoes
-        pass
+        self.te_p_ops = [
+            [Delay(duration).propagator(spin_model, *args, **kwargs)
+             for duration in self._pre_post_delays(te, self.t_ro, self.t_pexc)]
+            for te in self.tes]
 
     # -----------------------------------
-    def signal(self):
-
-        return None
+    def signals(self):
+        central_p_ops = self._p_ops_reorder(
+                self.base_p_ops, self.idx['ReadOut'])
+        return np.array([
+            self._signal(
+                self.spin_model,
+                self._propagator(
+                    [te_p_op_i] + central_p_ops + [te_p_op_f],
+                    self.n_r))
+            for (te_p_op_i, te_p_op_f) in self.te_p_ops])
 
 
 # ======================================================================
@@ -1648,7 +1811,7 @@ class MtFlash(Flash):
     def __init__(
             self,
             freqs,
-            flip_angles,
+            fas,
             *args,
             **kwargs):
         """
@@ -1668,57 +1831,58 @@ class MtFlash(Flash):
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, 'idx'):
             self.idx.update(idx)
+        self.freqs = freqs
+        self.fas = fas
+        self.spin_model = None
+        self.base_p_ops = None
         self.mt_p_ops = None
-
-        for i, pulse in enumerate(self.pulses):
-            print(i, pulse)
-
+        self.te_p_ops = None
 
     # -----------------------------------
-    def prepare(self, spin_model):
-        # todo: pre-compute p_ops for all possible combinations of freq/flip_angle/echoes
-        Flash.prepare()
-        mt_pulses = self.pulses[self.idx['MagnetizationPreparation']]
-        # self.mt_p_ops = [
-        #     self.pulses[
-        #         self.idx['MagnetizationPreparation']].propagator(spin_model)
-        #     for
-        # print(base_p_ops)
-        # print(mt_p_ops)
-        pass
-
+    def prepare_signals(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        self.spin_model = spin_model
+        self.base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        self.te_p_ops = [
+            Delay(t_d).propagator(spin_model, *args, **kwargs)
+            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
+        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+        f_c = mt_pulse.carrier_freq
+        self.mt_p_ops = [
+            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
+                spin_model, *args, **kwargs)
+            for f in self.freqs for fa in self.fas]
 
     # -----------------------------------
-    def signal(self):
-        return
+    def signals(self):
+        central_p_ops_list = [
+            self._p_ops_reorder(
+                self._p_ops_subst(
+                    self.base_p_ops, self.idx['MagnetizationPreparation'],
+                    mt_p_op),
+                self.idx['ReadOut'])
+            for mt_p_op in self.mt_p_ops]
+        return np.array([
+            self._signal(
+                self.spin_model,
+                self._propagator(
+                    [self.te_p_ops[0]] + central_p_ops + [self.te_p_ops[1]],
+                    self.n_r))
+            for central_p_ops in central_p_ops_list]).reshape(
+            (len(self.freqs), len(self.fas)))
 
-    # # -----------------------------------
-    # def set_flip_angle(self, flip_angle):
-    #     """
-    #
-    #     Args:
-    #         flip_angle:
-    #
-    #     Returns:
-    #         None
-    #
-    #     """
-    #     self.pulses[self.idx['MagnetizationPreparation']].set_flip_angle(
-    #         flip_angle)
-    #
-    # # -----------------------------------
-    # def set_freq(self, freq):
-    #     """
-    #
-    #     Args:
-    #         freq:
-    #
-    #     Returns:
-    #         None
-    #
-    #     """
-    #     self.pulses[self.idx['MagnetizationPreparation']].w_c = \
-    #         self.w_c + 2 * pi * freq
+
+# ======================================================================
+class MtMeFlash(Flash):
+    pass
+
+
+# ======================================================================
+class MtMeVtrFlash(Flash):
+    pass
 
 
 # ======================================================================
@@ -1726,11 +1890,11 @@ class MtFlash(Flash):
 
 #     The magnetization transfer signal generated by the following sequence:
 #
-#     RF  _()_/‾\____()_/\________________
-#     Gpe ___________/≣\____________
-#     Gsl ___________/≣\____________
-#     Gro ______________/‾‾‾‾‾‾‾‾\__
-#     ADC ______________/‾‾‾‾‾‾‾‾\__
+#     RF  __/‾\_____/\_______________
+#     Gpe _______/≣\_________________
+#     Gsl _______/≣\_________________
+#     Gro _____________/‾‾‾‾‾‾‾‾\____
+#     ADC______________/‾‾‾‾‾‾‾‾\____
 #
 #     δx:     Delay
 #     σx:     Spoiler, _()_
