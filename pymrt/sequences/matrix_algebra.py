@@ -1423,6 +1423,11 @@ class Delay(Pulse):
 
 # ======================================================================
 class PulseExc(Pulse):
+    """
+    Excitation pulse before detecting the signal.
+    """
+
+    # -----------------------------------
     def __init__(
             self,
             *args,
@@ -1432,6 +1437,11 @@ class PulseExc(Pulse):
 
 # ======================================================================
 class MagnetizationPreparation(Pulse):
+    """
+    Pulse to prepare the magnetization state of spins.
+    """
+
+    # -----------------------------------
     def __init__(
             self,
             *args,
@@ -1464,15 +1474,6 @@ class ReadOut(Delay):
             duration = 0.0
         Pulse.__init__(self, duration, np.zeros(1), w_c)
         self.shape = 'rect'
-
-    # -----------------------------------
-    def __str__(self):
-        text = '{}: '.format(self.__class__.__name__)
-        names = ['duration', 'w_c']
-        for name in names:
-            if hasattr(self, name):
-                text += '{}={}  '.format(name, getattr(self, name))
-        return text
 
 
 # ======================================================================
@@ -1520,8 +1521,11 @@ class PulseSequence(object):
             indices = [i for i, x in enumerate(pulse_types) if x == unique]
             if len(indices) > 1:
                 raise ValueError('Only one pulse can be `{}`.'.format(unique))
-            else:
+            elif len(indices) > 0:
                 idx[unique] = pulse_types.index(unique)
+            else:
+                text = 'Pulse `{}` not found in `pulses`.'.format(unique)
+                raise ValueError(text)
         return idx
 
     # -----------------------------------
@@ -1649,7 +1653,7 @@ class PulseSequence(object):
 
 
 # ======================================================================
-class Flash(PulseSequence):
+class SteadyState(PulseSequence):
     # -----------------------------------
     def __init__(
             self,
@@ -1671,6 +1675,7 @@ class Flash(PulseSequence):
         Returns:
 
         """
+        print(te, tr)
         PulseSequence.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
         if hasattr(self, 'idx'):
@@ -1742,7 +1747,7 @@ class Flash(PulseSequence):
 
 
 # ======================================================================
-class MeFlash(Flash):
+class MultiEchoSteadyState(SteadyState):
     # -----------------------------------
     def __init__(
             self,
@@ -1762,7 +1767,7 @@ class MeFlash(Flash):
         Returns:
 
         """
-        Flash.__init__(self, te=max(tes), *args, **kwargs)
+        SteadyState.__init__(self, tes[-1], *args, **kwargs)
         # handle echo times
         self.tes = tes
         # ensure compatible echo_times and repetition_time
@@ -1774,39 +1779,93 @@ class MeFlash(Flash):
                 '`echo_time={}` and `repetition_time={}`'.format(
                     tes, self.tr))
             raise ValueError(text)
-        self.spin_model = None
-        self.base_p_ops = None
-        self.te_p_ops = None
 
     # -----------------------------------
-    def prepare_signals(
+    def signal(
             self,
             spin_model,
             *args,
             **kwargs):
-        # todo: combine with `signals`
-        self.spin_model = spin_model
-        self.base_p_ops = self.propagators(spin_model)
-        self.te_p_ops = [
+        te_p_ops = [
             [Delay(duration).propagator(spin_model, *args, **kwargs)
              for duration in self._pre_post_delays(te, self.t_ro, self.t_pexc)]
             for te in self.tes]
-
-    # -----------------------------------
-    def signals(self):
         central_p_ops = self._p_ops_reorder(
-                self.base_p_ops, self.idx['ReadOut'])
-        return np.array([
+            self.propagators(spin_model), self.idx['ReadOut'])
+        s_arr = np.array([
             self._signal(
-                self.spin_model,
+                spin_model,
                 self._propagator(
                     [te_p_op_i] + central_p_ops + [te_p_op_f],
                     self.n_r))
-            for (te_p_op_i, te_p_op_f) in self.te_p_ops])
+            for (te_p_op_i, te_p_op_f) in te_p_ops])
+        return s_arr
 
 
 # ======================================================================
-class MtFlash(Flash):
+class MultiMtSteadyStateSparse(SteadyState):
+    # -----------------------------------
+    def __init__(
+            self,
+            preps,
+            *args,
+            **kwargs):
+        """
+
+        Args:
+            kernel (PulseSequence): The list of pulses to be repeated.
+            num_repetitions (:
+            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
+                If None, use the pulse with zero carrier frequency.
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        SteadyState.__init__(self, *args, **kwargs)
+        idx = self.get_unique_pulses(('MagnetizationPreparation',))
+        if hasattr(self, 'idx'):
+            self.idx.update(idx)
+        self.freqs = freqs
+        self.fas = fas
+
+    # -----------------------------------
+    def signals(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        te_p_ops = [
+            Delay(t_d).propagator(spin_model, *args, **kwargs)
+            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
+        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+        f_c = mt_pulse.carrier_freq
+        mt_p_ops = [
+            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
+                spin_model, *args, **kwargs)
+            for f in self.freqs for fa in self.fas]
+        central_p_ops_list = [
+            self._p_ops_reorder(
+                self._p_ops_subst(
+                    base_p_ops, self.idx['MagnetizationPreparation'],
+                    mt_p_op),
+                self.idx['ReadOut'])
+            for mt_p_op in mt_p_ops]
+        s_arr = np.array([
+            self._signal(
+                spin_model,
+                self._propagator(
+                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
+                    self.n_r))
+            for central_p_ops in central_p_ops_list]).reshape(
+            (len(self.freqs), len(self.fas)))
+        return s_arr
+
+
+# ======================================================================
+class MultiMtSteadyStateDense(SteadyState):
     # -----------------------------------
     def __init__(
             self,
@@ -1827,63 +1886,116 @@ class MtFlash(Flash):
         Returns:
 
         """
-        Flash.__init__(self, *args, **kwargs)
+        SteadyState.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, 'idx'):
             self.idx.update(idx)
         self.freqs = freqs
         self.fas = fas
-        self.spin_model = None
-        self.base_p_ops = None
-        self.mt_p_ops = None
-        self.te_p_ops = None
 
     # -----------------------------------
-    def prepare_signals(
+    def signals(
             self,
             spin_model,
             *args,
             **kwargs):
-        self.spin_model = spin_model
-        self.base_p_ops = self.propagators(spin_model, *args, **kwargs)
-        self.te_p_ops = [
+        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        te_p_ops = [
             Delay(t_d).propagator(spin_model, *args, **kwargs)
             for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
         mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
-        self.mt_p_ops = [
+        mt_p_ops = [
             mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
                 spin_model, *args, **kwargs)
             for f in self.freqs for fa in self.fas]
-
-    # -----------------------------------
-    def signals(self):
         central_p_ops_list = [
             self._p_ops_reorder(
                 self._p_ops_subst(
-                    self.base_p_ops, self.idx['MagnetizationPreparation'],
+                    base_p_ops, self.idx['MagnetizationPreparation'],
                     mt_p_op),
                 self.idx['ReadOut'])
-            for mt_p_op in self.mt_p_ops]
-        return np.array([
+            for mt_p_op in mt_p_ops]
+        s_arr = np.array([
             self._signal(
-                self.spin_model,
+                spin_model,
                 self._propagator(
-                    [self.te_p_ops[0]] + central_p_ops + [self.te_p_ops[1]],
+                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
                     self.n_r))
             for central_p_ops in central_p_ops_list]).reshape(
             (len(self.freqs), len(self.fas)))
+        return s_arr
 
 
 # ======================================================================
-class MtMeFlash(Flash):
-    pass
+class MultiMtVariableMultiEchoSteadyState(MultiEchoSteadyState):
+    # -----------------------------------
+    def __init__(
+            self,
+            preps,
+            tes=None,
+            tr=None,
+            *args,
+            **kwargs):
+        """
+
+        Args:
+            kernel (PulseSequence): The list of pulses to be repeated.
+            num_repetitions (:
+            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
+                If None, use the pulse with zero carrier frequency.
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        if tes is None and tr is not None:
+            tes = preps[0]
+        if tr is None:
+            tr = preps[0]
+
+        MultiEchoSteadyState.__init__(self, tes, tr, *args, **kwargs)
+        idx = self.get_unique_pulses(('MagnetizationPreparation',))
+        if hasattr(self, 'idx'):
+            self.idx.update(idx)
+        self.preps = preps
+
+    # -----------------------------------
+    def signals(
+            self,
+            spin_model,
+            *args,
+            **kwargs):
+        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        te_p_ops = [
+            Delay(t_d).propagator(spin_model, *args, **kwargs)
+            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
+        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+        f_c = mt_pulse.carrier_freq
+        mt_p_ops = [
+            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
+                spin_model, *args, **kwargs)
+            for f in self.freqs for fa in self.fas]
+        central_p_ops_list = [
+            self._p_ops_reorder(
+                self._p_ops_subst(
+                    base_p_ops, self.idx['MagnetizationPreparation'],
+                    mt_p_op),
+                self.idx['ReadOut'])
+            for mt_p_op in mt_p_ops]
+        s_arr = np.array([
+            self._signal(
+                spin_model,
+                self._propagator(
+                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
+                    self.n_r))
+            for central_p_ops in central_p_ops_list]).reshape(
+            (len(self.freqs), len(self.fas)))
+        return s_arr
 
 
-# ======================================================================
-class MtMeVtrFlash(Flash):
-    pass
-
+MtFlashSparse([], [1, 4])
 
 # ======================================================================
 # :: Tests
