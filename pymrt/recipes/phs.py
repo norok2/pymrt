@@ -24,8 +24,8 @@ from scipy.fftpack import fftn, ifftn
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-import pymrt.computation as pmc
 
+from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -391,7 +391,6 @@ def unwrap_sorting_path(
     """
     from skimage.restoration import unwrap_phase
 
-
     if unwrap_axes:
         loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
                     for j, dim in enumerate(arr.shape)]
@@ -458,3 +457,15 @@ def unwrap(
     if callable(method):
         arr = method(arr, **method_kws)
     return arr
+
+
+# ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

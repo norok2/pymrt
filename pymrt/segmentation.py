@@ -54,10 +54,12 @@ import scipy.signal  # SciPy: Signal Processing
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-# from pymrt import INFO, DIRS
-# from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+
+from pymrt import INFO, DIRS
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
+from pymrt import msg, dbg
+
 from pymrt.config import CFG
 
 
