@@ -98,7 +98,7 @@ import pymrt.sequences
 import pymrt.extras
 
 from pymrt.sequences import mp2rage
-from pymrt.sequences import matrix_algebra
+from pymrt.sequences import bloch_sim_matrix_algebra
 from pymrt.extras import siemens
 from pymrt.extras import jcampdx
 from pymrt.recipes import *

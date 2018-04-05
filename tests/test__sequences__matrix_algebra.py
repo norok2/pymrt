@@ -21,10 +21,10 @@ from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
 from pymrt import elapsed, report
 
-from pymrt.sequences.matrix_algebra import (
+from pymrt.sequences.bloch_sim_matrix_algebra import (
     GAMMA, GAMMA_BAR,
     dynamics_operator, SpinModel, PulseSequence, Pulse, Delay, Spoiler,
-    PulseExc, ReadOut, MagnetizationPreparation, MtFlash, )
+    PulseExc, ReadOut, MagnetizationPreparation,)
 
 
 # ======================================================================

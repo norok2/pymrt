@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.sequences.matrix_algebra: solver of the Bloch-McConnell equations.
+pymrt.sequences.bloch_sim_ma: solver of the Bloch-McConnell equations.
 
 Computes the signal by solving the Bloch-McConnell equations for multiple
 spin systems with exchange, using the matrix algebra approach.
@@ -1529,6 +1529,17 @@ class PulseSequence(object):
         return idx
 
     # -----------------------------------
+    @staticmethod
+    def _duration(pulses):
+        return sum([pulse.duration if hasattr(pulse, 'duration') else 0.0
+                    for pulse in pulses])
+
+    # -----------------------------------
+    @property
+    def duration(self):
+        return self._duration(self.pulses)
+
+    # -----------------------------------
     def propagators(
             self,
             spin_model,
@@ -1682,19 +1693,13 @@ class SteadyState(PulseSequence):
             self.idx.update(idx)
         # handle repetition time
         if tr is not None:
-            temp_tr = sum(
-                [pulse.duration if hasattr(pulse, 'duration') else 0.0
-                 for pulse in self.pulses])
-            if temp_tr < tr:
-                self.pulses[self.idx['ReadOut']].duration = tr - temp_tr
-            else:
-                text = (
-                    'Incompatible pulse sequence and '
-                    '`repetition_time={}`'.format(tr))
-                raise ValueError(text)
+            self.pulses[self.idx['ReadOut']].duration = self._get_t_ro(
+                self.duration, tr)
+        else:
+            tr = self.duration
         self.tr = tr
-        self.t_pexc = self.pulses[self.idx['PulseExc']].duration
         self.t_ro = self.pulses[self.idx['ReadOut']].duration
+        self.t_pexc = self.pulses[self.idx['PulseExc']].duration
         # handle echo times
         self.te = te
         # ensure compatible echo_times and repetition_time
@@ -1707,6 +1712,24 @@ class SteadyState(PulseSequence):
                     te, tr))
             raise ValueError(text)
         self.n_r = n_r
+
+    # -----------------------------------
+    @staticmethod
+    def _get_tr(pulses):
+        return sum([pulse.duration if hasattr(pulse, 'duration') else 0.0
+                    for pulse in pulses])
+
+    # -----------------------------------
+    @staticmethod
+    def _get_t_ro(temp_tr, tr):
+        if temp_tr < tr:
+            t_ro = tr - temp_tr
+        else:
+            text = (
+                'Incompatible pulse sequence and '
+                '`repetition_time={}`'.format(tr))
+            raise ValueError(text)
+        return t_ro
 
     # -----------------------------------
     @staticmethod
@@ -1747,7 +1770,7 @@ class SteadyState(PulseSequence):
 
 
 # ======================================================================
-class MultiEchoSteadyState(SteadyState):
+class MultiGradEchoSteadyState(SteadyState):
     # -----------------------------------
     def __init__(
             self,
@@ -1801,201 +1824,6 @@ class MultiEchoSteadyState(SteadyState):
             for (te_p_op_i, te_p_op_f) in te_p_ops])
         return s_arr
 
-
-# ======================================================================
-class MultiMtSteadyStateSparse(SteadyState):
-    # -----------------------------------
-    def __init__(
-            self,
-            preps,
-            *args,
-            **kwargs):
-        """
-
-        Args:
-            kernel (PulseSequence): The list of pulses to be repeated.
-            num_repetitions (:
-            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
-                If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
-        SteadyState.__init__(self, *args, **kwargs)
-        idx = self.get_unique_pulses(('MagnetizationPreparation',))
-        if hasattr(self, 'idx'):
-            self.idx.update(idx)
-        self.freqs = freqs
-        self.fas = fas
-
-    # -----------------------------------
-    def signals(
-            self,
-            spin_model,
-            *args,
-            **kwargs):
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
-        te_p_ops = [
-            Delay(t_d).propagator(spin_model, *args, **kwargs)
-            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
-        f_c = mt_pulse.carrier_freq
-        mt_p_ops = [
-            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
-            for f in self.freqs for fa in self.fas]
-        central_p_ops_list = [
-            self._p_ops_reorder(
-                self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
-                    mt_p_op),
-                self.idx['ReadOut'])
-            for mt_p_op in mt_p_ops]
-        s_arr = np.array([
-            self._signal(
-                spin_model,
-                self._propagator(
-                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
-                    self.n_r))
-            for central_p_ops in central_p_ops_list]).reshape(
-            (len(self.freqs), len(self.fas)))
-        return s_arr
-
-
-# ======================================================================
-class MultiMtSteadyStateDense(SteadyState):
-    # -----------------------------------
-    def __init__(
-            self,
-            freqs,
-            fas,
-            *args,
-            **kwargs):
-        """
-
-        Args:
-            kernel (PulseSequence): The list of pulses to be repeated.
-            num_repetitions (:
-            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
-                If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
-        SteadyState.__init__(self, *args, **kwargs)
-        idx = self.get_unique_pulses(('MagnetizationPreparation',))
-        if hasattr(self, 'idx'):
-            self.idx.update(idx)
-        self.freqs = freqs
-        self.fas = fas
-
-    # -----------------------------------
-    def signals(
-            self,
-            spin_model,
-            *args,
-            **kwargs):
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
-        te_p_ops = [
-            Delay(t_d).propagator(spin_model, *args, **kwargs)
-            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
-        f_c = mt_pulse.carrier_freq
-        mt_p_ops = [
-            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
-            for f in self.freqs for fa in self.fas]
-        central_p_ops_list = [
-            self._p_ops_reorder(
-                self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
-                    mt_p_op),
-                self.idx['ReadOut'])
-            for mt_p_op in mt_p_ops]
-        s_arr = np.array([
-            self._signal(
-                spin_model,
-                self._propagator(
-                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
-                    self.n_r))
-            for central_p_ops in central_p_ops_list]).reshape(
-            (len(self.freqs), len(self.fas)))
-        return s_arr
-
-
-# ======================================================================
-class MultiMtVariableMultiEchoSteadyState(MultiEchoSteadyState):
-    # -----------------------------------
-    def __init__(
-            self,
-            preps,
-            tes=None,
-            tr=None,
-            *args,
-            **kwargs):
-        """
-
-        Args:
-            kernel (PulseSequence): The list of pulses to be repeated.
-            num_repetitions (:
-            mt_pulse_index (int|None): Index of the MT pulse in the kernel.
-                If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
-        if tes is None and tr is not None:
-            tes = preps[0]
-        if tr is None:
-            tr = preps[0]
-
-        MultiEchoSteadyState.__init__(self, tes, tr, *args, **kwargs)
-        idx = self.get_unique_pulses(('MagnetizationPreparation',))
-        if hasattr(self, 'idx'):
-            self.idx.update(idx)
-        self.preps = preps
-
-    # -----------------------------------
-    def signals(
-            self,
-            spin_model,
-            *args,
-            **kwargs):
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
-        te_p_ops = [
-            Delay(t_d).propagator(spin_model, *args, **kwargs)
-            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
-        f_c = mt_pulse.carrier_freq
-        mt_p_ops = [
-            mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
-            for f in self.freqs for fa in self.fas]
-        central_p_ops_list = [
-            self._p_ops_reorder(
-                self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
-                    mt_p_op),
-                self.idx['ReadOut'])
-            for mt_p_op in mt_p_ops]
-        s_arr = np.array([
-            self._signal(
-                spin_model,
-                self._propagator(
-                    [te_p_ops[0]] + central_p_ops + [te_p_ops[1]],
-                    self.n_r))
-            for central_p_ops in central_p_ops_list]).reshape(
-            (len(self.freqs), len(self.fas)))
-        return s_arr
-
-
-MtFlashSparse([], [1, 4])
 
 # ======================================================================
 # :: Tests
