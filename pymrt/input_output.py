@@ -169,7 +169,7 @@ def masking(
     arr, meta = load(in_filepath, meta=True)
     mask = load(mask_filepath).astype(bool)
     arr[~mask] = mask_val
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -201,7 +201,7 @@ def filter_1_1(
     """
     arr, meta = load(in_filepath, meta=True)
     arr, meta = func(arr, meta, *args, **kwargs)
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -238,7 +238,7 @@ def filter_n_1(
         arrs.append(arr)
         metas.append(meta)
     arr, meta = func(arrs, metas, *args, **kwargs)
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -276,7 +276,7 @@ def filter_n_m(
         metas.append(meta)
     output_list = func(arrs, metas, *args, **kwargs)
     for (arr, meta), out_filepath in zip(output_list, out_filepaths):
-        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+        save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -302,13 +302,13 @@ def filter_n_x(
         func (callable): Filtering function
             (arr: ndarray, aff:ndarray, hdr:header)
             func(list[arr, aff, hdr], *args, *kwargs)) -> list[arr, aff, hdr]
-        *args (tuple): Positional arguments passed to the filtering function.
-        **kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (*tuple): Positional arguments of the filtering function.
+        **kwargs (**dict): Keyword arguments of the filtering function.
 
     Returns:
         None.
     """
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -329,15 +329,15 @@ def simple_filter_1_1(
         out_filepath (str): Output file path
         func (callable): Filtering function (arr: np.ndarray)
             func(arr, *args, *kwargs) -> arr
-        *args (*tuple): Positional arguments passed to the filtering function
-        **kwargs (**dict): Keyword arguments passed to the filtering function
+        *args (*tuple): Positional arguments of the filtering function.
+        **kwargs (**dict): Keyword arguments of the filtering function.
 
     Returns:
         None
     """
     arr, meta = load(in_filepath, meta=True)
     arr = func(arr, *args, **kwargs)
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -358,8 +358,8 @@ def simple_filter_n_1(
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs)) -> arr
-        *args (tuple): Positional arguments passed to the filtering function.
-        **kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (tuple): Positional arguments of the filtering function.
+        **kwargs (dict): Keyword arguments of the filtering function.
 
     Returns:
         None.
@@ -371,7 +371,7 @@ def simple_filter_n_1(
         metas.append(meta)
     arr = func(arrs, *args, **kwargs)
     meta = metas[-1]  # the metadata of the first image
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -396,8 +396,8 @@ def simple_filter_nn_1(
         out_filepath (str): Output file path.
         func (callable): Filtering function (arr: ndarray)
             func(*args, *kwargs)) -> arr
-        *args (tuple): Positional arguments passed to the filtering function.
-        **kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (tuple): Positional arguments of the filtering function.
+        **kwargs (dict): Keyword arguments of the filtering function.
 
     Returns:
         None.
@@ -409,7 +409,43 @@ def simple_filter_nn_1(
         metas.append(meta)
     arr = func(*(arrs + list(args)), **kwargs)
     meta = metas[-1]  # the affine of the last image
-    save(out_filepath, arr, **{k: v for k, v in meta.items()})
+    save(out_filepath, arr, **meta)
+
+
+# ======================================================================
+def simple_filter_inn_1(
+        in_filepaths,
+        out_filepath,
+        func,
+        *args,
+        **kwargs):
+    """
+    Interface to simplified n-1 filter.
+
+    Supports a different signature for `func` compared to `_n_1`.
+    Specifically, two arrays are expected where the first one is iteratively
+    updated with the second one looping through the list
+    This is useful when loading the inputs must be loaded one by one to avoid
+    memory constraints.
+
+    filter(in_filepaths) -> out_filepath
+
+    Args:
+        in_filepaths (Iterable[str]): List of input file paths.
+            The metadata is taken from the first item.
+        out_filepath (str): Output file path.
+        func (callable): Filtering function (arr: ndarray)
+            func(result, arr_i, *args, *kwargs)) -> result
+        *args (tuple): Positional arguments of the filtering function.
+        **kwargs (dict): Keyword arguments of the filtering function.
+
+    Returns:
+        None.
+    """
+    res, meta = load(in_filepaths[0], meta=True)
+    for i, in_filepath in enumerate(in_filepaths[1:]):
+        res = func(res, load(in_filepath), i, *args, **kwargs)
+    save(out_filepath, res, **meta)
 
 
 # ======================================================================
@@ -429,8 +465,8 @@ def simple_filter_1_m(
         out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments of the filtering function
+        **kwargs (dict): Keyword arguments of the filtering function
 
     Returns:
         None.
@@ -438,7 +474,7 @@ def simple_filter_1_m(
     arr, meta = load(in_filepath, meta=True)
     o_arrs = func(arr, *args, **kwargs)
     for arr, out_filepath in zip(o_arrs, out_filepaths):
-        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+        save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -458,8 +494,8 @@ def simple_filter_n_m(
         out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments of the filtering function
+        **kwargs (dict): Keyword arguments of the filtering function
 
     Returns:
         None.
@@ -472,7 +508,7 @@ def simple_filter_n_m(
     o_arrs = func(i_arrs, *args, **kwargs)
     meta = metas[-1]  # the affine of the last image
     for arr, out_filepath in zip(o_arrs, out_filepaths):
-        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+        save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -496,8 +532,8 @@ def simple_filter_nn_m(
         out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments of the filtering function
+        **kwargs (dict): Keyword arguments of the filtering function
 
     Returns:
         None.
@@ -510,7 +546,7 @@ def simple_filter_nn_m(
     o_arrs = func(*(i_arrs + list(args)), **kwargs)
     meta = metas[-1]  # the affine of the last image
     for arr, out_filepath in zip(o_arrs, out_filepaths):
-        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+        save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -540,8 +576,8 @@ def simple_filter_1_x(
              - `{name}`: the result identifier from the computing function.
         func (callable): Filtering function (arr: ndarray)
             func(list[arr], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function
-        **kwargs (dict): Keyword arguments passed to the filtering function
+        *args (tuple): Positional arguments of the filtering function
+        **kwargs (dict): Keyword arguments of the filtering function
 
     Returns:
         None.
@@ -555,7 +591,7 @@ def simple_filter_1_x(
         out_dirpath = os.path.dirname(out_filepath)
         if not os.path.isdir(out_dirpath):
             os.makedirs(out_dirpath)
-        save(out_filepath, arr, **{k: v for k, v in meta.items()})
+        save(out_filepath, arr, **meta)
 
 
 # ======================================================================
@@ -577,13 +613,13 @@ def simple_filter_n_x(
         out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(list[arr], *args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function.
-        **kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (tuple): Positional arguments of the filtering function.
+        **kwargs (dict): Keyword arguments of the filtering function.
 
     Returns:
         None.
     """
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -605,13 +641,13 @@ def simple_filter_nn_x(
         out_filepaths (Iterable[str]): List of output file paths.
         func (callable): Filtering function (arr: ndarray).
             func(*args, *kwargs) -> list[ndarray]
-        *args (tuple): Positional arguments passed to the filtering function.
-        **kwargs (dict): Keyword arguments passed to the filtering function.
+        *args (tuple): Positional arguments of the filtering function.
+        **kwargs (dict): Keyword arguments of the filtering function.
 
     Returns:
         None.
     """
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -672,8 +708,8 @@ def split(
         out_filepath = os.path.join(
             out_dirpath,
             mrt.utils.change_ext(out_basename + '-' + i_str,
-                mrt.utils.EXT['niz'], ''))
-        save(out_filepath, image, **{k: v for k, v in meta.items()})
+                                 mrt.utils.EXT['niz'], ''))
+        save(out_filepath, image, **meta)
         out_filepaths.append(out_filepath)
     return out_filepaths
 
@@ -964,9 +1000,9 @@ def find_objects(
         geometry.find_objects
     """
 
-    def _find_objects(array, structure, max_label):
-        labels, masks = mrt.segmentation.find_objects(array, structure,
-            max_label, False)
+    def _find_objects(array, structure_, max_label_):
+        labels, masks = mrt.segmentation.find_objects(
+            array, structure_, max_label_, False)
         return labels
 
     simple_filter_1_1(
@@ -1035,7 +1071,49 @@ def change_data_type(
     """
     arr, meta = load(in_filepath, meta=True)
     save(
-        out_filepath, arr.astype(data_type), **{k: v for k, v in meta.items()})
+        out_filepath, arr.astype(data_type), **meta)
+
+
+# ======================================================================
+def isum(
+        in_filepaths,
+        out_filepath):
+    """
+    Compute the sum of multiple arrays.
+
+    This is implemented using a memory-efficienty iterative approach.
+    Inputs must have the same shape.
+
+    Args:
+        in_filepaths (str): The input file path.
+        out_filepath (str): The output file path.
+
+    Returns:
+        None.
+    """
+    simple_filter_inn_1(in_filepaths, out_filepath, lambda r, x, i: r + x)
+
+
+# ======================================================================
+def imean(
+        in_filepaths,
+        out_filepath):
+    """
+    Compute the mean of multiple arrays.
+
+    This is implemented using a memory-efficienty iterative approach.
+    Inputs must have the same shape.
+
+    Args:
+        in_filepaths (str): The input file path.
+        out_filepath (str): The output file path.
+
+    Returns:
+        None.
+    """
+    simple_filter_inn_1(
+        in_filepaths, out_filepath,
+        lambda r, x, i: (r * (i + 1) + x) / (i + 2))
 
 
 # ======================================================================
