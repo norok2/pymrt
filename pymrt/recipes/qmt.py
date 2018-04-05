@@ -30,8 +30,8 @@ from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 from pymrt.recipes import generic
-from pymrt.sequences import bloch_sim_matrix_algebra
-from pymrt.sequences.bloch_sim_matrix_algebra import (
+from pymrt.sequences import matrix_algebra
+from pymrt.sequences.matrix_algebra import (
     SpinModel, Pulse, Delay, Spoiler, PulseExc, ReadOut,
     MagnetizationPreparation, PulseSequence, SteadyState,
     MultiGradEchoSteadyState, )
