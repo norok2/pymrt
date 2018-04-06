@@ -24,7 +24,9 @@ from pymrt import elapsed, report
 from pymrt.sequences.matrix_algebra import (
     GAMMA, GAMMA_BAR,
     dynamics_operator, SpinModel, PulseSequence, Pulse, Delay, Spoiler,
-    PulseExc, ReadOut, MagnetizationPreparation,)
+    PulseExc, ReadOut, MagnetizationPreparation, )
+from pymrt.recipes.qmt import (
+    MultiMtSteadyState, MultiMtSteadyState2, MultiMtVarMGESS)
 
 
 # ======================================================================
@@ -51,8 +53,8 @@ def check_dynamics_operator_symbolic():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
     # 3-pool model
@@ -67,8 +69,8 @@ def check_dynamics_operator_symbolic():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
     # 4-pool model
@@ -83,8 +85,8 @@ def check_dynamics_operator_symbolic():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
 
@@ -111,8 +113,8 @@ def check_dynamics_operator():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
     # 3-pool model
@@ -126,8 +128,8 @@ def check_dynamics_operator():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
     # 4-pool model
@@ -141,8 +143,8 @@ def check_dynamics_operator():
 
     print(spin_model)
     print(spin_model.m_eq)
-    print(spin_model.k_op)
-    print(spin_model.l_op)
+    print(spin_model._k_op)
+    print(spin_model._l_op)
     print(dynamics_operator(spin_model, w_c + 10.0, w1))
 
 
@@ -267,7 +269,7 @@ def check_z_spectrum(
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
         frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
-        amplitudes=np.round(mrt.utils.sgnlogspace(1, 5000, 32)),
+        amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
     """
@@ -290,7 +292,7 @@ def check_z_spectrum(
 
     flip_angles = amplitudes * 11.799 / 50.0
 
-    mt_flash = MtFlash(
+    mt_flash = MultiMtSteadyState(
         pulses=[
             MagnetizationPreparation.shaped(
                 10.0e-3, 90.0, 4000, 'gauss', {}, w_c, 'poly',
@@ -304,16 +306,14 @@ def check_z_spectrum(
         tr=70.0e-3,
         n_r=300,
         w_c=w_c,
-        freqs=frequencies,
-        fas=flip_angles)
-
-    mt_flash.prepare_signals(spin_model)
-    data = mt_flash.signals()
+        preps=[(df, fa) for df in frequencies for fa in flip_angles])
+    data = mt_flash.signal(spin_model).reshape(
+        (len(frequencies), len(flip_angles)))
 
     # plot results
     if plot_data:
         sns.set_style('whitegrid')
-        X, Y = np.meshgrid(amplitudes, np.log10(frequencies))
+        X, Y = np.meshgrid(flip_angles, np.log10(frequencies))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -326,6 +326,74 @@ def check_z_spectrum(
         np.savez(save_file, frequencies, amplitudes, data)
     return data, frequencies, flip_angles
 
+
+# ======================================================================
+def check_z_spectrum_sparse(
+        spin_model=SpinModel(
+            s0=1e8,
+            mc=(0.8681, 0.1319),
+            w0=((GAMMA['1H'] * 7.0,) * 2),
+            r1=(1.8, 1.0),
+            r2=(32.2581, 8.4746e4),
+            k=(0.3456,),
+            approx=(None, 'superlorentz_approx')),
+        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(np.linspace(1, 5000, 24)),
+        plot_data=True,
+        save_file=None):
+    """
+    Test calculation of z-spectra
+
+    Args:
+
+        spin_model (SpinModel):
+        frequencies (ndarray[float]):
+        amplitudes (ndarray[float]):
+        plot_data (bool):
+        save_file (string):
+
+    Returns:
+        freq
+
+    """
+    print('Checking Z-spectrum')
+    w_c = spin_model.w0[0]
+
+    flip_angles = amplitudes * 11.799 / 50.0
+
+    mt_flash = MultiMtSteadyState(
+        pulses=[
+            MagnetizationPreparation.shaped(
+                10.0e-3, 90.0, 4000, 'gauss', {}, w_c, 'poly',
+                {'fit_order': 3}),
+            Delay(1.0e-3),
+            Spoiler(1.0),
+            PulseExc.shaped(2.1e-3, 15.0, 1, 'rect', {}),
+            ReadOut(),
+            Spoiler(1.0), ],
+        te=5.0e-3,
+        tr=70.0e-3,
+        n_r=300,
+        w_c=w_c,
+        preps=[(df, fa) for df in frequencies for fa in flip_angles])
+    data = mt_flash.signal(spin_model).reshape(
+        (len(frequencies), len(flip_angles)))
+
+    # plot results
+    if plot_data:
+        sns.set_style('whitegrid')
+        X, Y = np.meshgrid(flip_angles, np.log10(frequencies))
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
+        ax.set_ylabel('Frequency offset / Hz (log10 scale)')
+        ax.set_zlabel('Signal Intensity / arb. units')
+        ax.plot_surface(
+            X, Y, data, cmap=mpl.cm.plasma,
+            rstride=1, cstride=1, linewidth=0.01, antialiased=False)
+    if save_file:
+        np.savez(save_file, frequencies, amplitudes, data)
+    return data, frequencies, flip_angles
 
 # ======================================================================
 def check_fit_spin_model(
@@ -361,7 +429,7 @@ def check_fit_spin_model(
     t_e = 1.7e-3
     t_r = 70.0e-3
     w_c = 297220696
-    mt_flash = MtFlash(
+    mt_flash = MultiMtSteadyState2(
         PulseSequence([
             Delay(
                 t_r - (t_e + 3 * 160.0e-6 + 20000.0e-6 + 970.0e-6 + 100e-6)),
@@ -466,7 +534,7 @@ if __name__ == '__main__':
     #               (0.25, 0.8, 0.001, 1.0), (20.0, 60.0, 8e4, 5e4),
     #               (1.0, 0.3, 0.0, 1.0, 0.5, 1.0),
     #               (None, None, 'superlorenz_approx', 'superlorenz_approx')))
-    check_z_spectrum()
+    check_z_spectrum_sparse()
     elapsed('check_z_spectrum')
 
     # check_fit_spin_model()

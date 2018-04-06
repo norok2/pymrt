@@ -436,7 +436,7 @@ def dynamics_operator(
     Returns:
         l_op (ndarray[float]): The dynamics operator L.
     """
-    l_op = np.zeros(spin_model.operator_shape).astype(spin_model.dtype)
+    l_op = np.zeros(spin_model._operator_shape).astype(spin_model._dtype)
     num_exact, num_approx = 0, 0
     for i, lineshape in enumerate(spin_model.approx):
         # 3: cartesian dims; +1: hom. operator
@@ -456,7 +456,7 @@ def dynamics_operator(
         else:
             l_op[base:base + 3, base:base + 3] += bloch_core
             num_exact += 1
-    return spin_model.l_op + l_op
+    return spin_model._l_op + l_op
 
 
 # ======================================================================
@@ -477,8 +477,8 @@ def _propagator_sum(
     Returns:
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
-    l_op_sum = np.zeros(spin_model.operator_shape)
-    for w1 in pulse_exc.w1_arr:
+    l_op_sum = np.zeros(spin_model._operator_shape)
+    for w1 in pulse_exc._w1_arr:
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
         l_op_sum += pulse_exc.dt * l_op
     return sp.linalg.expm(-l_op_sum)
@@ -504,7 +504,7 @@ def _propagator_sum_order1(
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
     l_ops = []
-    for w1 in pulse_exc.w1_arr:
+    for w1 in pulse_exc._w1_arr:
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
         l_ops.append(pulse_exc.dt * l_op)
     l_op_sum = sum(l_ops)
@@ -535,9 +535,9 @@ def _propagator_sum_sep(
     Returns:
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
-    p_op_w1_sum = np.zeros(spin_model.operator_shape)
+    p_op_w1_sum = np.zeros(spin_model._operator_shape)
     l_op_free = dynamics_operator(spin_model, pulse_exc.w_c, 0.0)
-    for w1 in pulse_exc.w1_arr:
+    for w1 in pulse_exc._w1_arr:
         l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1)
         p_op_w1_sum += (pulse_exc.dt * (l_op - l_op_free))
     # calculate propagators
@@ -572,11 +572,11 @@ def _propagator_poly(
     if not num_samples or num_samples < fit_order + 1:
         num_samples = fit_order + 1
     if pulse_exc.is_real or pulse_exc.is_imag:
-        _w1_arr = pulse_exc.w1_arr.real if pulse_exc.is_real else \
-            pulse_exc.w1_arr.imag
+        _w1_arr = pulse_exc._w1_arr.real if pulse_exc.is_real else \
+            pulse_exc._w1_arr.imag
         # :: calculate samples
         p_op_approx = np.zeros(
-            spin_model.operator_shape + (num_samples,))
+            spin_model._operator_shape + (num_samples,))
         w1_approx = np.linspace(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
@@ -598,19 +598,19 @@ def _propagator_poly(
         p_arr = p_arr.reshape(list(shape[:support_axis]) + [fit_order + 1])
         # :: approximate all propagators and calculate final result
         p_op_arr = np.zeros(
-            (pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrt.utils.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
-        re_min = np.min(pulse_exc.w1_arr.real)
-        im_min = np.min(pulse_exc.w1_arr.imag)
-        re_max = np.max(pulse_exc.w1_arr.real)
-        im_max = np.max(pulse_exc.w1_arr.imag)
+        re_min = np.min(pulse_exc._w1_arr.real)
+        im_min = np.min(pulse_exc._w1_arr.imag)
+        re_max = np.max(pulse_exc._w1_arr.real)
+        im_max = np.max(pulse_exc._w1_arr.imag)
         re_ptp, im_ptp = re_max - re_min, im_max - im_min
         _tmp = sqrt(re_ptp ** 2 +
                     (im_ptp * num_extra_samples + 2 * im_ptp) * re_ptp +
@@ -621,7 +621,7 @@ def _propagator_poly(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_approx = np.zeros(
-            spin_model.operator_shape + (num_samples,))
+            spin_model._operator_shape + (num_samples,))
         w1_approx = np.zeros(
             num_re_samples * num_im_samples).astype(complex)
         i = 0
@@ -648,11 +648,11 @@ def _propagator_poly(
         p_arr = p_arr.reshape(list(shape[:support_axis]) + [fit_order + 1])
         # :: approximate all propagators and calculate final result
         p_op_arr = np.zeros(
-            (pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.real(
-                    np.polyval(p_arr[i, j, :], pulse_exc.w1_arr))
+                    np.polyval(p_arr[i, j, :], pulse_exc._w1_arr))
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrt.utils.mdot(*p_ops[::-1])
     return p_op
@@ -682,10 +682,10 @@ def _propagator_interp(
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
     if pulse_exc.is_real or pulse_exc.is_imag:
-        _w1_arr = pulse_exc.w1_arr.real \
-            if pulse_exc.is_real else pulse_exc.w1_arr.imag
+        _w1_arr = pulse_exc._w1_arr.real \
+            if pulse_exc.is_real else pulse_exc._w1_arr.imag
         # :: calculate samples
-        p_op_approx = np.zeros(spin_model.operator_shape + (num_samples,))
+        p_op_approx = np.zeros(spin_model._operator_shape + (num_samples,))
         w1_approx = np.linspace(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
@@ -693,9 +693,9 @@ def _propagator_interp(
             p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
-            (pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = sp.interpolate.griddata(
                     w1_approx, p_op_approx[i, j, :], _w1_arr,
                     method=method, fill_value=0.0)
@@ -705,10 +705,10 @@ def _propagator_interp(
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
-        re_min = np.min(pulse_exc.w1_arr.real)
-        im_min = np.min(pulse_exc.w1_arr.imag)
-        re_max = np.max(pulse_exc.w1_arr.real)
-        im_max = np.max(pulse_exc.w1_arr.imag)
+        re_min = np.min(pulse_exc._w1_arr.real)
+        im_min = np.min(pulse_exc._w1_arr.imag)
+        re_max = np.max(pulse_exc._w1_arr.real)
+        im_max = np.max(pulse_exc._w1_arr.imag)
         re_ptp, im_ptp = re_max - re_min, im_max - im_min
         _tmp = sqrt(re_ptp ** 2 +
                     (im_ptp * num_extra_samples + 2 * im_ptp) * re_ptp +
@@ -719,7 +719,7 @@ def _propagator_interp(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_approx = np.zeros(
-            spin_model.operator_shape + (num_samples,))
+            spin_model._operator_shape + (num_samples,))
         w1_approx = np.zeros((num_re_samples * num_im_samples, 2))
         i = 0
         for w1_re in w1_re_approx:
@@ -731,12 +731,12 @@ def _propagator_interp(
                 i += 1
         # perform interpolation
         p_op_arr = np.zeros(
-            (pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = sp.interpolate.griddata(
                     w1_approx, p_op_approx[i, j, :],
-                    (pulse_exc.w1_arr.real, pulse_exc.w1_arr.imag),
+                    (pulse_exc._w1_arr.real, pulse_exc._w1_arr.imag),
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrt.utils.mdot(*p_ops[::-1])
@@ -764,11 +764,11 @@ def _propagator_linear(
         p_op (np.ndarray): The (approximated) propagator operator P.
     """
     if pulse_exc.is_real or pulse_exc.is_imag:
-        _w1_arr = pulse_exc.w1_arr.real \
-            if pulse_exc.is_real else pulse_exc.w1_arr.imag
+        _w1_arr = pulse_exc._w1_arr.real \
+            if pulse_exc.is_real else pulse_exc._w1_arr.imag
         # :: calculate samples
         p_op_approx = np.zeros(
-            spin_model.operator_shape + (num_samples,))
+            spin_model._operator_shape + (num_samples,))
         w1_approx = np.linspace(
             np.min(_w1_arr), np.max(_w1_arr), num_samples)
         for i, w1 in enumerate(w1_approx):
@@ -776,9 +776,9 @@ def _propagator_linear(
             p_op_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
         p_op_arr = np.zeros(
-            (pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.interp(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_ops = [p_op_arr[j, :, :] for j in
@@ -787,10 +787,10 @@ def _propagator_linear(
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
-        re_min = np.min(pulse_exc.w1_arr.real)
-        im_min = np.min(pulse_exc.w1_arr.imag)
-        re_max = np.max(pulse_exc.w1_arr.real)
-        im_max = np.max(pulse_exc.w1_arr.imag)
+        re_min = np.min(pulse_exc._w1_arr.real)
+        im_min = np.min(pulse_exc._w1_arr.imag)
+        re_max = np.max(pulse_exc._w1_arr.real)
+        im_max = np.max(pulse_exc._w1_arr.imag)
         re_ptp, im_ptp = re_max - re_min, im_max - im_min
         _tmp = sqrt(re_ptp ** 2 +
                     (im_ptp * num_extra_samples + 2 * im_ptp) * re_ptp +
@@ -801,9 +801,9 @@ def _propagator_linear(
         w1_re_approx = np.linspace(re_min, re_max, num_re_samples)
         w1_im_approx = np.linspace(im_min, im_max, num_im_samples)
         p_op_re_approx = np.zeros(
-            spin_model.operator_shape + (num_re_samples,))
+            spin_model._operator_shape + (num_re_samples,))
         p_op_im_approx = np.zeros(
-            spin_model.operator_shape + (num_im_samples,))
+            spin_model._operator_shape + (num_im_samples,))
         for i, w1_re in enumerate(w1_re_approx):
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_re)
             p_op_re_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
@@ -811,20 +811,20 @@ def _propagator_linear(
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_im)
             p_op_re_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
-        p_op_arr = np.zeros((pulse_exc.num_steps,) + spin_model.operator_shape)
-        for i in range(spin_model.operator_dim):
-            for j in range(spin_model.operator_dim):
+        p_op_arr = np.zeros((pulse_exc.num_steps,) + spin_model._operator_shape)
+        for i in range(spin_model._operator_dim):
+            for j in range(spin_model._operator_dim):
                 p_op_arr_re = np.interp(
-                    pulse_exc.w1_arr.real,
+                    pulse_exc._w1_arr.real,
                     w1_re_approx, p_op_re_approx[i, j, :])
                 p_op_arr_im = np.interp(
-                    pulse_exc.w1_arr.imag,
+                    pulse_exc._w1_arr.imag,
                     w1_im_approx, p_op_im_approx[i, j, :])
                 weighted = \
-                    (p_op_arr_re * np.abs(pulse_exc.w1_arr.real) +
-                     p_op_arr_im * np.abs(pulse_exc.w1_arr.imag)) / \
-                    (np.abs(pulse_exc.w1_arr.real) +
-                     np.abs(pulse_exc.w1_arr.imag))
+                    (p_op_arr_re * np.abs(pulse_exc._w1_arr.real) +
+                     p_op_arr_im * np.abs(pulse_exc._w1_arr.imag)) / \
+                    (np.abs(pulse_exc._w1_arr.real) +
+                     np.abs(pulse_exc._w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
         p_op = mrt.utils.mdot(*p_ops[::-1])
@@ -854,10 +854,10 @@ def _propagator_reduced(
     chunk_marks = np.round(
         np.linspace(0, pulse_exc.num_steps - 1, num_resamples + 1))
     dt_reduced = pulse_exc.dt * pulse_exc.num_steps / num_resamples
-    w1_reduced_arr = np.zeros(num_resamples).astype(pulse_exc.w1_arr[0])
+    w1_reduced_arr = np.zeros(num_resamples).astype(pulse_exc._w1_arr[0])
     for i in range(num_resamples):
         chunk = slice(chunk_marks[i], chunk_marks[i + 1])
-        w1_reduced_arr[i] = np.mean(pulse_exc.w1_arr[chunk])
+        w1_reduced_arr[i] = np.mean(pulse_exc._w1_arr[chunk])
     p_ops = [
         sp.linalg.expm(
             -dt_reduced *
@@ -904,27 +904,28 @@ class SpinModel(object):
             if approx is not None else [None] * self.num_pools
         self.num_approx = sum(
             [0 if item is None else 1 for item in self.approx])
-        self.num_exact = self.num_pools - self.num_approx
-        self.operator_dim = 1 + 3 * self.num_exact + self.num_approx
-        self.operator_shape = (self.operator_dim,) * 2
-        self.operator_base_dim = 1 + 3 * self.num_pools
-        self.operator_base_shape = (self.operator_base_dim,) * 2
-        self.dtype = type(mc[0])
+        self._num_exact = self.num_pools - self.num_approx
+        self._operator_dim = 1 + 3 * self._num_exact + self.num_approx
+        self._operator_shape = (self._operator_dim,) * 2
+        self._operator_base_dim = 1 + 3 * self.num_pools
+        self._operator_base_shape = (self._operator_base_dim,) * 2
+        self._dtype = type(mc[0])
         # simple check on the number of parameters
         if self.num_pools != len(r1) != len(r2) != len(approx) \
                 or len(k) != self.num_exchange:
             raise IndexError('inconsistent spin model')
-        sum_mc = sum(mc)
+
         self.s0 = s0
-        self.mc = np.array(mc) / sum_mc
+        self.mc = np.array(mc) / sum(mc)
         self.m0 = self.mc
         self.w0 = np.array(w0)
         self.r1 = np.array(r1)
         self.r2 = np.array(r2)
         self.k = np.array(k)
-        self.k_op = self.kinetics_operator()
-        self.ignore_k_transverse = True
-        self.l_op = self.dynamics_operator()
+
+        self._ignore_k_transverse = True
+        self._k_op = self.kinetics_operator()
+        self._l_op = self.dynamics_operator()
 
     # -----------------------------------
     def equilibrium_magnetization(self):
@@ -941,7 +942,7 @@ class SpinModel(object):
         Returns:
             m_eq (np.ndarray): The equilibrium magnetization vector.
         """
-        m_eq = np.zeros(self.operator_dim).astype(self.dtype)
+        m_eq = np.zeros(self._operator_dim).astype(self._dtype)
         m_eq[0] = 0.5
         num_exact, num_approx = 0, 0
         for m0z, lineshape in zip(self.m0, self.approx):
@@ -971,7 +972,7 @@ class SpinModel(object):
         Returns:
             det (np.ndarray): The detector vector.
         """
-        det = np.zeros(self.operator_dim).astype(complex)
+        det = np.zeros(self._operator_dim).astype(complex)
         num_exact, num_approx = 0, 0
         for lineshape in self.approx:
             # 3: cartesian dims; +1: hom. operator
@@ -994,7 +995,7 @@ class SpinModel(object):
             l_op (np.ndarray): The dynamics operator L.
         """
         num_pools = len(self.approx)
-        l_op = np.zeros(self.operator_base_shape).astype(self.dtype)
+        l_op = np.zeros(self._operator_base_shape).astype(self._dtype)
         # # ...to make L invertible
         # L[0, 0] = -2.0
         to_remove = []
@@ -1012,9 +1013,9 @@ class SpinModel(object):
                 to_remove.extend([base, base + 1])
         # include pool-pool interaction
         locator = np.diag([0.0, 0.0, 1.0]) \
-            if self.ignore_k_transverse else np.eye(3)
+            if self._ignore_k_transverse else np.eye(3)
         m0_op = np.repeat(self.m0.reshape((-1, 1)), self.num_pools, axis=1)
-        l_k_op = self.k_op * m0_op - np.diag(np.dot(self.k_op, self.m0))
+        l_k_op = self._k_op * m0_op - np.diag(np.dot(self._k_op, self.m0))
         l_op[1:, 1:] -= np.kron(l_k_op, locator)
         # remove transverse components of approximated pools
         l_op = np.delete(l_op, to_remove, 0)
@@ -1032,7 +1033,7 @@ class SpinModel(object):
         indexes = sorted(
             list(itertools.combinations(range(self.num_pools), 2)),
             key=lambda x: x[1])
-        k_op = np.zeros((self.num_pools,) * 2).astype(self.dtype)
+        k_op = np.zeros((self.num_pools,) * 2).astype(self._dtype)
         for k, index in zip(self.k, indexes):
             k_op[index] = k
             k_op[index[::-1]] = k
@@ -1040,15 +1041,41 @@ class SpinModel(object):
 
     # -----------------------------------
     def __str__(self):
-        text = 'SpinModel: '
-        names = ['s0', 'm0', 'w0', 'r1', 'r2', 'k']
-        for name in names:
-            text += '{}={}  '.format(name, getattr(self, name))
+        text = '{}: '.format(self.__class__.__name__)
+        for name in dir(self):
+            if not name.startswith('_'):
+                text += '{}={}  '.format(name, getattr(self, name))
         return text
 
 
 # ======================================================================
-class Pulse(object):
+class SequenceEvent(object):
+    """
+    Pulse sequence event.
+    """
+
+    # -----------------------------------
+    def __init__(
+            self,
+            duration):
+        """
+
+        Args:
+            duration ():
+        """
+        self.duration = duration
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}: '.format(self.__class__.__name__)
+        for name in dir(self):
+            if not name.startswith('_'):
+                text += '{}={}  '.format(name, getattr(self, name))
+        return text
+
+
+# ======================================================================
+class Pulse(SequenceEvent):
     """
     Pulse excitation interacting with the spin system.
     """
@@ -1056,7 +1083,7 @@ class Pulse(object):
     # -----------------------------------
     def __init__(
             self,
-            duration,
+            duration=0.0,
             w1_arr=None,
             w_c=None,
             label=None):
@@ -1075,10 +1102,10 @@ class Pulse(object):
         """
         # todo: add something to memorize shape
         # so that setting flip angle to 0 does not munge the shape
+        SequenceEvent.__init__(self, duration)
         self.shape = 'custom'
-        self.duration = duration
         self.w_c = w_c if w_c is not None else 0.0
-        self.w1_arr = w1_arr if w1_arr is not None else np.array((1.0,))
+        self._w1_arr = w1_arr if w1_arr is not None else np.array((1.0,))
         self.num_steps = len(w1_arr)
         self.dt = self.duration / self.num_steps
         if self.num_steps < 1 or self.dt < 0.0:
@@ -1187,7 +1214,7 @@ class Pulse(object):
         Returns:
             norm (float): The norm of the pulse excitation.
         """
-        return np.sum(np.abs(self.w1_arr * self.dt))
+        return np.sum(np.abs(self._w1_arr * self.dt))
 
     # -----------------------------------
     def set_norm(self, new_norm):
@@ -1204,9 +1231,9 @@ class Pulse(object):
             None.
         """
         if self.norm == 0.0:
-            self.w1_arr = np.ones_like(self.w1_arr)
+            self._w1_arr = np.ones_like(self._w1_arr)
             self.norm = self.get_norm()
-        self.w1_arr = self.w1_arr * new_norm / self.norm
+        self._w1_arr = self._w1_arr * new_norm / self.norm
         self.norm = new_norm
 
     # -----------------------------------
@@ -1241,11 +1268,8 @@ class Pulse(object):
         """
         Set a new carrier frequency for the pulse excitation.
 
-        This is equivalent to setting the norm (mind a scaling factor).
-        Note that this modifies the w1_arr.
-
         Args:
-            new_flip_angle (float): The new flip angle of the pulse in deg.
+            new_f_c (float): The new flip angle of the pulse in deg.
 
         Returns:
             None.
@@ -1258,11 +1282,11 @@ class Pulse(object):
         """
         Shift the carrier frequency for the pulse excitation.
 
-        This is equivalent to setting the norm (mind a scaling factor).
-        Note that this modifies the w1_arr.
+        Note that consecutive calls to this function will accumulate the shift
+        with respect to the original carrier frequency.
 
         Args:
-            new_flip_angle (float): The new flip angle of the pulse in deg.
+            delta_f_c (float): The new flip angle of the pulse in deg.
 
         Returns:
             None.
@@ -1296,7 +1320,7 @@ class Pulse(object):
             p_ops = [
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
-                for w1 in self.w1_arr]
+                for w1 in self._w1_arr]
             p_op = mrt.utils.mdot(*p_ops[::-1])
         else:
             try:
@@ -1308,12 +1332,12 @@ class Pulse(object):
                 p_ops = [
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
-                    for w1 in self.w1_arr]
+                    for w1 in self._w1_arr]
                 p_op = mrt.utils.mdot(*p_ops[::-1])
         return p_op
 
     # -----------------------------------
-    def __str__(self):
+    def __repr__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
             'flip_angle', round(self.flip_angle, 1),
@@ -1325,12 +1349,12 @@ class Pulse(object):
             if hasattr(self, name):
                 text += '{}={}  '.format(name, getattr(self, name))
         if self.shape == 'custom':
-            text += '\n w1_arr={}'.format(self.w1_arr)
+            text += '\n w1_arr={}'.format(self._w1_arr)
         return text
 
 
 # ======================================================================
-class Spoiler(object):
+class Spoiler(SequenceEvent):
     """
     Spoiler for eliminating T2*.
     """
@@ -1338,7 +1362,8 @@ class Spoiler(object):
     # -----------------------------------
     def __init__(
             self,
-            efficiency=1.0):
+            efficiency=1.0,
+            duration=0.0):
         """
         Base constructor of the spoiler class.
 
@@ -1348,6 +1373,7 @@ class Spoiler(object):
         Returns:
             None
         """
+        SequenceEvent.__init__(self, duration)
         self.efficiency = efficiency
 
     # -----------------------------------
@@ -1366,7 +1392,7 @@ class Spoiler(object):
         Returns:
             y (ndarray[float]): The propagator.
         """
-        p_op_diag = np.ones(spin_model.operator_dim)
+        p_op_diag = np.ones(spin_model._operator_dim)
         num_exact, num_approx = 0, 0
         for lineshape in spin_model.approx:
             # 3: cartesian dims; +1: hom. operator
@@ -1377,14 +1403,6 @@ class Spoiler(object):
                 p_op_diag[base:base + 2] -= self.efficiency
                 num_exact += 1
         return np.diag(p_op_diag)
-
-    # -----------------------------------
-    def __str__(self):
-        text = '{}: '.format(self.__class__.__name__)
-        names = ['efficiency']
-        for name in names:
-            text += '{}={}  '.format(name, getattr(self, name))
-        return text
 
 
 # ======================================================================
@@ -1486,9 +1504,7 @@ class PulseSequence(object):
     def __init__(
             self,
             pulses,
-            w_c=None,
-            *args,
-            **kwargs):
+            w_c=None):
         """
         Base constructor of the pulse sequence class.
 
@@ -1496,11 +1512,11 @@ class PulseSequence(object):
             w_c (float|None): Carrier angular frequency of the pulse in rad/s.
         """
         self.pulses = pulses
-        self.w_c = w_c
+        self._w_c = w_c
         for pulse in pulses:
             if hasattr(pulse, 'w_c') and pulse.w_c is None:
-                pulse.w_c = self.w_c
-        self.idx = dict()
+                pulse.w_c = self._w_c
+        self._idx = dict()
 
     # -----------------------------------
     def get_unique_pulses(
@@ -1650,16 +1666,26 @@ class PulseSequence(object):
         return p_ops
 
     # -----------------------------------
-    def __str__(self):
+    def __repr__(self):
         text = '{}'.format(self.__class__.__name__)
-        if hasattr(self, 'num_repetitions'):
-            text += ' (num_repetitions={})'.format(self.n_r)
         text += ':\n'
         if hasattr(self, 'pulses'):
             for pulse in self.pulses:
                 text += '  {}\n'.format(pulse)
-        if hasattr(self, 'kernel'):
-            text += '{}\n'.format(self.kernel)
+        return text
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}: '.format(self.__class__.__name__)
+        _blacklist = ['pulses']
+        if hasattr(self, 'pulses'):
+            text += 'pulses=[\n'
+            for pulse in self.pulses:
+                text += '  -{}\n'.format(pulse)
+            text += '  ]\n'
+        for name in dir(self):
+            if not name.startswith('_') and name not in _blacklist:
+                text += '{}={}  '.format(name, getattr(self, name))
         return text
 
 
@@ -1686,26 +1712,25 @@ class SteadyState(PulseSequence):
         Returns:
 
         """
-        print(te, tr)
         PulseSequence.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
         if hasattr(self, 'idx'):
-            self.idx.update(idx)
+            self._idx.update(idx)
         # handle repetition time
         if tr is not None:
-            self.pulses[self.idx['ReadOut']].duration = self._get_t_ro(
+            self.pulses[self._idx['ReadOut']].duration = self._get_t_ro(
                 self.duration, tr)
         else:
             tr = self.duration
         self.tr = tr
-        self.t_ro = self.pulses[self.idx['ReadOut']].duration
-        self.t_pexc = self.pulses[self.idx['PulseExc']].duration
+        self._t_ro = self.pulses[self._idx['ReadOut']].duration
+        self._t_pexc = self.pulses[self._idx['PulseExc']].duration
         # handle echo times
         self.te = te
         # ensure compatible echo_times and repetition_time
         if any([t < 0
                 for t in self._pre_post_delays(
-                self.te, self.t_ro, self.t_pexc)]):
+                self.te, self._t_ro, self._t_pexc)]):
             text = (
                 'Incompatible options '
                 '`echo_time={}` and `repetition_time={}`'.format(
@@ -1761,12 +1786,24 @@ class SteadyState(PulseSequence):
         """
         base_p_ops = self.propagators(spin_model, *args, **kwargs)
         pre_t, post_t = self._pre_post_delays(
-            self.te, self.t_ro, self.t_pexc)
+            self.te, self._t_ro, self._t_pexc)
         p_ops = (
                 Delay(pre_t).propagator(spin_model, *args, **kwargs) +
-                self._p_ops_reorder(base_p_ops, self.idx['ReadOut']) +
+                self._p_ops_reorder(base_p_ops, self._idx['ReadOut']) +
                 Delay(post_t).propagator(spin_model, *args, **kwargs))
         return self._propagator(p_ops, self.n_r)
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}'.format(self.__class__.__name__)
+        for attr in ('tr', 'n_r', 'te', 'tes'):
+            if hasattr(self, attr):
+                text += '{}={}'.format(attr, getattr(self, attr))
+        text += ':\n'
+        if hasattr(self, 'pulses'):
+            for pulse in self.pulses:
+                text += '  {}\n'.format(pulse)
+        return text
 
 
 # ======================================================================
@@ -1796,7 +1833,7 @@ class MultiGradEchoSteadyState(SteadyState):
         # ensure compatible echo_times and repetition_time
         if any([t < 0
                 for te in self.tes
-                for t in self._pre_post_delays(te, self.t_ro, self.t_pexc)]):
+                for t in self._pre_post_delays(te, self._t_ro, self._t_pexc)]):
             text = (
                 'Incompatible options '
                 '`echo_time={}` and `repetition_time={}`'.format(
@@ -1811,10 +1848,11 @@ class MultiGradEchoSteadyState(SteadyState):
             **kwargs):
         te_p_ops = [
             [Delay(duration).propagator(spin_model, *args, **kwargs)
-             for duration in self._pre_post_delays(te, self.t_ro, self.t_pexc)]
+             for duration in
+             self._pre_post_delays(te, self._t_ro, self._t_pexc)]
             for te in self.tes]
         central_p_ops = self._p_ops_reorder(
-            self.propagators(spin_model), self.idx['ReadOut'])
+            self.propagators(spin_model), self._idx['ReadOut'])
         s_arr = np.array([
             self._signal(
                 spin_model,
@@ -1823,6 +1861,18 @@ class MultiGradEchoSteadyState(SteadyState):
                     self.n_r))
             for (te_p_op_i, te_p_op_f) in te_p_ops])
         return s_arr
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}'.format(self.__class__.__name__)
+        for attr in ('tr', 'n_r', 'tes'):
+            if hasattr(self, attr):
+                text += '{}={}'.format(attr, getattr(self, attr))
+        text += ':\n'
+        if hasattr(self, 'pulses'):
+            for pulse in self.pulses:
+                text += '  {}\n'.format(pulse)
+        return text
 
 
 # ======================================================================

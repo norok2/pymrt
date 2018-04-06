@@ -62,13 +62,21 @@ class MultiMtSteadyState(SteadyState):
             *args ():
             **kwargs ():
         """
-        self.prep_labels = ['Frequency', 'FlipAngle']
-        self.prep_units = ['Hz', 'deg']
         SteadyState.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, 'idx'):
-            self.idx.update(idx)
+            self._idx.update(idx)
         self.preps = preps
+
+    # -----------------------------------
+    @staticmethod
+    def get_prep_labels():
+        return 'PrepFrequency', 'PrepFlipAngle'
+
+    # -----------------------------------
+    @staticmethod
+    def get_prep_units():
+        return 'Hz', 'deg'
 
     # -----------------------------------
     def signal(
@@ -79,8 +87,8 @@ class MultiMtSteadyState(SteadyState):
         base_p_ops = self.propagators(spin_model, *args, **kwargs)
         te_p_ops = [
             Delay(t_d).propagator(spin_model, *args, **kwargs)
-            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+            for t_d in self._pre_post_delays(self.te, self._t_ro, self._t_pexc)]
+        mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
         mt_p_ops = [
             mt_pulse.set_carrier_freq(f_c + df).set_flip_angle(fa).propagator(
@@ -89,9 +97,9 @@ class MultiMtSteadyState(SteadyState):
         central_p_ops_list = [
             self._p_ops_reorder(
                 self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
+                    base_p_ops, self._idx['MagnetizationPreparation'],
                     mt_p_op),
-                self.idx['ReadOut'])
+                self._idx['ReadOut'])
             for mt_p_op in mt_p_ops]
         s_arr = np.array([
             self._signal(
@@ -128,7 +136,7 @@ class MultiMtSteadyState2(SteadyState):
         SteadyState.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, 'idx'):
-            self.idx.update(idx)
+            self._idx.update(idx)
         self.freqs = freqs
         self.fas = fas
 
@@ -141,8 +149,8 @@ class MultiMtSteadyState2(SteadyState):
         base_p_ops = self.propagators(spin_model, *args, **kwargs)
         te_p_ops = [
             Delay(t_d).propagator(spin_model, *args, **kwargs)
-            for t_d in self._pre_post_delays(self.te, self.t_ro, self.t_pexc)]
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+            for t_d in self._pre_post_delays(self.te, self._t_ro, self._t_pexc)]
+        mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
         mt_p_ops = [
             mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
@@ -151,9 +159,9 @@ class MultiMtSteadyState2(SteadyState):
         central_p_ops_list = [
             self._p_ops_reorder(
                 self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
+                    base_p_ops, self._idx['MagnetizationPreparation'],
                     mt_p_op),
-                self.idx['ReadOut'])
+                self._idx['ReadOut'])
             for mt_p_op in mt_p_ops]
         s_arr = np.array([
             self._signal(
@@ -167,7 +175,7 @@ class MultiMtSteadyState2(SteadyState):
 
 
 # ======================================================================
-class MultiMtVariableMGESS(MultiGradEchoSteadyState):
+class MultiMtVarMGESS(MultiGradEchoSteadyState):
     # -----------------------------------
     def __init__(
             self,
@@ -186,10 +194,8 @@ class MultiMtVariableMGESS(MultiGradEchoSteadyState):
             *args ():
             **kwargs ():
         """
-        # todo: support for multiple flip angles
-        self.prep_labels = [
-            'MpFrequency', 'MpFlipAngle', 'FlipAngle', 'TR', 'TEs']
-        self.prep_units = ['Hz', 'deg', 'deg', 's', 's']
+
+
         if tes is None and tr is not None:
             assert (all(
                 [len(prep) == len(self.prep_labels) - 2 for prep in preps]))
@@ -200,12 +206,21 @@ class MultiMtVariableMGESS(MultiGradEchoSteadyState):
             assert (all([len(prep) == len(self.prep_labels) for prep in preps]))
         if tr is None:
             tr = preps[0][self.prep_labels.index('TR')]
-        MultiGradEchoSteadyState.__init__(
-            self, tes, tr, *args, **kwargs)
+        MultiGradEchoSteadyState.__init__(self, tes, tr, *args, **kwargs)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, 'idx'):
-            self.idx.update(idx)
+            self._idx.update(idx)
         self.preps = preps
+
+    # -----------------------------------
+    @staticmethod
+    def get_prep_labels():
+        return 'PrepFrequency', 'PrepFlipAngle', 'FlipAngle', 'TR', 'TEs'
+
+    # -----------------------------------
+    @staticmethod
+    def get_prep_units():
+        return 'Hz', 'deg', 'deg', 's', 's'
 
     # -----------------------------------
     def signal(
@@ -216,12 +231,12 @@ class MultiMtVariableMGESS(MultiGradEchoSteadyState):
         base_p_ops = self.propagators(spin_model, *args, **kwargs)
         unique_pre_post_delays = set([
             self._pre_post_delays(te, self._get_t_ro(self.duration, ),
-                self.t_pexc)
+                self._t_pexc)
             for df, mfa, fa, tr, tes in preps])
         unique_pre_post_p_ops = {
             t_d: Delay(t_d).propagator(spin_model, *args, **kwargs)
             for t_d in unique_pre_post_delays}
-        mt_pulse = self.pulses[self.idx['MagnetizationPreparation']]
+        mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
         unique_mt = set([(df, mfa) for df, mfa, tr, tes in self.preps])
         unique_mt_p_ops = [
@@ -232,9 +247,9 @@ class MultiMtVariableMGESS(MultiGradEchoSteadyState):
         central_p_ops_list = [
             self._p_ops_reorder(
                 self._p_ops_subst(
-                    base_p_ops, self.idx['MagnetizationPreparation'],
+                    base_p_ops, self._idx['MagnetizationPreparation'],
                     mt_p_op),
-                self.idx['ReadOut'])
+                self._idx['ReadOut'])
             for mt_p_op in mt_p_ops]
         s_arr = np.array([
             self._signal(
