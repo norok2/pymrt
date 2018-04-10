@@ -1665,6 +1665,13 @@ class PulseSequence(object):
         p_ops[idx] = new_p_op
         return p_ops
 
+# -----------------------------------
+    @staticmethod
+    def _p_ops_substs(p_ops, substs):
+        for idx, new_p_op in substs:
+            p_ops[idx] = new_p_op
+        return p_ops
+
     # -----------------------------------
     def __repr__(self):
         text = '{}'.format(self.__class__.__name__)
@@ -1694,8 +1701,8 @@ class SteadyState(PulseSequence):
     # -----------------------------------
     def __init__(
             self,
-            te,
-            tr,
+            te=None,
+            tr=None,
             n_r=1,
             *args,
             **kwargs):
@@ -1714,18 +1721,22 @@ class SteadyState(PulseSequence):
         """
         PulseSequence.__init__(self, *args, **kwargs)
         idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
-        if hasattr(self, 'idx'):
+        if hasattr(self, '_idx'):
             self._idx.update(idx)
+        else:
+            self._idx = idx
         # handle repetition time
         if tr is not None:
-            self.pulses[self._idx['ReadOut']].duration = self._get_t_ro(
-                self.duration, tr)
+            self.pulses[self._idx['ReadOut']].duration = \
+                self._get_t_ro(self.duration, tr)
         else:
             tr = self.duration
         self.tr = tr
         self._t_ro = self.pulses[self._idx['ReadOut']].duration
         self._t_pexc = self.pulses[self._idx['PulseExc']].duration
         # handle echo times
+        if te is None:
+            te = self._t_pexc / 2.0
         self.te = te
         # ensure compatible echo_times and repetition_time
         if any([t < 0
@@ -1747,7 +1758,7 @@ class SteadyState(PulseSequence):
     # -----------------------------------
     @staticmethod
     def _get_t_ro(temp_tr, tr):
-        if temp_tr < tr:
+        if tr >= temp_tr:
             t_ro = tr - temp_tr
         else:
             text = (
@@ -1827,9 +1838,11 @@ class MultiGradEchoSteadyState(SteadyState):
         Returns:
 
         """
-        SteadyState.__init__(self, tes[-1], *args, **kwargs)
+        SteadyState.__init__(self, None, *args, **kwargs)
         # handle echo times
-        self.tes = tes
+        if tes is None:
+            tes = self.te
+        self.tes = mrt.utils.auto_repeat(tes, 1, False, False)
         # ensure compatible echo_times and repetition_time
         if any([t < 0
                 for te in self.tes
