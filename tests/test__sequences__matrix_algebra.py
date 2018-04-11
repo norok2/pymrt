@@ -268,8 +268,8 @@ def check_z_spectrum(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 320)),
-        amplitudes=np.round(np.linspace(1, 5000, 240)),
+        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
     """
@@ -337,8 +337,8 @@ def check_z_spectrum2(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 320)),
-        amplitudes=np.round(np.linspace(1, 5000, 240)),
+        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
     """
@@ -406,8 +406,8 @@ def check_z_spectrum_sparse(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 320)),
-        amplitudes=np.round(np.linspace(1, 5000, 240)),
+        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
     """
@@ -444,7 +444,7 @@ def check_z_spectrum_sparse(
         tr=70.0e-3,
         n_r=300,
         w_c=w_c,
-        preps=[(df, mfa) for df in frequencies for mfa in flip_angles])
+        preps=[(df, mfa,) for df in frequencies for mfa in flip_angles])
     data = my_seq.signal(spin_model).reshape(
         (len(frequencies), len(flip_angles)))
 
