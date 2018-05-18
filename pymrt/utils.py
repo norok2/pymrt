@@ -1441,7 +1441,11 @@ def num_align(
     """
     Align a number to a specified value, so as to make it multiple of it.
 
-    This calculated
+    The resulting number is computed using the formula:
+
+    num = num + func(num % align / align) * align - num % align
+
+    where `func` is a rounding function, as determined by `mode`.
 
     Args:
         num (int): The input number.
@@ -1471,7 +1475,7 @@ def num_align(
         256
         >>> num_align(432, mode=0)
         512
-        >>> num_align(447, 32, mode=+1)
+        >>> num_align(447, 32, mode=1)
         448
         >>> num_align(447, 32, mode=-1)
         416
@@ -1483,6 +1487,14 @@ def num_align(
         8
         >>> num_align(128, 128, mode=1)
         128
+        >>> num_align(123.37, 0.5, mode=1)
+        123.5
+        >>> num_align(123.37, 0.5, mode=0)
+        123.5
+        >>> num_align(123.37, 0.5, mode=-1)
+        123.0
+        >>> num_align(123.37, None)
+        123.37
     """
     if mode == 'upper' or mode == +1:
         func = math.ceil
@@ -1493,21 +1505,22 @@ def num_align(
     else:
         raise ValueError('Invalid mode `{mode}`'.format(mode=mode))
 
-    if isinstance(align, str):
-        if align.startswith('pow'):
-            base = int(align[len('pow'):])
-            exp = math.log(num, base)
-            num = int(base ** func(exp))
+    if align:
+        if isinstance(align, str):
+            if align.startswith('pow'):
+                base = int(align[len('pow'):])
+                exp = math.log(num, base)
+                num = int(base ** func(exp))
+            else:
+                raise ValueError('Invalid align `{align}`'.format(align=align))
+
+        elif isinstance(align, (int, float)):
+            modulus = num % align
+            num += func(modulus / align) * align - modulus
+
         else:
-            raise ValueError('Invalid align `{align}`'.format(align=align))
-
-    elif isinstance(align, int):
-        modulus = num % align
-        num += func(modulus / align) * align - modulus
-
-    else:
-        warnings.warn('Will not align `{num}` to `{align}`.'.format(
-            num=num, align=align))
+            warnings.warn('Will not align `{num}` to `{align}`.'.format(
+                num=num, align=align))
 
     return num
 
@@ -2139,10 +2152,12 @@ def ndot(
         arr (np.ndarray): The input array.
         dim (int): The dimension along which to operate.
         start (int|None): The initial index for the dimension.
-            If None, uses the minimum or maximum value depending on the value of
+            If None, uses the minimum or maximum value depending on the
+            value of
             `step`: if `step` is positive use minimum, otherwise maximum.
         stop (int|None): The final index for the dimension.
-            If None, uses the minimum or maximum value depending on the value of
+            If None, uses the minimum or maximum value depending on the
+            value of
             `step`: if `step` is positive use maximum, otherwise minimum.
         step (int|None): The step for the dimension.
             If None, uses unity step.
@@ -5846,30 +5861,30 @@ def filter_cx(
         filter_kws = {}
     if mode == 'cartesian':
         arr = (
-                filter_func(arr.real, *filter_args, **filter_kws) +
-                1j * filter_func(arr.imag, *filter_args, **filter_kws))
+            filter_func(arr.real, *filter_args, **filter_kws) +
+            1j * filter_func(arr.imag, *filter_args, **filter_kws))
     elif mode == 'polar':
         arr = (
-                filter_func(np.abs(arr), *filter_args, **filter_kws) *
-                np.exp(
-                    1j * filter_func(np.angle(arr), *filter_args,
-                        **filter_kws)))
+            filter_func(np.abs(arr), *filter_args, **filter_kws) *
+            np.exp(
+                1j * filter_func(np.angle(arr), *filter_args,
+                                 **filter_kws)))
     elif mode == 'real':
         arr = (
-                filter_func(arr.real, *filter_args,
-                    **filter_kws) + 1j * arr.imag)
+            filter_func(arr.real, *filter_args,
+                        **filter_kws) + 1j * arr.imag)
     elif mode == 'imag':
         arr = (
-                arr.real + 1j * filter_func(arr.imag, *filter_args,
-            **filter_kws))
+            arr.real + 1j * filter_func(arr.imag, *filter_args,
+                                        **filter_kws))
     elif mode == 'mag':
         arr = (
-                filter_func(np.abs(arr), *filter_args, **filter_kws) *
-                np.exp(1j * np.angle(arr)))
+            filter_func(np.abs(arr), *filter_args, **filter_kws) *
+            np.exp(1j * np.angle(arr)))
     elif mode == 'phs':
         arr = (
-                np.abs(arr) * np.exp(
-            1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
+            np.abs(arr) * np.exp(
+                1j * filter_func(np.angle(arr), *filter_args, **filter_kws)))
     else:
         warnings.warn(
             'Mode `{}` not known'.format(mode) + ' Using default.')
