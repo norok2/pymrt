@@ -110,10 +110,10 @@ def read_input(
             Any extra information is stored into the corresponding sections.
     """
     content = {}
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r') as file_obj:
         i = 0
         section = 'base'
-        for line in file:
+        for line in file_obj:
             if HDR_INPUT['section_id'] in line:
                 section = line.strip().strip(HDR_INPUT['section_id'])
                 if section == HDR_INPUT['section_end']:
@@ -162,14 +162,14 @@ def read_output(
               - `data_bg`: the background of the spectrum  in arb. units.
     """
     content = {}
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r') as file_obj:
         # read_output file until it finds the concentrations labels
-        for line in file:
+        for line in file_obj:
             if HDR_OUTPUT['metabolites'] in line:
                 content['metabolites'] = {}
                 break
         # read_output concentrations
-        for line in file:
+        for line in file_obj:
             try:
                 if line.strip():
                     val, err, over_cre, name = line.split()
@@ -185,10 +185,10 @@ def read_output(
         for label in labels:
             vals = []
             if label == labels[0]:
-                for line in file:
+                for line in file_obj:
                     if HDR_OUTPUT[label] in line:
                         break
-            for line in file:
+            for line in file_obj:
                 try:
                     vals.extend([float(val) for val in line.split()])
                 except ValueError:
@@ -197,8 +197,8 @@ def read_output(
 
         # todo: improve support for all output
         # read_output extra information
-        file.seek(0)
-        for line in file:
+        file_obj.seek(0)
+        for line in file_obj:
             if '=' in line or ':' in line or ',' in line:
                 if 'extra' not in content:
                     content['extra'] = {}
@@ -208,7 +208,7 @@ def read_output(
                     item = item.strip()
                     if item:
                         while item.count('\'') % 2 != 0:
-                            item += file.readline().strip()
+                            item += file_obj.readline().strip()
                         if not label:
                             label = item.strip()
                         if label not in content['extra']:
