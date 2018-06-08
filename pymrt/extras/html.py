@@ -86,6 +86,9 @@ def _trim(filepath):
 def to_image(
         html_code,
         save_filepath,
+        method=None,
+        html_filepath=True,
+        img_type='png',
         dpi=96,
         trim=True,
         force=False,
@@ -95,7 +98,11 @@ def to_image(
 
     Args:
         html_code (str): The HTML code to render.
-        save_filepath (str):
+        save_filepath (str): The image file.
+        method (str|None): The HTML-to-image method
+        html_filepath (str|bool|None): The intermediate HTML file.
+        img_type (str): The image type / extension of the output.
+        dpi (int|float): The image density of the output.
         trim (bool): Remove borders from the image.
         force (bool): Force calculation of output.
         verbose (int): Set level of verbosity.
@@ -103,17 +110,47 @@ def to_image(
     Returns:
         None.
     """
-    D_DPI = 96
-    D_WIDTH = 1024
-    zoom = dpi / D_DPI
-    width = int(zoom * D_WIDTH)
-    html_filepath = mrt.utils.change_ext(save_filepath, 'html')
-    with open(html_filepath, 'wb+') as file_obj:
-        file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))
+    available_methods = []
+    if mrt.utils.which('wkhtmltoimage')[1]:
+        available_methods.append('webkit-png')
+    if mrt.utils.which('wkhtmltopdf')[1]:
+        available_methods.append('webkit-pdf')
+    try:
+        import weasyprint
+    except ImportError:
+        weasyprint = None
+    else:
+        available_methods.append('weasyprint')
 
-    os.system(
-        'wkhtmltoimage --encoding UTF-8 --zoom {zoom} --width {width} '
-        ' "{html_filepath}" "{save_filepath}"'.format_map(locals()))
+    if not method:
+        method = available_methods[0]
+
+    # export intermediate HTML output
+    if html_filepath is True or method == 'webkit':
+        html_filepath = mrt.utils.change_ext(save_filepath, 'html')
+    if html_filepath:
+        with open(html_filepath, 'wb+') as file_obj:
+            file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))
+
+    if method == 'webkit':
+        d_webkit_dpi = 96
+        d_webkit_width = 1024
+        zoom = dpi / d_webkit_dpi
+        width = int(zoom * d_webkit_width)
+        if img_type.lower() == 'png':
+            webkit_cmd = 'wkhtmltoimage'
+        elif img_type.lower() == 'pdf':
+            webkit_cmd = 'wkhtmltopdf'
+        os.system(
+            '{webkit_cmd} --encoding UTF-8 --zoom {zoom} --width {width} '
+            ' "{html_filepath}" "{save_filepath}"'.format_map(locals()))
+    elif method == 'weasyprint':
+        html_obj = weasyprint.HTML(string=html_code)
+        if img_type.lower() == 'png':
+            html_obj.write_png()
+        elif img_type.lower() == 'pdf':
+            html_obj.write_pdf()
+
     if trim:
         _trim(save_filepath)
 
