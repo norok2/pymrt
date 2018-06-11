@@ -25,7 +25,8 @@ import shlex  # Simple lexical analysis
 import warnings  # Warning control
 import importlib  # The implementation of import
 import gzip  # Support for gzip files
-import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
+import bz2  # Support for bzip2 compression
+# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import struct  # Interpret strings as packed binary data
 import re  # Regular expression operations
@@ -71,6 +72,7 @@ EXT = {
     'data': 'json',
     'gzip': 'gz',
     'bzip': 'bz2',
+    'bzip2': 'bz2',
     'lzip': 'lz',
 }
 D_TAB_SIZE = 8
@@ -3048,13 +3050,17 @@ def auto_open(filepath, *args, **kwargs):
 # ======================================================================
 def zopen(filepath, mode='rb', *args, **kwargs):
     """
-    Auto-magically open a gzip-compressed file.
+    Auto-magically open acompressed file.
+
+    Supports both `gzip` and `bzip2` files.
+    This is achieved through the Python standard library modules.
 
     Note: all compressed files should be opened as binary.
     Opening in text mode is not supported.
 
     Args:
         filepath (str): The file path.
+            This cannot be a file object.
         mode (str): The mode for file opening.
             See `open()` for more info.
             If the `t` mode is not specified, `b` mode is assumed.
@@ -3069,7 +3075,7 @@ def zopen(filepath, mode='rb', *args, **kwargs):
         IOError: on failure.
 
     See Also:
-        open(), gzip.open()
+        open(), gzip.open(), bz2.open()
 
     Examples:
         >>> file_obj = zopen(__file__, 'rb')
@@ -3083,19 +3089,28 @@ def zopen(filepath, mode='rb', *args, **kwargs):
     file_obj = open(filepath, mode=mode, *args, **kwargs)
 
     if valid_mode:
-        # test if file is gzip using magic type (first 2 bytes)
+        # test if file is compressed using its header
+        # for gzip: magic
+        # for bzip2: magic, version, hundred_k_blocksize, compressed_magic
         try:
-            magic = file_obj.read(2)
-            by_magic = magic == b'\x1f\x8b'
+            head = file_obj.read(16)
+            gz_by_header = head[:2] == b'\x1f\x8b'
+            bz2_by_header = (
+                head[:2] == b'BZ' and head[2:3] == b'h' and head[3:4].isdigit()
+                and head[4:10] == b'\x31\x41\x59\x26\x53\x59')
         except io.UnsupportedOperation:
-            by_magic = False
+            gz_by_header = False
+            bz2_by_header = False
         finally:
             file_obj.seek(0)
 
-        by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['gzip']))
+        gz_by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['gzip']))
+        bz2_by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['bzip2']))
 
-        if by_magic or by_ext:
+        if gz_by_header or gz_by_ext:
             file_obj = gzip.GzipFile(fileobj=file_obj, mode=mode)
+        elif bz2_by_header or bz2_by_ext:
+            file_obj = bz2.BZ2File(filename=file_obj, mode=mode)
 
     return file_obj
 
