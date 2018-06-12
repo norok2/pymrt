@@ -26,6 +26,7 @@ import warnings  # Warning control
 import importlib  # The implementation of import
 import gzip  # Support for gzip files
 import bz2  # Support for bzip2 compression
+# import lzma  # Compression using the LZMA algorithm
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import struct  # Interpret strings as packed binary data
@@ -73,6 +74,8 @@ EXT = {
     'gzip': 'gz',
     'bzip': 'bz2',
     'bzip2': 'bz2',
+    'lzma': 'lzma',
+    'xz': 'xz',
     'lzip': 'lz',
 }
 D_TAB_SIZE = 8
@@ -3052,11 +3055,16 @@ def zopen(filepath, mode='rb', *args, **kwargs):
     """
     Auto-magically open acompressed file.
 
-    Supports both `gzip` and `bzip2` files.
+    Supports the following file formats:
+     - `gzip`: GNU Zip -- DEFLATE (Lempel-Ziv 77 + Huffman coding)
+     - `bzip2`: Burrows-Wheeler algorithm
+     - `lzma`/`xz`: Lempel-Ziv-Markov chain algorithm (LZMA) (Python 3 only)
+
     This is achieved through the Python standard library modules.
 
-    Note: all compressed files should be opened as binary.
-    Opening in text mode is not supported.
+    Notes:
+    - All compressed files should be opened as binary.
+      Opening in text mode is not supported.
 
     Args:
         filepath (str): The file path.
@@ -3092,25 +3100,37 @@ def zopen(filepath, mode='rb', *args, **kwargs):
         # test if file is compressed using its header
         # for gzip: magic
         # for bzip2: magic, version, hundred_k_blocksize, compressed_magic
+        # for xz/lzma: non-standard magic
+        try:
+            import lzma  # Compression using the LZMA algorithm
+        except ImportError:
+            lzma = None
         try:
             head = file_obj.read(16)
             gz_by_header = head[:2] == b'\x1f\x8b'
             bz2_by_header = (
                 head[:2] == b'BZ' and head[2:3] == b'h' and head[3:4].isdigit()
                 and head[4:10] == b'\x31\x41\x59\x26\x53\x59')
+            xz_by_header = head[:1] == b'\xfd7zXz\x00'
         except io.UnsupportedOperation:
             gz_by_header = False
             bz2_by_header = False
+            xz_by_header = False
         finally:
             file_obj.seek(0)
 
         gz_by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['gzip']))
         bz2_by_ext = split_ext(filepath)[1].endswith(add_extsep(EXT['bzip2']))
+        xz_by_ext = (
+            split_ext(filepath)[1].endswith(add_extsep(EXT['xz'])) or
+            split_ext(filepath)[1].endswith(add_extsep(EXT['lzma'])))
 
         if gz_by_header or gz_by_ext:
             file_obj = gzip.GzipFile(fileobj=file_obj, mode=mode)
         elif bz2_by_header or bz2_by_ext:
             file_obj = bz2.BZ2File(filename=file_obj, mode=mode)
+        elif lzma and xz_by_header or xz_by_ext:
+            file_obj = lzma.LZMAFile(filename=file_obj, mode=mode)
 
     return file_obj
 
