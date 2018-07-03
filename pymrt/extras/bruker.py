@@ -451,7 +451,7 @@ def batch_extract(
             if custom_reco == 'cx':
                 reco_flag = mrt.naming.ITYPES['cx']
                 cx_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(cx_filepath)):
                     os.makedirs(os.path.dirname(cx_filepath))
 
@@ -467,13 +467,13 @@ def batch_extract(
             elif custom_reco == 'mag_phs':
                 reco_flag = mrt.naming.ITYPES['mag']
                 mag_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(mag_filepath)):
                     os.makedirs(os.path.dirname(mag_filepath))
 
                 reco_flag = mrt.naming.ITYPES['phs']
                 phs_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(phs_filepath)):
                     os.makedirs(os.path.dirname(phs_filepath))
 
@@ -494,13 +494,13 @@ def batch_extract(
             elif custom_reco == 're_im':
                 reco_flag = mrt.naming.ITYPES['re']
                 re_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(re_filepath)):
                     os.makedirs(os.path.dirname(re_filepath))
 
                 reco_flag = mrt.naming.ITYPES['im']
                 im_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(im_filepath)):
                     os.makedirs(os.path.dirname(im_filepath))
 
@@ -525,7 +525,7 @@ def batch_extract(
                 reco_flag = _get_reco_num(reco_c)
 
                 cx_filepath = mrt.utils.change_ext(
-                    out_filepath.format_map(locals()), mrt.utils.EXT['niz'])
+                    out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(cx_filepath)):
                     os.makedirs(os.path.dirname(cx_filepath))
 

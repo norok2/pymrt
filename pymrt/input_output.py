@@ -587,7 +587,7 @@ def simple_filter_1_x(
     path, base, ext = mrt.utils.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
-            out_basepath, out_filename_template.format_map(locals()))
+            out_basepath, out_filename_template.format(**locals()))
         out_dirpath = os.path.dirname(out_filepath)
         if not os.path.isdir(out_dirpath):
             os.makedirs(out_dirpath)

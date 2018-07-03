@@ -2458,7 +2458,7 @@ def execute(
             pid = proc.pid
             for stream, source in ((p_stdout, 'out'), (p_stderr, 'err')):
                 if stream:
-                    log_filepath = log.format_map(locals())
+                    log_filepath = log.format(**locals())
                     with open(log_filepath, 'wb') as fileobj:
                         fileobj.write(stream.encode(encoding))
     return ret_code, p_stdout, p_stderr
@@ -2957,7 +2957,7 @@ def next_filepath(
         counter = 0
         while os.path.exists(filepath):
             counter += 1
-            filepath = out_template.format_map(locals())
+            filepath = out_template.format(**locals())
         msg('NEW: {}'.format(filepath), verbose, VERB_LVL['medium'])
     return filepath
 
@@ -4628,9 +4628,9 @@ def exp_gradient_kernels(
                 [0.-2.4492936e-16j, 0.+0.0000000e+00j]]]),)
         >>> exp_gradient_kernels((2, 2), None, 3)
         (array([[1.5+0.8660254j, 1.5+0.8660254j],
-               [0. +0.       j, 0. +0.       j]]),\
- array([[1.5+0.8660254j, 0. +0.       j],
-               [1.5+0.8660254j, 0. +0.       j]]))
+               [0. +0.j       , 0. +0.j       ]]),\
+ array([[1.5+0.8660254j, 0. +0.j       ],
+               [1.5+0.8660254j, 0. +0.j       ]]))
     """
     kk_ = grid_coord(shape)
     if factors and factors != 1:
@@ -5618,7 +5618,7 @@ def rolling_stat(
                  np.full((num - 1,), borders[0])))
         else:
             raise ValueError(
-                '`borders={borders}` not understood'.format_map(locals()))
+                '`borders={borders}` not understood'.format(**locals()))
 
         # calculate generator for data and weights
         arr = np.concatenate((arr, extension))
@@ -5738,7 +5738,7 @@ def running_stat(
             tail = np.full((num - 1,), borders[-1])
         else:
             raise ValueError(
-                '`borders={borders}` not understood'.format_map(locals()))
+                '`borders={borders}` not understood'.format(**locals()))
 
         # calculate generator for data and weights
         gen = np.concatenate((head, arr, tail))

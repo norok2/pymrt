@@ -159,7 +159,7 @@ def auto_convert(
             for name, arr in read(in_filepath, verbose=verbose).items():
                 dirpath, base, ext = mrt.utils.split_path(in_filepath)
                 basepath = os.path.join(dirpath, base)
-                out_filepath = out_template.format_map(locals())
+                out_filepath = out_template.format(**locals())
                 do_save = True
                 if os.path.exists(out_filepath):
                     if on_exist == 'skip':

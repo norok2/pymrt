@@ -616,7 +616,7 @@ def threshold_to_mask(
     else:
         raise ValueError(
             'valid comparisons are: {comparisons}'
-            ' (given: {comparison})'.format_map(locals()))
+            ' (given: {comparison})'.format(**locals()))
     return mask
 
 

@@ -149,7 +149,7 @@ def phs_to_dphs(
         if units == 'ms':
             units = 1e-3
         else:
-            warnings.warn('Invalid units `{units}`'.format_map(locals()))
+            warnings.warn('Invalid units `{units}`'.format(**locals()))
             units = 1
     tis = np.array(mrt.utils.auto_repeat(tis, 1)) * units
 

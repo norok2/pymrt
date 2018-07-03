@@ -72,7 +72,7 @@ def _trim(filepath):
     """Trim borders from image contained in filepath."""
     # : equivalent to:
     # os.system(
-    #     'mogrify "{filepath}" -trim "{filepath}"'.format_map(locals()))
+    #     'mogrify "{filepath}" -trim "{filepath}"'.format(**locals()))
     im = pil.Image.open(filepath)
     bg = pil.Image.new(im.mode, im.size, im.getpixel((0,0)))
     diff = pil.ImageChops.difference(im, bg)
@@ -143,7 +143,7 @@ def to_image(
             webkit_cmd = 'wkhtmltopdf'
         os.system(
             '{webkit_cmd} --encoding UTF-8 --zoom {zoom} --width {width} '
-            ' "{html_filepath}" "{save_filepath}"'.format_map(locals()))
+            ' "{html_filepath}" "{save_filepath}"'.format(**locals()))
     elif method == 'weasyprint':
         html_obj = weasyprint.HTML(string=html_code)
         if img_type.lower() == 'png':

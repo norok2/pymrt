@@ -306,11 +306,11 @@ def simple(
         plot = ax.plot(x_data, y_data, label=legend)
     # setup title and labels
     if title:
-        ax.set_title(title.format_map(locals()))
+        ax.set_title(title.format(**locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0].format_map(locals()))
+        ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1].format_map(locals()))
+        ax.set_ylabel(labels[1].format(**locals()))
     if any([legend for legend in legends]):
         ax.legend(**(legend_kws if legend_kws is not None else {}))
     # include additional text
@@ -532,9 +532,9 @@ def multi(
     if title:
         # y=1.08 if twin_ax is not None and shared_axis='y' else None
         if twin_ax is None:
-            ax.set_title(title.format_map(locals()))
+            ax.set_title(title.format(**locals()))
         else:
-            twin_ax.set_title(title.format_map(locals()))
+            twin_ax.set_title(title.format(**locals()))
 
     # include additional text
     if more_texts is not None:
@@ -1547,11 +1547,11 @@ def histogram1d(
     plot = ax.plot(mrt.utils.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
-        ax.set_title(title.format_map(locals()))
+        ax.set_title(title.format(**locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0].format_map(locals()))
+        ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1].format_map(locals()))
+        ax.set_ylabel(labels[1].format(**locals()))
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
@@ -1713,11 +1713,11 @@ def histogram1d_list(
     _manage_ticks_limit(ticks_limit, ax)
     # setup title and labels
     if title:
-        ax.set_title(title.format_map(locals()))
+        ax.set_title(title.format(**locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0].format_map(locals()))
+        ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1].format_map(locals()))
+        ax.set_ylabel(labels[1].format(**locals()))
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
@@ -1946,11 +1946,11 @@ def histogram2d(
             transform=ax.transAxes)
     # setup title and labels
     if title:
-        ax.set_title(title.format_map(locals()))
+        ax.set_title(title.format(**locals()))
     if labels[0]:
-        ax.set_xlabel(labels[0].format_map(locals()))
+        ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
-        ax.set_ylabel(labels[1].format_map(locals()))
+        ax.set_ylabel(labels[1].format(**locals()))
     # fine-tune ticks
     _manage_ticks_limit(ticks_limit, ax)
     # include additional text
@@ -2285,7 +2285,7 @@ def subplots(
                     letter_uppercase = letter.upper()
                     letter_lowercase = letter.lower()
                     plot_kwargs['title'] = \
-                        subplot_title_fmt.format_map(locals())
+                        subplot_title_fmt.format(**locals())
                 plot_func(*plot_args, **plot_kwargs)
             else:
                 axs[i, j].clear()

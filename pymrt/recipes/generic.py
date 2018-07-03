@@ -1133,7 +1133,7 @@ def voxel_curve_fit(
         except Exception as ex:
             warnings.warn(
                 'W: Exception `{ex}` in ndarray_fit() method'
-                ' `method}`'.format_map(locals()))
+                ' `method}`'.format(**locals()))
 
     # revert to original shape
     p_arr = p_arr.reshape((shape[:axis]) + (num_params,))
