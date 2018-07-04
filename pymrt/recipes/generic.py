@@ -203,7 +203,7 @@ def cx_div(
         result (float|complex|np.ndarray): The pseud-ratio array.
     """
     result = arr1 * arr2 / (
-            np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
+        np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
         result = mrt.utils.scale(result, values_interval, (-0.5, 0.5))
     return result
@@ -854,6 +854,55 @@ def fit_exp_tau(
 
     """
     raise NotImplementedError
+
+
+# ======================================================================
+def fit_exp_s0_loglin(
+        arr,
+        tis,
+        tis_mask=None,
+        variant='w=1/np.sqrt(x_arr)',
+        exp_factor=0,
+        zero_cutoff=np.spacing(1)):
+    """
+    Fit exponential decay to data using the log-linear method.
+
+    Args:
+        arr (np.ndarray): The input array in arb. units.
+            The sampling time T_i varies in the last dimension.
+        tis (Iterable): The sampling times T_i in time units.
+            The number of points must match the last shape size of arr.
+        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
+            If None, all will be used.
+        variant (str): Specify a variant of the algorithm.
+            A valid Python expression is expected and used as keyword argument
+            of the `numpy.polyfit()` function.
+            Most notably can be used to specify (global) data weighting, e.g.:
+            `w=1/np.sqrt(x_arr)`.
+        exp_factor (float|None): The data pre-whitening factor.
+            A value different from zero, may improve numerical stability
+            for very large or very small data.
+        zero_cutoff (float|None): The threshold value for masking zero values.
+
+    Returns:
+        s0_arr (np.ndarray): The constant term of the decay in arb. units.
+            Units are determined by the units of `arr`.
+    """
+    results = fit_exp_loglin(
+        arr, tis, tis_mask, poly_deg=1,
+        variant=variant, full=False, exp_factor=exp_factor,
+        zero_cutoff=zero_cutoff)
+    return results['s0']
+
+
+# ======================================================================
+def fit_exp_s0_from_tau(
+        arr,
+        tau_arr,
+        tis,
+        tis_mask=None):
+    # todo: proper broadcasting
+    return np.mean(arr[..., tis_mask] / np.exp(-tis_arr / tau_arr))
 
 
 # ======================================================================
