@@ -296,6 +296,11 @@ def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
 
 
 # ======================================================================
+def _exp_s0_from_tau(arr, tau_arr, tis_arr):
+    return np.mean(arr / np.exp(-tis_arr / tau_arr[..., None]))
+
+
+# ======================================================================
 def fit_exp_loglin(
         arr,
         tis,
@@ -334,8 +339,10 @@ def fit_exp_loglin(
         results (dict): The calculated information.
             If full is True, more information is available.
             Standard content:
-            - `s0` contains the amplitude of the exponential in arb. units.
-            - `tau_{i}` for i=1,...,num contain the higher order fit terms.
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
+            - `tau_{i}` (for i=2,...,poly_deg-2): the higher order fit terms.
               Units are determined by the units of `tis`.
     """
     axis = -1
@@ -351,7 +358,7 @@ def fit_exp_loglin(
 
     try:
         method_kws = dict(eval(variant))
-    except Exception:
+    except Exception:  # avoid crashing for invalid variant
         method_kws = {}
 
     p_arr = voxel_curve_fit(
@@ -413,8 +420,8 @@ def fit_exp_curve_fit(
         results (dict): The calculated information.
             If full is True, more information is available.
             Standard content:
-            - `s0` contains the amplitude of the exponential in arb. units.
-            - `tau_{i}` for i=1,...,num contain the higher order fit terms.
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
               Units are determined by the units of `tis`.
     """
     axis = -1
@@ -456,7 +463,7 @@ def fit_exp_curve_fit(
 
 
 # ======================================================================
-def fit_exp_tau_quad(
+def fit_exp_quad(
         arr,
         tis,
         tis_mask=None,
@@ -491,8 +498,12 @@ def fit_exp_tau_quad(
             dimension over which combination is done.
 
     Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
+        results (dict): The calculated information.
+            If full is True, more information is available.
+            Standard content:
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
     """
     axis = -1
 
@@ -517,11 +528,15 @@ def fit_exp_tau_quad(
             n += 1
     with np.errstate(divide='ignore', invalid='ignore'):
         tau_arr = s_arr / d_arr
-    return combine(tau_arr, axis=axis)
+    tau_arr = combine(tau_arr, axis=axis)
+    del s_arr, d_arr, y_arr
+    s0_arr = _exp_s0_from_tau(arr, tau_arr, x_arr)
+    result = {'s0': s0_arr, 'tau': tau_arr}
+    return result
 
 
 # ======================================================================
-def fit_exp_tau_quadr(
+def fit_exp_quadr(
         arr,
         tis,
         tis_mask=None,
@@ -529,27 +544,27 @@ def fit_exp_tau_quadr(
         window_size=None):
     """
     Mono-exponential decay fit using integral properties (revisited).
-    
+
     The function to fit is: :math:`s(t) = A e^{-t / \\tau}`
-    
+
     The value of :math:`\\tau` is estimated using the following formula:
     :math:`\int_{t_i}^{t_{i+j}} s(t) dt = \\tau [s(t_i) - s(t_{i+j})]`
-    
+
     The integral is estimated numerically.
-    
+
     The value of `j` is determined by the `window size` parameters.
     All valid combination of i and j are calculated (from the number of
     support points).
 
     The partial terms are combined together using the formula:
-    
+
     :math:`\\tau = \\frac{s_{ss} + s_{ds}}{s_{dd} + s_{ds}}`
 
     with:
         - :math:`s_{ss} = \sum_j \sum_{i=0}^{N-j} s_i^2`
         - :math:`s_{sd} = \sum_j \sum_{i=0}^{N-j} s_i d_i`
         - :math:`s_{dd} = \sum_j \sum_{i=0}^{N-j} d_i^2`
-    
+
     where:
         - :math:`t_i` are the sampling points;
         - :math:`\Delta t_i` is the sampling point spacing (must be constant);
@@ -560,9 +575,9 @@ def fit_exp_tau_quadr(
 
     The value of the window size `j` can be fixed, and the method reduces
     to the `Auto-Regression on Linear Operations (ARLO)` method.
-    
+
     This is a closed-form solution.
-    
+
     Args:
         arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
@@ -575,9 +590,14 @@ def fit_exp_tau_quadr(
             dimension over which integration is done.
         window_size (int|None): The window over which calculating the integral.
             If None, all valid window sizes are considered.
+
     Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
+        results (dict): The calculated information.
+            If full is True, more information is available.
+            Standard content:
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
 
     Notes:
         This method can be understood as a multi-window extension of the
@@ -630,11 +650,14 @@ def fit_exp_tau_quadr(
     with np.errstate(divide='ignore', invalid='ignore'):
         tau_arr = (sum_ss + sum_sd) / (sum_sd + sum_dd)
 
-    return tau_arr
+    del s_arr, d_arr, sum_ss, sum_sd, sum_dd, y_arr
+    s0_arr = _exp_s0_from_tau(arr, tau_arr, x_arr)
+    result = {'s0': s0_arr, 'tau': tau_arr}
+    return result
 
 
 # ======================================================================
-def fit_exp_tau_diff(
+def fit_exp_diff(
         arr,
         tis,
         tis_mask=None,
@@ -674,8 +697,12 @@ def fit_exp_tau_diff(
             dimension over which combination is done.
 
     Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
+        results (dict): The calculated information.
+            If full is True, more information is available.
+            Standard content:
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
     """
     axis = -1
 
@@ -693,11 +720,15 @@ def fit_exp_tau_diff(
         dx_arr = differentiate(x_arr, axis=axis)
         tau_arr = -y_arr * dx_arr / dy_arr
 
-    return combine(tau_arr, axis=axis)
+    tau_arr = combine(tau_arr, axis=axis)
+    del dy_arr, dx_arr, y_arr
+    s0_arr = _exp_s0_from_tau(arr, tau_arr, x_arr)
+    result = {'s0': s0_arr, 'tau': tau_arr}
+    return result
 
 
 # ======================================================================
-def fit_exp_tau_arlo(
+def fit_exp_arlo(
         arr,
         tis,
         tis_mask=None,
@@ -737,8 +768,12 @@ def fit_exp_tau_arlo(
         window_size (int): The window over which calculating the integral. 
 
     Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
+        results (dict): The calculated information.
+            If full is True, more information is available.
+            Standard content:
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
 
     Notes:
         This is an independent implementation of the monoexponential fitting
@@ -786,60 +821,23 @@ def fit_exp_tau_arlo(
         tau_arr = (dti / window_size) \
                   * (sum_ss + dti / window_size * sum_sd) \
                   / (sum_dd + dti / window_size * sum_sd)
-    return tau_arr
+
+    del s_arr, d_arr, sum_ss, sum_sd, sum_dd, y_arr
+    s0_arr = _exp_s0_from_tau(arr, tau_arr, x_arr)
+    result = {'s0': s0_arr, 'tau': tau_arr}
+    return result
 
 
 # ======================================================================
-def fit_exp_tau_loglin(
+def fit_exp(
         arr,
         tis,
         tis_mask=None,
-        variant='w=1/np.sqrt(x_arr)',
-        exp_factor=0,
-        zero_cutoff=np.spacing(1)):
-    """
-    Fit exponential decay to data using the log-linear method.
-
-    Args:
-        arr (np.ndarray): The input array in arb. units.
-            The sampling time T_i varies in the last dimension.
-        tis (Iterable): The sampling times T_i in time units.
-            The number of points must match the last shape size of arr.
-        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
-            If None, all will be used.
-        variant (str): Specify a variant of the algorithm.
-            A valid Python expression is expected and used as keyword argument
-            of the `numpy.polyfit()` function.
-            Most notably can be used to specify (global) data weighting, e.g.:
-            `w=1/np.sqrt(x_arr)`.
-        exp_factor (float|None): The data pre-whitening factor.
-            A value different from zero, may improve numerical stability
-            for very large or very small data.
-        zero_cutoff (float|None): The threshold value for masking zero values.
-
-    Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
-    """
-    results = fit_exp_loglin(
-        arr, tis, tis_mask, poly_deg=1,
-        variant=variant, full=False, exp_factor=exp_factor,
-        zero_cutoff=zero_cutoff)
-    return results['tau']
-
-
-# ======================================================================
-def fit_exp_tau(
-        arr,
-        tis,
-        tis_mask=None):
+        method='quadr',
+        method_kws=None):
     """
     Mono-exponential decay fit.
 
-    EXPERIMENTAL!
-
-    The actual algorithm to be used is determined from the data itself.
-    
     Args:
         arr (np.ndarray): The input array in arb. units.
             The sampling time T_i varies in the last dimension.
@@ -847,62 +845,50 @@ def fit_exp_tau(
             The number of points must match the last shape size of arr.
         tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
+        method (str): Determine the fitting method to use.
+            Accepted values are:
+             - 'auto': determine an optimal method by inspecting the data.
+             - 'loglin': use a log-linear fit, fast but fragile.
+             - 'curve_fit': use non-linear least square curve fitting, slow
+               but accurate.
+             - 'diff': closed-form solution using the differential properties
+               of the exponential, very fast but fragile.
+             - 'quad': closed-form solution using the quadrature properties
+               of the exponential, very fast and moderately robust.
+             - 'arlo': closed-form solution using the `Auto-Regression on
+               Linear Operations (ARLO)` method (similar to 'quad'),
+               very fast and robust.
+             - 'quadr': closed-form solution using the quadrature properties
+               of the exponential and optimal noise regression,
+               very fast and very robust (extends both 'quad' and 'arlo').
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:
-        tau_arr (np.ndarray): The exponential time constant in time units.
-            Units are determined by the units of `tis`.
-
+        results (dict): The calculated information.
+            If full is True, more information is available.
+            Standard content:
+            - `s0`: the amplitude of the exponential in arb. units.
+            - `tau`: the exponential decay time constant in time units.
+              Units are determined by the units of `tis`.
+            Additional content may be available depending on the method used.
     """
-    raise NotImplementedError
+    method = method.lower()
+    method_kws = {} if method_kws is None else dict(method_kws)
+    methods = ('loglin', 'curve_fit', 'diff', 'quad', 'arlo', 'quadr')
 
+    if method == 'auto':
+        warnings.warn('Not Implemented Yet!')
 
-# ======================================================================
-def fit_exp_s0_loglin(
-        arr,
-        tis,
-        tis_mask=None,
-        variant='w=1/np.sqrt(x_arr)',
-        exp_factor=0,
-        zero_cutoff=np.spacing(1)):
-    """
-    Fit exponential decay to data using the log-linear method.
+    if method in methods:
+        method = eval(method)
+    if not callable(method):
+        text = (
+            'Unknown method `{}` in `recipes.generic.fit_exp(). ' +
+            'Using fallback `{}`.'.format(method, methods[0]))
+        warnings.warn(text)
+        method = eval(methods[0])
 
-    Args:
-        arr (np.ndarray): The input array in arb. units.
-            The sampling time T_i varies in the last dimension.
-        tis (Iterable): The sampling times T_i in time units.
-            The number of points must match the last shape size of arr.
-        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
-            If None, all will be used.
-        variant (str): Specify a variant of the algorithm.
-            A valid Python expression is expected and used as keyword argument
-            of the `numpy.polyfit()` function.
-            Most notably can be used to specify (global) data weighting, e.g.:
-            `w=1/np.sqrt(x_arr)`.
-        exp_factor (float|None): The data pre-whitening factor.
-            A value different from zero, may improve numerical stability
-            for very large or very small data.
-        zero_cutoff (float|None): The threshold value for masking zero values.
-
-    Returns:
-        s0_arr (np.ndarray): The constant term of the decay in arb. units.
-            Units are determined by the units of `arr`.
-    """
-    results = fit_exp_loglin(
-        arr, tis, tis_mask, poly_deg=1,
-        variant=variant, full=False, exp_factor=exp_factor,
-        zero_cutoff=zero_cutoff)
-    return results['s0']
-
-
-# ======================================================================
-def fit_exp_s0_from_tau(
-        arr,
-        tau_arr,
-        tis,
-        tis_mask=None):
-    # todo: proper broadcasting
-    return np.mean(arr[..., tis_mask] / np.exp(-tis_arr / tau_arr))
+    return method(arr, tis, tis_mask, **method_kws)
 
 
 # ======================================================================
