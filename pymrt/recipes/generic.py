@@ -272,6 +272,80 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
 
 
 # ======================================================================
+def referencing(
+        arr,
+        masks,
+        ext_refs=None,
+        combines=np.mean,
+        ref_operation=(
+                lambda arr, int_refs, ext_refs:
+                arr - int_refs[0] + ext_refs[0])):
+    """
+    Reference a measurement to an arbitrary set of values.
+
+    Values within the data are matched to external reference values.
+    If any of the masks is defined incorrectly, no referencing is performed.
+
+    Args:
+        arr (np.ndarray): The input array. 
+        masks (Iterable[Iterable[Iterable[int]]|np.ndarray]|None]):
+            The reference masks.
+            Values corresponding to the specified mask are used to compute
+            the internal reference value.
+            Each item can be:
+                - np.ndarray[bool]: An array mask with same shape as `arr`.
+                - Iterable[Iterable[int]]: The extrema (min_index, max_index)
+                  defining an hyperrectangle.
+                  The hyperrectangle must be contained within `arr`.
+                - None: all elements of the array will be used.
+        ext_refs (Iterable[int|float]|None): The external references.
+            Units depend on input and referencing operation.
+            If Iterable, its length must match that of masks.
+            If None, no referencing is performed.
+        combines (Iterable[callable]|callable):
+            Computation of internal references.
+            Each of the callable must have the following signature:
+            func(np.ndarray) -> int|float
+            If Iterable, its length must match that of masks.
+            If callable, the same function will be used for all masks.
+        ref_operation (callable): Computation of the referenced array.
+            Must have the following signature:
+            func(np.ndarray, Iterable[int|float], Iterable[int|float]) ->
+            np.ndarray
+
+    Returns:
+        res_arr (np.ndarray): The referenced array.
+
+    Raises:
+        AssertionError: if length of masks, ext_refs and combines do not match.
+    """
+    res_arr = arr
+    if ext_refs is not None:
+        assert (len(masks) == len(ext_refs))
+        num_refs = len(ext_refs)
+        combines = mrt.utils.auto_repeat(combines, num_refs, True, True)
+        are_mask_arr = [
+            isinstance(mask, np.array) and (
+                np.issubdtype(mask.dtype, np.bool) and arr.shape == mask.shape)
+            for mask in masks]
+        are_mask_borders = [
+            len(mask) == len(arr.shape) and all(
+                [upper > lower >= 0 and lower < upper <= max_i
+                 for (lower, upper), max_i in zip(mask, arr.shape)])
+            for mask in masks]
+        if all([is_mask_arr or is_mask_borders or mask is None
+                for is_mask_arr, is_mask_borders, mask in zip(
+                are_mask_arr, are_mask_borders, masks)]):
+            int_refs = [
+                combine(arr[mask]) for combine, mask in zip(combines, masks)]
+            res_arr = ref_operation(arr, int_refs, ext_refs)
+        else:
+            text = 'Incorrect `masks` in `pymrt.recipes.generic.warnings().'
+            warnings.warn(text)
+    return res_arr
+
+
+# ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
     arr = np.abs(arr)
     log_arr = np.zeros_like(arr)
