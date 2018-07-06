@@ -349,7 +349,7 @@ def flatten(
         >>> ll = [[1, 2, 3], [4, 5, 6], [7], [8, 9]]
         >>> list(flatten(ll))
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        >>> list(flatten(ll)) == list(itertools.chain.from_iterable(ll))
+        >>> list(flatten(ll)) == list(itertools.chain.from_Iterable(ll))
         True
         >>> ll = [ll, ll]
         >>> list(flatten(ll))
