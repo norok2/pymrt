@@ -30,10 +30,9 @@ import pymrt.correction
 from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
-    fix_phase_interval, rate_to_time, time_to_rate,
-    func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_curve_fit,
-    fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
-    fit_exp_tau_loglin)
+    fix_phase_interval, rate_to_time, time_to_rate, referencing,
+    func_exp_decay, fit_exp, fit_exp_loglin, fit_exp_curve_fit,
+    fit_exp_quad, fit_exp_diff, fit_exp_quadr, fit_exp_arlo)
 
 
 # ======================================================================
@@ -42,11 +41,16 @@ def fit_multiecho_mono(
         echo_times,
         echo_times_mask=None,
         method='quadr',
+        method_kws=None,
+        b1r_arr=None,
+        ref_mask=None,
+        ref_val=None,
         prepare=mrt.correction.fix_bias_rician):
     """
-    Calculate the mono-exponential fit for T2 data.
+    Calculate the mono-exponential amplitude from fit of multi-echo data.
 
-    This is also suitable for T2* data from multi-echo FLASH acquisitions.
+    This is suitable for both spin echo and gradient echo sequences.
+    Note that stimulated echoes effects are ignored.
 
     Args:
         arr (np.ndarray): The input array in arb. units.
@@ -57,54 +61,54 @@ def fit_multiecho_mono(
         echo_times_mask (Iterable[bool]|None): Determine the echo times to use.
             If None, all will be used.
         method (str): Determine the fitting method to use.
-            Accepted values are:
-             - 'auto': determine an optimal method by inspecting the data.
-             - 'loglin': use a log-linear fit, fast but inaccurate and fragile.
-             - 'curve_fit': use non-linear least square curve fitting, slow
-               but accurate.
-             - 'diff': closed-form solution using the differential properties
-               of the exponential, very fast but inaccurate.
-             - 'quad': closed-form solution using the quadrature properties
-               of the exponential, very fast and moderately accurate.
-             - 'arlo': closed-form solution using the `Auto-Regression on
-               Linear Operations (ARLO)` method (similar to 'quad'),
-               very fast and accurate.
-             - 'quadr': closed-form solution using the quadrature properties
-               of the exponential and optimal noise regression,
-               very fast and very accurate (extends both 'quad' and 'arlo').
+            See `recipes.generic.fit_exp()` for more info.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        b1r_arr (np.ndarray): The receive profile in arb. units.
+            Assumes that units of time is ms and units of rates is Hz.
+        ref_mask (tuple[int]|np.ndarray|None): The reference mask.
+            Values are scaled so that the average inside the mask has
+            the value specified in `ref_val`.
+        ref_val (int|float|None): The external reference value.
+            This is typically set to 100.0 so that the map is in percent.
+            If None, no referencing is performed.
         prepare (callable|None): Input array preparation.
             Must have the signature: f(np.ndarray) -> np.ndarray.
             Useful for data pre-whitening, including for example the
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        t2s_arr (np.ndarray): The output array.
+        rho_arr (np.ndarray): The output array.
     """
-    methods = ('auto', 'loglin', 'leasq', 'diff', 'quad', 'arlo', 'quadr')
-
     # data pre-whitening
     arr = prepare(arr) if prepare else arr.astype(float)
-
-    if method == 'auto':
-        t2s_arr = fit_exp_tau(arr, echo_times, echo_times_mask)
-    elif method == 'loglin':
-        t2s_arr = fit_exp_tau_loglin(arr, echo_times, echo_times_mask)
-    elif method == 'curve_fit':
-        t2s_arr = fit_exp_curve_fit(arr, echo_times, echo_times_mask)['tau']
-    elif method == 'quad':
-        t2s_arr = fit_exp_tau_quad(arr, echo_times, echo_times_mask)
-    elif method == 'diff':
-        t2s_arr = fit_exp_tau_diff(arr, echo_times, echo_times_mask)
-    elif method == 'quadr':
-        t2s_arr = fit_exp_tau_quadr(arr, echo_times, echo_times_mask)
-    elif method == 'arlo':
-        t2s_arr = fit_exp_tau_arlo(arr, echo_times, echo_times_mask)
-    else:
-        raise ValueError(
-            'valid methods are: {} (given: {})'.format(methods, method))
+    # compute rho
+    rho_arr = fit_exp(
+        arr, echo_times, echo_times_mask, method, method_kws)['s0']
+    # perform receive profile correction
+    if b1r_arr is not None:
+        rho_arr = b1r_correction(rho_arr, b1r_arr)
+    # perform referencing
+    if ref_val is not None:
+        rho_arr = referencing(
+            arr, [ref_mask], [ref_val], np.mean,
+            lambda x, int_refs, ext_refs: x / int_refs[0] * ext_refs[0])
     return rho_arr
 
 
-def b1r_correction(rho_arr, b1r_arr):
+# ======================================================================
+def b1r_correction(
+        rho_arr,
+        b1r_arr):
+    """
+    Compute the receive profile correction for spin density mapping.
 
+    The input arrays must be already registered.
+
+    Args:
+        rho_arr (np.ndarray): The uncorrected spin density map in arb. units.
+        b1r_arr (np.ndarray):
+
+    Returns:
+
+    """
     return rho_arr / b1r_arr

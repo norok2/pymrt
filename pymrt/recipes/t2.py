@@ -36,9 +36,8 @@ from pymrt.recipes import generic
 from pymrt.recipes import quality
 from pymrt.recipes.generic import (
     fix_phase_interval, rate_to_time, time_to_rate,
-    func_exp_decay, fit_exp_tau, fit_exp_loglin, fit_exp_curve_fit,
-    fit_exp_tau_quad, fit_exp_tau_diff, fit_exp_tau_quadr, fit_exp_tau_arlo,
-    fit_exp_tau_loglin)
+    func_exp_decay, fit_exp, fit_exp_loglin, fit_exp_curve_fit,
+    fit_exp_quad, fit_exp_diff, fit_exp_quadr, fit_exp_arlo)
 
 
 # ======================================================================
@@ -47,12 +46,15 @@ def fit_multiecho_mono(
         echo_times,
         echo_times_mask=None,
         method='quadr',
-        inverted=False,
+        method_kws=None,
+        invert_tau=False,
         prepare=mrt.correction.fix_bias_rician):
     """
-    Calculate the mono-exponential fit for T2 data.
+    Calculate the mono-exponential time constant from fit of multi-echo data.
 
-    This is also suitable for T2* data from multi-echo FLASH acquisitions.
+    This is also suitable for computing T2 and T2*:
+    - T2 from a multi-echo spin echo sequence (ignoring stimulated echoes)
+    - T2* from multi-echo FLASH acquisitions.
 
     Args:
         arr (np.ndarray): The input array in arb. units.
@@ -63,22 +65,9 @@ def fit_multiecho_mono(
         echo_times_mask (Iterable[bool]|None): Determine the echo times to use.
             If None, all will be used.
         method (str): Determine the fitting method to use.
-            Accepted values are:
-             - 'auto': determine an optimal method by inspecting the data.
-             - 'loglin': use a log-linear fit, fast but inaccurate and fragile.
-             - 'curve_fit': use non-linear least square curve fitting, slow
-               but accurate.
-             - 'diff': closed-form solution using the differential properties
-               of the exponential, very fast but inaccurate.
-             - 'quad': closed-form solution using the quadrature properties
-               of the exponential, very fast and moderately accurate.
-             - 'arlo': closed-form solution using the `Auto-Regression on
-               Linear Operations (ARLO)` method (similar to 'quad'),
-               very fast and accurate.
-             - 'quadr': closed-form solution using the quadrature properties
-               of the exponential and optimal noise regression,
-               very fast and very accurate (extends both 'quad' and 'arlo').
-        inverted (bool): Invert results to convert times to rates.
+            See `recipes.generic.fit_exp()` for more info.
+        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        invert_tau (bool): Invert tau results to convert times to rates.
             Assumes that units of time is ms and units of rates is Hz.
         prepare (callable|None): Input array preparation.
             Must have the signature: f(np.ndarray) -> np.ndarray.
@@ -86,33 +75,17 @@ def fit_multiecho_mono(
             correction of magnitude data from Rician mean bias.
 
     Returns:
-        t2s_arr (np.ndarray): The output array.
+        t2_arr (np.ndarray): The output array.
     """
-    methods = ('auto', 'loglin', 'leasq', 'diff', 'quad', 'arlo', 'quadr')
-
     # data pre-whitening
     arr = prepare(arr) if prepare else arr.astype(float)
-
-    if method == 'auto':
-        t2s_arr = fit_exp_tau(arr, echo_times, echo_times_mask)
-    elif method == 'loglin':
-        t2s_arr = fit_exp_tau_loglin(arr, echo_times, echo_times_mask)
-    elif method == 'curve_fit':
-        t2s_arr = fit_exp_curve_fit(arr, echo_times, echo_times_mask)['tau']
-    elif method == 'quad':
-        t2s_arr = fit_exp_tau_quad(arr, echo_times, echo_times_mask)
-    elif method == 'diff':
-        t2s_arr = fit_exp_tau_diff(arr, echo_times, echo_times_mask)
-    elif method == 'quadr':
-        t2s_arr = fit_exp_tau_quadr(arr, echo_times, echo_times_mask)
-    elif method == 'arlo':
-        t2s_arr = fit_exp_tau_arlo(arr, echo_times, echo_times_mask)
-    else:
-        raise ValueError(
-            'valid methods are: {} (given: {})'.format(methods, method))
-    if inverted:
-        t2s_arr = time_to_rate(t2s_arr, 'ms', 'Hz')
-    return t2s_arr
+    # compute t2
+    t2_arr = fit_exp(
+        arr, echo_times, echo_times_mask, method, method_kws)['tau']
+    # compute relaxation rates instead of times.
+    if invert_tau:
+        t2_arr = time_to_rate(t2_arr, 'ms', 'Hz')
+    return t2_arr
 
 
 # ======================================================================
@@ -124,6 +97,8 @@ def _test(use_cache=True):
 
     import pymrt.utils
     import os
+
+
     base_dir = mrt.utils.realpath('~/hd1/TEMP')
     filepath = os.path.join(base_dir, 'tau_arr.npz')
     if os.path.isfile(filepath) and use_cache:
@@ -152,7 +127,7 @@ def _test(use_cache=True):
     # print(fit_exp_loglin(y + n, x, weighted=False)['tau'])
     # print(fit_exp_tau_quadr(y + n, x))
 
-    print('quad', eval_dist(fit_exp_tau_quad(y + n, x, m), tau_arr))
+    print('quad', eval_dist(fit_exp_quad(y + n, x, m), tau_arr))
     elapsed('quad')
 
     print('diff', eval_dist(fit_exp_tau_diff(y + n, x, m), tau_arr))
@@ -169,7 +144,7 @@ def _test(use_cache=True):
           eval_dist(fit_exp_tau_quadr(y + n, x, m, window_size=3), tau_arr))
     elapsed('quadr_w3')
 
-    print('arlo', eval_dist(fit_exp_tau_arlo(y + n, x, m), tau_arr))
+    print('arlo', eval_dist(fit_exp_arlo(y + n, x, m), tau_arr))
     elapsed('arlo')
 
     print('loglin', eval_dist(fit_exp_loglin(y + n, x, m)['tau'], tau_arr))
@@ -177,12 +152,14 @@ def _test(use_cache=True):
 
     print(
         'loglin_w',
-        eval_dist(fit_exp_loglin(y + n, x, m, variant='weighted_reverse')['tau'],
-                  tau_arr))
+        eval_dist(
+            fit_exp_loglin(y + n, x, m, variant='weighted_reverse')['tau'],
+            tau_arr))
     elapsed('loglin_w')
 
     # print('leasq',
-    #       eval_dist(fit_exp_curve_fit(y + n, x, init=[5, 4000])['tau'], tau_arr))
+    #       eval_dist(fit_exp_curve_fit(y + n, x, init=[5, 4000])['tau'],
+    # tau_arr))
     # elapsed('leasq')
 
     msg(report())
