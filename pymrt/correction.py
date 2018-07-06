@@ -68,7 +68,7 @@ def dwt_filter(
     Returns:
 
     """
-    return arr
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -76,11 +76,11 @@ def denoise(
         arr,
         method='wavelet',
         method_kws=None,
-        mode='cartesian'):
+        cx_mode='cartesian'):
     """
     Perform standard single-data de-noising algorithms.
 
-    Can be applied to complex data (see `cx_mode` for the exact behavior).
+    It can be applied to complex data (see `cx_mode` for the exact behavior).
 
     Exposes several algorithms from `scipy.ndimage.filters` and
     `skimage.restoration`.
@@ -106,7 +106,7 @@ def denoise(
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
-        mode (str): Complex calculation mode.
+        cx_mode (str): Complex calculation mode.
             If `arr` is not complex, this parameter is ignored.
             See `mode` parameter of `pymrt.utils.filter_cx()` for more info.
 
@@ -172,7 +172,7 @@ def denoise(
         raise ValueError(text)
 
     if np.any(np.iscomplex(arr)):
-        arr = mrt.utils.filter_cx(arr, filter_func, (), method_kws)
+        arr = mrt.utils.filter_cx(arr, filter_func, (), method_kws, cx_mode)
     else:
         arr = filter_func(np.real(arr), **method_kws)
     return arr
@@ -192,7 +192,8 @@ def sn_split_signals(
         method (Iterable[float]|str|callable): The separation method.
             If Iterable[float], the specified thresholds value are used.
             If str, the thresholds are estimated using
-            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method`
+            parameter set
             to `method`.
             Additional accepted values:
              - 'mean': use the mean value of the signal.
@@ -566,11 +567,13 @@ def sn_split_thresholds(
         arr (np.ndarray): The input array.
         signal_threshold (int|float|str|None): The noise threshold.
             If str, the threshold is estimated using
-            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method`
+            parameter set
             to `signal_threshold`.
         noise_threshold (int|float|str|None): The noise threshold.
             If str, the threshold is estimated using
-            `pymrt.segmentation.auto_thresholds()` with its `method` parameter set
+            `pymrt.segmentation.auto_thresholds()` with its `method`
+            parameter set
             to `noise_threshold`.
             If None, `noise_threshold` is set to `signal_threshold`.
         signal_kws (dict|None): Keyword parameters.

@@ -1033,7 +1033,7 @@ def dirac_delta(
         value=np.inf,
         n_dim=None):
     """
-    
+
     Args:
         shape (): 
         position (): 

@@ -519,8 +519,8 @@ def adaptive_iter(
             if filtering:
                 sens = mrt.utils.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
-                    np.sqrt(np.sum(sens * sens.conj(), -1))
-                    + epsilon)[..., None]
+                np.sqrt(np.sum(sens * sens.conj(), -1))
+                + epsilon)[..., None]
             combined = np.sum(sens.conj() * arr, -1)
             # include the additional phase
             weights = np.sum(sens * combined[..., None], other_axes)
@@ -535,8 +535,8 @@ def adaptive_iter(
             if threshold > 0:
                 last_delta = delta
                 delta = (
-                        np.linalg.norm(combined - last_combined) /
-                        np.linalg.norm(combined))
+                    np.linalg.norm(combined - last_combined) /
+                    np.linalg.norm(combined))
                 msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
                     end=', ' if i + 1 < max_iter else '.\n', flush=True)
                 if delta < threshold or last_delta < delta:
@@ -936,10 +936,10 @@ def sensitivity(
         method = eval(method)
     if not callable(method):
         text = (
-                'Unknown compression method `{}`. '.format(method) +
-                'Using fallback `complex_sum`.')
+            'Unknown method `{}` in `recipes.coils.sensitivity(). ' +
+            'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
-        method = block_adaptive_iter
+        method = eval(methods[0])
 
     if split_axis is not None:
         shape = arr.shape
@@ -1049,10 +1049,10 @@ def combine(
         method = eval(method)
     if not callable(method):
         text = (
-                'Unknown compression method `{}`. '.format(method) +
-                'Using fallback `complex_sum`.')
+            'Unknown method `{}` in `recipes.coils.combine(). ' +
+            'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
-        method = complex_sum
+        method = eval(methods[0])
         has_sens = True
 
     if split_axis is not None:
@@ -1134,4 +1134,4 @@ def quality(
     sum_arr = np.sum(np.abs(coils_arr), axis=coil_axis)
     abs_arr = np.abs(combined_arr)
     return factor * (
-            abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))
+        abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))

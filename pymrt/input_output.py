@@ -837,7 +837,7 @@ def zoom(
         extra_dim (bool): Force extra dimensions in the zoom parameters.
         fill_dim (bool): Dimensions not specified are left untouched.
 
-    Returns:    
+    Returns:
         None.
 
     See Also:

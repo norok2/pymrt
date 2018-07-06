@@ -2143,7 +2143,7 @@ def subplots(
         force=False,
         verbose=D_VERB_LVL):
     """
-    
+
     Args:
         plots (): 
         rows (): 
