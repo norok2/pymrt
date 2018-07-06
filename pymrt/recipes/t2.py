@@ -127,24 +127,24 @@ def _test(use_cache=True):
     # print(fit_exp_loglin(y + n, x, weighted=False)['tau'])
     # print(fit_exp_tau_quadr(y + n, x))
 
-    print('quad', eval_dist(fit_exp_quad(y + n, x, m), tau_arr))
+    print('quad', eval_dist(fit_exp_quad(y + n, x, m)['tau'], tau_arr))
     elapsed('quad')
 
-    print('diff', eval_dist(fit_exp_tau_diff(y + n, x, m), tau_arr))
+    print('diff', eval_dist(fit_exp_diff(y + n, x, m)['tau'], tau_arr))
     elapsed('diff')
 
-    print('quadr', eval_dist(fit_exp_tau_quadr(y + n, x, m), tau_arr))
+    print('quadr', eval_dist(fit_exp_quadr(y + n, x, m)['tau'], tau_arr))
     elapsed('quadr')
 
     print('quadr_w2',
-          eval_dist(fit_exp_tau_quadr(y + n, x, m, window_size=2), tau_arr))
+          eval_dist(fit_exp_quadr(y + n, x, m, window_size=2)['tau'], tau_arr))
     elapsed('quadr_w2')
 
     print('quadr_w3',
-          eval_dist(fit_exp_tau_quadr(y + n, x, m, window_size=3), tau_arr))
+          eval_dist(fit_exp_quadr(y + n, x, m, window_size=3)['tau'], tau_arr))
     elapsed('quadr_w3')
 
-    print('arlo', eval_dist(fit_exp_arlo(y + n, x, m), tau_arr))
+    print('arlo', eval_dist(fit_exp_arlo(y + n, x, m)['tau'], tau_arr))
     elapsed('arlo')
 
     print('loglin', eval_dist(fit_exp_loglin(y + n, x, m)['tau'], tau_arr))
