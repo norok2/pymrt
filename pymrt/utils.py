@@ -3053,7 +3053,7 @@ def auto_open(filepath, *args, **kwargs):
 # ======================================================================
 def zopen(filepath, mode='rb', *args, **kwargs):
     """
-    Auto-magically open acompressed file.
+    Auto-magically open a compressed file.
 
     Supports the following file formats:
      - `gzip`: GNU Zip -- DEFLATE (Lempel-Ziv 77 + Huffman coding)

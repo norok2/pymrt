@@ -179,6 +179,11 @@ def denoise(
 
 
 # ======================================================================
+def denoise_multi(arrs):
+    raise NotImplementedError
+
+
+# ======================================================================
 def sn_split_signals(
         arr,
         method='otsu',
