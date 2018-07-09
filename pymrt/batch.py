@@ -826,9 +826,9 @@ def voxel_curve_fit(
     else:
         try:
             p_arr = fit_func(y_arr, x_arr, fit_params)
-        except Exception as ex:
+        except Exception as e:
             print('WW: Exception "{}" in ndarray_fit() method "{}"'.format(
-                ex, method))
+                e, method))
 
     # revert to original shape
     p_arr = p_arr.reshape(list(shape[:support_axis]) + [len(fit_params)])

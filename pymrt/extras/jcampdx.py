@@ -193,8 +193,8 @@ def my_testing():
             print(c)
             print(b['GO_raw_data_format'])
 
-    except Exception as exception:  # This has to catch all exceptions.
-        print(exception)
+    except Exception as e:  # This has to catch all exceptions.
+        print(e)
         print('Test not passed.')
     else:
         print('All test were passed successfully.')

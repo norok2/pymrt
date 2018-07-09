@@ -32,7 +32,8 @@ Examples:
     ...     try:
     ...         y = np.sin(x / params['a'])
     ...         ax.plot(x, y, label=r'$\sin(x / a)$')
-    ...     except:
+    ...     except Exception as e:
+    ...         print(e)
     ...         ax.set_title('\\n'.join(('WARNING! Some plot failed!', title)))
     ...     else:
     ...         ax.set_title(title)

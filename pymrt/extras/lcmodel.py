@@ -240,8 +240,8 @@ def test():
     try:
         for test_filepath in test_filepath_list:
             read_output(test_filepath)
-    except Exception as exception:  # This has to catch all exceptions.
-        print(exception)
+    except Exception as e:  # This has to catch all exceptions.
+        print(e)
         print('Test not passed.')
     else:
         print('All test were passed successfully.')

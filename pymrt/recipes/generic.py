@@ -432,7 +432,11 @@ def fit_exp_loglin(
 
     try:
         method_kws = dict(eval(variant))
-    except Exception:  # avoid crashing for invalid variant
+    except Exception as e:  # avoid crashing for invalid variant
+        text = (
+            'While evaluating `variant`: {variant},' +
+            'the following exception occurred: {e}.').format(**locals())
+        warnings.warn(text)
         method_kws = {}
 
     p_arr = voxel_curve_fit(
@@ -1239,9 +1243,9 @@ def voxel_curve_fit(
     else:
         try:
             p_arr = fit_func(y_arr, x_arr, fit_params)
-        except Exception as ex:
+        except Exception as e:
             warnings.warn(
-                'W: Exception `{ex}` in ndarray_fit() method'
+                'W: Exception `{e}` in ndarray_fit() method'
                 ' `method}`'.format(**locals()))
 
     # revert to original shape
