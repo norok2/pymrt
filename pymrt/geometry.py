@@ -1617,7 +1617,7 @@ def num_angles_from_dim(num_dim):
     Given the dimension of an array, calculate the number of all possible
     cartesian orthogonal planes of rotations, using the formula:
 
-    N = n * (n - 1) / 2 [ = n! / 2! / (n - 2)! ]
+    :math:`N = n * (n - 1) / 2` [ :math:`N = n! / 2! / (n - 2)!` ]
     (N: num of angles, n: num of dim)
 
     Args:
@@ -1627,9 +1627,37 @@ def num_angles_from_dim(num_dim):
         num_angles (int): The corresponding number of angles.
 
     See Also:
-        angles2linear
+        pymrt.geometry.num_dims_from_angles()
     """
     return num_dim * (num_dim - 1) // 2
+
+
+# ======================================================================
+def num_dims_from_angles(num_angles):
+    """
+    Computes the number of dimensions from the number of angles.
+
+    This is the solution for `n` to the equation: :math:`n * (n - 1) / 2 = N`
+    (N: num of angles, n: num of dim)
+
+    Args:
+        num_angles (int): The number of angles.
+
+    Returns:
+        num_dim (int): The corresponding number of dimensions.
+
+    Raises:
+        ValueError: if the number of angles is invalid!
+
+    See Also:
+        pymrt.geometry.num_angles_from_dim()
+    """
+    num_dims = ((1 + np.sqrt(1 + 8 * num_angles)) / 2)
+    # alternatives: numpy.modf, math.modf
+    int_part, dec_part = divmod(num_dims, 1)
+    if not np.isclose(dec_part, 0.0):
+        raise ValueError('cannot get the dimension from the number of angles')
+    return int(num_dims)
 
 
 # ======================================================================
@@ -1656,18 +1684,15 @@ def angles2linear(
         linear (np.ndarray): The rotation matrix as defined by the angles.
 
     See Also:
-        num_angles_from_dim,
+        pymrt.geometry.num_angles_from_dim(),
+        pymrt.geometry.num_dims_from_angles(),
         itertools.combinations
     """
     # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
-    num_dim = ((1 + np.sqrt(1 + 8 * len(angles))) / 2)
-    if np.modf(num_dim)[0] != 0.0:
-        raise ValueError('cannot get the dimension from the number of angles')
-    else:
-        num_dim = int(num_dim)
+    num_dim = num_dims_from_angles(len(angles))
     if not axes_list:
         axes_list = list(itertools.combinations(range(num_dim), 2))
-    linear = np.eye(num_dim).astype(np.double)  # longdouble?
+    lin_mat = np.eye(num_dim).astype(np.double)  # longdouble?
     for angle, axes in zip(angles, axes_list):
         if use_degree:
             angle = np.deg2rad(angle)
@@ -1676,43 +1701,43 @@ def angles2linear(
         rotation[axes[1], axes[1]] = np.cos(angle)
         rotation[axes[0], axes[1]] = -np.sin(angle)
         rotation[axes[1], axes[0]] = np.sin(angle)
-        linear = np.dot(linear, rotation)
+        lin_mat = np.dot(lin_mat, rotation)
     # :: check that this is a rotation matrix
-    det = np.linalg.det(linear)
+    det = np.linalg.det(lin_mat)
     if np.abs(det) - 1.0 > tol * np.finfo(np.float).eps:
         text = 'rotation matrix may be inaccurate [det = {}]'.format(repr(det))
         warnings.warn(text)
-    return linear
+    return lin_mat
 
 
 # ======================================================================
 def linear2angles():
     # todo: implement the inverse of angles2linear
-    raise ValueError('function is not implemented yet')
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================
-def affine_transform(
-        arr,
-        linear,
-        shift,
-        origin=None,
-        *args,
-        **kwargs):
+def prepare_affine(
+        shape,
+        lin_mat,
+        shift=None,
+        origin=None):
     """
-    Perform an affine transformation followed by a translation on the array.
+    Prepare parameters to be used with `scipy.ndimage.affine_transform()`.
+
+    In particular, it computes the linear matrix and the offset implementing
+    an affine transformation followed by a translation on the array.
+
+    The result can be passed directly as `matrix` and `offset` parameters of
+    `scipy.ndimage.affine_transform()`.
 
     Args:
-        arr (np.ndarray): The N-dim array to operate with.
-        linear (np.ndarray): The N-sized linear square matrix.
-        shift (np.ndarray): The shift along each axis in px.
-        origin (np.ndarray): The origin vector of the linear transformation.
+        shape (Iterable): The shape of the array to be transformed.
+        lin_mat (np.ndarray): The N-sized linear square matrix.
+        shift (np.ndarray|None): The shift along each axis in px.
+            If None, no shift is performed.
+        origin (np.ndarray|None): The origin of the linear transformation.
             If None, uses the center of the array.
-        args (tuple|None): Positional arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
-        kwargs (dict|None): Keyword arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
     Returns:
         array (np.ndarray): The transformed array.
@@ -1720,17 +1745,13 @@ def affine_transform(
     See Also:
         scipy.ndimage.affine_transform
     """
-    # other parameters accepted by `scipy.ndimage.affine_transform` are:
-    #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
+    ndim = len(shape)
+    if shift is None:
+        shift = 0
     if origin is None:
-        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
-    offset = origin - np.dot(linear, origin + shift)
-    arr = sp.ndimage.affine_transform(arr, linear, offset, *args, **kwargs)
-    return arr
+        origin = np.array(rel2abs(shape, (0.5,) * ndim))
+    offset = origin - np.dot(lin_mat, origin + shift)
+    return lin_mat, offset
 
 
 # ======================================================================
@@ -1761,10 +1782,10 @@ def weighted_center(
         center (np.ndarray): The coordinates of the weighed center.
 
     See Also:
-        pymrt.geometry.tensor_of_inertia,
-        pymrt.geometry.rotatio_axes,
-        pymrt.geometry.auto_rotate,
-        pymrt.geometry.realign
+        pymrt.geometry.tensor_of_inertia(),
+        pymrt.geometry.rotatio_axes(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.realigning()
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
     arr = arr.astype(np.double)
@@ -1813,8 +1834,8 @@ def weighted_covariance(
     See Also:
         pymrt.geometry.tensor_of_inertia,
         pymrt.geometry.rotation_axes,
-        pymrt.geometry.auto_rotate,
-        pymrt.geometry.realign
+        pymrt.geometry.auto_rotation,
+        pymrt.geometry.realigning
     """
     # numpy.double to improve the accuracy of the norm and the weighted center
     arr = arr.astype(np.double)
@@ -1867,10 +1888,10 @@ def tensor_of_inertia(
         inertia (np.ndarray): The tensor of inertia from the origin.
 
     See Also:
-        pymrt.geometry.weighted_covariance,
-        pymrt.geometry.rotation_axes,
-        pymrt.geometry.auto_rotate,
-        pymrt.geometry.realign
+        pymrt.geometry.weighted_covariance(),
+        pymrt.geometry.rotation_axes(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.realigning()
     """
     cov = weighted_covariance(arr, labels, index, origin)
     inertia = np.eye(arr.ndim) * np.trace(cov) - cov
@@ -1884,7 +1905,7 @@ def rotation_axes(
         index=None,
         sort_by_shape=False):
     """
-    Calculate principal axes of rotation.
+    Calculate the principal axes of rotation.
 
     These can be found as the eigenvectors of the tensor of inertia.
 
@@ -1904,13 +1925,13 @@ def rotation_axes(
             Otherwise, it is sorted by increasing eigenvalues.
 
     Returns:
-        axes (ndarray): A matrix containing the axes of rotation as columns.
+        axes (list[np.ndarray]): The principal axes of rotation.
 
     See Also:
-        pymrt.geometry.weighted_covariance,
-        pymrt.geometry.tensor_of_inertia,
-        pymrt.geometry.auto_rotate,
-        pymrt.geometry.realign
+        pymrt.geometry.weighted_covariance(),
+        pymrt.geometry.tensor_of_inertia(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.realigning()
     """
     # calculate the tensor of inertia with respect to the weighted center
     inertia = tensor_of_inertia(arr, labels, index, None).astype(np.double)
@@ -1928,79 +1949,41 @@ def rotation_axes(
         axes = []
         for size, eigenvalue, eigenvector in tmp:
             axes.append(eigenvector)
-        axes = np.array(axes).transpose()
     else:
-        axes = eigenvectors
+        axes = [axis for axis in eigenvectors.transpose()]
     return axes
 
 
 # ======================================================================
-def auto_rotate(
-        arr,
-        labels=None,
-        index=None,
-        origin=None,
-        *args,
-        **kwargs):
+def rotation_axes_to_matrix(axes):
     """
-    Rotate the array to have the principal axes of rotation along the axes.
+    Compute the rotation matrix from the principal axes of rotation.
+
+    This matrix describes the linear transformation required to bring the
+    principal axes of rotation along the axes of the canonical basis.
 
     Args:
-        arr (np.ndarray): The input array.
-        labels (np.ndarray|None): Cumulative mask array for the objects.
-            The output of `scipy.ndimage.label` is expected.
-            The number of dimensions must be the same as `array`.
-            Only uses the labels as indicated by `index`.
-        index (int|Iterable[int]|None): Labels used for the calculation.
-            If an int, uses all labels between 1 and the specified value.
-            If a tuple of int, uses only the selected labels.
-            If None, uses all positive labels.
-        origin (np.ndarray|None): The origin for the covariance matrix.
-            If None, the weighted center is used.
-        args (tuple|None): Positional arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
-        kwargs (dict|None): Keyword arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
+        axes (Iterable[np.ndarray]): The principal axes of rotation.
 
     Returns:
-        rotated (np.ndarray): The rotated array.
-        rot_matrix (np.ndarray): The rotation matrix used.
-        offset (np.ndarray): The offset used.
-
-    See Also:
-        scipy.ndimage.center_of_mass,
-        scipy.ndimage.affine_transform,
-        pymrt.weighted_covariance,
-        pymrt.tensor_of_inertia,
-        pymrt.rotation_axes,
-        pymrt.angles2linear,
-        pymrt.linear2angles,
-        pymrt.auto_rotate,
-        pymrt.realign
+        lin_mat (np.ndarray): The linear transformation matrix.
     """
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
-    rot_matrix = rotation_axes(arr, labels, index, True)
-    if origin is None:
-        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
-    offset = origin - np.dot(rot_matrix, origin)
-    rotated = sp.ndimage.affine_transform(
-        arr, rot_matrix, offset, *args, **kwargs)
-    return rotated, rot_matrix, offset
+    return np.array(axes).transpose()
 
 
 # ======================================================================
-def auto_shift(
+def auto_rotation(
         arr,
         labels=None,
         index=None,
-        origin=None,
-        *args,
-        **kwargs):
+        origin=None):
     """
-    Shift the array to have the weighted center in a convenient location.
+    Compute the linear transformation and shift for optimal rotation.
+
+    The principal axis of rotation will be parallel to the cartesian axes.
+
+    The result can be passed directly as `matrix` and `offset` parameters of
+    `scipy.ndimage.affine_transform()`.
 
     Args:
         arr (np.ndarray): The input array.
@@ -2014,53 +1997,90 @@ def auto_shift(
             If None, uses all positive labels.
         origin (np.ndarray|None): The origin for the covariance matrix.
             If None, the weighted center is used.
-        args (tuple|None): Positional arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
-        kwargs (dict|None): Keyword arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
     Returns:
-        rotated (np.ndarray): The rotated array.
-        offset (np.ndarray): The offset used.
+        lin_mat (np.ndarray): The linear matrix for the rotation.
+        offset (np.ndarray): The offset for the translation.
 
     See Also:
-        scipy.ndimage.center_of_mass,
-        scipy.ndimage.affine_transform,
-        pymrt.weighted_covariance,
-        pymrt.tensor_of_inertia,
-        pymrt.rotation_axes,
-        pymrt.angles2linear,
-        pymrt.linear2angles,
-        pymrt.auto_rotate,
-        pymrt.realign
+        scipy.ndimage.center_of_mass(),
+        scipy.ndimage.affine_transform(),
+        pymrt.geometry.weighted_covariance(),
+        pymrt.geometry.tensor_of_inertia(),
+        pymrt.geometry.rotation_axes(),
+        pymrt.geometry.angles2linear(),
+        pymrt.geometry.linear2angles(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.realigning()
     """
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
-    if origin is None:
-        origin = rel2abs(arr.shape, (0.5,) * arr.ndim)
+    lin_mat = rotation_axes_to_matrix(rotation_axes(arr, labels, index, True))
+    lin_mat, offset = prepare_affine(arr.shape, lin_mat, origin=origin)
+    return lin_mat, offset
+
+
+# ======================================================================
+def auto_shifting(
+        arr,
+        labels=None,
+        index=None,
+        origin=None):
+    """
+    Compute the linear transformation and shift for optimal shifting.
+
+    Weighted center will be at a given point (e.g. the middle of the support).
+
+    The result can be passed directly as `matrix` and `offset` parameters of
+    `scipy.ndimage.affine_transform()`.
+
+    Args:
+        arr (np.ndarray): The input array.
+        labels (np.ndarray|None): Cumulative mask array for the objects.
+            The output of `scipy.ndimage.label` is expected.
+            The number of dimensions must be the same as `array`.
+            Only uses the labels as indicated by `index`.
+        index (int|Iterable[int]|None): Labels used for the calculation.
+            If an int, uses all labels between 1 and the specified value.
+            If a tuple of int, uses only the selected labels.
+            If None, uses all positive labels.
+        origin (np.ndarray|None): The origin for the covariance matrix.
+            If None, the weighted center is used.
+
+    Returns:
+        lin_mat (np.ndarray): The linear matrix for the rotation.
+        offset (np.ndarray): The offset for the translation.
+
+    See Also:
+        scipy.ndimage.center_of_mass(),
+        scipy.ndimage.affine_transform(),
+        pymrt.geometry.weighted_covariance(),
+        pymrt.geometry.tensor_of_inertia(),
+        pymrt.geometry.rotation_axes(),
+        pymrt.geometry.angles2linear(),
+        pymrt.geometry.linear2angles(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.realigning()
+    """
+    lin_mat = np.eye(arr.ndim)
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
-    offset = com - origin
-    shifted = sp.ndimage.affine_transform(
-        arr, np.eye(arr.ndim), offset, *args, **kwargs)
-    return shifted, offset
+    lin_mat, offset = prepare_affine(arr.shape, lin_mat, com, origin)
+    return lin_mat, offset
 
 
 # ======================================================================
-def realign(
+def realigning(
         arr,
         labels=None,
         index=None,
-        origin=None,
-        *args,
-        **kwargs):
+        origin=None):
     """
-    Shift and rotate the array for optimal grid alignment.
+    Compute the linear transformation and shift for optimal grid alignment.
 
     The principal axis of rotation will be parallel to the cartesian axes.
     Weighted center will be at a given point (e.g. the middle of the support).
 
+    The result can be passed directly as `matrix` and `offset` parameters of
+    `scipy.ndimage.affine_transform()`.
+
     Args:
         arr (np.ndarray): The input array.
         labels (np.ndarray|None): Cumulative mask array for the objects.
@@ -2073,39 +2093,26 @@ def realign(
             If None, uses all positive labels.
         origin (np.ndarray|None): The origin for the covariance matrix.
             If None, the weighted center is used.
-        args (tuple|None): Positional arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
-        kwargs (dict|None): Keyword arguments for the transforming function.
-            If not None, they are passed to `scipy.ndimage.affine_transform`.
 
     Returns:
-        rotated (np.ndarray): The rotated array.
-        rot_matrix (np.ndarray): The rotation matrix used.
-        offset (np.ndarray): The offset used.
+        lin_mat (np.ndarray): The linear matrix for the rotation.
+        offset (np.ndarray): The offset for the translation.
 
     See Also:
-        scipy.ndimage.center_of_mass,
-        scipy.ndimage.affine_transform,
-        pymrt.weighted_covariance,
-        pymrt.tensor_of_inertia,
-        pymrt.rotation_axes,
-        pymrt.angles2linear,
-        pymrt.linear2angles,
-        pymrt.auto_rotate,
-        pymrt.auto_shift
+        scipy.ndimage.center_of_mass(),
+        scipy.ndimage.affine_transform(),
+        pymrt.geometry.weighted_covariance(),
+        pymrt.geometry.tensor_of_inertia(),
+        pymrt.geometry.rotation_axes(),
+        pymrt.geometry.angles2linear(),
+        pymrt.geometry.linear2angles(),
+        pymrt.geometry.auto_rotation(),
+        pymrt.geometry.auto_shift()
     """
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
     com = np.array(sp.ndimage.center_of_mass(arr, labels, index))
-    rot_matrix = rotation_axes(arr, labels, index, True)
-    if origin is None:
-        origin = np.array(rel2abs(arr.shape, (0.5,) * arr.ndim))
-    offset = com - np.dot(rot_matrix, origin)
-    aligned = sp.ndimage.affine_transform(
-        arr, rot_matrix, offset, *args, **kwargs)
-    return aligned, rot_matrix, offset
+    lin_mat = rotation_axes_to_matrix(rotation_axes(arr, labels, index, True))
+    lin_mat, offset = prepare_affine(arr.shape, lin_mat, com, origin)
+    return lin_mat, offset
 
 
 # ======================================================================
