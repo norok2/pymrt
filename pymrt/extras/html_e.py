@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PyMRT: read/write files with BART's CFL structure.
+PyMRT: HTML extended support.
 
 The module is NumPy-aware.
 
