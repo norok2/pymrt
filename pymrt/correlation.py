@@ -371,15 +371,15 @@ def register(
         #     img, ref, transform='translation',
         #     init_guess=('weights', 'weights'))
         # # print(shift)
-        # img = mrt.geometry.affine_transform(img, linear, shift)
+        # img = sp.ndimage.affine_transform(img, linear, shift)
         # ... then reorient
         linear, shift = mrt.registration.affine_registration(
             img, ref, transform='reflection_simple')
-        img = mrt.geometry.affine_transform(img, linear, shift)
+        img = sp.ndimage.affine_transform(img, linear, shift)
         # ... and finally perform finer registration
         linear, shift = mrt.registration.affine_registration(img, ref, *args,
                                                              **kwargs)
-        img = mrt.geometry.affine_transform(img, linear, shift)
+        img = sp.ndimage.affine_transform(img, linear, shift)
         return img
 
     if mrt.utils.check_redo([in_filepath, ref_filepath], [out_filepath],

@@ -48,7 +48,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
+import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
 import pymrt as mrt
@@ -283,7 +283,7 @@ def _min_func_affine(
     linear, shift = params_to_affine(params, num_dim, transform)
     # the other valid parameters of the `affine_transform` function are:
     #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
-    moved_ravel = mrt.geometry.affine_transform(
+    moved_ravel = sp.ndimage.affine_transform(
         moving_ravel.reshape(shape), linear, shift, order=interp_order).ravel()
     return cost_func(moved_ravel, fixed_ravel)
 
@@ -440,15 +440,15 @@ def my_reg(array_list, *args, **kwargs):
     # linear, shift = affine_registration(
     #     img, ref, transform='translation', init_guess=('weights', 'weights'))
     # # print(shift)
-    # img = mrt.geometry.affine_transform(img, linear, shift)
+    # img = sp.ndimage.affine_transform(img, linear, shift)
     # ... then reorient
     linear, shift = affine_registration(
         img, ref, transform='reflection', interp_order=0)
     print(linear)
-    img = mrt.geometry.affine_transform(img, linear, shift)
+    img = sp.ndimage.affine_transform(img, linear, shift)
     # # ... and finally perform finer registration
     # linear, shift = affine_registration(img, ref, *args, **kwargs)
-    # img = mrt.geometry.affine_transform(img, linear, shift)
+    # img = sp.ndimage.affine_transform(img, linear, shift)
     # print(mrt.geometry.encode_affine(linear, shift))
     return img
 
