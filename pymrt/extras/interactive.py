@@ -66,12 +66,11 @@ import matplotlib.backends.backend_tkagg as tkagg
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt
 
 from pymrt import INFO, DIRS, MY_GREETINGS
-from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
+from pymrt import msg, dbg
 
 # ======================================================================
 _MIN_WIDTH = 320
@@ -295,9 +294,12 @@ def mpl_plot(func, interactives, gui_main=PytkMain, *args, **kwargs):
 
 
 # ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
     msg(__doc__.strip())
-    begin_time = datetime.datetime.now()
     doctest.testmod()
-    end_time = datetime.datetime.now()
-    print('ExecTime: {}'.format(end_time - begin_time))
+    msg(report())

@@ -27,6 +27,7 @@ import PIL.Image, PIL.ImageChops
 import pymrt as mrt
 import pymrt.utils
 
+from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -74,7 +75,7 @@ def _trim(filepath):
     # os.system(
     #     'mogrify "{filepath}" -trim "{filepath}"'.format(**locals()))
     im = pil.Image.open(filepath)
-    bg = pil.Image.new(im.mode, im.size, im.getpixel((0,0)))
+    bg = pil.Image.new(im.mode, im.size, im.getpixel((0, 0)))
     diff = pil.ImageChops.difference(im, bg)
     diff = pil.ImageChops.add(diff, diff, 2.0, -100)
     bbox = diff.getbbox()
@@ -154,3 +155,14 @@ def to_image(
     if trim:
         _trim(save_filepath)
 
+
+# ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

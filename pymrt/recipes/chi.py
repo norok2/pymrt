@@ -408,7 +408,7 @@ def qsm_remove_background_sharp(
     # # generate the spherical kernel
     sphere = mrt.geometry.sphere(db0_arr.shape, radius).astype(complex)
     sphere /= np.sum(sphere)
-    dirac_delta = mrt.geometry.dirac_delta(db0_arr.shape, 0.5, 1.0)
+    dirac_delta = mrt.geometry.nd_dirac_delta(db0_arr.shape, 0.5, 1.0)
     kernel_k = np.fft.fftn(np.fft.ifftshift(dirac_delta - sphere))
 
     kernel_mask = np.abs(kernel_k) > threshold

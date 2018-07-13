@@ -53,8 +53,9 @@ import pyparsing as pp  # A Python Parsing Module
 import pymrt as mrt
 import pymrt.utils
 
-# from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import INFO, DIRS
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 # ======================================================================
@@ -305,11 +306,15 @@ def test():
         t = f.read()
         _read_x_protocol(t)
 
+# test()
+
+# ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
     msg(__doc__.strip())
-    begin_time = datetime.datetime.now()
-    test()
-    end_time = datetime.datetime.now()
-    print('ExecTime: {}'.format(end_time - begin_time))
+    doctest.testmod()
+    msg(report())

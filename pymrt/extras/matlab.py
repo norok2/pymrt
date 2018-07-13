@@ -30,9 +30,11 @@ import scipy.io  # SciPy: Input and output
 import pymrt as mrt
 import pymrt.utils
 import pymrt.input_output
-from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import msg, dbg
 
+from pymrt import INFO, DIRS
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report
+from pymrt import msg, dbg
 
 # ======================================================================
 # :: additional globals
@@ -185,5 +187,12 @@ def auto_convert(
 
 
 # ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    pass
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

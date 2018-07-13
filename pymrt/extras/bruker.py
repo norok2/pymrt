@@ -321,10 +321,10 @@ def _reco_from_fid(
             if num_rep > 1:
                 arr = np.sum(arr, axis=rep_axis)
 
-            # mrt.input_output.save(fp.format(s='M'), np.abs(arr))
-            # print('MAG')
-            # mrt.input_output.save(fp.format(s='P'), np.angle(arr))
-            # print('PHS')
+                # mrt.input_output.save(fp.format(s='M'), np.abs(arr))
+                # print('MAG')
+                # mrt.input_output.save(fp.format(s='P'), np.angle(arr))
+                # print('PHS')
 
         # except ValueError:
         except NotImplementedError as e:
@@ -540,17 +540,21 @@ def batch_extract(
                         verbose, D_VERB_LVL)
 
 
-# ======================================================================
-if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
+# batch_extract(
+#     '/home/raid1/metere/hd3/sandbox/hmri'
+#     '/Specimen_170814_1_0_Study_20170814_080054/',
+#     custom_reco='mag_phs',
+#     verbose=VERB_LVL['debug'],
+#     force=False)
 
-    # batch_extract(
-    #     '/home/raid1/metere/hd3/sandbox/hmri'
-    #     '/Specimen_170814_1_0_Study_20170814_080054/',
-    #     custom_reco='mag_phs',
-    #     verbose=VERB_LVL['debug'],
-    #     force=False)
 
 # ======================================================================
 elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

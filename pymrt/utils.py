@@ -5902,16 +5902,16 @@ def filter_cx(
         arr = (
             filter_func(np.abs(arr), *filter_args, **filter_kws) *
             np.exp(
-                1j * filter_func(np.angle(arr), *filter_args,
-                                 **filter_kws)))
+                1j * filter_func(
+                    np.angle(arr), *filter_args, **filter_kws)))
     elif mode == 'real':
         arr = (
-            filter_func(arr.real, *filter_args,
-                        **filter_kws) + 1j * arr.imag)
+            filter_func(
+                arr.real, *filter_args, **filter_kws) + 1j * arr.imag)
     elif mode == 'imag':
         arr = (
-            arr.real + 1j * filter_func(arr.imag, *filter_args,
-                                        **filter_kws))
+            arr.real + 1j * filter_func(
+                arr.imag, *filter_args, **filter_kws))
     elif mode == 'mag':
         arr = (
             filter_func(np.abs(arr), *filter_args, **filter_kws) *

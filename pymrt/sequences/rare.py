@@ -67,8 +67,8 @@ def signal():
 def rotation(
         angle=sym.Symbol('a'),
         axes=(0, 1),
-        num_dim=3):
-    rot_mat = sym.eye(num_dim)
+        n_dim=3):
+    rot_mat = sym.eye(n_dim)
     rot_mat[axes[0], axes[0]] = sym.cos(angle)
     rot_mat[axes[1], axes[1]] = sym.cos(angle)
     rot_mat[axes[0], axes[1]] = -sym.sin(angle)
@@ -113,7 +113,7 @@ def evolution_tse(
         repetition_time=sym.Symbol('T_R'),
         turbo_factor=1,
         flip_angle=sym.Symbol('a')):
-    num_dim = 3
+    n_dim = 3
 
     relaxation_longitudinal = sym.Symbol('R_1')
     relaxation_transverse = sym.Symbol('R_2')
@@ -136,7 +136,7 @@ def evolution_tse(
         relaxation_longitudinal, relaxation_transverse, resonance_offset,
         equilibrium_magnetization)
     # attempt some simplification
-    # for i in range(num_dim):
+    # for i in range(n_dim):
     #     final_magnetization[i] = sym.factor(final_magnetization[i])
     return final_magnetization, first_excitation
 
@@ -164,10 +164,10 @@ def steady_state(
 # ======================================================================
 def magnetization(
         label='',
-        num_dim=3):
+        n_dim=3):
     mag_vec = sym.Matrix(
         [sym.Symbol('M_{}_{}'.format(label, i)) for i in
-         range(num_dim)])
+         range(n_dim)])
     return mag_vec
 
 

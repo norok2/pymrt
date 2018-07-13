@@ -990,7 +990,7 @@ def combine(
         method (str): The combination method.
             If str, uses the specified method as found in this module.
             Some methods require `ref` and/or `multi_axis` to be set in
-            `methods_kws`.
+            `method_kws`.
             Accepted values not requiring `ref` or `multi_axis` are:
              - 'complex_sum': use `pymrt.recipes.coils.complex_sum()`;
              - 'sum_of_squares': use `pymrt.recipes.coils.sum_of_squares()`;

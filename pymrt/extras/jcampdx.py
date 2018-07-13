@@ -60,7 +60,7 @@ from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 
-#todo: rewrite using pyparsing
+# todo: rewrite using pyparsing
 
 # ======================================================================
 def _strip_comments(data, comment_start_str='$$'):
@@ -201,9 +201,12 @@ def my_testing():
 
 
 # ======================================================================
-if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
+elapsed(__file__[len(DIRS['base']) + 1:])
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

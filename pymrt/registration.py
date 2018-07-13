@@ -66,14 +66,14 @@ from pymrt.config import EXT_CMD
 def affine_to_params(
         linear,
         shift,
-        num_dim,
+        n_dim,
         transform):
     """
 
     Args:
         linear ():
         shift ():
-        num_dim ():
+        n_dim ():
         transform ():
 
     Returns:
@@ -89,29 +89,29 @@ def affine_to_params(
 # ======================================================================
 def params_to_affine(
         params,
-        num_dim,
+        n_dim,
         transform):
     """
 
     Args:
         params ():
-        num_dim ():
+        n_dim ():
         transform ():
 
     Returns:
 
     """
-    linear = np.eye(num_dim)
-    shift = np.zeros(num_dim)
+    linear = np.eye(n_dim)
+    shift = np.zeros(n_dim)
     if 'translation' in transform or transform in ['rigid', 'affine']:
-        shift = params[:num_dim]
-        params = params[num_dim:]
+        shift = params[:n_dim]
+        params = params[n_dim:]
     if 'rotation' in transform or transform in ['rigid']:
         linear = mrt.geometry.angles2linear(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
-        linear = params.reshape((num_dim, num_dim))
+        linear = params.reshape((n_dim, n_dim))
     return linear, shift
 
 
@@ -121,7 +121,7 @@ def set_bounds(
     """
     Set bounds for registration parameters.
     """
-    num_dim = len(shape)
+    n_dim = len(shape)
     # todo: implement sensible bounds for different transformations
     return None
 
@@ -183,7 +183,7 @@ def set_init_parameters(
 
 
 # ======================================================================
-def _discrete_generator(transform, num_dim):
+def _discrete_generator(transform, n_dim):
     """
     Generator of discrete transformations.
 
@@ -193,42 +193,42 @@ def _discrete_generator(transform, num_dim):
         The name of the accepted transformation.
     """
     if transform == 'reflection':
-        shift = np.zeros((num_dim,))
+        shift = np.zeros((n_dim,))
         for elements in itertools.product([-1, 0, 1],
-                                          repeat=num_dim * num_dim):
-            linear = np.array(elements).reshape((num_dim, num_dim))
+                                          repeat=n_dim * n_dim):
+            linear = np.array(elements).reshape((n_dim, n_dim))
             if np.abs(np.linalg.det(linear)) == 1:
                 linear = linear.astype(np.float)
                 yield linear, shift
     elif transform == 'reflection_simple':
-        shift = np.zeros((num_dim,))
-        for diagonal in itertools.product([-1, 1], repeat=num_dim):
+        shift = np.zeros((n_dim,))
+        for diagonal in itertools.product([-1, 1], repeat=n_dim):
             linear = np.diag(diagonal).astype(np.float)
             yield linear, shift
     elif transform == 'pi_rotation':
-        shift = np.zeros((num_dim,))
-        for diagonal in itertools.product([-1, 1], repeat=num_dim):
+        shift = np.zeros((n_dim,))
+        for diagonal in itertools.product([-1, 1], repeat=n_dim):
             if np.prod(np.array(diagonal)) == 1:
                 linear = np.diag(diagonal).astype(np.float)
                 yield linear, shift
     elif transform == 'pi/2_rotation':
-        shift = np.zeros((num_dim,))
-        num_angles = mrt.geometry.num_angles_from_dim(num_dim)
+        shift = np.zeros((n_dim,))
+        num_angles = mrt.geometry.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             linear = mrt.geometry.angles2linear(angles)
             yield linear, shift
     elif transform == 'pi/2_rotation+':
-        shift = np.zeros((num_dim,))
-        num_angles = mrt.geometry.num_angles_from_dim(num_dim)
+        shift = np.zeros((n_dim,))
+        num_angles = mrt.geometry.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
-            for diagonal in itertools.product([-1, 1], repeat=num_dim):
+            for diagonal in itertools.product([-1, 1], repeat=n_dim):
                 linear = np.dot(
                     np.diag(diagonal).astype(np.float),
                     mrt.geometry.angles2linear(angles))
                 yield linear, shift
     else:
-        shift = np.zeros(num_dim)
-        linear = np.eye(num_dim)
+        shift = np.zeros(n_dim)
+        linear = np.eye(n_dim)
         yield linear, shift
 
 
@@ -279,8 +279,8 @@ def _min_func_affine(
     """
     Function to minimize for affine transformation.
     """
-    num_dim = len(shape)
-    linear, shift = params_to_affine(params, num_dim, transform)
+    n_dim = len(shape)
+    linear, shift = params_to_affine(params, n_dim, transform)
     # the other valid parameters of the `affine_transform` function are:
     #     output=None, order=3, mode='constant', cval=0.0, prefilter=True
     moved_ravel = sp.ndimage.affine_transform(

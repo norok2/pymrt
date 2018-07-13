@@ -6,7 +6,7 @@ PyMRT: read_output files from LCModel.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
@@ -49,10 +49,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pymrt as mrt
 import pymrt.utils
 
-# import pymrt.naming
-# import pymrt.input_output
-# import pymrt.geometry
-# from pymrt.sequences import mp2rage
+from pymrt import INFO, DIRS
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
 
@@ -248,7 +246,7 @@ def test():
 
 
 # ======================================================================
-if __name__ == '__main__':
+def _to_be_checked():
     msg(__doc__.strip())
 
     test()
@@ -268,6 +266,7 @@ if __name__ == '__main__':
     if 'data_cs' in d:
         import matplotlib.pyplot as plt
 
+
         plt.figure()
         plt.plot(d['data_cs'], d['data_s'], '-b')
         plt.plot(d['data_cs'], d['data_fit'], '-r')
@@ -282,3 +281,18 @@ if __name__ == '__main__':
     elapsed('test lcmodel i/o')
     msg(report())
     print()
+
+
+# _to_be_checked()
+
+
+# ======================================================================
+elapsed(__file__[len(DIRS['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())
