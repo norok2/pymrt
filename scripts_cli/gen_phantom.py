@@ -73,7 +73,7 @@ PHANTOMS = ('cuboid', 'ellipsoid', 'rhomboid', 'cylinder')
 # TODO: fix documentation
 
 # ======================================================================
-def make_phantom(
+def gen_phantom(
         i_filepath,
         shape,
         append,
@@ -256,7 +256,7 @@ def main():
         arg_parser.print_help()
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
-    make_phantom(
+    gen_phantom(
         args.infile, args.sizes, args.append, args.phantom, args.position,
         args.lengths, args.intensities, args.outfile, args.verbose)
 

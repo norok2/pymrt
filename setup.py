@@ -179,7 +179,7 @@ setup(
             'pymrt_correlate=scripts_cli.correlate:main',
 
             'pymrt_calc_mask=scripts_cli.calc_mask:main',
-            'pymrt_geom_phantom=scripts_cli.geom_phantom:main',
+            'pymrt_gen_phantom=scripts_cli.gen_phantom:main',
             'pymrt_ernst_calc=scripts_cli.ernst_calc:main',
             'pymrt_unwrap=scripts_cli.unwrap:main',
             'pymrt_coil_combine=scripts_cli.coil_combine:main',
