@@ -352,6 +352,27 @@ def ellipsis(
 
 
 # ======================================================================
+def polygon(
+        shape,
+        vertices,
+        position=0.5):
+    """
+    Generate a mask whose shape is a simple polygon.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the mask in px.
+        vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
+
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def cube(
         shape,
         side,
@@ -662,6 +683,77 @@ def cylinder(
 
 
 # ======================================================================
+def polyhedron(
+        shape,
+        vertices,
+        position=0.5):
+    """
+    Generate a mask whose shape is a simple polyhedron.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the mask in px.
+        vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
+
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def extrema_to_semisizes_position(minima, maxima, num=None):
+    """
+    Compute semisizes and positions from extrema.
+
+    Args:
+        minima (float|Iterable[float]): The minimum extrema.
+            These are the lower bound of the object.
+            If both `minima` and `maxima` are Iterable, their length must
+            match.
+        maxima (float|Iterable[float]): The maximum extrema.
+            These are the upper bound of the object.
+            If both `minima` and `maxima` are Iterable, their length must
+            match.
+        num (int|None): The number of extrema.
+            If None, it is guessed from the `minima` and/or `maxima`.
+            If int, must match the length of `minima` and/or `maxima`
+            (if they are Iterable).
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - semisizes (Iterable[float]): The N-dim cuboid semisides sizes.
+             - position (Iterable[float]): The position of the center.
+               Values are relative to the lowest edge.
+
+    Examples:
+        >>> extrema_to_semisizes_position(0.1, 0.5)
+        ([0.2], [0.3])
+        >>> extrema_to_semisizes_position(0.2, 0.5)
+        ([0.15], [0.35])
+        >>> extrema_to_semisizes_position(0.2, 0.5, 2)
+        ([0.15, 0.15], [0.35, 0.35])
+        >>> extrema_to_semisizes_position((0.2, 0.1), 0.5)
+        ([0.15, 0.2], [0.35, 0.3])
+        >>> extrema_to_semisizes_position((0.1, 0.2), (0.9, 0.5))
+        ([0.4, 0.15], [0.5, 0.35])
+    """
+    if not num:
+        num = mrt.utils.combine_iter_len((minima, maxima, num))
+    # check compatibility of given parameters
+    minima = mrt.utils.auto_repeat(minima, num, check=True)
+    maxima = mrt.utils.auto_repeat(maxima, num, check=True)
+    semisizes, position = [], []
+    for min_val, max_val in zip(minima, maxima):
+        semisizes.append((max_val - min_val) / 2.0)
+        position.append((max_val + min_val) / 2.0)
+    return semisizes, position
+
+
+# ======================================================================
 def nd_cuboid(
         shape,
         semisizes=0.5,
@@ -670,7 +762,7 @@ def nd_cuboid(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is an N-dim cuboid.
+    Generate a mask whose shape is an N-dim cuboid (hypercuboid).
 
     The cartesian equations are:
 
@@ -743,7 +835,7 @@ def nd_superellipsoid(
     coordinate, :math:`a` are the semi-sizes (semi-axes) and
     :math:`k` are the indexes.
 
-    When the index is 2, an ellipsis is generated.
+    When the index is 2, an ellipsoid (hyperellipsoid) is generated.
 
     Args:
         shape (int|Iterable[int]): The shape of the mask in px.
@@ -854,52 +946,111 @@ def nd_prism(
 
 
 # ======================================================================
-def extrema_to_semisizes_position(minima, maxima, num=None):
+def nd_superellipsoidal_prism(
+        shape,
+        axis=-1,
+        semisizes=0.5,
+        indexes=2,
+        position=0.5,
+        n_dim=None,
+        rel_position=True,
+        rel_sizes=True):
+    # todo: ensure n_dim is not none
+    # todo: nd_superellipsoidal_come is the same except nd_prims -> nd_cone
+    if not n_dim:
+        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes))
+    axis = axis % n_dim
+    # separate shape/dims
+    base_shape = tuple(dim for i, dim in enumerate(shape) if i != axis)
+    extra_dim = shape[axis]
+    # separate position
+    position = mrt.utils.auto_repeat(position, n_dim, False, True)
+    base_position = tuple(x for i, x in enumerate(position) if i != axis)
+    extra_position = position[axis]
+    # separate semisizes
+    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, False, True)
+    base_semisizes = tuple(x for i, x in enumerate(semisizes) if i != axis)
+    extra_semisize = semisizes[axis]
+    # generate prism base
+    base = nd_superellipsoid(
+        base_shape, base_semisizes, indexes, base_position, n_dim - 1,
+        rel_position, rel_sizes)
+    # generate final prism
+    mask = nd_prism(
+        base, extra_dim, axis, extra_semisize * 2, extra_position,
+        rel_position, rel_sizes)
+    return mask
+
+
+# ======================================================================
+def nd_cone(
+        base,
+        extra_dim,
+        axis=-1,
+        size=0.5,
+        position=0.5,
+        rel_position=True,
+        rel_sizes=True):
     """
+    Generate a mask whose shape is a N-dim cone.
 
     Args:
-        minima (float|Iterable[float]): The minimum extrema.
-            These are the lower bound of the object.
-            If both `minima` and `maxima` are Iterable, their length must
-            match.
-        maxima (float|Iterable[float]): The maximum extrema.
-            These are the upper bound of the object.
-            If both `minima` and `maxima` are Iterable, their length must
-            match.
-        num (int|None): The number of extrema.
-            If None, it is guessed from the `minima` and/or `maxima`.
-            If int, must match the length of `minima` and/or `maxima`
-            (if they are Iterable).
+        base (np.ndarray): Base (N-1)-dim mask to stack as prism.
+        extra_dim (int): Size of the new dimension to be added.
+        axis (int): Orientation of the prism in the N-dim space.
+        size (float): The size of the prism height.
+            The values interpretation depend on `rel_size`.
+        position (float): The relative position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+            This setting only affects the extra shape dimension.
+        rel_position (bool): Interpret positions as relative value.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+        rel_sizes (bool): Interpret sizes as relative value.
+            If True, `size` values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
 
     Returns:
-        result (tuple): The tuple
-            contains:
-             - semisizes (Iterable[float]): The N-dim cuboid semisides sizes.
-             - position (Iterable[float]): The position of the center.
-               Values are relative to the lowest edge.
-
-    Examples:
-        >>> extrema_to_semisizes_position(0.1, 0.5)
-        ([0.2], [0.3])
-        >>> extrema_to_semisizes_position(0.2, 0.5)
-        ([0.15], [0.35])
-        >>> extrema_to_semisizes_position(0.2, 0.5, 2)
-        ([0.15, 0.15], [0.35, 0.35])
-        >>> extrema_to_semisizes_position((0.2, 0.1), 0.5)
-        ([0.15, 0.2], [0.35, 0.3])
-        >>> extrema_to_semisizes_position((0.1, 0.2), (0.9, 0.5))
-        ([0.4, 0.15], [0.5, 0.35])
+        mask (np.ndarray): Array of boolean describing the geometrical object.
     """
-    if not num:
-        num = mrt.utils.combine_iter_len((minima, maxima, num))
-    # check compatibility of given parameters
-    minima = mrt.utils.auto_repeat(minima, num, check=True)
-    maxima = mrt.utils.auto_repeat(maxima, num, check=True)
-    semisizes, position = [], []
-    for min_val, max_val in zip(minima, maxima):
-        semisizes.append((max_val - min_val) / 2.0)
-        position.append((max_val + min_val) / 2.0)
-    return semisizes, position
+    n_dim = base.ndim + 1
+    if axis > n_dim:
+        raise ValueError(
+            'axis of orientation must not exceed the number of dimensions')
+    # get correct position
+    if rel_sizes:
+        size = rel2abs((extra_dim,), size)
+    position = mrt.utils.grid_coord(
+        (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
+    extra_mask = np.abs(position) <= (size / 2.0)
+    # calculate mask shape
+    shape = (
+        base.shape[:axis] + (extra_dim,) + base.shape[axis:])
+    # create indefinite prism
+    mask = np.zeros(shape, dtype=bool)
+    for i in range(extra_dim):
+        if extra_mask[i]:
+            index = [slice(None)] * n_dim
+            index[axis] = i
+            mask[tuple(index)] = base
+    return mask
+
+
+# ======================================================================
+def nd_superellipsoidal_cone(
+        shape,
+        semisizes=0.5,
+        indexes=2,
+        axis=-1,
+        size=0.5,
+        position=0.5,
+        n_dim=None,
+        rel_position=True,
+        rel_sizes=True):
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -1027,23 +1178,24 @@ def nd_gradient(
 
 
 # ======================================================================
-def dirac_delta(
+def nd_dirac_delta(
         shape,
-        position,
+        position=0.5,
         value=np.inf,
         n_dim=None):
     """
+    Generate an approximation of Dirac's Delta function.
 
     Args:
-        shape (): 
-        position (): 
-        value (): 
-        n_dim (): 
+        shape ():
+        position ():
+        value ():
+        n_dim ():
 
     Returns:
 
     Examples:
-        >>> dirac_delta((5, 5), 0.5, 1)
+        >>> nd_dirac_delta((5, 5), 0.5, 1)
         array([[ 0.,  0.,  0.,  0.,  0.],
                [ 0.,  0.,  0.,  0.,  0.],
                [ 0.,  0.,  1.,  0.,  0.],
@@ -1062,6 +1214,41 @@ def dirac_delta(
     mask = np.zeros(shape)
     mask[[slice(i, i + 1) for i in origin]] = value
     return mask
+
+
+# ======================================================================
+def nd_polytope(
+        shape,
+        vertices,
+        position=0.5,
+        n_dim=None,
+        rel_position=True,
+        rel_sizes=True):
+    """
+    Generate a mask whose shape is a simple polytope.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the mask in px.
+        vertices (Iterable[Iterable[float]): Coordinates of the vertices.
+            The values interpretation depend on `rel_sizes`.
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+        rel_sizes (bool): Interpret sizes as relative values.
+            If True, `vertices` values are interpreted as relative,
+            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
+
+    Returns:
+        mask (np.ndarray): Array of boolean describing the geometrical object.
+    """
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -1542,34 +1729,6 @@ def multi_resample(
 
 
 # ======================================================================
-def apply_to_complex(
-        arr,
-        func,
-        *args,
-        **kwargs):
-    """
-    Apply a real-valued function to real and imaginary part of an array.
-
-    This can be useful for geometric transformations, particularly affines,
-    and generally for functions that are explicitly restricted to real values.
-
-    Args:
-        arr (np.ndarray): The N-dim array to be transformed.
-        func (callable): Filtering function.
-            func(arr, *args, **kwargs) -> arr
-        args (tuple): Positional arguments passed to the filtering function.
-        kwargs (dict): Keyword arguments passed to the filtering function.
-
-    Returns:
-        array (np.ndarray): The transformed N-dim array.
-    """
-    real = func(np.real(arr), *args, **kwargs)
-    imag = func(np.imag(arr), *args, **kwargs)
-    arr = mrt.utils.cartesian2complex(real, imag)
-    return arr
-
-
-# ======================================================================
 def decode_affine(
         affine):
     """
@@ -1610,7 +1769,7 @@ def encode_affine(
 
 
 # ======================================================================
-def num_angles_from_dim(num_dim):
+def num_angles_from_dim(n_dim):
     """
     Calculate the complete number of angles given the dimension.
 
@@ -1621,19 +1780,21 @@ def num_angles_from_dim(num_dim):
     (N: num of angles, n: num of dim)
 
     Args:
-        num_dim (int): The number of dimensions.
+        n_dim (int): The number of dimensions.
 
     Returns:
-        num_angles (int): The corresponding number of angles.
+        n_angles (int): The corresponding number of angles.
 
     See Also:
-        pymrt.geometry.num_dims_from_angles()
+        pymrt.geometry.num_dim_from_angles()
     """
-    return num_dim * (num_dim - 1) // 2
+    return n_dim * (n_dim - 1) // 2
 
 
 # ======================================================================
-def num_dims_from_angles(num_angles):
+def num_dim_from_angles(
+        n_angles,
+        raise_err=False):
     """
     Computes the number of dimensions from the number of angles.
 
@@ -1641,62 +1802,81 @@ def num_dims_from_angles(num_angles):
     (N: num of angles, n: num of dim)
 
     Args:
-        num_angles (int): The number of angles.
+        n_angles (int): The number of angles.
+        raise_err (bool): Raise an exception if invalid number of angles.
 
     Returns:
-        num_dim (int): The corresponding number of dimensions.
+        n_dim (int): The corresponding number of dimensions.
 
     Raises:
-        ValueError: if the number of angles is invalid!
+        ValueError: if `raise_err == True` and the number of angles is invalid!
 
     See Also:
         pymrt.geometry.num_angles_from_dim()
     """
-    num_dims = ((1 + np.sqrt(1 + 8 * num_angles)) / 2)
+    n_dim = ((1 + np.sqrt(1 + 8 * n_angles)) / 2)
     # alternatives: numpy.modf, math.modf
-    int_part, dec_part = divmod(num_dims, 1)
-    if not np.isclose(dec_part, 0.0):
+    int_part, dec_part = divmod(n_dim, 1)
+    if not np.isclose(dec_part, 0.0) and raise_err:
         raise ValueError('cannot get the dimension from the number of angles')
-    return int(num_dims)
+    return int(np.ceil(n_dim))
 
 
 # ======================================================================
 def angles2linear(
         angles,
+        n_dim=None,
         axes_list=None,
         use_degree=True,
-        tol=2e-6):
+        atol=None):
     """
     Calculate the linear transformation relative to the specified rotations.
 
     Args:
         angles (tuple[float]): The angles to be used for rotation.
+        n_dim (int|None): The number of dimensions to consider.
+            The number of angles and `n_dim` should satisfy the relation:
+            `n_angles = n_dim * (n_dim - 1) / 2`.
+            If `len(angles)` is smaller than expected for a given `n_dim`,
+            the remaining angles are set to 0.
+            If `len(angles)` is larger than expected, the exceeding `angles`
+            are ignored.
+            If None, n_dim is computed from `len(angles)`.
         axes_list (tuple[tuple[int]]|None): The axes of the rotation plane.
-            If not None, for each rotation angle a pair of axes must be
-            specified to define the associated plane of rotation.
-            If None, uses output of `itertools.combinations(range(n_dim), 2)`.
+            If not None, for each rotation angle a pair of axes
+            (i.e. a 2-tuple of int) must be specified to define the associated
+            plane of rotation.
+            The number of 2-tuples should match the number of of angles
+            `len(angles) == len(axes_list)`.
+            If `len(angles) < len(axes_list)` or `len(angles) > len(axes_list)`
+            the unspecified rotations are not performed.
+            If None, generates `axes_list` using the output of
+            `itertools.combinations(range(n_dim), 2)`.
         use_degree (bool): Interpret angles as expressed in degree.
             Otherwise, use radians.
-        tol (float): Tolerance in the approximation.
-            If error tolerante is exceded, a warning is issued.
+        atol (float|None): Absolute tolerance in the approximation.
+            If error tolerance is exceded, a warning is issued.
+            If float, the specified number is used as threshold.
+            If None, a threshold is computed based on the size of the linear
+            transformation matrix: `dim ** 4 * np.finfo(np.double).eps`.
 
     Returns:
         linear (np.ndarray): The rotation matrix as defined by the angles.
 
     See Also:
         pymrt.geometry.num_angles_from_dim(),
-        pymrt.geometry.num_dims_from_angles(),
+        pymrt.geometry.num_dim_from_angles(),
         itertools.combinations
     """
-    # solution to: n * (n - 1) / 2 = N  (N: num of angles, n: num of dim)
-    num_dim = num_dims_from_angles(len(angles))
+    if n_dim is None:
+        n_dim = num_dim_from_angles(len(angles))
     if not axes_list:
-        axes_list = list(itertools.combinations(range(num_dim), 2))
-    lin_mat = np.eye(num_dim).astype(np.double)  # longdouble?
+        axes_list = list(itertools.combinations(range(n_dim), 2))
+    lin_mat = np.eye(n_dim).astype(np.double)
     for angle, axes in zip(angles, axes_list):
         if use_degree:
             angle = np.deg2rad(angle)
-        rotation = np.eye(num_dim)
+        rotation = np.eye(n_dim)
         rotation[axes[0], axes[0]] = np.cos(angle)
         rotation[axes[1], axes[1]] = np.cos(angle)
         rotation[axes[0], axes[1]] = -np.sin(angle)
@@ -1704,7 +1884,9 @@ def angles2linear(
         lin_mat = np.dot(lin_mat, rotation)
     # :: check that this is a rotation matrix
     det = np.linalg.det(lin_mat)
-    if np.abs(det) - 1.0 > tol * np.finfo(np.float).eps:
+    if not atol:
+        atol = lin_mat.ndim ** 4 * np.finfo(np.double).eps
+    if np.abs(det) - 1.0 > atol:
         text = 'rotation matrix may be inaccurate [det = {}]'.format(repr(det))
         warnings.warn(text)
     return lin_mat
@@ -2139,6 +2321,82 @@ def rand_mask(
 
 
 # ======================================================================
+def multi_render(
+        shape,
+        geom_shapes,
+        n_dim=None,
+        affine_kws=(('order', 0),),
+        dtype=np.float):
+    """
+    Render multiple geometrical masks into a single array.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the mask in px.
+        geom_shapes (Iterable): The
+
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the shape parameter.
+        affine_kws (dict|Iterable|None): Keyword parameters for the affine.
+            These parameters are passed to `scipy.ndimage.affine_transform()`
+            upon application of the (eventual) rotation.
+            If Iterable, must be possible to cast to dict.
+            If None, no parameter is set.
+        dtype (np.dtype): The Numpy data type of the rendered array.
+            Note that this will be used also for the internal interpolations.
+
+    Returns:
+        arr (np.ndarray): The
+    """
+    # check that ellipsoids parameters have the right size
+    if n_dim is None:
+        n_dim = len(shape)
+    else:
+        shape = mrt.utils.auto_repeat(shape, n_dim, False, True)
+    inner_shape = [min(shape)] * n_dim
+    affine_kws = \
+        {} if affine_kws is None else dict(affine_kws)
+    arr = np.zeros(shape, dtype=dtype)
+    for scale, geom_shape, inner_pos, angles, outer_pos in geom_shapes:
+        # generate the base geometric shape
+        geom_name = geom_shape[0]
+        geom_arr = None
+        if geom_name in ('e', 'ellipsoid'):
+            semisizes = geom_shape[1]
+            geom_arr = nd_superellipsoid(inner_shape, semisizes)
+        elif geom_name in ('s', 'superellipsoid'):
+            indexes, semisizes = geom_shape[1:]
+            geom_arr = nd_superellipsoid(inner_shape, semisizes, indexes)
+        elif geom_name in ('c', 'cuboid'):
+            indexes, semisizes = geom_shape[1:]
+            geom_arr = nd_superellipsoid(inner_shape, semisizes)
+        elif geom_name in ('p', 'prism'):
+            axis, semisizes, indexes = geom_shape[1:]
+            geom_arr = nd_superellipsoidal_prism(
+                inner_shape, axis, semisizes, indexes)
+        elif geom_name in ('g', 'gradient'):
+            gen_ranges = geom_shape[1]
+            geom_arr = nd_gradient(gen_ranges)
+        else:
+            text = ('unknown name `{geom_name}` while rendering with '
+                    '`pymrt.geometry.multi_render`'.format(**locals()))
+            warnings.warn(text)
+        if outer_pos is None:
+            outer_pos = 0.5
+        if geom_arr is not None:
+            # compute position and linear transformation matrix
+            if angles is None:
+                lin_mat = np.eye(n_dim)
+            else:
+                lin_mat = angles2linear(angles, n_dim)
+            inner_pos = rel2abs(inner_shape, inner_pos)
+            lin_mat, offset = prepare_affine(inner_shape, lin_mat, inner_pos)
+            arr += reframe(scale * sp.ndimage.affine_transform(
+                geom_arr.astype(dtype),
+                lin_mat, offset, **affine_kws), shape, outer_pos)
+    return arr
+
+
+# ======================================================================
 def _self_test_interactive():
     """
     Test the functions available in the package.
@@ -2186,6 +2444,3 @@ if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
     msg(report())
-    # _self_test_interactive()
-    # elapsed('self_test_interactive')
-    # msg(report())
