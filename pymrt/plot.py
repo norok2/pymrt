@@ -155,12 +155,11 @@ def explore(array):
     Returns:
         None
     """
-    # todo: implement!
-    pass
+    raise NotImplementedError
 
 
 # ======================================================================
-def quick(array, values_range=None):
+def quick(arr, *args, **kwargs):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -175,19 +174,17 @@ def quick(array, values_range=None):
 
     """
 
-    if array.ndim == 1:
-        quick_1d(array, values_range)
-    elif array.ndim == 2:
-        quick_2d(array, values_range)
-    elif array.ndim == 3:
-        quick_3d(array, values_range)
+    if arr.ndim == 1:
+        quick_1d(arr, *args, **kwargs)
+    elif arr.ndim >= 2:
+        quick_2d(arr, *args, **kwargs)
     else:
-        warnings.warn('cannot quickly plot this array (try `explore`)')
+        raise ValueError('Cannot plot 0-dim data.')
     plt.show()
 
 
 # ======================================================================
-def quick_1d(array, values_range=None):
+def quick_1d(arr, *args, **kwargs):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -201,19 +198,15 @@ def quick_1d(array, values_range=None):
     None
 
     """
-    if array.ndim == 1:
-        # using Matplotlib
-        plt.figure()
-        plt.plot(np.arange(len(array)), array.astype(float))
-    elif array.ndim > 1:
-        # todo: 1D projection
-        pass
+    if arr.ndim == 1:
+        fig, ax = plt.subplots()
+        ax.plot(np.arange(len(arr)), arr.astype(float), *args, **kwargs)
     else:
-        warnings.warn('cannot plot (1D projection of) current array')
+        raise NotImplementedError
 
 
 # ======================================================================
-def quick_2d(arr, values_range=None):
+def quick_2d(arr, *args, **kwargs):
     """
     Quickly plot an array in 2D or 3D.
 
@@ -228,53 +221,34 @@ def quick_2d(arr, values_range=None):
 
     """
     if arr.ndim == 2:
-        img = arr
+        fig, ax = plt.subplots()
+        ax.imshow(arr.astype(float), *args, **kwargs)
     else:
-        warnings.warn('current array was not 2D, performing brute conversion')
-        img = arr.reshape(mrt.utils.optimal_shape(arr.size))
+        def process_key(event):
+            fig = event.canvas.figure
+            ax = fig.axes[0]
+            if event.key == ',':
+                previous_slice(ax)
+            elif event.key == '.':
+                next_slice(ax)
+            fig.canvas.draw()
 
-    if not values_range:
-        values_range = mrt.utils.minmax(img)
+        def previous_slice(ax):
+            volume = ax.volume
+            ax.index = (ax.index - 1) % volume.shape[0]  # wrap around using %
+            ax.images[0].set_array(volume[ax.index])
 
-    # using Matplotlib
-    fig = plt.subplots()
-    plt.imshow(
-        img.astype(float), cmap=plt.cm.gray,
-        vmin=values_range[0], vmax=values_range[1])
+        def next_slice(ax):
+            volume = ax.volume
+            ax.index = (ax.index + 1) % volume.shape[0]
+            ax.images[0].set_array(volume[ax.index])
 
-
-# ======================================================================
-def quick_3d(arr, values_range=None):
-    """
-    TODO: DOCSTRING.
-
-    Args:
-        arr:
-
-    Returns:
-        None
-    """
-    warnings.warn('3D-support plots might be slow (consider using `explore`)')
-    if arr.ndim == 3:
-        # using Matplotlib
-        from skimage import measure
-
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1, projection='3d')
-        # zz, xx, yy = array.nonzero()
-        # ax.scatter(xx, yy, zz, cmap=plt.cm.afmhot_r)
-
-        verts, faces, normals, values = measure.marching_cubes(
-            arr, 0.5, (2,) * 3)
-        ax.plot_trisurf(
-            verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral',
-            antialiased=False, linewidth=0.0)
-    elif arr.ndim > 3:
-        # todo: 3D projection
-        pass
-    else:
-        warnings.warn('cannot plot (3D projection of) current array')
+        # remove_keymap_conflicts({'j', 'k'})
+        fig, ax = plt.subplots()
+        ax.volume = arr
+        ax.index = arr.shape[0] // 2
+        ax.imshow(arr[ax.index], *args, **kwargs)
+        fig.canvas.mpl_connect('key_press_event', process_key)
 
 
 # ======================================================================
