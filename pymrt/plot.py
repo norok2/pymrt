@@ -277,7 +277,7 @@ def simple(
     if legends is None:
         legends = mrt.utils.auto_repeat(None, len(y_datas), check=True)
     for x_data, y_data, legend in zip(x_datas, y_datas, legends):
-        plot = ax.plot(x_data, y_data, label=legend)
+        pax = ax.plot(x_data, y_data, label=legend)
     # setup title and labels
     if title:
         ax.set_title(title.format(**locals()))
@@ -771,7 +771,7 @@ def sample2d(
     ax.set_aspect('equal')
 
     # plot data
-    plot = ax.imshow(
+    pax = ax.imshow(
         data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
         interpolation=interpolation)
 
@@ -784,7 +784,7 @@ def sample2d(
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
         # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
@@ -1005,7 +1005,7 @@ def sample3d_view2d(
     ax.set_aspect('equal')
 
     # plot data
-    plot = ax.imshow(
+    pax = ax.imshow(
         view, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
         interpolation=interpolation)
 
@@ -1018,7 +1018,7 @@ def sample3d_view2d(
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
         # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
@@ -1208,7 +1208,7 @@ def sample2d_multi(
                 text_color = 'k'
 
         # plot data
-        plot = ax.imshow(
+        pax = ax.imshow(
             data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
             interpolation=interpolation)
 
@@ -1219,7 +1219,7 @@ def sample2d_multi(
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(plot, cax=cax, **dict(cbar_kws))
+        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
         # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
@@ -1397,7 +1397,7 @@ def sample2d_anim(
     data = []
     for i in range(0, n_frames, step):
         sample = mrt.utils.ndim_slice(array, axis, i)
-        plot = ax.imshow(
+        pax = ax.imshow(
             sample, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         # include additional text
@@ -1407,7 +1407,7 @@ def sample2d_anim(
         data.append(sample)
         if len(plots) <= 0:
             if cbar_kws is not None:
-                cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
+                cbar = ax.figure.colorbar(pax, ax=ax, **dict(cbar_kws))
                 if cbar_txt is not None:
                     only_extremes = \
                         'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
@@ -1416,7 +1416,7 @@ def sample2d_anim(
                             2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
                     else:
                         cbar.set_label(cbar_txt)
-        plots.append([plot])
+        plots.append([pax])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
     if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
         fig.tight_layout()
@@ -1518,7 +1518,7 @@ def histogram1d(
         ax = fig.gca()
     else:
         fig = plt.gcf()
-    plot = ax.plot(mrt.utils.midval(bin_edges), hist, **dict(style))
+    pax = ax.plot(mrt.utils.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format(**locals()))
@@ -1676,7 +1676,7 @@ def histogram1d_list(
         else:
             legend = '_nolegend_'
         # plot figure
-        plot = ax.plot(
+        pax = ax.plot(
             mrt.utils.midval(bin_edges), hist,
             label=legend,
             **next(style_cycler))
@@ -1878,14 +1878,14 @@ def histogram2d(
     else:
         fig = plt.gcf()
     # plot figure
-    plot = ax.imshow(
+    pax = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
         aspect=aspect,
         vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     # plot the color bar
     if cbar_kws is not None:
-        cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
+        cbar = ax.figure.colorbar(pax, ax=ax, **dict(cbar_kws))
         if cbar_txt is not None:
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
