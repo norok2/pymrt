@@ -42,13 +42,6 @@ import traceback  # Print or retrieve a stack traceback
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
-import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-import scipy.optimize
-import pytk
-import pytk.widgets
-
-import matplotlib.backends.backend_tkagg as tkagg
 
 # :: Local Imports
 import pymrt as mrt
@@ -371,11 +364,11 @@ def main():
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
     if not args.indirect:
-        interactive.mpl_plot(
+        interactive.plotting_tk_mpl(
             plot_rho_b1t_mp2rage_seq,
             SEQ_INTERACTIVES, title=TITLE, about=__doc__)
     else:
-        interactive.mpl_plot(
+        interactive.plotting_tk_mpl(
             plot_rho_b1t_mp2rage_acq,
             ACQ_INTERACTIVES, title=TITLE, about=__doc__)
 

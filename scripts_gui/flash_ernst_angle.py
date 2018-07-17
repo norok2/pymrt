@@ -248,15 +248,15 @@ def main():
             filtered_interactives.pop(k)
 
     if x_vars == {'t1', 'tr'}:
-        interactive.mpl_plot(
+        interactive.plotting_tk_mpl(
             plot_flash_ernst_angle_t1_tr,
             filtered_interactives, title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
-        interactive.mpl_plot(
+        interactive.plotting_tk_mpl(
             plot_flash_ernst_angle_fa_t1,
             filtered_interactives, title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
-        interactive.mpl_plot(
+        interactive.plotting_tk_mpl(
             plot_flash_ernst_angle_fa_tr,
             filtered_interactives, title=TITLE, about=__doc__)
 

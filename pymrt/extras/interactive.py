@@ -42,7 +42,7 @@ Examples:
     ...         ax.set_ylabel(r'y (arb. units)')
     ...         ax.legend()
     ...     return ax
-    >>> mpl_plot(plot_func, interactives, title='Test')
+    >>> plotting_tk_mpl(plot_func, interactives, title='Test')
     <tkinter.Tk object .>
 """
 
@@ -94,7 +94,7 @@ class PytkAbout(pytk.Window):
 
         about_txt = '\n'.join((
             MY_GREETINGS[1:],
-            pymrt.__doc__,
+            mrt.__doc__,
             about,
             '{} - ver. {}\n{} {}\n{}'.format(
                 INFO['name'], INFO['version'],
@@ -285,7 +285,7 @@ class PytkMain(pytk.widgets.Frame):
 
 
 # ======================================================================
-def mpl_plot(func, interactives, gui_main=PytkMain, *args, **kwargs):
+def plotting_tk_mpl(func, interactives, gui_main=PytkMain, *args, **kwargs):
     root = pytk.tk.Tk()
     app = gui_main(root, func, interactives, *args, **kwargs)
     pytk.utils.set_icon(root, 'icon', DIRS['data'])
