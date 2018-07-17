@@ -2628,7 +2628,7 @@ def split_ext(
         auto_multi_ext=True):
     """
     Split the filepath into a pair (root, ext), so that: root + ext == path.
-    root is everything that preceeds the first extension separator.
+    root is everything that precedes the first extension separator.
     ext is the extension (including the separator).
 
     It can automatically detect multiple extensions.
