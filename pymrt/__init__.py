@@ -20,7 +20,7 @@ import appdirs  # Determine appropriate platform-specific dirs
 
 # ======================================================================
 # :: Version
-__version__ = '0.1.dev154+n79cee1b'
+from ._version import __version__
 
 # ======================================================================
 # :: Project Details
@@ -180,6 +180,7 @@ def dbg(obj, fmt=None):
         dbg(my_dict['a']): 1
     """
     import inspect
+
 
     outer_frame = inspect.getouterframes(inspect.currentframe())[1]
     name_str = outer_frame[4][0][:-1]
