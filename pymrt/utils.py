@@ -2232,7 +2232,9 @@ def iwalk2(
         max_depth=-1,
         on_error=None):
     """
-    Recursively walk through sub paths of a base directory
+    Recursively walk through sub-paths of a base directory.
+
+    This produces a generator for the next sub-path item.
 
     Args:
         base (str): Directory where to operate.
@@ -2297,7 +2299,9 @@ def walk2(
         max_depth=-1,
         on_error=None):
     """
-    Recursively walk through sub paths of a base directory
+    Recursively walk through sub paths of a base directory.
+
+    This differs from `iwalk2()` in that it returns a list.
 
     Args:
         base (str): Directory where to operate.
@@ -2327,6 +2331,8 @@ def which(args):
     Determine the full path of an executable, if possible.
 
     It mimics the behavior of the POSIX command `which`.
+
+    Deprecated: for Python >3.3 use `shutil.which()`.
 
     Args:
         args (str|list[str]): Command to execute as a list of tokens.
@@ -2601,7 +2607,7 @@ def add_extsep(ext):
     Add a extsep char to a filename extension, if it does not have one.
 
     Args:
-        ext (str): Filename extension to which the dot has to be added.
+        ext (str|None): Filename extension to which the dot has to be added.
 
     Returns:
         ext (str): Filename extension with a prepending dot.
@@ -2613,10 +2619,12 @@ def add_extsep(ext):
         '.txt'
         >>> add_extsep('')
         '.'
+        >>> add_extsep(None)
+        '.'
     """
-    if not ext:
-        ext = ''
-    ext = ('' if ext.startswith(os.path.extsep) else os.path.extsep) + ext
+    ext = (
+        ('' if ext and ext.startswith(os.path.extsep) else os.path.extsep) +
+        (ext if ext else ''))
     return ext
 
 
@@ -2754,10 +2762,10 @@ def multi_split_path(
     Note that: os.path.sep.join(*dirs, base) + ext == path.
     (and therfore: ''.join(dirs) + base + ext != path).
 
-    root is everything that preceeds the last path separator.
-    base is everything between the last path separator and the first
+    `root` is everything that preceeds the last path separator.
+    `base` is everything between the last path separator and the first
     extension separator.
-    ext is the extension (including the separator).
+    `ext` is the extension (including the separator).
 
     Note that this separation is performed only on the string and it is not
     aware of the filepath actually existing, being a file, a directory,

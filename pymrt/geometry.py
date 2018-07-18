@@ -850,11 +850,11 @@ def nd_superellipsoid(
             If None, the number of dims is guessed from the other parameters.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `semisizes` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -912,11 +912,11 @@ def nd_prism(
             This setting only affects the extra shape dimension.
         rel_position (bool): Interpret positions as relative value.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative value.
             If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -1006,11 +1006,11 @@ def nd_cone(
             This setting only affects the extra shape dimension.
         rel_position (bool): Interpret positions as relative value.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative value.
             If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -1893,7 +1893,10 @@ def angles2linear(
 
 
 # ======================================================================
-def linear2angles():
+def linear2angles(
+        linear,
+        use_degree=True,
+        atol=None):
     # todo: implement the inverse of angles2linear
     raise NotImplementedError
 
