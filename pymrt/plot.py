@@ -145,113 +145,6 @@ def _manage_ticks_limit(ticks_limit, ax):
 
 
 # ======================================================================
-def explore(array):
-    """
-    Generate a visualization of an ND-array.
-
-    Args:
-        array:
-
-    Returns:
-        None
-    """
-    raise NotImplementedError
-
-
-# ======================================================================
-def quick(arr, *args, **kwargs):
-    """
-    Quickly plot an array in 2D or 3D.
-
-    Parameters
-    ==========
-    mask : ndarray
-        The mask to plot.
-
-    Returns
-    =======
-    None
-
-    """
-
-    if arr.ndim == 1:
-        quick_1d(arr, *args, **kwargs)
-    elif arr.ndim >= 2:
-        quick_2d(arr, *args, **kwargs)
-    else:
-        raise ValueError('Cannot plot 0-dim data.')
-    plt.show()
-
-
-# ======================================================================
-def quick_1d(arr, *args, **kwargs):
-    """
-    Quickly plot an array in 2D or 3D.
-
-    Parameters
-    ==========
-    mask : ndarray
-        The mask to plot.
-
-    Returns
-    =======
-    None
-
-    """
-    if arr.ndim == 1:
-        fig, ax = plt.subplots()
-        ax.plot(np.arange(len(arr)), arr.astype(float), *args, **kwargs)
-    else:
-        raise NotImplementedError
-
-
-# ======================================================================
-def quick_2d(arr, *args, **kwargs):
-    """
-    Quickly plot an array in 2D or 3D.
-
-    Parameters
-    ==========
-    mask : ndarray
-        The mask to plot.
-
-    Returns
-    =======
-    None
-
-    """
-    if arr.ndim == 2:
-        fig, ax = plt.subplots()
-        ax.imshow(arr.astype(float), *args, **kwargs)
-    else:
-        def process_key(event):
-            fig = event.canvas.figure
-            ax = fig.axes[0]
-            if event.key == ',':
-                previous_slice(ax)
-            elif event.key == '.':
-                next_slice(ax)
-            fig.canvas.draw()
-
-        def previous_slice(ax):
-            volume = ax.volume
-            ax.index = (ax.index - 1) % volume.shape[0]  # wrap around using %
-            ax.images[0].set_array(volume[ax.index])
-
-        def next_slice(ax):
-            volume = ax.volume
-            ax.index = (ax.index + 1) % volume.shape[0]
-            ax.images[0].set_array(volume[ax.index])
-
-        # remove_keymap_conflicts({'j', 'k'})
-        fig, ax = plt.subplots()
-        ax.volume = arr
-        ax.index = arr.shape[0] // 2
-        ax.imshow(arr[ax.index], *args, **kwargs)
-        fig.canvas.mpl_connect('key_press_event', process_key)
-
-
-# ======================================================================
 def simple(
         x_datas,
         y_datas,
@@ -957,7 +850,7 @@ def sample3d_view2d(
         # todo: fix this
         for i, v in enumerate(views):
             if v.shape[0] != views[0].shape[0] and \
-                    v.shape[1] != views[0].shape[1]:
+                            v.shape[1] != views[0].shape[1]:
                 views[i] = v.transpose()
 
         x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]

@@ -2410,6 +2410,7 @@ def _self_test_interactive():
     Returns:
         None
     """
+    import numex.gui_tk_mpl
     pos = 0.5
     dim = 128
     l1, l2, l3 = (16.0, 8.0, 32.0)
@@ -2417,24 +2418,24 @@ def _self_test_interactive():
 
     # :: 2D Tests
     # :: - shape test
-    mrt.plot.quick(square(dim, l1, pos))
-    mrt.plot.quick(rectangle(dim, (l1, l2), pos))
-    mrt.plot.quick(rhombus(dim, (l1, l2), pos))
-    mrt.plot.quick(circle(dim, l1, pos))
-    mrt.plot.quick(ellipsis(dim, (l1, l2), pos))
+    numex.gui_tk_mpl.explore(square(dim, l1, pos))
+    numex.gui_tk_mpl.explore(rectangle(dim, (l1, l2), pos))
+    numex.gui_tk_mpl.explore(rhombus(dim, (l1, l2), pos))
+    numex.gui_tk_mpl.explore(circle(dim, l1, pos))
+    numex.gui_tk_mpl.explore(ellipsis(dim, (l1, l2), pos))
     # :: - Position test
-    mrt.plot.quick(ellipsis(dim, (l1, l2), (0.2, 0.7)))
+    numex.gui_tk_mpl.explore(ellipsis(dim, (l1, l2), (0.2, 0.7)))
 
     # :: 3D Tests
     # :: - shape test
-    mrt.plot.quick(cube(dim, l1, pos))
-    mrt.plot.quick(cuboid(dim, (l1, l2, l3), pos))
-    mrt.plot.quick(rhomboid(dim, (l1, l2, l3), pos))
-    mrt.plot.quick(sphere(dim, l1, pos))
-    mrt.plot.quick(ellipsoid(dim, (l1, l2, l3), pos))
-    mrt.plot.quick(cylinder(dim, 2.0 * l1, l1, -1, pos))
+    numex.gui_tk_mpl.explore(cube(dim, l1, pos))
+    numex.gui_tk_mpl.explore(cuboid(dim, (l1, l2, l3), pos))
+    numex.gui_tk_mpl.explore(rhomboid(dim, (l1, l2, l3), pos))
+    numex.gui_tk_mpl.explore(sphere(dim, l1, pos))
+    numex.gui_tk_mpl.explore(ellipsoid(dim, (l1, l2, l3), pos))
+    numex.gui_tk_mpl.explore(cylinder(dim, 2.0 * l1, l1, -1, pos))
     # :: - Position test
-    mrt.plot.quick(ellipsoid(dim, (l1, l2, l3), (0.0, 1.0, 0.5)))
+    numex.gui_tk_mpl.explore(ellipsoid(dim, (l1, l2, l3), (0.0, 1.0, 0.5)))
 
 
 # ======================================================================

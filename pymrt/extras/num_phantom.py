@@ -266,13 +266,13 @@ def render(
     return arr
 
 
-import pymrt.plot
+import numex.gui_tk_mpl
 
 # arr = render(256, 'shepp_logan_toft')
 # mrt.plot.quick(arr.T, origin='lower')
 
 arr = render(256, 'shepp_logan_3d')
-mrt.plot.quick(arr.transpose((2, 1, 0)), origin='lower')
+numex.gui_tk_mpl.explore(arr)
 
 
 # ======================================================================
