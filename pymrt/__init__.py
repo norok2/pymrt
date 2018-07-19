@@ -17,6 +17,7 @@ import datetime  # Basic date and time types
 # import inspect  # Inspect live objects
 import os  # Miscellaneous operating system interfaces
 import appdirs  # Determine appropriate platform-specific dirs
+import pkg_resources  # Manage package resource (from setuptools module)
 
 # ======================================================================
 # :: Version
@@ -315,7 +316,8 @@ def _app_dirs(
         ['base', 'cache', 'config', 'data', 'log']
     """
     dirpaths = dict((
-        ('base', os.path.dirname(__file__)),
+        ('base', os.path.dirname(__file__)),  # todo: fix for pyinstaller
+        ('resources', pkg_resources.resource_filename('pymrt', 'resources')),
         ('config', appdirs.user_config_dir(name, author, version)),
         ('cache', appdirs.user_cache_dir(name, author, version)),
         ('data', appdirs.user_data_dir(name, author, version)),

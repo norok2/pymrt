@@ -128,10 +128,8 @@ setup(
         'GNU General Public License v3 or later (GPLv3+)',
 
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 
     keywords=('quantitative', 'MRI', 'qMRI', 'MT', 'susceptibility',
@@ -147,13 +145,14 @@ setup(
         'nibabel',
         'matplotlib',
         'pyparsing',
-        'numeral',
         'appdirs',
         'seaborn',
         'pywavelets',
         'h5py',
-        'pytk',
         'pillow',
+        'numeral',
+        'pytk',
+        'numex',
     ],
 
     setup_requires=[
@@ -167,10 +166,13 @@ setup(
     },
 
     package_data={
-        'pymrt': ['sequences/pulses/*.csv', ],
+        'pymrt': [
+            'resources/icon.*',
+            'sequences/pulses/*.csv',],
     },
+    include_package_data=True,
 
-    # data_files=[('my_data', ['data/data_file'])],
+    data_files=[('share/icons', ['artwork/pymrt_logo.svgz'])],
 
     entry_points={
         'console_scripts': [
