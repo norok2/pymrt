@@ -41,12 +41,12 @@ import traceback  # Print or retrieve a stack traceback
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (signal and image processing library)
+# import scipy as sp  # SciPy (signal and image processing library)
+import numex.interactive_tk_mpl
 
 # :: Local Imports
 import pymrt as mrt
 from pymrt.sequences import mp2rage
-from pymrt.extras import interactive
 
 from pymrt import INFO, DIRS
 from pymrt import VERB_LVL, D_VERB_LVL
@@ -157,7 +157,7 @@ ACQ_INTERACTIVES = collections.OrderedDict([
     ('k_gre', dict(
         label='k_GRE / one units',
         default=0.5, start=0.0, stop=1.0, step=0.05)),
-    
+
     ('sl_pe_swap', dict(
         label='Swap PE/SL', default=False)),
 
@@ -233,7 +233,6 @@ def plot_rho_b1t_mp2rage_seq(
             expression = None
         ax.set_xlabel(r'$\rho={}$ / arb. units'.format(expression))
         ax.legend()
-    return ax
 
 
 # ======================================================================
@@ -312,7 +311,6 @@ def plot_rho_b1t_mp2rage_acq(
             expression = None
         ax.set_xlabel(r'$\rho={}$ / arb. units'.format(expression))
         ax.legend()
-    return ax
 
 
 # ======================================================================
@@ -364,13 +362,15 @@ def main():
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
     if not args.indirect:
-        interactive.plotting_tk_mpl(
+        numex.interactive_tk_mpl.plotting(
             plot_rho_b1t_mp2rage_seq,
-            SEQ_INTERACTIVES, title=TITLE, about=__doc__)
+            SEQ_INTERACTIVES, resources_path=DIRS['resources'],
+            title=TITLE, about=__doc__)
     else:
-        interactive.plotting_tk_mpl(
+        numex.interactive_tk_mpl.plotting(
             plot_rho_b1t_mp2rage_acq,
-            ACQ_INTERACTIVES, title=TITLE, about=__doc__)
+            ACQ_INTERACTIVES, resources_path=DIRS['resources'],
+            title=TITLE, about=__doc__)
 
     elapsed(__file__[len(DIRS['base']) + 1:])
     msg(report())

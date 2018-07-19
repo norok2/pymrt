@@ -25,17 +25,9 @@ import argparse  # Argument Parsing
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-# import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
+from mpl_toolkits.mplot3d import Axes3D  # required by `projection='3d'`
+import numex.interactive_tk_mpl
 
-from mpl_toolkits.mplot3d import Axes3D
 
 # :: Local Imports
 import pymrt as mrt
@@ -45,7 +37,6 @@ from pymrt import msg, dbg
 from pymrt import elapsed, report
 
 from pymrt.sequences import flash
-from pymrt.extras import interactive
 
 # ======================================================================
 TITLE = __doc__.strip().split('\n')[0][:-1]
@@ -108,8 +99,7 @@ def plot_flash_ernst_angle_t1_tr(
         ax.set_xlabel(r'$T_1$ (ms)')
         ax.set_ylabel(r'$T_R$ (ms)')
         ax.set_zlabel(r'$\alpha$ (deg)')
-        ax.legend()
-    return ax
+        # ax.legend()
 
 
 # ======================================================================
@@ -147,8 +137,7 @@ def plot_flash_ernst_angle_fa_t1(
         ax.set_xlabel(r'$T_1$ (ms)')
         ax.set_ylabel(r'$\alpha$ (deg)')
         ax.set_zlabel(r'$T_R$ (ms)')
-        ax.legend()
-    return ax
+        # ax.legend()
 
 
 # ======================================================================
@@ -186,8 +175,7 @@ def plot_flash_ernst_angle_fa_tr(
         ax.set_xlabel(r'$T_1$ (ms)')
         ax.set_ylabel(r'$\alpha$ (deg)')
         ax.set_zlabel(r'$T_R$ (ms)')
-        ax.legend()
-    return ax
+        # ax.legend()
 
 
 # ======================================================================
@@ -248,17 +236,19 @@ def main():
             filtered_interactives.pop(k)
 
     if x_vars == {'t1', 'tr'}:
-        interactive.plotting_tk_mpl(
+        numex.interactive_tk_mpl.plotting(
             plot_flash_ernst_angle_t1_tr,
-            filtered_interactives, title=TITLE, about=__doc__)
+            filtered_interactives, resources_path=DIRS['resources'],
+            title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
-        interactive.plotting_tk_mpl(
+        numex.interactive_tk_mpl.plotting(
             plot_flash_ernst_angle_fa_t1,
-            filtered_interactives, title=TITLE, about=__doc__)
+            filtered_interactives, resources_path=DIRS['resources'],
+            title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
-        interactive.plotting_tk_mpl(
-            plot_flash_ernst_angle_fa_tr,
-            filtered_interactives, title=TITLE, about=__doc__)
+        numex.interactive_tk_mpl.plotting(
+            filtered_interactives, resources_path=DIRS['resources'],
+            title=TITLE, about=__doc__)
 
     elapsed(__file__[len(DIRS['base']) + 1:])
     msg(report())
