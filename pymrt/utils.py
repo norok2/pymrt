@@ -33,6 +33,9 @@ import struct  # Interpret strings as packed binary data
 import re  # Regular expression operations
 import fnmatch  # Unix filename pattern matching
 import random  # Generate pseudo-random numbers
+import hashlib  # Secure hashes and message digests
+import base64  # Base16, Base32, Base64, Base85 Data Encodings
+import pickle  # Python object serialization
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -1806,6 +1809,172 @@ def split_func_kws(
     kws = {k: v for k, v in func_kws.items() if k not in inspected.args}
     func_kws = {k: v for k, v in func_kws.items() if k in inspected.args}
     return func_kws, kws
+
+
+# ======================================================================
+def blocks(
+        file_obj,
+        size=64 * 1024):
+    """
+    Yields the data within a file object in blocks of given size.
+
+    Args:
+        file_obj (file): The input file.
+        size (int|None): The block size.
+            If int, the input file is yielded in blocks of the specified size.
+            If None, the input file is yielded at once.
+
+    Yields:
+        block (bytes|str): The data within the blocks.
+    """
+    while True:
+        block = file_obj.read(size)
+        if not block:
+            break
+        else:
+            yield block
+
+
+# ======================================================================
+def xopen(
+        the_file,
+        *args,
+        **kwargs):
+    """
+    Ensure that `the_file` is a file object, if a file path is provided.
+
+    Args:
+        the_file (str|bytes|file): The input file.
+        *args: Positional arguments passed to `open()`.
+        **kwargs: Keyword arguments passed to `open()`.
+
+    Returns:
+        the_file (file):
+    """
+    return open(the_file, *args, **kwargs) \
+        if isinstance(the_file, (str, bytes)) else the_file
+
+
+# ======================================================================
+def hash_file(
+        the_file,
+        hash_algorithm=hashlib.md5,
+        filtering=base64.urlsafe_b64encode,
+        coding='ascii',
+        block_size=64 * 1024):
+    """
+    Compute the hash of a file.
+
+    Args:
+        the_file (str|bytes|file): The input file.
+            Can be either a valid file path or a file object.
+            See `xopen()` for more details.
+        hash_algorithm (callable): The hashing algorithm.
+            This must support the methods provided by `hashlib` module, like
+            `md5`, `sha1`, `sha256`, `sha512`.
+        filtering (callable|None): The filtering function.
+            If callable, must have the following signature:
+            filtering(bytes) -> bytes|str.
+            If None, no additional filering is performed.
+        coding (str): The coding for converting the returning object to str.
+            If str, must be a valid coding.
+            If None, the object is kept as bytes.
+        block_size (int|None): The block size.
+            See `size` argument of `pymrt.utils.blocks` for exact behavior.
+
+    Returns:
+        hash_key (str|bytes): The result of the hashing.
+    """
+    hash_obj = hash_algorithm()
+    with xopen(the_file, 'rb') as file_obj:
+        file_obj.seek(0)
+        for block in blocks(file_obj, block_size):
+            hash_obj.update(block)
+    hash_key = hash_obj.digest()
+    if filtering:
+        hash_key = filtering(hash_key)
+    if coding and isinstance(hash_key, bytes):
+        hash_key = hash_key.decode(coding)
+    return hash_key
+
+
+# ======================================================================
+def hash_object(
+        obj,
+        serializer=pickle.dumps,
+        hash_algorithm=hashlib.md5,
+        filtering=base64.urlsafe_b64encode,
+        coding='ascii'):
+    """
+    Compute the hash of an object.
+
+    Args:
+        obj: The input object.
+        serializer (callable): The function used to convert the object.
+            Must have the following signature:
+            obj_to_bytes(Any) -> bytes
+        hash_algorithm (callable): The hashing algorithm.
+            This must support the methods provided by `hashlib` module, like
+            `md5`, `sha1`, `sha256`, `sha512`.
+        filtering (callable|None): The filtering function.
+            If callable, must have the following signature:
+            filtering(bytes) -> bytes.
+            If None, no additional filering is performed.
+        coding (str): The coding for converting the returning object to str.
+            If str, must be a valid coding.
+            If None, the object is kept as bytes.
+
+    Returns:
+        hash_key (str|bytes): The result of the hashing.
+    """
+    obj_bytes = serializer(obj)
+    hash_key = hash_algorithm(obj_bytes).digest()
+    if filtering:
+        hash_key = filtering(hash_key)
+    if coding and isinstance(hash_key, bytes):
+        hash_key = hash_key.decode(coding)
+    return hash_key
+
+
+# ======================================================================
+def from_cached(
+        func,
+        func_kws=None,
+        dirpath=None,
+        filename='{hash_key}.p',
+        save_func=pickle.dump,
+        load_func=pickle.load,
+        force=False):
+    """
+    Compute or load from cache the result of a computation.
+
+    Args:
+        func (callable): The computation to perform.
+        func_kws (dict|None): Keyword arguments passed to `func`.
+        dirpath (str): The path of the caching directory.
+        filename (str): The filename of the caching file.
+            This is processed by `format` with `locals()`.
+        save_func (callable): The function used to save caching file.
+            Must have the following signature:
+            save_func(file_obj, Any) -> None
+            The value returned from `save_func` is not used.
+        load_func (callable): The function used to load caching file.
+            Must have the following signature:
+            load_func(file_obj) -> Any
+        force (bool): Force the calculation, regardless of caching state.
+
+    Returns:
+        result (Any): The result of the cached computation.
+    """
+    func_kws = dict(func_kws) if func_kws else {}
+    hash_key = hash_object((func, func_kws))
+    filepath = os.path.join(dirpath, filename.format(**locals()))
+    if os.path.isfile(filepath) and not force:
+        result = load_func(open(filepath, 'rb'))
+    else:
+        result = func(**func_kws)
+        save_func(open(filepath, 'wb'), result)
+    return result
 
 
 # ======================================================================
