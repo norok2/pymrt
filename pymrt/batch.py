@@ -1019,7 +1019,7 @@ def compute_generic(
                 - affine_func (str): name of the function for affine
                   computation: affine_func(affines, affine_args...) -> affine
                 - affine_args (list): additional parameters for affine_func
-        force (bool): Force calculation of output
+        force (bool): Force calculation of output.
         verbose (int): Set level of verbosity.
 
     Returns:
