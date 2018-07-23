@@ -53,7 +53,7 @@ from scipy.fftpack import fftn, ifftn
 import pymrt as mrt
 
 # :: Local Imports
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -1814,25 +1814,104 @@ def split_func_kws(
 # ======================================================================
 def blocks(
         file_obj,
-        size=64 * 1024):
+        size=64 * 1024,
+        reset_offset=True):
     """
-    Yields the data within a file object in blocks of given size.
+    Yields the data within a file in blocks of given size.
+
+    The last block
 
     Args:
         file_obj (file): The input file.
         size (int|None): The block size.
-            If int, the input file is yielded in blocks of the specified size.
-            If None, the input file is yielded at once.
+            If int, the file is yielded in blocks of the specified size.
+            If None, the file is yielded at once.
+        reset_offset (bool): Reset the file offset.
+            If True, starts reading from the beginning of the file.
+            Otherwise, starts reading from where the file current position is.
 
     Yields:
         block (bytes|str): The data within the blocks.
+
+    Examples:
+        >>> with open(__file__, 'r') as file_obj:
+        ...     content = file_obj.read()
+        ...     content2 = ''.join([b for b in blocks(file_obj, 100)])
+        ...     content == content2
+        True
+        >>> with open(__file__, 'rb') as file_obj:
+        ...     content = file_obj.read()
+        ...     content2 = b''.join([b for b in blocks(file_obj, 100)])
+        ...     content == content2
+        True
     """
+    if reset_offset:
+        file_obj.seek(0)
     while True:
         block = file_obj.read(size)
         if not block:
             break
         else:
             yield block
+
+
+# ======================================================================
+def blocks_r(
+        file_obj,
+        size=64 * 1024,
+        reset_offset=True,
+        encoding=None):
+    """
+    Yields the data within a file in reverse-ordered blocks of given size.
+
+    Note that:
+     - the content of the block is NOT reversed.
+     - if the file is open in text mode, the actual size of the block may be
+       shorter for multi-byte encodings (such as `utf8`, which is the default).
+
+    Args:
+        file_obj (file): The input file.
+        size (int|None): The block size.
+            If int, the file is yielded in blocks of the specified size.
+            If None, the file is yielded at once.
+        reset_offset (bool): Reset the file offset.
+            If True, starts reading from the end of the file.
+            Otherwise, starts reading from where the file current position is.
+        encoding (str|None): The encoding for correct block size computation.
+            If `str`, must be a valid string encoding.
+            If None, the default encoding is used.
+
+    Yields:
+        block (bytes|str): The data within the blocks.
+
+    Examples:
+        >>> with open(__file__, 'r') as file_obj:
+        ...     content = file_obj.read()
+        ...     content2 = ''.join([b for b in blocks_r(file_obj, 100)][::-1])
+        ...     content == content2
+        True
+        >>> with open(__file__, 'rb') as file_obj:
+        ...     content = file_obj.read()
+        ...     content2 = b''.join([b for b in blocks_r(file_obj, 100)][::-1])
+        ...     content == content2
+        True
+    """
+    offset = 0
+    if reset_offset:
+        file_size = remaining_size = file_obj.seek(0, os.SEEK_END)
+    else:
+        file_size = remaining_size = file_obj.tell()
+    rounding = 0
+    while remaining_size > 0:
+        offset = min(file_size, offset + size)
+        file_obj.seek(file_size - offset)
+        block = file_obj.read(min(remaining_size, size))
+        if not isinstance(block, bytes):
+            real_size = len(
+                block.encode(encoding) if encoding else block.encode())
+            rounding = len(block) - real_size
+        remaining_size -= size
+        yield block[:len(block) + rounding] if rounding else block
 
 
 # ======================================================================
@@ -1901,7 +1980,7 @@ def hash_file(
 # ======================================================================
 def hash_object(
         obj,
-        serializer=pickle.dumps,
+        serializer=lambda x: repr(x).encode(),
         hash_algorithm=hashlib.md5,
         filtering=base64.urlsafe_b64encode,
         coding='ascii'):
@@ -1975,6 +2054,66 @@ def from_cached(
         result = func(**func_kws)
         save_func(open(filepath, 'wb'), result)
     return result
+
+
+# ======================================================================
+def readline(
+        file_obj,
+        reverse=False,
+        skip_empty=True,
+        append_newline=True,
+        block_size=64 * 1024,
+        reset_offset=True,
+        encoding=None):
+    """
+    Flexible function for reading lines incrementally.
+
+    Args:
+        file_obj (file): The input file.
+        reverse (bool): Read the file in reverse mode.
+            If True, the lines will be read in reverse order.
+            The content of each line will NOT be reversed.
+        skip_empty (bool): Skip empty lines.
+        append_newline (bool):
+        block_size (int|None): The block size.
+            If int, the file is processed in blocks of the specified size.
+            If None, the file is processed at once.
+
+    Yields:
+        line (str|bytes): The next line.
+
+    Examples:
+        >>> with open(__file__, 'rb') as file_obj:
+        ...     lines = [l for l in readline(file_obj, False)]
+        ...     lines_r = [l for l in readline(file_obj, True)][::-1]
+        ...     lines == lines_r
+        True
+    """
+    is_bytes = isinstance(file_obj.read(0), bytes)
+    newline = b'\n' if is_bytes else '\n'
+    empty = b'' if is_bytes else ''
+    remainder = empty
+    block_generator_kws = dict(size=block_size, reset_offset=reset_offset)
+    if not reverse:
+        block_generator = blocks
+    else:
+        block_generator = blocks_r
+        block_generator_kws.update(dict(encoding=encoding))
+    for block in block_generator(file_obj, **block_generator_kws):
+        lines = block.split(newline)
+        if remainder:
+            if not reverse:
+                lines[0] = remainder + lines[0]
+            else:
+                lines[-1] = lines[-1] + remainder
+        remainder = lines[-1 if not reverse else 0]
+        mask = slice(0, -1, 1) if not reverse else slice(-1, 0, -1)
+        for line in lines[mask]:
+            if line or not skip_empty:
+                yield line + (newline if append_newline else empty)
+    if remainder or not skip_empty:
+        yield remainder + (newline if append_newline else empty)
+
 
 
 # ======================================================================
@@ -6917,7 +7056,7 @@ def euclid_dist(
 
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
