@@ -31,7 +31,7 @@ import numex.interactive_tk_mpl
 
 # :: Local Imports
 import pymrt as mrt
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, report
@@ -238,19 +238,19 @@ def main():
     if x_vars == {'t1', 'tr'}:
         numex.interactive_tk_mpl.plotting(
             plot_flash_ernst_angle_t1_tr,
-            filtered_interactives, resources_path=DIRS['resources'],
+            filtered_interactives, resources_path=PATH['resources'],
             title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
         numex.interactive_tk_mpl.plotting(
             plot_flash_ernst_angle_fa_t1,
-            filtered_interactives, resources_path=DIRS['resources'],
+            filtered_interactives, resources_path=PATH['resources'],
             title=TITLE, about=__doc__)
     elif x_vars == {'fa', 't1'}:
         numex.interactive_tk_mpl.plotting(
-            filtered_interactives, resources_path=DIRS['resources'],
+            filtered_interactives, resources_path=PATH['resources'],
             title=TITLE, about=__doc__)
 
-    elapsed(__file__[len(DIRS['base']) + 1:])
+    elapsed(__file__[len(PATH['base']) + 1:])
     msg(report())
 
 

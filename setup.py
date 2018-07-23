@@ -199,4 +199,4 @@ setup(
 
 # ======================================================================
 # :: create user directory
-from pymrt import _app_dirs
+from pymrt import _pkg_paths

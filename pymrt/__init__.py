@@ -20,6 +20,11 @@ import appdirs  # Determine appropriate platform-specific dirs
 import pkg_resources  # Manage package resource (from setuptools module)
 
 # ======================================================================
+# :: External Imports
+# import flyingcircus as fc
+# from flyingcircus import msg, dbg, elapsed, report,
+
+# ======================================================================
 # :: Version
 from ._version import __version__
 
@@ -292,7 +297,7 @@ def report(
 
 
 # ======================================================================
-def _app_dirs(
+def _pkg_paths(
         name=INFO['name'],
         author=INFO['author'],
         version=INFO['version']):
@@ -312,7 +317,7 @@ def _app_dirs(
             - 'log': directory for log files.
 
     Examples:
-        >>> sorted(_app_dirs().keys())
+        >>> sorted(_pkg_paths().keys())
         ['base', 'cache', 'config', 'data', 'log']
     """
     dirpaths = dict((
@@ -330,7 +335,7 @@ def _app_dirs(
 
 
 # ======================================================================
-DIRS = _app_dirs()
+PATH = _pkg_paths()
 
 # ======================================================================
 elapsed()

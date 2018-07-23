@@ -80,7 +80,7 @@ import pymrt.utils
 # import pymrt.plot as pmp
 # import pymrt.segmentation
 
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 # from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, report
@@ -142,7 +142,7 @@ def _prepare_superlorentz(
              - 'x': The independent interpolation sample points.
              - 'y': The superlorentzian of 'x'.
     """
-    cache_filepath = os.path.join(DIRS['cache'], 'superlorentz_approx.cache')
+    cache_filepath = os.path.join(PATH['cache'], 'superlorentz_approx.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         result = dict(x=x, y=superlorentz(x))
         with open(cache_filepath, 'wb') as cache_file:
@@ -1915,7 +1915,7 @@ class MultiGradEchoSteadyState(SteadyState):
 
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':

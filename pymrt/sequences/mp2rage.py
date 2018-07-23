@@ -54,7 +54,7 @@ from sympy import pi, exp, sin, cos
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 # from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, report
@@ -104,7 +104,7 @@ def _mz_p(mz0, fa_p, eta_p):
 def _prepare_mp2rage(use_cache=CFG['use_cache']):
     """Solve the MP2RAGE signal expressions analytically."""
 
-    cache_filepath = os.path.join(DIRS['cache'], 'mp2rage.cache')
+    cache_filepath = os.path.join(PATH['cache'], 'mp2rage.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         print('Solving MP2RAGE equations. May take some time.')
         print('Caching results: {}'.format(use_cache))

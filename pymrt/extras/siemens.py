@@ -53,7 +53,7 @@ import pyparsing as pp  # A Python Parsing Module
 import pymrt as mrt
 import pymrt.utils
 
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -309,7 +309,7 @@ def test():
 # test()
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':

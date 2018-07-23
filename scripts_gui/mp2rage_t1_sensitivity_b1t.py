@@ -46,7 +46,7 @@ import numex.interactive_tk_mpl
 import pymrt as mrt
 from pymrt.sequences import mp2rage
 
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, report
@@ -398,10 +398,10 @@ def main():
     else:
         numex.interactive_tk_mpl.plotting(
             plot_rho_t1_mp2rage_acq,
-            ACQ_INTERACTIVES, resources_path=DIRS['resources'],
+            ACQ_INTERACTIVES, resources_path=PATH['resources'],
             title=TITLE, about=__doc__)
 
-    elapsed(__file__[len(DIRS['base']) + 1:])
+    elapsed(__file__[len(PATH['base']) + 1:])
     msg(report())
 
 

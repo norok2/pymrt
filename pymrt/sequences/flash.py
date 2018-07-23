@@ -61,7 +61,7 @@ from sympy import pi, exp, sin, cos, tan
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import msg, dbg
-from pymrt import DIRS
+from pymrt import PATH
 from pymrt.config import CFG
 
 
@@ -138,7 +138,7 @@ def _prepare_triple_flash_approx(use_cache=CFG['use_cache']):
     """Solve the combination of FLASH images analytically."""
 
     cache_filepath = os.path.join(
-        DIRS['cache'], 'flash_triple_approx.cache')
+        PATH['cache'], 'flash_triple_approx.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         print('Solving Triple FLASH Approx equations. May take some time.')
         print('Caching results: {}'.format(use_cache))
@@ -216,7 +216,7 @@ def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
     """Solve the combination of FLASH images analytically."""
 
     cache_filepath = os.path.join(
-        DIRS['cache'], 'flash_triple_special1.cache')
+        PATH['cache'], 'flash_triple_special1.cache')
     if not os.path.isfile(cache_filepath) or not use_cache:
         print('Solving Triple FLASH Special1 equations. May take some time.')
         print('Caching results: {}'.format(use_cache))

@@ -52,7 +52,7 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.plot
 
-from pymrt import INFO, DIRS
+from pymrt import INFO, PATH
 from pymrt import elapsed, report
 from pymrt import msg, dbg
 
@@ -2439,7 +2439,7 @@ def _self_test_interactive():
 
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
