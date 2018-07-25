@@ -43,9 +43,12 @@ import doctest  # Test interactive Python examples
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -87,7 +90,7 @@ def rel2abs(shape, size=0.5):
         >>> abs2rel(shape, rel2abs(shape, (0.0, 0.25, 0.5, 0.75, 1.0)))
         (0.0, 0.25, 0.5, 0.75, 1.0)
     """
-    size = mrt.utils.auto_repeat(size, len(shape), check=True)
+    size = fc.util.auto_repeat(size, len(shape), check=True)
     return tuple((s - 1.0) * p for p, s in zip(size, shape))
 
 
@@ -119,7 +122,7 @@ def abs2rel(shape, position=0):
         >>> abs2rel(shape, rel2abs(shape, (0, 25, 50, 75, 100)))
         (0.0, 25.0, 50.0, 75.0, 100.0)
     """
-    position = mrt.utils.auto_repeat(position, len(shape), check=True)
+    position = fc.util.auto_repeat(position, len(shape), check=True)
     return tuple(p / (s - 1.0) for p, s in zip(position, shape))
 
 
@@ -668,8 +671,8 @@ def cylinder(
                 [False, False, False, False]]], dtype=bool)
     """
     n_dim = 3
-    shape = mrt.utils.auto_repeat(shape, n_dim)
-    position = mrt.utils.auto_repeat(position, n_dim)
+    shape = fc.util.auto_repeat(shape, n_dim)
+    position = fc.util.auto_repeat(position, n_dim)
     # generate base
     base_shape = tuple(
         dim for i, dim in enumerate(shape) if axis % n_dim != i)
@@ -742,10 +745,10 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
         ([0.4, 0.15], [0.5, 0.35])
     """
     if not num:
-        num = mrt.utils.combine_iter_len((minima, maxima, num))
+        num = fc.util.combine_iter_len((minima, maxima, num))
     # check compatibility of given parameters
-    minima = mrt.utils.auto_repeat(minima, num, check=True)
-    maxima = mrt.utils.auto_repeat(maxima, num, check=True)
+    minima = fc.util.auto_repeat(minima, num, check=True)
+    maxima = fc.util.auto_repeat(maxima, num, check=True)
     semisizes, position = [], []
     for min_val, max_val in zip(minima, maxima):
         semisizes.append((max_val - min_val) / 2.0)
@@ -786,7 +789,7 @@ def nd_cuboid(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `pymrt.utils.grid_coord()` internally.
+            Uses `fc.num.grid_coord()` internally.
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `semisizes` values are interpreted as relative,
             i.e. they are scaled for `shape` values.
@@ -797,15 +800,15 @@ def nd_cuboid(
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes))
+        n_dim = fc.util.combine_iter_len((shape, position, semisizes))
     # check compatibility of given parameters
-    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
-    position = mrt.utils.auto_repeat(position, n_dim, check=True)
-    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
+    position = fc.util.auto_repeat(position, n_dim, check=True)
+    semisizes = fc.util.auto_repeat(semisizes, n_dim, check=True)
     # fix relative units
     if rel_sizes:
         semisizes = rel2abs(shape, semisizes)
-    position = mrt.utils.grid_coord(
+    position = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
     # create the mask
     mask = np.ones(shape, dtype=bool)
@@ -850,32 +853,32 @@ def nd_superellipsoid(
             If None, the number of dims is guessed from the other parameters.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `semisizes` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
         mask (np.ndarray): Array of boolean describing the geometrical object.
     """
     if not n_dim:
-        n_dim = mrt.utils.combine_iter_len(
+        n_dim = fc.util.combine_iter_len(
             (shape, position, semisizes, indexes))
 
     # check compatibility of given parameters
-    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
-    position = mrt.utils.auto_repeat(position, n_dim, check=True)
-    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, check=True)
-    indexes = mrt.utils.auto_repeat(indexes, n_dim, check=True)
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
+    position = fc.util.auto_repeat(position, n_dim, check=True)
+    semisizes = fc.util.auto_repeat(semisizes, n_dim, check=True)
+    indexes = fc.util.auto_repeat(indexes, n_dim, check=True)
 
     # get correct position
     if rel_sizes:
         semisizes = rel2abs(shape, semisizes)
     # print('Semisizes: {}'.format(semisizes))  # DEBUG
     # print('Shape: {}'.format(shape))  # DEBUG
-    position = mrt.utils.grid_coord(
+    position = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
     # print('Position: {}'.format(position))  # DEBUG
 
@@ -912,11 +915,11 @@ def nd_prism(
             This setting only affects the extra shape dimension.
         rel_position (bool): Interpret positions as relative value.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative value.
             If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -929,7 +932,7 @@ def nd_prism(
     # get correct position
     if rel_sizes:
         size = rel2abs((extra_dim,), size)
-    position = mrt.utils.grid_coord(
+    position = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
     extra_mask = np.abs(position) <= (size / 2.0)
     # calculate mask shape
@@ -958,17 +961,17 @@ def nd_superellipsoidal_prism(
     # todo: ensure n_dim is not none
     # todo: nd_superellipsoidal_come is the same except nd_prims -> nd_cone
     if not n_dim:
-        n_dim = mrt.utils.combine_iter_len((shape, position, semisizes))
+        n_dim = fc.util.combine_iter_len((shape, position, semisizes))
     axis = axis % n_dim
     # separate shape/dims
     base_shape = tuple(dim for i, dim in enumerate(shape) if i != axis)
     extra_dim = shape[axis]
     # separate position
-    position = mrt.utils.auto_repeat(position, n_dim, False, True)
+    position = fc.util.auto_repeat(position, n_dim, False, True)
     base_position = tuple(x for i, x in enumerate(position) if i != axis)
     extra_position = position[axis]
     # separate semisizes
-    semisizes = mrt.utils.auto_repeat(semisizes, n_dim, False, True)
+    semisizes = fc.util.auto_repeat(semisizes, n_dim, False, True)
     base_semisizes = tuple(x for i, x in enumerate(semisizes) if i != axis)
     extra_semisize = semisizes[axis]
     # generate prism base
@@ -1006,11 +1009,11 @@ def nd_cone(
             This setting only affects the extra shape dimension.
         rel_position (bool): Interpret positions as relative value.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative value.
             If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `pymrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -1023,7 +1026,7 @@ def nd_cone(
     # get correct position
     if rel_sizes:
         size = rel2abs((extra_dim,), size)
-    position = mrt.utils.grid_coord(
+    position = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
     extra_mask = np.abs(position) <= (size / 2.0)
     # calculate mask shape
@@ -1155,9 +1158,9 @@ def nd_gradient(
           [-2.  2.]]]
     """
     num_gens = len(gen_ranges)
-    generators = mrt.utils.auto_repeat(
+    generators = fc.util.auto_repeat(
         generators, num_gens, check=True)
-    generators_kws = mrt.utils.auto_repeat(
+    generators_kws = fc.util.auto_repeat(
         generators_kws, num_gens, check=True)
 
     shape = tuple(num for start, stop, num in gen_ranges)
@@ -1203,13 +1206,13 @@ def nd_dirac_delta(
                [ 0.,  0.,  0.,  0.,  0.]])
     """
     if not n_dim:
-        n_dim = mrt.utils.combine_iter_len((shape, position))
+        n_dim = fc.util.combine_iter_len((shape, position))
 
     # check compatibility of given parameters
-    shape = mrt.utils.auto_repeat(shape, n_dim, check=True)
-    position = mrt.utils.auto_repeat(position, n_dim, check=True)
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
+    position = fc.util.auto_repeat(position, n_dim, check=True)
 
-    origin = mrt.utils.coord(shape, position, use_int=True)
+    origin = fc.num.coord(shape, position, use_int=True)
 
     mask = np.zeros(shape)
     mask[[slice(i, i + 1) for i in origin]] = value
@@ -1238,11 +1241,11 @@ def nd_polytope(
             If None, the number of dims is guessed from the other parameters.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
         rel_sizes (bool): Interpret sizes as relative values.
             If True, `vertices` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `mrt.utils.grid_coord()`.
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
@@ -1268,7 +1271,7 @@ def apply_mask(
         mask (np.ndarray): The mask array.
             The shape of `arr` and `mask` must be identical, broadcastable
             through `np.broadcast_to()`, or unsqueezable using
-            `pymrt.utils.unsqueeze()`.
+            `fc.num.unsqueeze()`.
         borders (int|float|tuple[int|float]|None): The border size(s).
             If None, the border is not modified.
             Otherwise, a border is added to the masked array.
@@ -1282,7 +1285,7 @@ def apply_mask(
             calculations.
         background (int|float): The value used for masked-out pixels.
         unsqueeze (bool): Unsqueeze mask to input.
-            If True, use `pymrt.utils.unsqueeze()` on mask.
+            If True, use `fc.num.unsqueeze()` on mask.
             Only effective when `arr` and `mask` shapes do not match and
             are not already broadcastable.
             Otherwise, shapes must match or be broadcastable.
@@ -1301,12 +1304,12 @@ def apply_mask(
     mask = mask.astype(bool)
     if arr.ndim > mask.ndim and unsqueeze:
         old_shape = mask.shape
-        mask = mrt.utils.unsqueeze(mask, shape=arr.shape)
+        mask = fc.num.unsqueeze(mask, shape=arr.shape)
         if isinstance(borders, (int, float)):
             borders = [borders if dim != 1 else 0 for dim in mask.shape]
         elif borders is not None and len(borders) == len(old_shape):
             borders = list(
-                mrt.utils.replace_iter(
+                fc.util.replace_iter(
                     mask.shape, lambda x: x == 1, borders))
     arr = arr.copy()
     if arr.shape != mask.shape:
@@ -1352,7 +1355,7 @@ def frame(
     See Also:
         reframe()
     """
-    borders = mrt.utils.auto_repeat(borders, arr.ndim)
+    borders = fc.util.auto_repeat(borders, arr.ndim)
     if any(borders) < 0:
         raise ValueError('relative border cannot be negative')
     if isinstance(borders[0], float):
@@ -1433,8 +1436,8 @@ def reframe(
                [ 0.,  0.,  0.,  0.,  0.],
                [ 0.,  0.,  0.,  0.,  0.]])
     """
-    new_shape = mrt.utils.auto_repeat(new_shape, arr.ndim, check=True)
-    position = mrt.utils.auto_repeat(position, arr.ndim, check=True)
+    new_shape = fc.util.auto_repeat(new_shape, arr.ndim, check=True)
+    position = fc.util.auto_repeat(position, arr.ndim, check=True)
     if any([old > new for old, new in zip(arr.shape, new_shape)]):
         raise ValueError('new shape cannot be smaller than the old one.')
     position = [
@@ -1524,7 +1527,7 @@ def zoom_prepare(
         zoom (tuple[float]): The zoom factors for each directions.
         shape (int|Iterable[int]): The shape of the array to operate with.
     """
-    zoom_factors = list(mrt.utils.auto_repeat(zoom_factors, len(shape)))
+    zoom_factors = list(fc.util.auto_repeat(zoom_factors, len(shape)))
     if extra_dim:
         shape = list(shape) + [1] * (len(zoom_factors) - len(shape))
     else:
@@ -1700,7 +1703,7 @@ def multi_resample(
         shape_arr = np.ones((len(shapes), len(new_shape))).astype(np.int)
         for i, shape in enumerate(shapes):
             shape_arr[i, :len(shape)] = np.array(shape)
-        combiner = mrt.utils.lcm if lossless else max
+        combiner = fc.util.lcm if lossless else max
         new_shape = tuple(
             combiner(*list(shape_arr[:, i]))
             for i in range(len(new_shape)))
@@ -2354,7 +2357,7 @@ def multi_render(
     if n_dim is None:
         n_dim = len(shape)
     else:
-        shape = mrt.utils.auto_repeat(shape, n_dim, False, True)
+        shape = fc.util.auto_repeat(shape, n_dim, False, True)
     inner_shape = [min(shape)] * n_dim
     affine_kws = \
         {} if affine_kws is None else dict(affine_kws)
@@ -2411,6 +2414,8 @@ def _self_test_interactive():
         None
     """
     import numex.gui_tk_mpl
+
+
     pos = 0.5
     dim = 128
     l1, l2, l3 = (16.0, 8.0, 32.0)

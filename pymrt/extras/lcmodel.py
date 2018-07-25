@@ -37,6 +37,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -44,6 +45,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -215,7 +218,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            mrt.utils.is_number(item)
+                            fc.util.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:

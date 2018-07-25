@@ -16,6 +16,7 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
+import shutil  # High-level file operations
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -112,9 +113,9 @@ def to_image(
         None.
     """
     available_methods = []
-    if mrt.utils.which('wkhtmltoimage')[1]:
+    if shutil.which('wkhtmltoimage'):
         available_methods.append('webkit-png')
-    if mrt.utils.which('wkhtmltopdf')[1]:
+    if shutil.which('wkhtmltopdf'):
         available_methods.append('webkit-pdf')
     try:
         import weasyprint
@@ -128,7 +129,7 @@ def to_image(
 
     # export intermediate HTML output
     if html_filepath is True or method == 'webkit':
-        html_filepath = mrt.utils.change_ext(save_filepath, 'html')
+        html_filepath = fc.util.change_ext(save_filepath, 'html')
     if html_filepath:
         with open(html_filepath, 'wb+') as file_obj:
             file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))

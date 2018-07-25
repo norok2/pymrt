@@ -373,7 +373,7 @@ from __future__ import(
 # from pymrt.extras import *
 # from pymrt.recipes import *
 
-# from pymrt import INFO, DIRS, MY_GREETINGS
+# from pymrt import INFO, PATH, MY_GREETINGS
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 # from pymrt import elapsed, report
 # from pymrt import msg, dbg

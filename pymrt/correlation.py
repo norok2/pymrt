@@ -6,10 +6,8 @@ PyMRT: voxel-by-voxel correlation analysis for MRI data.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -40,12 +38,15 @@ import scipy as sp  # SciPy (signal and image processing library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -153,7 +154,7 @@ def _get_ref_list(
         ref_filepaths (list[str]): List of paths to reference files
         ref_src_filepaths (list[str]): List of paths to reference source files
     """
-    ref_src_filepaths = mrt.utils.listdir(dirpath, ref_ext)
+    ref_src_filepaths = fc.util.listdir(dirpath, ref_ext)
     if ref_src_filepaths:
         ref_filepaths = []
         for ref_src in ref_src_filepaths:
@@ -162,14 +163,14 @@ def _get_ref_list(
             if subdir:
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
-            ref_filename = mrt.utils.change_ext(
+            ref_filename = fc.util.change_ext(
                 os.path.basename(ref_src), mrt.utils.EXT['niz'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepaths.append(ref_filepath)
     elif target_list:
         ref_filepaths = target_list
     else:
-        ref_filepaths = mrt.utils.listdir(dirpath, mrt.utils.EXT['niz'])
+        ref_filepaths = fc.util.listdir(dirpath, mrt.utils.EXT['niz'])
     if not ref_filepaths:
         raise RuntimeError('No reference file(s) found')
     return ref_filepaths, ref_src_filepaths
@@ -206,8 +207,8 @@ def _compute_affine_fsl(
     Returns:
         None.
     """
-    if mrt.utils.check_redo([in_filepath, ref_filepath], [aff_filepath],
-                            force):
+    if fc.util.check_redo([in_filepath, ref_filepath], [aff_filepath],
+                          force):
         msg('Affine: {}'.format(os.path.basename(aff_filepath)),
             verbose, D_VERB_LVL)
         ext_cmd = EXT_CMD['fsl/5.0/flirt']
@@ -224,7 +225,7 @@ def _compute_affine_fsl(
                 cmd_args[str(key)] = eval(val)
         cmd = ' '.join(
             [ext_cmd] + ['-{} {}'.format(k, v) for k, v in cmd_args.items()])
-        mrt.utils.execute(cmd, verbose=verbose)
+        fc.util.execute(cmd, verbose=verbose)
 
 
 # ======================================================================
@@ -249,7 +250,7 @@ def _apply_affine_fsl(
     Returns:
         None.
     """
-    if mrt.utils.check_redo(
+    if fc.util.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
             force):
         msg('Regstr: {}'.format(os.path.basename(out_filepath)),
@@ -265,7 +266,7 @@ def _apply_affine_fsl(
         cmd = ' '.join(
             [ext_cmd] +
             ['-{} {}'.format(k, v) for k, v in cmd_options.items()])
-        mrt.utils.execute(cmd, verbose=verbose)
+        fc.util.execute(cmd, verbose=verbose)
 
 
 def register_ants(
@@ -330,7 +331,7 @@ def register_fsl(
         os.path.dirname(out_filepath),
         mrt.naming.combine_filename(affine_prefix,
                                     (ref_filepath, in_filepath)) +
-        mrt.utils.add_extsep(mrt.utils.EXT['text']))
+        fc.util.add_extsep(mrt.utils.EXT['text']))
     _compute_affine_fsl(
         in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
         ref_mask_filepath, flirt_kwargs, flirt__kwargs,
@@ -382,8 +383,8 @@ def register(
         img = sp.ndimage.affine_transform(img, linear, shift)
         return img
 
-    if mrt.utils.check_redo([in_filepath, ref_filepath], [out_filepath],
-                            force):
+    if fc.util.check_redo([in_filepath, ref_filepath], [out_filepath],
+                          force):
         mrt.input_output.simple_filter_n_1(
             [in_filepath, ref_filepath], out_filepath, _quick_reg,
             transform='rigid', interp_order=1, init_guess=('none', 'none'))
@@ -423,8 +424,8 @@ def apply_mask(
         img = mrt.geometry.frame(img, 0.1, 0.0)
         return img
 
-    if mrt.utils.check_redo([in_filepath, mask_filepath], [out_filepath],
-                            force):
+    if fc.util.check_redo([in_filepath, mask_filepath], [out_filepath],
+                          force):
         msg('RunMsk: {}'.format(os.path.basename(out_filepath)))
         mrt.input_output.simple_filter_n_1(
             [in_filepath, mask_filepath], out_filepath,
@@ -518,19 +519,19 @@ def calc_mask(
         # perform BET extraction
         ext_cmd = EXT_CMD['fsl/5.0/bet']
         bet_tmp_filepath = mrt.naming.change_img_type(out_dirpath, 'BRAIN')
-        if mrt.utils.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
+        if fc.util.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
             msg('TmpMsk: {}'.format(os.path.basename(bet_tmp_filepath)))
             cmd_tokens = [
                 ext_cmd, in_tmp_filepath, bet_tmp_filepath, bet_params]
             cmd = ' '.join(cmd_tokens)
-            ret_code, p_stdout, p_stderr = mrt.utils.execute(
+            ret_code, p_stdout, p_stderr = fc.util.execute(
                 cmd, verbose=verbose)
         in_tmp_filepath = bet_tmp_filepath
 
     if threshold_kws is None:
         threshold_kws = {}
     # extract mask using a threshold
-    if mrt.utils.check_redo([in_tmp_filepath], [out_dirpath], force):
+    if fc.util.check_redo([in_tmp_filepath], [out_dirpath], force):
         _calc_mask_kwargs = dict(
             threshold=threshold,
             threshold_kws=dict(threshold_kws),
@@ -569,8 +570,8 @@ def calc_difference(
         None
 
     """
-    if mrt.utils.check_redo([in1_filepath, in2_filepath], [out_filepath],
-                            force):
+    if fc.util.check_redo([in1_filepath, in2_filepath], [out_filepath],
+                          force):
         msg('DifImg: {}'.format(os.path.basename(out_filepath)))
         mrt.input_output.simple_filter_n_1(
             [in1_filepath, in2_filepath], out_filepath,
@@ -630,7 +631,7 @@ def calc_correlation(
         in_filepath_list = [in1_filepath, in2_filepath, mask_filepath]
     else:
         in_filepath_list = [in1_filepath, in2_filepath]
-    if mrt.utils.check_redo(in_filepath_list, [out_filepath], force):
+    if fc.util.check_redo(in_filepath_list, [out_filepath], force):
         msg('Correl: {}'.format(os.path.basename(out_filepath)))
         img1_nii = nib.load(in1_filepath)
         img2_nii = nib.load(in2_filepath)
@@ -644,7 +645,7 @@ def calc_correlation(
         else:
             mask = np.ones_like(img1 * img2).astype(bool)
         if val_interval is None:
-            val_interval = mrt.utils.minmax(np.stack((img1, img2)))
+            val_interval = fc.num.minmax(np.stack((img1, img2)))
         mask *= (img1 > val_interval[0])
         mask *= (img1 < val_interval[1])
         mask *= (img2 > val_interval[0])
@@ -653,10 +654,10 @@ def calc_correlation(
             removes = []
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
-        d_dict = mrt.utils.calc_stats(d_arr, removes)
+        d_dict = fc.num.calc_stats(d_arr, removes)
         # calculate stats of the absolute difference image
         e_arr = np.abs(d_arr)
-        e_dict = mrt.utils.calc_stats(e_arr, removes)
+        e_dict = fc.num.calc_stats(e_arr, removes)
         # calculate Pearson's Correlation Coefficient
         pcc_val, pcc_p_val = \
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
@@ -671,19 +672,19 @@ def calc_correlation(
         #            img2[mask].ravel(),
         # img1[mask].ravel())
         # mutual information
-        mi = mrt.utils.norm_mutual_information(img1[mask], img2[mask])
+        mi = fc.num.norm_mutual_information(img1[mask], img2[mask])
         # voxel counts
         num = np.sum(mask.astype(bool))
         num_tot = np.size(mask)
         num_ratio = num / num_tot
         # save results to csv
         filenames = [
-            mrt.utils.change_ext(
+            fc.util.change_ext(
                 os.path.basename(path), '', mrt.utils.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
-        val_filter = (lambda x: mrt.utils.compact_num_str(x, trunc)) \
+        val_filter = (lambda x: fc.util.compact_num_str(x, trunc)) \
             if trunc else (lambda x: x)
         d_arr_val = [val_filter(d_dict[key]) for key in label_list]
         e_arr_val = [val_filter(e_dict[key]) for key in label_list]
@@ -707,9 +708,9 @@ def calc_correlation(
              'N_eff', 'N_tot', 'N_ratio']
         with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile,
-                                   delimiter=str(mrt.utils.CSV_DELIMITER))
-            csvwriter.writerow([mrt.utils.COMMENT_TOKEN + in2_filepath])
-            csvwriter.writerow([mrt.utils.COMMENT_TOKEN + in1_filepath])
+                                   delimiter=str(fc.util.CSV_DELIMITER))
+            csvwriter.writerow([fc.util.CSV_COMMENT_TOKEN + in2_filepath])
+            csvwriter.writerow([fc.util.CSV_COMMENT_TOKEN + in1_filepath])
             csvwriter.writerow(labels)
             csvwriter.writerow(values)
 
@@ -757,9 +758,9 @@ def combine_correlation(
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile,
-                                   delimiter=str(mrt.utils.CSV_DELIMITER))
+                                   delimiter=str(fc.util.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(mrt.utils.COMMENT_TOKEN):
+                if row[0].startswith(fc.util.CSV_COMMENT_TOKEN):
                     base_dir = os.path.dirname(os.path.commonprefix(
                         (base_dir, row[0]))) + os.path.sep \
                         if base_dir else row[0]
@@ -768,9 +769,9 @@ def combine_correlation(
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile,
-                                   delimiter=str(mrt.utils.CSV_DELIMITER))
+                                   delimiter=str(fc.util.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(mrt.utils.COMMENT_TOKEN):
+                if row[0].startswith(fc.util.CSV_COMMENT_TOKEN):
                     sub_dir = os.path.dirname(row[0][len(base_dir):])
                 elif not labels:
                     labels = ['subdir'] + row if sub_dir else row
@@ -793,11 +794,11 @@ def combine_correlation(
             rows[j][i] = '{: <{size}s}'.format(col, size=max_cols[i])
     # :: write grouped correlation to new file
     out_filepath = os.path.join(
-        out_dirpath, out_filename + mrt.utils.add_extsep(mrt.utils.EXT['tab']))
-    if mrt.utils.check_redo(filepath_list, [out_filepath], force):
+        out_dirpath, out_filename + fc.util.add_extsep(mrt.utils.EXT['tab']))
+    if fc.util.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile,
-                                   delimiter=str(mrt.utils.CSV_DELIMITER))
+                                   delimiter=str(fc.util.CSV_DELIMITER))
             if not selected_cols:
                 selected_cols = range(len(labels))
             csvwriter.writerow([base_dir])
@@ -853,11 +854,11 @@ def plot_correlation(
     filename = mrt.naming.combine_filename(
         corr_prefix, (img1_filepath, img2_filepath))
     save_filepath = os.path.join(
-        out_dirpath, filename + mrt.utils.add_extsep(mrt.utils.EXT['plot']))
+        out_dirpath, filename + fc.util.add_extsep(mrt.utils.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if mrt.utils.check_redo(in_filepath_list, [save_filepath], force):
+    if fc.util.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltCor: {}'.format(os.path.basename(save_filepath)))
         img1_label = mrt.naming.filename2label(
             img1_filepath, ext=mrt.utils.EXT['niz'], max_length=32)
@@ -921,13 +922,13 @@ def plot_histogram(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        mrt.utils.change_ext(os.path.basename(img_filepath),
-                             mrt.utils.EXT['plot'],
-                             mrt.utils.EXT['niz']))
+        fc.util.change_ext(os.path.basename(img_filepath),
+                           mrt.utils.EXT['plot'],
+                           mrt.utils.EXT['niz']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if mrt.utils.check_redo(in_filepath_list, [save_filepath], force):
+    if fc.util.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltHst: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = ''
@@ -986,10 +987,10 @@ def plot_sample(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        mrt.utils.change_ext(os.path.basename(img_filepath),
-                             mrt.utils.EXT['plot'],
-                             mrt.utils.EXT['niz']))
-    if mrt.utils.check_redo([img_filepath], [save_filepath], force):
+        fc.util.change_ext(os.path.basename(img_filepath),
+                           mrt.utils.EXT['plot'],
+                           mrt.utils.EXT['niz']))
+    if fc.util.check_redo([img_filepath], [save_filepath], force):
         msg('PltFig: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = 'Image'
@@ -1048,7 +1049,7 @@ def registering(
         ref_filepath = in_filepath_list[0]
     # log the name of the reference image
     log_filepath = os.path.join(out_dirpath, log_filename)
-    if mrt.utils.check_redo(
+    if fc.util.check_redo(
                     in_filepath_list + [ref_filepath], [log_filepath], force):
         with open(log_filepath, 'w') as log_file:
             log_file.write(ref_filepath)
@@ -1085,7 +1086,7 @@ def registering(
                 # serial
                 register_func(*register_args, **register_kwargs)
         else:
-            if mrt.utils.check_redo([in_filepath], [out_filepath], force):
+            if fc.util.check_redo([in_filepath], [out_filepath], force):
                 msg('Regstr: {}'.format(os.path.basename(out_filepath)))
                 msg('I: copying without registering.')
                 shutil.copy(in_filepath, out_filepath)
@@ -1207,12 +1208,12 @@ def prepare_comparison(
             out_dirpath,
             mrt.naming.combine_filename(diff_prefix,
                                         (ref_filepath, in_filepath)) +
-            mrt.utils.add_extsep(mrt.utils.EXT['niz']))
+            fc.util.add_extsep(mrt.utils.EXT['niz']))
         corr_filepath = os.path.join(
             out_dirpath,
             mrt.naming.combine_filename(corr_prefix,
                                         (ref_filepath, in_filepath)) +
-            mrt.utils.add_extsep(mrt.utils.EXT['tab']))
+            fc.util.add_extsep(mrt.utils.EXT['tab']))
         cmp_list.append(
             (in_filepath, ref_filepath, diff_filepath, corr_filepath))
     return cmp_list
@@ -1377,8 +1378,8 @@ def check_correlation(
     # :: populate a list of images to analyze
     targets, corrs = [], []
     if os.path.exists(dirpath):
-        filepath_list = mrt.utils.listdir(dirpath, mrt.utils.EXT['niz'])
-        sources = [mrt.utils.realpath(filepath) for filepath in filepath_list
+        filepath_list = fc.util.listdir(dirpath, mrt.utils.EXT['niz'])
+        sources = [fc.util.realpath(filepath) for filepath in filepath_list
                    if not val_name or
                    mrt.naming.parse_filename(filepath)['type'] == val_name]
         if len(sources) > 0:
@@ -1416,7 +1417,7 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filepath = mrt.utils.change_ext(
+                    mask_filepath = fc.util.change_ext(
                         MASK_FILENAME, mrt.utils.EXT['niz'])
                 # add current directory if it was not specified
                 if not os.path.isfile(mask_filepath):
@@ -1428,7 +1429,7 @@ def check_correlation(
                     mask_filepath = calc_mask(
                         ref, tmp_path, verbose=verbose, force=force,
                         **reg_info['calc_mask'])
-                mask_filepath = mrt.utils.realpath(mask_filepath)
+                mask_filepath = fc.util.realpath(mask_filepath)
             # else:
             #     mask_filepath = None
             msg('I: {}'.format(mask_filepath), verbose, VERB_LVL['high'])
@@ -1489,7 +1490,7 @@ def check_correlation(
                 if val_interval is None:
                     stats_dict = mrt.input_output.calc_stats(target)
                     val_interval = (stats_dict['min'], stats_dict['max'])
-                diff_interval = mrt.utils.combine_interval(
+                diff_interval = fc.num.combine_interval(
                     val_interval, val_interval, '-')
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:
@@ -1511,7 +1512,7 @@ def check_correlation(
             msg('W: no input file found.', verbose, VERB_LVL['medium'])
             msg('I: descending into subdirectories.', verbose,
                 VERB_LVL['high'])
-            sub_dirpath_list = mrt.utils.listdir(dirpath, None)
+            sub_dirpath_list = fc.util.listdir(dirpath, None)
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,

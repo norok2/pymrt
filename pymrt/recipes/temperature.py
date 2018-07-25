@@ -17,6 +17,11 @@ import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
+
+# :: External Imports Submodules
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt

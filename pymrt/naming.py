@@ -16,8 +16,10 @@ import re  # Regular expression operations
 import doctest  # Test interactive Python examples
 
 # :: External Imports
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
+
 
 # :: Local Imports
 import pymrt as mrt
@@ -25,7 +27,7 @@ import pymrt.utils
 
 from pymrt import msg
 
-# from dcmpi.lib.common import D_NUM_DIGITS
+# todo: consider moving to flyingcircus
 D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
 
 # ======================================================================
@@ -98,7 +100,7 @@ def str_to_key_val(
     else:
         key, val = None, None
     if val:
-        val = mrt.utils.auto_convert(val)
+        val = fc.util.auto_convert(val)
     return key, val
 
 
@@ -173,7 +175,7 @@ def str_to_info(
     """
     tokens = text.split(sep)
     info = {
-        '#': mrt.utils.auto_convert(tokens[0][len(SERIES_NUM_ID):])
+        '#': fc.util.auto_convert(tokens[0][len(SERIES_NUM_ID):])
         if SERIES_NUM_ID.lower() in tokens[0].lower() else None}
     for token in tokens[1:]:
         key, val = str_to_key_val(token, kv_sep)
@@ -222,7 +224,7 @@ def filepath_to_info(
     Returns:
         info (dict): Information extracted from the
     """
-    filename = mrt.utils.change_ext(os.path.basename(filepath), '', file_ext)
+    filename = fc.util.change_ext(os.path.basename(filepath), '', file_ext)
     return str_to_info(filename)
 
 
@@ -233,10 +235,10 @@ def info_to_filepath(
         file_ext=mrt.utils.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
-    filename = mrt.utils.change_ext(info_to_str(info, sep, kv_sep), file_ext,
+    filename = fc.util.change_ext(info_to_str(info, sep, kv_sep), file_ext,
                                     '')
     return os.path.join(
-        dirpath, + mrt.utils.add_extsep(file_ext))
+        dirpath, + fc.util.add_extsep(file_ext))
 
 
 # ======================================================================
@@ -368,7 +370,7 @@ def parse_filename(
     to_filename
 
     """
-    root = mrt.utils.basename(filepath)
+    root = fc.util.basename(filepath)
     if i_sep != p_sep and i_sep != kv_sep and i_sep != b_sep:
         tokens = root.split(i_sep)
         info = {}
@@ -376,15 +378,15 @@ def parse_filename(
         idx_begin_name = 0
         idx_end_name = len(tokens)
         # check if contains scan ID
-        info['num'] = mrt.utils.auto_convert(
+        info['num'] = fc.util.auto_convert(
             get_param_val(tokens[0], SERIES_NUM_ID))
         idx_begin_name += (1 if info['num'] is not None else 0)
         # check if contains Sequential Number
         info['seq'] = None
         if len(tokens) > 1:
             for token in tokens[-1:-3:-1]:
-                if mrt.utils.is_number(token):
-                    info['seq'] = mrt.utils.auto_convert(token)
+                if fc.util.is_number(token):
+                    info['seq'] = fc.util.auto_convert(token)
                     break
         idx_end_name -= (1 if info['seq'] is not None else 0)
         # check if contains Image type
@@ -441,7 +443,7 @@ def to_filename(
     if 'type' in info and info['type'] is not None:
         tokens.append(info['type'])
     filepath = INFO_SEP.join(tokens)
-    filepath += (mrt.utils.add_extsep(ext) if ext else '')
+    filepath += (fc.util.add_extsep(ext) if ext else '')
     filepath = os.path.join(dirpath, filepath) if dirpath else filepath
     return filepath
 
@@ -495,7 +497,7 @@ def parse_series_name(
         else:
             param_id = re.findall('^[a-zA-Z\-]*', token)[0]
             param_val = get_param_val(token, param_id)
-        params[param_id] = mrt.utils.auto_convert(
+        params[param_id] = fc.util.auto_convert(
             param_val) if param_val else None
     return base, params
 
@@ -650,7 +652,7 @@ def combine_filename(
     filename = prefix
     for name in filenames:
         filename += 2 * INFO_SEP + \
-                    mrt.utils.change_ext(os.path.basename(name), '',
+                    fc.util.change_ext(os.path.basename(name), '',
                                          mrt.utils.EXT['niz'])
     return filename
 
@@ -680,7 +682,7 @@ def filename2label(
         The extracted label.
 
     """
-    filename = mrt.utils.change_ext(os.path.basename(filepath), '', ext)
+    filename = fc.util.change_ext(os.path.basename(filepath), '', ext)
     tokens = filename.split(INFO_SEP)
     # remove unwanted information
     if excludes is None:

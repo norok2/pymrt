@@ -190,7 +190,7 @@ def main():
     else:
         print('WW: Method not specified.')
 
-    mrt.utils.elapsed('compute')
+    fc.util.elapsed('compute')
     msg(report(), args.verbose, VERB_LVL['medium'])
 
 

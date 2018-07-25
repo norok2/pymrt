@@ -36,7 +36,7 @@ import doctest  # Test interactive Python examples
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-import scipy as sp  # SciPy (signal and image processing library)
+# import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 # import PIL  # Python Image Library (image manipulation toolkit)
@@ -44,13 +44,16 @@ import scipy as sp  # SciPy (signal and image processing library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 # import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
-import scipy.ndimage  # SciPy: ND-image Manipulation
+# import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 from nibabel.spatialimages import (
     HeaderDataError, HeaderTypeError, ImageDataError, )
@@ -584,7 +587,7 @@ def simple_filter_1_x(
     """
     arr, meta = load(in_filepath, meta=True)
     results = func(arr, *args, **kwargs)
-    path, base, ext = mrt.utils.split_path(in_filepath)
+    path, base, ext = fc.util.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
             out_basepath, out_filename_template.format(**locals()))
@@ -684,7 +687,7 @@ def split(
         in_filepath (str): Input file path.
             The metadata information is taken from the input.
         out_dirpath (str): Path to directory where to store results.
-        out_filename (str): Output filename (without extension).
+        out_basename (str): Output filename (without extension).
         axis (int): Joining axis of orientation.
             Must be a valid index for the input shape
 
@@ -695,7 +698,7 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = mrt.utils.change_ext(
+        out_basename = fc.util.change_ext(
             os.path.basename(in_filepath), '', mrt.utils.EXT['niz'])
     out_filepaths = []
 
@@ -707,7 +710,7 @@ def split(
         i_str = str(i).zfill(len(str(len(arrs))))
         out_filepath = os.path.join(
             out_dirpath,
-            mrt.utils.change_ext(out_basename + '-' + i_str,
+            fc.util.change_ext(out_basename + '-' + i_str,
                                  mrt.utils.EXT['niz'], ''))
         save(out_filepath, image, **meta)
         out_filepaths.append(out_filepath)
@@ -973,7 +976,7 @@ def mask_threshold(
     See Also:
         segmentation.mask_threshold
     """
-    kw_params = mrt.utils.set_func_kws(
+    kw_params = fc.util.set_func_kws(
         mrt.segmentation.mask_threshold, locals())
     simple_filter_1_1(
         in_filepath, out_filepath, mrt.segmentation.mask_threshold,
@@ -1050,7 +1053,7 @@ def calc_stats(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    return mrt.utils.calc_stats(arr[mask], *args, **kwargs)
+    return fc.num.calc_stats(arr[mask], *args, **kwargs)
 
 
 # ======================================================================

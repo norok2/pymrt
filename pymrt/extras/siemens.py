@@ -6,55 +6,26 @@ pymrt/twix: manage Siemens's TWIX (raw) data from MRI scanners.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import(
+from __future__ import (
     division, absolute_import, print_function, unicode_literals, )
 
 # ======================================================================
 # :: Python Standard Library Imports
 import os  # Miscellaneous operating system interfaces
-import io  # Core tools for working with streams
-# import shutil  # High-level file operations
-# import math  # Mathematical functions
-import time  # Time access and conversions
-import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # Container datatypes
-# import itertools  # Functions creating iterators for efficient looping
-# import functools  # Higher-order functions and operations on callable objects
-# import argparse  # Parser for command-line options, arguments and sub-command
-import re  # Regular expression operations
-# import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
-# import fractions  # Rational numbers
-# mport csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-import struct  # Interpret strings as packed binary data
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
-# import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import pyparsing as pp  # A Python Parsing Module
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util  # FlyingCircus: generic basic utilities
 
 # :: Local Imports
-import pymrt as mrt
-import pymrt.utils
 
 from pymrt import INFO, PATH
-from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
 
@@ -99,7 +70,7 @@ def _read_twix(
         mask = 0
     else:
         mask = slice(None)
-    data = mrt.utils.read_stream(file_stream, dtype, '<', count, offset)
+    data = fc.util.read_stream(file_stream, dtype, '<', count, offset)
     return data[mask]
 
 
@@ -132,9 +103,9 @@ def _read_protocol(text):
                     val = prot[key]
                 else:
                     val = []
-                val.append((indexes, mrt.utils.auto_convert(value, '""', '""')))
+                val.append((indexes, fc.util.auto_convert(value, '""', '""')))
             else:
-                val = mrt.utils.auto_convert(value, '""', '""')
+                val = fc.util.auto_convert(value, '""', '""')
             if key:
                 prot[key] = val
     return prot
@@ -203,7 +174,7 @@ def _guess_version(file_stream):
 def _guess_header_type(text):
     if text.startswith('<XProtocol'):
         header_type = 'x_prot'
-    elif mrt.utils.has_decorator(text, *PROT['prot_decor']):
+    elif fc.util.has_decorator(text, *PROT['prot_decor']):
         header_type = 'prot'
     else:
         header_type = None
@@ -216,7 +187,7 @@ def _parse_vb_header(
         num_x_prot):
     raw_header = {}
     for i in range(num_x_prot):
-        key = mrt.utils.read_cstr(file_stream)
+        key = fc.util.read_cstr(file_stream)
         size = _read_twix(file_stream, 'int')
         val = file_stream.read(size).decode('ascii')
         raw_header[key] = str(val.strip(' \n\t\0'))
@@ -305,6 +276,7 @@ def test():
     with open('/media/Data/tmp/hdr_Meas.txt', 'r') as f:
         t = f.read()
         _read_x_protocol(t)
+
 
 # test()
 

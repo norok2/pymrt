@@ -19,9 +19,13 @@ import collections  # Container datatypes
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
+# :: External Imports Submodules
 import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -38,6 +42,7 @@ from pymrt.recipes import db0, phs, generic
 
 from pymrt.constants import CHI_V
 
+from pymrt import PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
@@ -113,7 +118,7 @@ def dipole_kernel(
 
     # generate the dipole kernel
     assert (len(shape) == 3)
-    kk = np.array(mrt.utils.grid_coord(shape, origin))
+    kk = np.array(fc.num.grid_coord(shape, origin))
     if b0_direction is None:
         theta, phi = [np.deg2rad(angle) for angle in (theta, phi)]
         b0_direction = [
@@ -268,7 +273,7 @@ def db0_to_chi(
     chi_k_arr = np.fft.fftn(db0_arr) / dk
 
     # remove singularity of susceptibility
-    chi_k_arr = mrt.utils.subst(chi_k_arr)
+    chi_k_arr = fc.num.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -283,7 +288,7 @@ def db0_to_chi(
 def qsm_remove_background_milf(
         db0_arr,
         mask_arr,
-        threshold=np.spacing(1),
+        threshold=np.spacing(1.0),
         pad_width=0):
     """
     Filter out the background component of the phase using MILF.
@@ -319,14 +324,14 @@ def qsm_remove_background_milf(
     """
     if pad_width:
         shape = db0_arr.shape
-        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
+        pad_width = fc.util.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         db0_arr = np.pad(db0_arr, pad_width, 'constant', constant_values=0)
         mask_arr = np.pad(mask_arr, pad_width, 'constant', constant_values=0)
     else:
         mask = [slice(None)] * db0_arr.ndim
 
-    kernel_k = np.fft.fftshift(mrt.utils.laplace_kernel(db0_arr.shape))
+    kernel_k = np.fft.fftshift(fc.num.laplace_kernel(db0_arr.shape))
 
     kernel_mask = np.abs(kernel_k) > threshold
     kernel_k_inv = kernel_mask.astype(complex)
@@ -348,7 +353,7 @@ def qsm_remove_background_sharp(
         db0_arr,
         mask_arr,
         radius=range(11, 3, -2),
-        threshold=np.spacing(1),
+        threshold=np.spacing(1.0),
         pad_width=0.3,
         rel_radius=True):
     """
@@ -395,7 +400,7 @@ def qsm_remove_background_sharp(
     """
     if pad_width:
         shape = db0_arr.shape
-        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
+        pad_width = fc.util.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         db0_arr = np.pad(db0_arr, pad_width, 'constant', constant_values=0)
         mask_arr = np.pad(mask_arr, pad_width, 'constant', constant_values=0)
@@ -431,7 +436,7 @@ def qsm_remove_background_pdf(
         db0_arr,
         mask_arr,
         radius=0.01,
-        threshold=np.spacing(1)):
+        threshold=np.spacing(1.0)):
     """
     Filter out the non-harmonic components of the magnetic field variation.
 
@@ -516,7 +521,7 @@ def qsm_field2source_tkd(
     chi_k_arr = dk_inv * np.fft.fftn(db0i_arr)
 
     # remove singularity of susceptibility
-    chi_k_arr = mrt.utils.subst(chi_k_arr)
+    chi_k_arr = fc.num.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -532,7 +537,7 @@ def qsm_field2source_l2_closed_form(
         db0i_arr,
         mask_arr=None,
         grad_regularization=0.09,
-        threshold=np.spacing(1),
+        threshold=np.spacing(1.0),
         b0_direction=(0, 0, 1),
         theta=0.0,
         phi=0.0):
@@ -592,7 +597,7 @@ def qsm_field2source_l2_closed_form(
 
     # compute the gradient operators along all dims
     exp_2_k = sum(
-        mrt.utils.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
+        fc.num.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
     exp_2_k = np.fft.fftshift(exp_2_k)
 
     # perform the inverse Fourier transform
@@ -689,7 +694,7 @@ def qsm_field2source_l2_iter(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = mrt.utils.exp_gradient_kernels(
+    exp_ks = fc.num.exp_gradient_kernels(
         db0i_arr.shape, None, db0i_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
@@ -882,7 +887,7 @@ def qsm_total_field_inversion(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = mrt.utils.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
+    exp_ks = fc.num.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
         if threshold:
@@ -1032,13 +1037,13 @@ def qsm_preprocess(
     Returns:
 
     """
-    echo_times = np.array(mrt.utils.auto_repeat(echo_times, 1))
+    echo_times = np.array(fc.util.auto_repeat(echo_times, 1))
     if len(echo_times) > 1:
         dphs_arr = phs.phs_to_dphs(
             phs_arr, tis=echo_times, tis_mask=echo_times_mask)
         mag_arr = mag_arr[..., 0]
     else:
-        dphs_arr = phs.single_phs_to_dphs(phs_arr, echo_times[0])
+        dphs_arr = phs.phs_to_dphs(phs_arr, echo_times[0])
     mask_arr = mrt.segmentation.mask_threshold_compact(mag_arr)
     raise NotImplementedError
     # return dphs_arr, mask_arr
@@ -1080,7 +1085,7 @@ def wip():
     msk_arr = mrt.input_output.load(msk_filepath).astype(bool)
 
     uphs_filepath = os.path.join(base_path, 'bai_uphs.nii.gz')
-    if mrt.utils.check_redo(phs_filepath, uphs_filepath, force):
+    if fc.util.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
         uphs_arr = phs.unwrap(phs_arr)
@@ -1089,7 +1094,7 @@ def wip():
         uphs_arr = mrt.input_output.load(uphs_filepath)
 
     dphs_filepath = os.path.join(base_path, 'bai_dphs.nii.gz')
-    if mrt.utils.check_redo(phs_filepath, dphs_filepath, force):
+    if fc.util.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
         dphs_arr = phs.phs_to_dphs(phs_arr, 20.0)
@@ -1098,7 +1103,7 @@ def wip():
         dphs_arr = mrt.input_output.load(dphs_filepath)
 
     db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
-    if mrt.utils.check_redo(dphs_filepath, db0_filepath, force):
+    if fc.util.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
 
         db0_arr = db0.dphs_to_db0(dphs_arr, b0=2.89362)
@@ -1107,7 +1112,7 @@ def wip():
         db0_arr = mrt.input_output.load(db0_filepath)
 
     # milf_filepath = os.path.join(base_path, 'bai_db0i_milf.nii.gz')
-    # if mrt.utils.check_redo(db0_filepath, milf_filepath, force):
+    # if fc.util.check_redo(db0_filepath, milf_filepath, force):
     #     from pymrt.recipes import phs
     #
     #     milf_arr = qsm_remove_background_milf(uphs_arr, msk_arr)
@@ -1117,7 +1122,7 @@ def wip():
     #     milf_arr = mrt.input_output.load(milf_filepath)
 
     # sharp_filepath = os.path.join(base_path, 'bai_db0i_sharp.nii.gz')
-    # if mrt.utils.check_redo(uphs_filepath, sharp_filepath, force):
+    # if fc.util.check_redo(uphs_filepath, sharp_filepath, force):
     #     from pymrt.recipes import phs
     #     import scipy.ndimage
     #
@@ -1131,7 +1136,7 @@ def wip():
     #     sharp_arr = mrt.input_output.load(sharp_filepath)
 
     chi_filepath = os.path.join(base_path, 'bai_chi_ptfi_minres_i0128.nii.gz')
-    if mrt.utils.check_redo(db0_filepath, chi_filepath, force):
+    if fc.util.check_redo(db0_filepath, chi_filepath, force):
         from pymrt.recipes import db0
 
         mask = mag_arr > 0.5
@@ -1150,7 +1155,7 @@ def wip():
         chi_arr = mrt.input_output.load(chi_filepath)
 
     # chi_filepath = os.path.join(base_path, 'bai_chi_tfi_lsmr.nii.gz')
-    # if mrt.utils.check_redo(db0_filepath, chi_filepath, force):
+    # if fc.util.check_redo(db0_filepath, chi_filepath, force):
     #     from pymrt.recipes import db0
     #
     #     chi_arr = qsm_total_field_inversion(
@@ -1164,7 +1169,7 @@ def wip():
 
 
 # ======================================================================
-elapsed(__file__[len(DIRS['base']) + 1:])
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':

@@ -17,9 +17,13 @@ import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
+# :: External Imports Submodules
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -151,7 +155,7 @@ def phs_to_dphs(
         else:
             warnings.warn('Invalid units `{units}`'.format(**locals()))
             units = 1
-    tis = np.array(mrt.utils.auto_repeat(tis, 1)) * units
+    tis = np.array(fc.util.auto_repeat(tis, 1)) * units
 
     if unwrapping is not None:
         phs_arr = unwrap(phs_arr, unwrapping, unwrapping_kws)
@@ -225,7 +229,7 @@ def dphs_to_phs(
     """
     shape = dphs_arr.shape
     tis = np.array(
-        mrt.utils.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
+        fc.util.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
     dphs_arr = dphs_arr.reshape(shape + (1,))
     return dphs_arr * tis + phs0_arr
 
@@ -260,7 +264,7 @@ def unwrap_laplacian(
     """
     if pad_width:
         shape = arr.shape
-        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
+        pad_width = fc.util.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
@@ -273,7 +277,7 @@ def unwrap_laplacian(
 
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    kk_2 = fftshift(mrt.utils.laplace_kernel(arr.shape))
+    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
@@ -318,7 +322,7 @@ def unwrap_laplacian_corrected(
     raise NotImplementedError
     if pad_width:
         shape = arr.shape
-        pad_width = mrt.utils.auto_pad_width(pad_width, shape)
+        pad_width = fc.util.auto_pad_width(pad_width, shape)
         mask = [slice(lower, -upper) for (lower, upper) in pad_width]
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
@@ -331,7 +335,7 @@ def unwrap_laplacian_corrected(
 
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    kk_2 = fftshift(mrt.utils.laplace_kernel(arr.shape))
+    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]

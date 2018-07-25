@@ -268,7 +268,7 @@ def check_z_spectrum(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -337,7 +337,7 @@ def check_z_spectrum2(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -406,7 +406,7 @@ def check_z_spectrum_sparse(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(mrt.utils.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -536,7 +536,7 @@ def check_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    freqs = mrt.utils.sgnlogspace(100.0, 300.0e3, 32)
+    freqs = fc.util.sgnlogspace(100.0, 300.0e3, 32)
     flip_angles = np.linspace(1.0, 1100.0, 32)
 
     x_data = np.array(tuple(itertools.product(freqs, flip_angles)))
@@ -567,7 +567,7 @@ def check_fit_spin_model(
     # fitted = mt_signal(x_data, *p0).reshape(measured.shape)
 
     if plot_data:
-        X, Y = np.meshgrid(flip_angles, mrt.utils.sgnlog(freqs, 10.0))
+        X, Y = np.meshgrid(flip_angles, fc.util.sgnlog(freqs, 10.0))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -588,16 +588,16 @@ def check_fit_spin_model(
 if __name__ == '__main__':
     msg(__doc__.strip())
     # check_dynamics_operator_symbolic()
-    # mrt.utils.elapsed('check_symbolic')
+    # fc.util.elapsed('check_symbolic')
 
     # check_dynamics_operator()
-    # mrt.utils.elapsed'check_dynamics_operator')
+    # fc.util.elapsed'check_dynamics_operator')
 
     # check_mt_sequence()
-    # mrt.utils.elapsed'check_mt_sequence')
+    # fc.util.elapsed'check_mt_sequence')
 
     # check_approx_propagator()
-    # mrt.utils.elapsed'check_approx_propagator')
+    # fc.util.elapsed'check_approx_propagator')
 
     # check_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA['1H'] * B0,) * 4,
@@ -614,7 +614,7 @@ if __name__ == '__main__':
     # print(x3[0].ravel() / x1[0].ravel())
 
     # check_fit_spin_model()
-    # mrt.utils.elapsed('check_fit_spin_model')
+    # fc.util.elapsed('check_fit_spin_model')
 
     msg(report())
     # profile.run('check_z_spectrum()', sort=1)

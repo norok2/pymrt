@@ -53,7 +53,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 # import numba  # Numba Just-In-Time compiler for Python / NumPy
-
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -66,6 +66,8 @@ import scipy.constants  # SciPy: Constants
 import scipy.linalg  # SciPy: Linear Algebra
 import scipy.stats  # SciPy: Statistical functions
 import scipy.misc  # SciPy: Miscellaneous routines
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 from numpy import pi, sin, cos, exp, sqrt, sinc
 # from sympy import pi, sin, cos, exp, sqrt, sinc
@@ -154,7 +156,7 @@ def _prepare_superlorentz(
 
 
 _SUPERLORENTZ = _prepare_superlorentz()
-mrt.utils.elapsed('Superlorentz Approx.')
+fc.util.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -399,7 +401,7 @@ def _shape_from_file(
         y (complex): The pulse shape.
     """
     tmp_dirpaths = [
-        mrt.utils.realpath(dirpath),
+        fc.util.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
     ]
     for tmp_dirpath in tmp_dirpaths:
@@ -407,7 +409,7 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + mrt.utils.add_extsep(mrt.utils.EXT['tab']))
+        dirpath, filename + fc.util.add_extsep(mrt.utils.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
@@ -510,7 +512,7 @@ def _propagator_sum_order1(
     l_op_sum = sum(l_ops)
     # pseudo-first-order correction
     comms = [
-        mrt.utils.commutator(l_ops[i], l_ops[i + 1]) / 2.0
+        fc.util.commutator(l_ops[i], l_ops[i + 1]) / 2.0
         for i in range(len(l_ops[:-1]))]
     comm_sum = sum(comms)
     return sp.linalg.expm(-(l_op_sum + comm_sum))
@@ -603,7 +605,7 @@ def _propagator_poly(
             for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -654,7 +656,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc._w1_arr))
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -701,7 +703,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -739,7 +741,7 @@ def _propagator_interp(
                     (pulse_exc._w1_arr.real, pulse_exc._w1_arr.imag),
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -783,7 +785,7 @@ def _propagator_linear(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -827,7 +829,7 @@ def _propagator_linear(
                      np.abs(pulse_exc._w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -863,7 +865,7 @@ def _propagator_reduced(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return mrt.utils.mdot(*p_ops[::-1])
+    return fc.num.mdot(*p_ops[::-1])
 
 
 # ======================================================================
@@ -1137,7 +1139,7 @@ class Pulse(SequenceEvent):
         Returns:
             freq (float): The carrier frequency in Hz.
         """
-        return mrt.utils.afreq2freq(self.w_c)
+        return fc.util.afreq2freq(self.w_c)
 
     # -----------------------------------
     @classmethod
@@ -1274,7 +1276,7 @@ class Pulse(SequenceEvent):
         Returns:
             None.
         """
-        self.w_c = mrt.utils.freq2afreq(new_f_c)
+        self.w_c = fc.num.freq2afreq(new_f_c)
         return self
 
     # -----------------------------------
@@ -1291,7 +1293,7 @@ class Pulse(SequenceEvent):
         Returns:
             None.
         """
-        self.w_c = self.w_c + mrt.utils.freq2afreq(delta_f_c)
+        self.w_c = self.w_c + fc.num.freq2afreq(delta_f_c)
         return self
 
     # -----------------------------------
@@ -1321,7 +1323,7 @@ class Pulse(SequenceEvent):
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self._w1_arr]
-            p_op = mrt.utils.mdot(*p_ops[::-1])
+            p_op = fc.num.mdot(*p_ops[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
@@ -1333,7 +1335,7 @@ class Pulse(SequenceEvent):
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self._w1_arr]
-                p_op = mrt.utils.mdot(*p_ops[::-1])
+                p_op = fc.num.mdot(*p_ops[::-1])
         return p_op
 
     # -----------------------------------
@@ -1614,7 +1616,7 @@ class PulseSequence(object):
         Returns:
             y(ndarray[float]): The propagator.
         """
-        p_op = mrt.utils.mdot(*p_ops[::-1])
+        p_op = fc.num.mdot(*p_ops[::-1])
         if num > 1:
             p_op = sp.linalg.fractional_matrix_power(p_op, num)
         return p_op
@@ -1654,7 +1656,7 @@ class PulseSequence(object):
 
         """
         return (
-                np.abs(mrt.utils.mdot(
+                np.abs(fc.num.mdot(
                     spin_model.detector(), p_op,
                     spin_model.equilibrium_magnetization())) *
                 spin_model.s0)
@@ -1842,7 +1844,7 @@ class MultiGradEchoSteadyState(SteadyState):
         # handle echo times
         if tes is None:
             tes = self.te
-        self.tes = mrt.utils.auto_repeat(tes, 1, False, False)
+        self.tes = fc.util.auto_repeat(tes, 1, False, False)
         # ensure compatible echo_times and repetition_time
         if any([t < 0
                 for te in self.tes

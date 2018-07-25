@@ -42,6 +42,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -52,7 +53,6 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
 # import pymrt.input_output
 import pymrt.geometry
 # from pymrt import INFO
@@ -252,7 +252,7 @@ def minimize_discrete(
                 interp_order=interp_order))
     if cost_func is None:
         cost_func = \
-            mrt.utils.set_func_kws(_min_func_affine, {})['cost_func']
+            fc.util.set_func_kws(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
@@ -345,7 +345,7 @@ def affine_registration(
             method = 'BFGS'
         if cost_func is None:
             kwargs__min_func_affine = \
-                mrt.utils.set_func_kws(_min_func_affine, {})
+                fc.util.set_func_kws(_min_func_affine, {})
             cost_func = kwargs__min_func_affine['cost_func']
         args__min_func_affine = (
             moving.ravel(), fixed.ravel(), moving.shape,
@@ -398,7 +398,7 @@ def external_registration(
     # generate
     if tool.startswith('FSL'):
         cmd = EXT_CMD['fsl/5.0/flirt']
-        mrt.utils.execute(cmd)
+        fc.util.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension
     return affine

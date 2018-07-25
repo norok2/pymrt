@@ -18,9 +18,13 @@ import collections  # Container datatypes
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
+# :: External Imports Submodules
 import scipy.integrate  # SciPy: Integration and ODEs
 import scipy.optimize  # SciPy: Optimization and root finding
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -99,7 +103,7 @@ def _test(use_cache=True):
     import os
 
 
-    base_dir = mrt.utils.realpath('~/hd1/TEMP')
+    base_dir = fc.util.realpath('~/hd1/TEMP')
     filepath = os.path.join(base_dir, 'tau_arr.npz')
     if os.path.isfile(filepath) and use_cache:
         y = np.load(filepath)['y']

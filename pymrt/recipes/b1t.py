@@ -13,13 +13,16 @@ from __future__ import (
 # :: Python Standard Library Imports
 # import itertools  # Functions creating iterators for efficient looping
 import warnings  # Warning control
-import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
+# :: External Imports Submodules
 import scipy.interpolate  # Scipy: Interpolation
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -356,7 +359,7 @@ def mp2rage_rho(
         mode (str): Select the array combination mode.
             See `pymrt.sequences.mp2rage.rho()` for more info.
         **params_kws: The acquisition parameters.
-            This is filtered through `pymrt.utils.split_func_kws()` for
+            This is filtered through `fc.util.split_func_kws()` for
             `sequences.mp2rage.acq_to_seq_params()` and the result
             is passed to `sequences.mp2rage.rho()`.
             Its (key, value) pairs must be accepted by either
@@ -385,12 +388,12 @@ def mp2rage_rho(
     """
     # determine the sequence parameters
     try:
-        acq_kws, kws = mrt.utils.split_func_kws(
+        acq_kws, kws = fc.util.split_func_kws(
             mp2rage.acq_to_seq_params, params_kws)
         seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
         seq_kws.update(kws)
     except TypeError:
-        seq_kws, kws = mrt.utils.split_func_kws(mp2rage.rho, params_kws)
+        seq_kws, kws = fc.util.split_func_kws(mp2rage.rho, params_kws)
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
@@ -400,7 +403,7 @@ def mp2rage_rho(
             eta_fa_values_range[0], eta_fa_values_range[1], t1_num)
         rho = mp2rage.rho(t1=t1_arr, eta_fa=eta_fa, mode=mode, **seq_kws)
         # remove non-bijective branches
-        bijective_slice = mrt.utils.bijective_part(rho)
+        bijective_slice = fc.num.bijective_part(rho)
         eta_fa = eta_fa[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:

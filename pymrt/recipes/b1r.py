@@ -24,7 +24,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
 
 from pymrt.recipes import t1
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

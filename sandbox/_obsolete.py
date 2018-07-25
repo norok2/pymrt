@@ -24,8 +24,6 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.signal  # SciPy: Signal Processing
 
-import pymrt.utils
-
 
 # ======================================================================
 def tty_colorify(
@@ -138,6 +136,7 @@ def is_prime(num):
         if num % i == 0 or num % (i + 2) == 0:
             return False
     return True
+
 
 # ======================================================================
 def interval_size(interval):
@@ -318,6 +317,8 @@ def sequence(
         [10]
     """
     from pymrt.utils import guess_decimals
+
+
     if step is None:
         step = 1 if stop > start else -1
     if precision is None:
@@ -364,6 +365,8 @@ def accumulate(
 def transparent_compression(func):
     def _wrapped():
         from importlib import import_module
+
+
         zip_module_names = "gzip", "bz2"
         fallback_module_name = "builtins"
         open_module_names = zip_module_names + (fallback_module_name,)
@@ -408,7 +411,8 @@ def ssim(
             Modulate the relative weight of the three SSIM components
             (luminosity, contrast and structural information).
             If they are all equal to 1, the computation can be simplified.
-        kk (tuple[float]): The ratio regularization constant factors. Must be 3.
+        kk (tuple[float]): The ratio regularization constant factors. Must
+        be 3.
             Determine the regularization constants as a factors of the total
             interval size (squared) for the three SSIM components
             (luminosity, contrast and structural information).
@@ -468,7 +472,8 @@ def ssim_map(
             Modulate the relative weight of the three SSIM components
             (luminosity, contrast and structural information).
             If they are all equal to 1, the computation can be simplified.
-        kk (tuple[float]): The ratio regularization constant factors. Must be 3.
+        kk (tuple[float]): The ratio regularization constant factors. Must
+        be 3.
             Determine the regularization constants as a factors of the total
             interval size (squared) for the three SSIM components
             (luminosity, contrast and structural information).
@@ -490,7 +495,7 @@ def ssim_map(
             min(np.min(arr1), np.min(arr2)), max(np.max(arr1), np.max(arr2)))
     interval_size = np.ptp(arr_interval)
     ndim = arr1.ndim
-    arr_filter = mrt.utils.gaussian_nd(filter_sizes, sigmas, 0.5, ndim, True)
+    arr_filter = fc.util.gaussian_nd(filter_sizes, sigmas, 0.5, ndim, True)
     convolve = scipy.signal.fftconvolve
     mu1 = convolve(arr1, arr_filter, 'same')
     mu2 = convolve(arr2, arr_filter, 'same')
@@ -570,7 +575,7 @@ def calc_averages(
    out_phs_filepath = change_img_type(out_tmp_filepath, TYPE_ID['phs'])
    out_filepath_list = [out_tmp_filepath, out_mag_filepath, out_phs_filepath]
    # perform calculation
-  if mrt.utils.check_redo(filepath_list, out_filepath_list, force) and 
+  if fc.util.check_redo(filepath_list, out_filepath_list, force) and 
   sum_avg > 1:
        # stack multiple images together
        # assume every other file is a phase image, starting with magnitude
@@ -595,7 +600,7 @@ def calc_averages(
 #            os.path.join(
 #            tmp_dirpath,
 #            mrt.input_output.del_ext(os.path.basename(img_tuple[0])) +
-#            mrt.utils.add_extsep(mrt.utils.EXT['txt']))
+#            fc.util.add_extsep(mrt.utils.EXT['txt']))
 #            for img_tuple in img_tuple_list]
 #        iter_param_list = [
 #            (img_tuple[0], img_tuple_list[0][0], regmat)
@@ -643,7 +648,7 @@ def calc_averages(
                rel_power = np.abs(avg_power - np.sum(img_mag)) / avg_power
            if (not avg_power or rel_power < threshold) \
                    and shape == img_mag.shape:
-               img_list.append(mrt.utils.polar2complex(img_mag, img_phs))
+               img_list.append(fc.num.polar2complex(img_mag, img_phs))
                num += 1
                avg_power = (avg_power * (num - 1) + np.sum(img_mag)) / num
        out_mag_filepath = change_param_val(
@@ -660,39 +665,39 @@ def calc_averages(
            img = np.fft.ifftn(np.fft.ifftshift(ft_img * np.exp(1j * dephs)))
            img_list[idx] = img
 
-       img = mrt.utils.ndstack(img_list, -1)
+       img = fc.util.ndstack(img_list, -1)
        img = np.mean(img, -1)
        mrt.input_output.save(out_mag_filepath, np.abs(img), affine_nii)
 #        mrt.input_output.save(out_phs_filepath, np.angle(img), affine_nii)
 
 #        fixed = np.abs(img_list[0])
 #        for idx, img in enumerate(img_list):
-#            affine = mrt.utils.affine_registration(np.abs(img), fixed, 'rigid')
-#            img_list[idx] = mrt.utils.apply_affine(img_list[idx], affine)
+#            affine = fc.util.affine_registration(np.abs(img), fixed, 'rigid')
+#            img_list[idx] = fc.util.apply_affine(img_list[idx], affine)
 #        mrt.input_output.save(out_filepath, np.abs(img), affine_nii)
 #        print(img.shape, img.nbytes / 1024 / 1024)  # DEBUG
 #        # calculate the Fourier transform
 #        for img in img_list:
 #            fft_list.append(np.fft.fftshift(np.fft.fftn(img)))
 #        fixed = np.abs(img[:, :, :, 0])
-#        mrt.utils.sample2d(fixed, -1)
+#        fc.util.sample2d(fixed, -1)
 #        tmp = tmp * np.exp(1j*0.5)
 #        moving = sp.ndimage.shift(fixed, [1.0, 5.0, 0.0])
-#        mrt.utils.sample2d(moving, -1)
+#        fc.util.sample2d(moving, -1)
 
 #        print(linear, shift)
 #        moved = sp.ndimage.affine_transform(moving, linear, offset=-shift)
-#        mrt.utils.sample2d(moved, -1)
+#        fc.util.sample2d(moved, -1)
 #        mrt.input_output.save(out_filepath, moving, affine)
 #        mrt.input_output.save(mag_filepath, fixed, affine)
 #        mrt.input_output.save(phs_filepath, moved-fixed, affine)
 #        for idx in range(len(img_list)):
 #            tmp_img = img[:, :, :, idx]
 #            tmp_fft = fft[:, :, :, idx]
-#            mrt.utils.sample2d(np.real(tmp_fft), -1)
-#            mrt.utils.sample2d(np.imag(tmp_fft), -1)
-#            mrt.utils.sample2d(np.abs(img[:, :, :, idx]), -1)
-#            mrt.utils.sample2d(np.angle(img[:, :, :, idx]), -1)
+#            fc.util.sample2d(np.real(tmp_fft), -1)
+#            fc.util.sample2d(np.imag(tmp_fft), -1)
+#            fc.util.sample2d(np.abs(img[:, :, :, idx]), -1)
+#            fc.util.sample2d(np.angle(img[:, :, :, idx]), -1)
 
        # calculate output
        if verbose > VERB_LVL['none']:

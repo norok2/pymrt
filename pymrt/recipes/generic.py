@@ -21,12 +21,16 @@ import multiprocessing  # Process-based parallelism
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
+# :: External Imports Submodules
 import scipy.integrate  # SciPy: Integration and ODEs
 import scipy.optimize  # SciPy: Optimization and root finding
 import scipy.stats  # SciPy: Statistical functions
 import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -170,7 +174,7 @@ def is_linear(arr, axis=-1):
 def cx_div(
         arr1,
         arr2,
-        regularization=np.spacing(1),
+        regularization=np.spacing(1.0),
         values_interval=None):
     """
     Calculate the pseudo-ratio expression: s1 * s2 / (s1^2 + s2^2)
@@ -205,7 +209,7 @@ def cx_div(
     result = arr1 * arr2 / (
         np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
-        result = mrt.utils.scale(result, values_interval, (-0.5, 0.5))
+        result = fc.num.scale(result, values_interval, (-0.5, 0.5))
     return result
 
 
@@ -232,8 +236,8 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    if not mrt.utils.is_in_range(arr, (-np.pi, np.pi)):
-        arr = mrt.utils.scale(arr.astype(float), (-np.pi, np.pi))
+    if not fc.num.is_in_range(arr, (-np.pi, np.pi)):
+        arr = fc.num.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -264,7 +268,7 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     if phs_arr is not None:
         if fix_phase:
             phs_arr = fix_phase_interval(phs_arr)
-        cx_arr = mrt.utils.polar2complex(
+        cx_arr = fc.num.polar2complex(
             mag_arr.astype(float), phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)
@@ -323,7 +327,7 @@ def referencing(
     if ext_refs is not None:
         assert (len(masks) == len(ext_refs))
         num_refs = len(ext_refs)
-        combines = mrt.utils.auto_repeat(combines, num_refs, True, True)
+        combines = fc.util.auto_repeat(combines, num_refs, True, True)
         are_mask_arr = [
             isinstance(mask, np.array) and (
                 np.issubdtype(mask.dtype, np.bool) and arr.shape == mask.shape)
@@ -346,7 +350,7 @@ def referencing(
 
 
 # ======================================================================
-def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
+def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     arr = np.abs(arr)
     log_arr = np.zeros_like(arr)
     # calculate logarithm only of strictly positive values
@@ -356,7 +360,7 @@ def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
 
 
 # ======================================================================
-def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1)):
+def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     # tau = p_arr[..., 0]
     # s_0 = p_arr[..., 1]
     axis = -1
@@ -383,7 +387,7 @@ def fit_exp_loglin(
         variant=None,
         full=False,
         exp_factor=0,
-        zero_cutoff=np.spacing(1)):
+        zero_cutoff=np.spacing(1.0)):
     """
     Fit exponential decay to data using the log-linear method.
 
@@ -468,7 +472,7 @@ def fit_exp_curve_fit(
         full=False,
         num_proc=0,
         exp_factor=0,
-        zero_cutoff=np.spacing(1)):
+        zero_cutoff=np.spacing(1.0)):
     """
     Fit exponential decay to data using the log-linear method.
 
@@ -974,7 +978,7 @@ def cx_2_combine(
         cx1_arr,
         cx2_arr,
         func='ratio',
-        regularization=np.spacing(1)):
+        regularization=np.spacing(1.0)):
     """
     Calculate the combination of two arrays.
 
@@ -1027,7 +1031,7 @@ def mag_phase_2_combine(
         mag2_arr,
         phs2_arr,
         func='ratio',
-        regularization=np.spacing(1)):
+        regularization=np.spacing(1.0)):
     """
     Calculate the combination of two arrays.
 
@@ -1059,8 +1063,8 @@ def mag_phase_2_combine(
     mag2_arr = mag2_arr.astype(float)
     phs1_arr = fix_phase_interval(phs1_arr)
     phs2_arr = fix_phase_interval(phs2_arr)
-    inv1_arr = mrt.utils.polar2complex(mag1_arr, phs1_arr)
-    inv2_arr = mrt.utils.polar2complex(mag2_arr, phs2_arr)
+    inv1_arr = fc.num.polar2complex(mag1_arr, phs1_arr)
+    inv2_arr = fc.num.polar2complex(mag2_arr, phs2_arr)
     return cx_2_combine(inv1_arr, inv2_arr, regularization, func)
 
 
@@ -1450,4 +1454,3 @@ if __name__ == '__main__':
     msg(__doc__.strip())
     doctest.testmod()
     msg(report())
-    wip()

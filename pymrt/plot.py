@@ -42,6 +42,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import numeral  # Support for various integer-to-numeral (and back) conversion
 import seaborn as sns  # Seaborn: statistical data visualization
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -55,6 +56,8 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -166,9 +169,9 @@ def simple(
     else:
         fig = plt.gcf()
     if isinstance(x_datas, np.ndarray):
-        x_datas = mrt.utils.auto_repeat(x_datas, len(y_datas), True, True)
+        x_datas = fc.util.auto_repeat(x_datas, len(y_datas), True, True)
     if legends is None:
-        legends = mrt.utils.auto_repeat(None, len(y_datas), check=True)
+        legends = fc.util.auto_repeat(None, len(y_datas), check=True)
     for x_data, y_data, legend in zip(x_datas, y_datas, legends):
         pax = ax.plot(x_data, y_data, label=legend)
     # setup title and labels
@@ -185,7 +188,7 @@ def simple(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -218,7 +221,7 @@ def empty(
     ax.set_aspect(1)
 
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -299,7 +302,7 @@ def multi(
     # : prepare for plotting
     num = len(y_arrs)
     if isinstance(x_arrs, np.ndarray):
-        x_arrs = mrt.utils.auto_repeat(x_arrs, num, force=True, check=True)
+        x_arrs = fc.util.auto_repeat(x_arrs, num, force=True, check=True)
     elif x_arrs is None:
         x_arrs = tuple(np.arange(len(y_arr)) for y_arr in y_arrs)
 
@@ -409,7 +412,7 @@ def multi(
             ax.text(**dict(text_kws))
 
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -535,7 +538,7 @@ def legend(
             ax.text(**dict(text_kws))
 
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -617,9 +620,9 @@ def sample2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = mrt.utils.auto_repeat(axis, 1)
+        axis = fc.util.auto_repeat(axis, 1)
     if index is not None:
-        index = mrt.utils.auto_repeat(index, 1)
+        index = fc.util.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -627,7 +630,7 @@ def sample2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = mrt.utils.ndim_slice(arr, axis, index)
+        data = fc.num.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -650,14 +653,14 @@ def sample2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = mrt.utils.minmax(arr)
+        array_interval = fc.num.minmax(arr)
     if not cmap:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             cmap = mpl.cm.get_cmap('RdBu_r')
         else:
             cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -722,7 +725,7 @@ def sample2d(
             ax.text(**dict(text_kws))
 
     # save plot
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -779,9 +782,9 @@ def sample3d_view2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = mrt.utils.auto_repeat(axis, 1)
+        axis = fc.util.auto_repeat(axis, 1)
     if index is not None:
-        index = mrt.utils.auto_repeat(index, 1)
+        index = fc.util.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -789,7 +792,7 @@ def sample3d_view2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = mrt.utils.ndim_slice(arr, axis, index)
+        data = fc.num.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -805,7 +808,7 @@ def sample3d_view2d(
     if view_axes is None:
         view_axes = np.argsort(data.shape)
     if view_indexes is None:
-        view_indexes = mrt.utils.auto_repeat(None, data_dim)
+        view_indexes = fc.util.auto_repeat(None, data_dim)
     if len(view_axes) != data_dim:
         raise IndexError('Incorrect number of view axes.')
     if len(view_indexes) != data_dim:
@@ -813,7 +816,7 @@ def sample3d_view2d(
 
     views = []
     for view_axis, view_index in zip(view_axes, view_indexes):
-        views.append(mrt.utils.ndim_slice(data, view_axis, view_index))
+        views.append(fc.num.ndim_slice(data, view_axis, view_index))
     if ((orientation == 'transpose') or
             (orientation == 'landscape'
              and views[0].shape[0] > views[0].shape[1]) or
@@ -884,14 +887,14 @@ def sample3d_view2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = mrt.utils.minmax(arr)
+        array_interval = fc.num.minmax(arr)
     if not cmap:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             cmap = mpl.cm.get_cmap('RdBu_r')
         else:
             cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -959,7 +962,7 @@ def sample3d_view2d(
         ax.axis('off')
 
     # save plot
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1039,18 +1042,18 @@ def sample2d_multi(
 
     assert all([arr.shape == arrs[0].shape for arr in arrs])
     num_arrs = len(arrs)
-    alphas = mrt.utils.auto_repeat(alphas, num_arrs, False, True)
-    cmaps = mrt.utils.auto_repeat(cmaps, num_arrs, False, True)
-    array_intervals = mrt.utils.auto_repeat(
+    alphas = fc.util.auto_repeat(alphas, num_arrs, False, True)
+    cmaps = fc.util.auto_repeat(cmaps, num_arrs, False, True)
+    array_intervals = fc.util.auto_repeat(
         array_intervals, num_arrs, False, True)
 
     # prepare data
     if axis is None:
         axis = np.argsort(arrs[0].shape)[:-data_dim]
     else:
-        axis = mrt.utils.auto_repeat(axis, 1)
+        axis = fc.util.auto_repeat(axis, 1)
     if index is not None:
-        index = mrt.utils.auto_repeat(index, 1)
+        index = fc.util.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -1067,7 +1070,7 @@ def sample2d_multi(
     for arr, alpha, cmap, array_interval in \
             zip(arrs, alphas, cmaps, array_intervals):
         if arr.ndim - len(axis) == data_dim:
-            data = mrt.utils.ndim_slice(arr, axis, index)
+            data = fc.num.ndim_slice(arr, axis, index)
         elif arr.ndim == data_dim:
             data = arr
         else:
@@ -1088,14 +1091,14 @@ def sample2d_multi(
             data = data[:, ::-1]
 
         if array_interval is None:
-            array_interval = mrt.utils.minmax(arr)
+            array_interval = fc.num.minmax(arr)
         if not cmap:
-            if not mrt.utils.is_same_sign(array_interval):
+            if not fc.util.is_same_sign(array_interval):
                 cmap = mpl.cm.get_cmap('RdBu_r')
             else:
                 cmap = mpl.cm.get_cmap('gray_r')
         if not text_color:
-            if not mrt.utils.is_same_sign(array_interval):
+            if not fc.util.is_same_sign(array_interval):
                 text_color = 'k'
             else:
                 text_color = 'k'
@@ -1157,7 +1160,7 @@ def sample2d_multi(
             ax.text(**dict(text_kws))
 
     # save plot
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1232,18 +1235,18 @@ def sample2d_anim(
         fig = plt.gcf()
     if axis is None:
         axis = np.argmin(array.shape)
-    sample = mrt.utils.ndim_slice(array, axis, 0)
+    sample = fc.num.ndim_slice(array, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = mrt.utils.minmax(array)
+        array_interval = fc.num.minmax(array)
     if not cmap:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             cmap = mpl.cm.get_cmap('RdBu_r')
         else:
             cmap = mpl.cm.get_cmap('gray_r')
     if not text_color:
-        if not mrt.utils.is_same_sign(array_interval):
+        if not fc.util.is_same_sign(array_interval):
             text_color = 'k'
         else:
             text_color = 'k'
@@ -1289,7 +1292,7 @@ def sample2d_anim(
     plots = []
     data = []
     for i in range(0, n_frames, step):
-        sample = mrt.utils.ndim_slice(array, axis, i)
+        sample = fc.num.ndim_slice(array, axis, i)
         pax = ax.imshow(
             sample, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
@@ -1311,7 +1314,7 @@ def sample2d_anim(
                         cbar.set_label(cbar_txt)
         plots.append([pax])
     mov = anim.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kwargs = {'fps': n_frames / step / duration}
         if save_kws is None:
@@ -1390,7 +1393,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([mrt.utils.scale(val, array_interval)
+    hist_interval = tuple([fc.num.scale(val, array_interval)
                            for val in hist_interval])
 
     # create histogram
@@ -1411,7 +1414,7 @@ def histogram1d(
         ax = fig.gca()
     else:
         fig = plt.gcf()
-    pax = ax.plot(mrt.utils.midval(bin_edges), hist, **dict(style))
+    pax = ax.plot(fc.util.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format(**locals()))
@@ -1424,7 +1427,7 @@ def histogram1d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1529,7 +1532,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([mrt.utils.scale(val, array_interval)
+    hist_interval = tuple([fc.num.scale(val, array_interval)
                            for val in hist_interval])
 
     # prepare style list
@@ -1570,7 +1573,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         pax = ax.plot(
-            mrt.utils.midval(bin_edges), hist,
+            fc.util.midval(bin_edges), hist,
             label=legend,
             **next(style_cycler))
         data.append((hist, bin_edges))
@@ -1590,7 +1593,7 @@ def histogram1d_list(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -1744,7 +1747,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[mrt.utils.scale(val, array_interval[i])
+    hist_interval = tuple([[fc.num.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
@@ -1802,10 +1805,10 @@ def histogram2d(
         mask *= (arr1 < array_interval[0][1]).astype(bool)
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
-        stats_dict = mrt.utils.calc_stats(
+        stats_dict = fc.num.calc_stats(
             arr1[mask] - arr2[mask], **stats_kws)
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *mrt.utils.format_value_error(
+            *fc.util.format_value_error(
                 stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
@@ -1825,7 +1828,7 @@ def histogram2d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         if save_kws is None:
             save_kws = {}
@@ -2049,7 +2052,7 @@ def subplots(
                 num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
             elif isinstance(aspect_ratio, str):
                 if 'exact' in aspect_ratio:
-                    num_col, num_row = mrt.utils.optimal_shape(num_plots)
+                    num_col, num_row = fc.util.optimal_shape(num_plots)
                     if 'portrait' in aspect_ratio:
                         num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
@@ -2073,18 +2076,18 @@ def subplots(
         num_col = len(cols)
     assert (num_row * num_col >= num_plots)
 
-    pads = list(mrt.utils.auto_repeat(pads, 2, False, True))
-    label_pads = list(mrt.utils.auto_repeat(label_pads, 2, False, True))
-    borders = list(mrt.utils.auto_repeat(borders, 4, False, True))
+    pads = list(fc.util.auto_repeat(pads, 2, False, True))
+    label_pads = list(fc.util.auto_repeat(label_pads, 2, False, True))
+    borders = list(fc.util.auto_repeat(borders, 4, False, True))
     size_factors = list(
-        mrt.utils.auto_repeat(size_factors, 2, False, True))
+        fc.util.auto_repeat(size_factors, 2, False, True))
 
     # fix row/col labels
     if row_labels is None:
-        row_labels = mrt.utils.auto_repeat(None, num_row)
+        row_labels = fc.util.auto_repeat(None, num_row)
         label_pads[0] = 0.0
     if col_labels is None:
-        col_labels = mrt.utils.auto_repeat(None, num_col)
+        col_labels = fc.util.auto_repeat(None, num_col)
         label_pads[1] = 0.0
     assert (num_row == len(row_labels))
     assert (num_col == len(col_labels))
@@ -2160,7 +2163,7 @@ def subplots(
 
             if col_label:
                 fig.text(
-                    mrt.utils.scale(
+                    fc.num.scale(
                         (j * 2 + 1) / (num_col * 2),
                         out_interval=(
                             label_pads[0], 1.0 - legend_pad)),
@@ -2172,7 +2175,7 @@ def subplots(
         if row_label:
             fig.text(
                 label_pads[0] / 2,
-                mrt.utils.scale(
+                fc.num.scale(
                     1.0 - (i * 2 + 1) / (num_row * 2),
                     out_interval=(0, 1.0 - label_pads[1])),
                 row_label, rotation=90,
@@ -2194,7 +2197,7 @@ def subplots(
         for text_kws in more_texts:
             fig.text(**dict(text_kws))
     # save figure to file
-    if save_filepath and mrt.utils.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout(
             rect=[
                 0.0 + label_pads[0] + borders[0],

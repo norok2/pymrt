@@ -20,12 +20,15 @@ import multiprocessing  # Process-based parallelism
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # import scipy.integrate  # SciPy: Integration and ODEs
 # import scipy.optimize  # SciPy: Optimization and root finding
 # import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.special  # SciPy: Special functions
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 from skimage.restoration import (
     denoise_bilateral, denoise_nl_means, denoise_wavelet,
@@ -33,7 +36,6 @@ from skimage.restoration import (
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
 import pymrt.geometry
 import pymrt.segmentation
 
@@ -108,7 +110,7 @@ def denoise(
             See the respective documentation for details.
         cx_mode (str): Complex calculation mode.
             If `arr` is not complex, this parameter is ignored.
-            See `mode` parameter of `pymrt.utils.filter_cx()` for more info.
+            See `mode` parameter of `fc.num.filter_cx()` for more info.
 
     Raises:
         ValueError: If `method` is unknown.
@@ -172,7 +174,7 @@ def denoise(
         raise ValueError(text)
 
     if np.any(np.iscomplex(arr)):
-        arr = mrt.utils.filter_cx(arr, filter_func, (), method_kws, cx_mode)
+        arr = fc.num.filter_cx(arr, filter_func, (), method_kws, cx_mode)
     else:
         arr = filter_func(np.real(arr), **method_kws)
     return arr
@@ -239,7 +241,7 @@ def sn_split_signals(
     else:
         thresholds = tuple(method)
 
-    thresholds = mrt.utils.auto_repeat(thresholds, 1)
+    thresholds = fc.util.auto_repeat(thresholds, 1)
 
     masks = []
     full_mask = np.ones(arr.shape, dtype=bool)
@@ -345,7 +347,7 @@ def sn_split_calib_region(
             If Iterable, it is passed as positional arguments to
             `geometry.extrema_to_semisizes_position()`.
             If None, a suitable region is guessed.
-        region_shape (str): Shape of the calibration region.
+        region_shape (callable|str): Shape of the calibration region.
             Accepted values are:Function for calculating the region masks.
             The signature of the function must accept three positional
             arguments: shape, semisizes, position.
@@ -427,7 +429,7 @@ def sn_split_otsu(
                 - signal_arr: The signal array.
                 - noise_arr: The noise array.
     """
-    corrections = mrt.utils.auto_repeat(corrections, 2, check=True)
+    corrections = fc.util.auto_repeat(corrections, 2, check=True)
     otsu = mrt.segmentation.threshold_otsu(arr)
     signal_mask = arr > otsu * corrections[0]
     noise_mask = arr <= otsu * corrections[1]
@@ -465,7 +467,7 @@ def sn_split_relative(
     See Also:
         segmentation.threshold_relative(),
     """
-    thresholds = mrt.utils.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.util.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_relative(arr, thresholds)
     signal_mask = arr > signal_threshold
@@ -504,7 +506,7 @@ def sn_split_percentile(
     See Also:
         segmentation.threshold_percentile()
     """
-    thresholds = mrt.utils.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.util.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_percentile(arr, thresholds)
     signal_mask = arr > signal_threshold
@@ -518,8 +520,7 @@ def sn_split_percentile(
 def sn_split_mean_std(
         arr,
         std_steps=(-1, -2),
-        mean_steps=1,
-        separate=True):
+        mean_steps=1):
     """
     Separate signal from noise using a threshold combining mean and std.dev.
 
@@ -533,10 +534,6 @@ def sn_split_mean_std(
             These are usually values between -2 and 2.
         mean_steps (Iterable[int|float]): The mean multiplication step(s).
             This is usually set to 1.
-        symmetric (bool): Use symmetric thresholds.
-            If True, signal values are between the smallest and the largest
-            thresholds.
-            Otherwise, only the smallest threshold is used.
 
     Returns:
         result (tuple[np.ndarray]): The tuple

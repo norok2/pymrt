@@ -24,6 +24,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -33,6 +34,8 @@ import scipy as sp  # SciPy (signal and image processing library)
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.linalg  # Scipy: Linear Algebra
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -90,7 +93,7 @@ def compress_svde(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `pymrt.utils.optimal_num_components()` for more details.
+            See `fc.util.optimal_num_components()` for more details.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
         verbose (int): Set level of verbosity.
@@ -120,7 +123,7 @@ def compress_svd(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `pymrt.utils.optimal_num_components()` for more details.
+            See `fc.util.optimal_num_components()` for more details.
         orthonormal: Uses the orthonormal approximation.
             Uses the pseudo-inverse, instead of the hermitian conjugate,
             to form the signal compression matrix.
@@ -159,7 +162,7 @@ def compress_svd(
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
-    k_svd = mrt.utils.auto_num_components(
+    k_svd = fc.util.auto_num_components(
         k_svd, np.abs(eigvals[eig_sort]) / np.max(np.abs(eigvals)),
         verbose=verbose)
 
@@ -346,7 +349,7 @@ def adaptive(
     if filtering:
         for i in range(num_coils):
             for j in range(num_coils):
-                coil_cov[..., i, j] = mrt.utils.filter_cx(
+                coil_cov[..., i, j] = fc.num.filter_cx(
                     coil_cov[..., i, j], filtering, (), filtering_kws)
 
     # calculate the principal eigenvector of the coil covariance
@@ -517,7 +520,7 @@ def adaptive_iter(
             last_combined = combined.copy() if threshold > 0 else combined
             sens = arr * combined[..., None].conj()
             if filtering:
-                sens = mrt.utils.filter_cx(sens, filtering, (), filtering_kws)
+                sens = fc.num.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
                 np.sqrt(np.sum(sens * sens.conj(), -1))
                 + epsilon)[..., None]

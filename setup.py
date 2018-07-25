@@ -153,6 +153,7 @@ setup(
         'numeral',
         'pytk',
         'numex',
+        'flyingcircus',
     ],
 
     setup_requires=[
@@ -163,12 +164,12 @@ setup(
 
     extras_require={
         'blessed': 'blessed',
+        'weasyprint': 'weasyprint',
     },
 
     package_data={
-        'pymrt': [
-            'resources/icon.*',
-            'sequences/pulses/*.csv',],
+        'pymrt': ['sequences/pulses/*.csv'],
+        'resources': ['icon.*']
     },
     include_package_data=True,
 

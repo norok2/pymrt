@@ -41,6 +41,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -50,10 +51,11 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.stats  # SciPy: Statistical functions
 import scipy.signal  # SciPy: Signal Processing
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -84,7 +86,7 @@ def threshold_relative(
 
     min_val = np.min(arr)
     max_val = np.max(arr)
-    values = mrt.utils.auto_repeat(values, 1)
+    values = fc.util.auto_repeat(values, 1)
     return tuple(
         min_val + (max_val - min_val) * float(value)
         for value in values)
@@ -108,7 +110,7 @@ def threshold_percentile(
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
-    values = mrt.utils.auto_repeat(values, 1)
+    values = fc.util.auto_repeat(values, 1)
     values = tuple(100.0 * value for value in values)
     return tuple(np.percentile(arr, values))
 
@@ -139,8 +141,8 @@ def threshold_mean_std(
     std = np.nanstd(arr)
     min_val = np.min(arr)
     max_val = np.max(arr)
-    mean_steps = mrt.utils.auto_repeat(mean_steps, 1)
-    std_steps = mrt.utils.auto_repeat(std_steps, 1)
+    mean_steps = fc.util.auto_repeat(mean_steps, 1)
+    std_steps = fc.util.auto_repeat(std_steps, 1)
     return tuple(
         mean * mean_step + std * std_step
         for mean_step, std_step in itertools.product(mean_steps, std_steps)
@@ -158,8 +160,8 @@ def threshold_otsu(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `pymrt.utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `pymrt.utils.auto_bin()` method if set to
+            using `fc.num.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fc.num.auto_bin()` method if set to
             None.
 
     Returns:
@@ -182,7 +184,7 @@ def threshold_otsu(
           62–66. doi:10.1109/TSMC.1979.4310076
     """
     # todo: extend to multiple classes
-    return mrt.utils.otsu_threshold(arr, bins=bins)
+    return fc.util.otsu_threshold(arr, bins=bins)
 
 
 # ======================================================================
@@ -198,8 +200,8 @@ def threshold_otsu2(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `pymrt.utils.auto_bin()` with `method` set to `bins` if str,
-            and using the default `pymrt.utils.auto_bin()` method if set to
+            using `fc.num.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fc.num.auto_bin()` method if set to
             None.
 
     Returns:
@@ -224,29 +226,29 @@ def threshold_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
+        bins = fc.num.auto_bin(arr, bins)
     elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
+        bins = fc.num.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
+    bin_centers = fc.util.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = mrt.utils.auto_bin(arr, depth)
+        depth = fc.num.auto_bin(arr, depth)
     elif bins is None:
-        depth = mrt.utils.auto_bin(arr)
+        depth = fc.num.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -268,29 +270,29 @@ def threshold_inv_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
+        bins = fc.num.auto_bin(arr, bins)
     elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
+        bins = fc.num.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
+    bin_centers = fc.util.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = mrt.utils.auto_bin(arr, depth)
+        depth = fc.num.auto_bin(arr, depth)
     elif bins is None:
-        depth = mrt.utils.auto_bin(arr)
+        depth = fc.num.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -312,34 +314,34 @@ def threshold_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
+        bins = fc.num.auto_bin(arr, bins)
     elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
+        bins = fc.num.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
+    bin_centers = fc.util.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = mrt.utils.auto_bin(arr, depth)
+        depth = fc.num.auto_bin(arr, depth)
     elif bins is None:
-        depth = mrt.utils.auto_bin(arr)
+        depth = fc.num.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
         peaks = sp.signal.find_peaks_cwt(hist, widths)
-    peak_edges = mrt.utils.midval(peaks)
+    peak_edges = fc.util.midval(peaks)
     return tuple(bin_centers[peak_edges])
 
 
@@ -357,34 +359,34 @@ def threshold_inv_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `pymrt.utils.auto_bins()`.
-            If None, the default method in `pymrt.utils.auto_bins()` is used.
+            If str, this is determined using `fc.num.auto_bins()`.
+            If None, the default method in `fc.num.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = mrt.utils.auto_bin(arr, bins)
+        bins = fc.num.auto_bin(arr, bins)
     elif bins is None:
-        bins = mrt.utils.auto_bin(arr)
+        bins = fc.num.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = mrt.utils.midval(bin_edges)
+    bin_centers = fc.util.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = mrt.utils.auto_bin(arr, depth)
+        depth = fc.num.auto_bin(arr, depth)
     elif bins is None:
-        depth = mrt.utils.auto_bin(arr)
+        depth = fc.num.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
         inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
-    inv_peak_edges = mrt.utils.midval(inv_peaks)
+    inv_peak_edges = fc.util.midval(inv_peaks)
     return tuple(bin_centers[inv_peak_edges])
 
 
@@ -530,11 +532,16 @@ def auto_thresholds(
              - 'otsu': use `pymrt.segmentation.threshold_otsu()`.
              - 'otsu2': use `pymrt.segmentation.threshold_otsu2()`.
              - 'hist_peaks': use `pymrt.segmentation.threshold_hist_peaks()`.
-             - 'inv_hist_peaks': use `pymrt.segmentation.threshold_inv_hist_peaks()`.
-             - 'hist_peak_edges': use `pymrt.segmentation.threshold_hist_peak_edges()`.
-             - 'inv_hist_peak_edges': use `pymrt.segmentation.threshold_inv_hist_peak_edges()`.
-             - 'twice_first_peak': use `pymrt.segmentation.threshold_twice_first_peak()`.
-             - 'cum_hist_elbow': use `pymrt.segmentation.threshold_cum_hist_elbow()`.
+             - 'inv_hist_peaks': use
+             `pymrt.segmentation.threshold_inv_hist_peaks()`.
+             - 'hist_peak_edges': use
+             `pymrt.segmentation.threshold_hist_peak_edges()`.
+             - 'inv_hist_peak_edges': use
+             `pymrt.segmentation.threshold_inv_hist_peak_edges()`.
+             - 'twice_first_peak': use
+             `pymrt.segmentation.threshold_twice_first_peak()`.
+             - 'cum_hist_elbow': use
+             `pymrt.segmentation.threshold_cum_hist_elbow()`.
              - 'rayleigh': use `pymrt.segmentation.threshold_rayleigh()`.
              - 'optim': use `pymrt.segmentation.threshold_optim()`.
         kws (dict|None): Keyword parameters for the selected method.
@@ -588,7 +595,7 @@ def auto_thresholds(
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
     # ensures that the result is Iterable
-    thresholds = tuple(mrt.utils.auto_repeat(thresholds, 1))
+    thresholds = tuple(fc.util.auto_repeat(thresholds, 1))
     return thresholds
 
 
@@ -745,7 +752,7 @@ def clip_range(
     t1, t2 = interval
     if out_values is None:
         out_values = interval
-    out_values = mrt.utils.auto_repeat(out_values, 2, check=True)
+    out_values = fc.util.auto_repeat(out_values, 2, check=True)
     v1, v2 = out_values
     arr[arr < t1] = v1
     arr[arr > t2] = v2

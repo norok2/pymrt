@@ -11,48 +11,12 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-import os  # Miscellaneous operating system interfaces
-# import shutil  # High-level file operations
-# import math  # Mathematical functions
-# import time  # Time access and conversions
-import datetime  # Basic date and time types
-# import operator  # Standard operators as functions
-# import collections  # Container datatypes
-# import argparse  # Parser for command-line options, arguments and subcommands
-# import itertools  # Functions creating iterators for efficient looping
-# import subprocess  # Subprocess management
-# import multiprocessing  # Process-based parallelism
-# import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
-# import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-import doctest  # Test interactive Python examples
-import pyparsing as pp  # A Python Parsing Module
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 
-# import scipy as sp  # SciPy (signal and image processing library)
-# import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
-# import sympy as sym  # SymPy (symbolic CAS library)
-# import PIL  # Python Image Library (image manipulation toolkit)
-# import SimpleITK as sitk  # Image ToolKit Wrapper
-# import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
-# import nipy  # NiPy (NeuroImaging in Python)
-# import nipype  # NiPype (NiPy Pipelines and Interfaces)
-
-# :: External Imports Submodules
-# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-# import scipy.optimize  # SciPy: Optimization Algorithms
-# import scipy.integrate  # SciPy: Integrations facilities
-# import scipy.constants  # SciPy: Mathematal and Physical Constants
-# import scipy.ndimage  # SciPy: ND-image Manipulation
-
 # :: Local Imports
 import pymrt as mrt
-# import pymrt.utils
-# import pymrt.naming
-# import pymrt.input_output
-# import pymrt.geometry
-# from pymrt.sequences import mp2rage
 
 from pymrt import INFO, PATH
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

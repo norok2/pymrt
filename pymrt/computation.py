@@ -9,11 +9,10 @@ See Also:
 
 # ======================================================================
 # :: Future Imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
 
+# todo: clarify difference between computation and batch (get rid of both?)
 # todo: use kwargs instead of opts
 # todo: get rid of tty colorify
 
@@ -45,6 +44,8 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
+
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -52,10 +53,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.stats  # SciPy: Statistical functions
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+
 import pymrt.naming
 import pymrt.input_output
 
@@ -141,7 +144,7 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    mrt.utils.execute(str(' '.join(cmd)))
+    fc.util.execute(str(' '.join(cmd)))
     # import temp output
     arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
@@ -374,18 +377,18 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = mrt.utils.merge_dicts(D_OPTS, opts)
+    opts = fc.util.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = mrt.utils.listdir(
+        data_filepath_list = fc.util.listdir(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
-                mrt.utils.change_ext(mrt.utils.os.path.basename(data_filepath), '',
+                fc.util.change_ext(fc.util.os.path.basename(data_filepath), '',
                                mrt.utils.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
@@ -398,7 +401,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      mrt.utils.add_extsep(opts['meta_ext']))
+                                      fc.util.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -452,7 +455,7 @@ def sources_generic(
 
         if verbose >= VERB_LVL['debug']:
             for sources, params in zip(sources_list, params_list):
-                print(mrt.utils.tty_colorify('DEBUG', 'r'))
+                print(fc.util.tty_colorify('DEBUG', 'r'))
                 print(sources, params)
     elif verbose >= VERB_LVL['medium']:
         print("WW: no data directory '{}'. Skipping.".format(data_dirpath))
@@ -504,7 +507,7 @@ def compute_generic(
     """
     # TODO: implement affine_func, affine_args, affine_kwargs?
     # get the num, name and seq from first source file
-    opts = mrt.utils.merge_dicts(D_OPTS, opts)
+    opts = fc.util.merge_dicts(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -520,7 +523,7 @@ def compute_generic(
         targets.append(os.path.join(out_dirpath, mrt.naming.to_filename(info)))
 
     # perform the calculation
-    if mrt.utils.check_redo(sources, targets, force):
+    if fc.util.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -655,9 +658,9 @@ def compute(
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kwargs)
-            mrt.utils.elapsed('Time: ')
+            fc.util.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                mrt.utils.report(only_last=True)
+                fc.util.report(only_last=True)
     else:
         recursive = True
 
@@ -680,4 +683,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-mrt.utils.elapsed('pymrt.computation')
+fc.util.elapsed('pymrt.computation')

@@ -43,6 +43,11 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
+
+# :: External Imports Submodules
+import flyingcircus.util  # FlyingCircus: generic basic utilities
+import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: External Imports Submodules
 # import scipy.optimize  # SciPy: Optimization Algorithms
@@ -289,7 +294,7 @@ def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
 #     """Solve the combination of FLASH images analytically."""
 #
 #     cache_filepath = os.path.join(
-#         DIRS['cache'], 'flash_triple_special1.cache')
+#         PATH['cache'], 'flash_triple_special1.cache')
 #     if not os.path.isfile(cache_filepath) or not use_cache:
 #         print('Solving Triple FLASH special1 equations. May take some time.')
 #         print('Caching results: {}'.format(use_cache))
