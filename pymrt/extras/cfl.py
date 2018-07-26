@@ -32,7 +32,6 @@ from pymrt import msg, dbg
 # :: additional globals
 
 
-
 # ======================================================================
 def read(
         basename,
@@ -47,9 +46,6 @@ def read(
 
     Returns:
         array (ndarray): The data read.
-
-    Examples:
-
     """
     filepath = os.path.join(dirpath, basename)
 
@@ -67,7 +63,7 @@ def read(
     data_size = int(np.prod(shape))
 
     # load data
-    with open(filepath + ".cfl", "r") as data_file:
+    with open(filepath + '.cfl', 'r') as data_file:
         array = np.fromfile(
             data_file, dtype=np.complex64, count=data_size)
 
