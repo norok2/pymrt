@@ -21,7 +21,7 @@ The 3D geometrical shapes currently available are:
 The N-D geometrical shapes currently available are:
 - cuboid: sum[abs(x_n/a_n)^inf] < 1
 - superellipsoid: sum[abs(x_n/a_n)^k] < 1
-- prism: stack (N-1)-D mask on given axis
+- prism: stack (N-1)-D rendered objects on given axis
 
 Running this file directly will run some tests.
 """
@@ -68,7 +68,7 @@ def rel2abs(shape, size=0.5):
     Calculate the absolute size from a relative size for a given shape.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         size (float|tuple[float]): Relative position (to the lowest edge).
             Each element of the tuple should be in the range [0, 1].
 
@@ -100,7 +100,7 @@ def abs2rel(shape, position=0):
     Calculate the relative size from an absolute size for a given shape.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         position (float|tuple[float]): Absolute position inside the shape.
             Each element of the tuple should be in the range [0, dim - 1],
             where dim is the corresponding dimension of the shape.
@@ -127,29 +127,28 @@ def abs2rel(shape, position=0):
 
 
 # ======================================================================
-def render(
-        mask,
+def set_values(
+        rendered,
         fill=(1, 0),
         dtype=float):
     """
-    Render a mask as an image.
+    Set the values of a rendering pattern.
 
     Args:
-        mask (np.ndarray): Mask to be rendered.
-        fill (tuple[bool|int|float]): Values to render the mask with.
-            The first value is used for inside the mask.
-            The second value is used for outside the mask.
-        dtype (data-type): Desired output data-type.
+        rendered (np.ndarray[bool]): The rendered object.
+        fill (tuple[bool|int|float]): Values to use.
+            The first value is used for the rendered object.
+            The second value is used for everything else.
+        dtype (np.dtype): Desired output data-type.
             See `np.ndarray()` for more.
 
     Returns:
-        img (np.ndarray):
-            Image of the mask rendered with specified values and data type.
+        arr (np.ndarray): The rendered object with custom values and data-type.
     """
-    img = np.empty_like(mask, dtype)
-    img[mask] = fill[0]
-    img[~mask] = fill[1]
-    return img
+    arr = np.empty_like(rendered, dtype)
+    arr[rendered] = fill[0]
+    arr[~rendered] = fill[1]
+    return arr.dtype
 
 
 # ======================================================================
@@ -158,17 +157,17 @@ def square(
         side,
         position=0.5):
     """
-    Generate a mask whose shape is a square.
+    Render a square.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         side (float): The side of the square in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> square(4, 2)
@@ -194,17 +193,17 @@ def rectangle(
         semisides,
         position=0.5):
     """
-    Generate a mask whose shape is a rectangle.
+    Render a rectangle.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semisides (tuple[float]): The semisides of the rectangle in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     >>> rectangle(6, (2, 1))
     array([[False, False, False, False, False, False],
@@ -241,17 +240,17 @@ def rhombus(
         semidiagonals,
         position=0.5):
     """
-    Generate a mask whose shape is a rhombus.
+    Render a rhombus.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> rhombus(5, 2)
@@ -278,17 +277,17 @@ def circle(
         radius,
         position=0.5):
     """
-    Generate a mask whose shape is a circle.
+    Render a circle.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         radius (float): The radius of the circle in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> circle(5, 1)
@@ -321,17 +320,17 @@ def ellipsis(
         semiaxes,
         position=0.5):
     """
-    Generate a mask whose shape is an ellipsis.
+    Render an ellipsis.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> ellipsis(6, (2, 3))
@@ -360,17 +359,17 @@ def polygon(
         vertices,
         position=0.5):
     """
-    Generate a mask whose shape is a simple polygon.
+    Render a simple polygon.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     raise NotImplementedError
 
@@ -381,17 +380,17 @@ def cube(
         side,
         position=0.5):
     """
-    Generate a mask whose shape is a cube.
+    Render a cube.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         side (float): The side of the cube in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> cube(4, 2)
@@ -426,17 +425,17 @@ def cuboid(
         semisides,
         position=0.5):
     """
-    Generate a mask whose shape is a cuboid.
+    Render a cuboid.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semisides (tuple[float]): The semisides of the cuboid in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> cuboid((3, 4, 6), (0.5, 2, 1))
@@ -466,17 +465,17 @@ def rhomboid(
         semidiagonals,
         position=0.5):
     """
-    Generate a mask whose shape is a rhomboid.
+    Render a rhomboid.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> rhomboid((3, 5, 7), (1, 1, 2))
@@ -510,17 +509,17 @@ def sphere(
         radius,
         position=0.5):
     """
-    Generate a mask whose shape is a sphere.
+    Render a sphere.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         radius (float): The radius of the sphere in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> sphere(3, 1)
@@ -577,17 +576,17 @@ def ellipsoid(
         semiaxes,
         position=0.5):
     """
-    Generate a mask whose shape is an ellipsoid.
+    Render an ellipsoid.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> ellipsoid(5, (1., 2., 1.5))
@@ -634,10 +633,10 @@ def cylinder(
         axis=-1,
         position=0.5):
     """
-    Generate a mask whose shape is a cylinder.
+    Render a cylinder.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         height (float): The height of the cylinder in px.
         radius (float): The radius of the cylinder in px.
         axis (int): Orientation of the cylinder in the N-dim space.
@@ -646,7 +645,7 @@ def cylinder(
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> cylinder(4, 2, 2, 0)
@@ -691,17 +690,17 @@ def polyhedron(
         vertices,
         position=0.5):
     """
-    Generate a mask whose shape is a simple polyhedron.
+    Render a simple polyhedron.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     raise NotImplementedError
 
@@ -757,6 +756,178 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
 
 
 # ======================================================================
+def bresenham_line(
+        point_a,
+        point_b):
+    """
+    Yield the integer points lying on an N-dim line.
+
+    This uses an adaptation of the Bresenham algorithm to multiple dimensions.
+
+    Args:
+        point_a (Iterable[int]): The coordinates of the starting point.
+        point_b (Iterable[int]): The coordinates of the ending point.
+            Size of `point_a` and `point_b` must match.
+
+    Yields:
+        point (tuple[int]): A point on the N-dim line.
+    """
+    n_dim = len(point_a)
+    diffs = [abs(b - a) for a, b in zip(point_a, point_b)]
+    steps = [1 if a < b else -1 for a, b in zip(point_a, point_b)]
+    max_diff = max(diffs)
+    updates = [max_diff / 2] * n_dim
+    to_render = list(point_a)
+    for i in range(max_diff):
+        yield tuple(to_render)
+        for i, (x, d, s, u) in enumerate(
+                zip(to_render, diffs, steps, updates)):
+            updates[i] -= d
+            if u < 0:
+                to_render[i] += s
+                updates[i] += max_diff
+
+
+# ======================================================================
+def bresenham_lines(
+        points,
+        closed=False):
+    """
+    Yield the integer points lying on N-dim lines.
+
+    This uses an adaptation of the Bresenham algorithm.
+
+    Args:
+        points (Iterable[int]): The coordinates of the starting point.
+        closed (bool): Render a line between the first and last points.
+            This is used to generate closed lines.
+            If only two points are given, this parameter has no effect.
+
+    Yields:
+        point (tuple[int]): A point on the N-dim lines.
+
+    See Also:
+        bresenham_line()
+    """
+    for point_a, point_b in zip(points[:-1], points[1:]):
+        for point in bresenham_line(point_a, point_b):
+            yield point
+    if closed and len(points) > 2:
+        for point in bresenham_line(points[-1], points[0]):
+            yield point
+
+
+# ======================================================================
+def nd_lines(
+        shape,
+        positions,
+        closed=False,
+        n_dim=None,
+        rel_position=True):
+    """
+    Render a series of N-dim lines.
+
+    The positions are aligned to the integer grid defined by the shape.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the container in px.
+        positions (Iterable[float|Iterable[float]]): The position of extrema.
+            The first iterable must consist of two or more items,
+            each describing a point as an iterable of floats
+            (with length matching the desired number of dimensions)
+            or a single float (repeated in all dimensions).
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+        closed (bool): Render a line between the first and last positions.
+            This is used to generate closed lines.
+            If only two positions are given, this parameter has no effect.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` values.
+            Otherwise, they are interpreted as absolute (in px).
+            Uses `fc.num.grid_coord()` internally.
+
+    Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
+
+    See Also:
+        bresenham_line(), bresenham_lines()
+    """
+    if not n_dim:
+        n_dim = fc.util.combine_iter_len(tuple(shape) + tuple(positions))
+    positions = [
+        fc.util.auto_repeat(position, n_dim, check=True)
+        for position in positions]
+    coords = [
+        fc.num.coord(shape, position, rel_position, True)
+        for position in positions]
+    rendered = np.zeros(shape, dtype=bool)
+    for point in bresenham_lines(coords, closed):
+        rendered[point] = True
+    return rendered
+
+
+# ======================================================================
+def nd_curve(
+        point_a,
+        point_b):
+    """
+    Yield the integer points lying on an N-dim Bézier curve.
+
+    This uses an adaptation of the Bresenham algorithm.
+
+    Args:
+        point_a (Iterable[int]): The coordinates of the starting point.
+        point_b (Iterable[int]): The coordinates of the ending point.
+            Size of `point_a` and `point_b` must match.
+
+    Yields:
+        point (tuple[int]): A point on the N-dim curve.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def nd_curves(
+        shape,
+        positions,
+        is_closed=False,
+        n_dim=None,
+        rel_position=True):
+    """
+    Render a series of N-dim Bézier curves.
+
+    The positions are aligned to the integer grid defined by the shape.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the container in px.
+        positions (Iterable[float|Iterable[float]]): The position of extrema.
+            The first iterable must consist of two or more items,
+            each describing a point as an iterable of floats
+            (with length matching the desired number of dimensions)
+            or a single float (repeated in all dimensions).
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+        is_closed (bool): Draw a line between the first and last positions.
+            This is used to generate closed lines.
+            If only two positions are given, this parameter has no effect.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` values.
+            Otherwise, they are interpreted as absolute (in px).
+            Uses `fc.num.grid_coord()` internally.
+
+    Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
 def nd_cuboid(
         shape,
         semisizes=0.5,
@@ -765,7 +936,7 @@ def nd_cuboid(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is an N-dim cuboid (hypercuboid).
+    Render an N-dim cuboid (hypercuboid).
 
     The cartesian equations are:
 
@@ -777,7 +948,7 @@ def nd_cuboid(
     :math:`\\inf` is infinity.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semisizes (float|Iterable[float]): The N-dim cuboid semisides sizes.
             The values interpretation depend on `rel_sizes`.
         position (float|Iterable[float]): The position of the center.
@@ -797,7 +968,7 @@ def nd_cuboid(
             Uses `pymrt.geometry.rel2abs()` internally.
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len((shape, position, semisizes))
@@ -810,11 +981,11 @@ def nd_cuboid(
         semisizes = rel2abs(shape, semisizes)
     position = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
-    # create the mask
-    mask = np.ones(shape, dtype=bool)
+    # create the rendered object
+    rendered = np.ones(shape, dtype=bool)
     for x_i, semisize in zip(position, semisizes):
-        mask *= (np.abs(x_i) <= semisize)
-    return mask
+        rendered *= (np.abs(x_i) <= semisize)
+    return rendered
 
 
 # ======================================================================
@@ -827,7 +998,7 @@ def nd_superellipsoid(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is an N-dim superellipsoid.
+    Render an N-dim superellipsoid.
 
     The cartesian equations are:
 
@@ -841,7 +1012,7 @@ def nd_superellipsoid(
     When the index is 2, an ellipsoid (hyperellipsoid) is generated.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         semisizes (float|Iterable[float]): The N-dim superellipsoid axes sizes.
             The values interpretation depend on `rel_sizes`.
         position (float|Iterable[float]): The position of the center.
@@ -861,7 +1032,7 @@ def nd_superellipsoid(
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len(
@@ -882,13 +1053,13 @@ def nd_superellipsoid(
         shape, position, is_relative=rel_position, use_int=False)
     # print('Position: {}'.format(position))  # DEBUG
 
-    # create the mask
-    mask = np.zeros(shape, dtype=float)
+    # create the rendered
+    rendered = np.zeros(shape, dtype=float)
     for x_i, semisize, index in zip(position, semisizes, indexes):
-        mask += (np.abs(x_i / semisize) ** index)
-    mask = mask <= 1.0
+        rendered += (np.abs(x_i / semisize) ** index)
+    rendered = rendered <= 1.0
 
-    return mask
+    return rendered
 
 
 # ======================================================================
@@ -901,10 +1072,10 @@ def nd_prism(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is a N-dim prism.
+    Render a N-dim prism.
 
     Args:
-        base (np.ndarray): Base (N-1)-dim mask to stack as prism.
+        base (np.ndarray): Base (N-1)-dim rendered object to stack as prism.
         extra_dim (int): Size of the new dimension to be added.
         axis (int): Orientation of the prism in the N-dim space.
         size (float): The size of the prism height.
@@ -923,7 +1094,7 @@ def nd_prism(
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     n_dim = base.ndim + 1
     if axis > n_dim:
@@ -934,18 +1105,18 @@ def nd_prism(
         size = rel2abs((extra_dim,), size)
     position = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
-    extra_mask = np.abs(position) <= (size / 2.0)
-    # calculate mask shape
+    extra_rendered = np.abs(position) <= (size / 2.0)
+    # calculate rendered object shape
     shape = (
-        base.shape[:axis] + (extra_dim,) + base.shape[axis:])
+            base.shape[:axis] + (extra_dim,) + base.shape[axis:])
     # create indefinite prism
-    mask = np.zeros(shape, dtype=bool)
+    rendered = np.zeros(shape, dtype=bool)
     for i in range(extra_dim):
-        if extra_mask[i]:
+        if extra_rendered[i]:
             index = [slice(None)] * n_dim
             index[axis] = i
-            mask[tuple(index)] = base
-    return mask
+            rendered[tuple(index)] = base
+    return rendered
 
 
 # ======================================================================
@@ -979,10 +1150,10 @@ def nd_superellipsoidal_prism(
         base_shape, base_semisizes, indexes, base_position, n_dim - 1,
         rel_position, rel_sizes)
     # generate final prism
-    mask = nd_prism(
+    rendered = nd_prism(
         base, extra_dim, axis, extra_semisize * 2, extra_position,
         rel_position, rel_sizes)
-    return mask
+    return rendered
 
 
 # ======================================================================
@@ -995,10 +1166,10 @@ def nd_cone(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is a N-dim cone.
+    Render a N-dim cone.
 
     Args:
-        base (np.ndarray): Base (N-1)-dim mask to stack as prism.
+        base (np.ndarray): Base (N-1)-dim rendered object to stack as prism.
         extra_dim (int): Size of the new dimension to be added.
         axis (int): Orientation of the prism in the N-dim space.
         size (float): The size of the prism height.
@@ -1017,7 +1188,7 @@ def nd_cone(
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     n_dim = base.ndim + 1
     if axis > n_dim:
@@ -1028,18 +1199,18 @@ def nd_cone(
         size = rel2abs((extra_dim,), size)
     position = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
-    extra_mask = np.abs(position) <= (size / 2.0)
-    # calculate mask shape
+    extra_rendered = np.abs(position) <= (size / 2.0)
+    # calculate rendered object shape
     shape = (
-        base.shape[:axis] + (extra_dim,) + base.shape[axis:])
+            base.shape[:axis] + (extra_dim,) + base.shape[axis:])
     # create indefinite prism
-    mask = np.zeros(shape, dtype=bool)
+    rendered = np.zeros(shape, dtype=bool)
     for i in range(extra_dim):
-        if extra_mask[i]:
+        if extra_rendered[i]:
             index = [slice(None)] * n_dim
             index[axis] = i
-            mask[tuple(index)] = base
-    return mask
+            rendered[tuple(index)] = base
+    return rendered
 
 
 # ======================================================================
@@ -1214,9 +1385,9 @@ def nd_dirac_delta(
 
     origin = fc.num.coord(shape, position, use_int=True)
 
-    mask = np.zeros(shape)
-    mask[[slice(i, i + 1) for i in origin]] = value
-    return mask
+    rendered = np.zeros(shape)
+    rendered[[slice(i, i + 1) for i in origin]] = value
+    return rendered
 
 
 # ======================================================================
@@ -1228,10 +1399,10 @@ def nd_polytope(
         rel_position=True,
         rel_sizes=True):
     """
-    Generate a mask whose shape is a simple polytope.
+    Render a simple polytope.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         vertices (Iterable[Iterable[float]): Coordinates of the vertices.
             The values interpretation depend on `rel_sizes`.
         position (float|Iterable[float]): The position of the center.
@@ -1249,7 +1420,7 @@ def nd_polytope(
             Otherwise, they are interpreted as absolute (in px).
 
     Returns:
-        mask (np.ndarray): Array of boolean describing the geometrical object.
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     raise NotImplementedError
 
@@ -1928,10 +2099,13 @@ def prepare_affine(
             If None, uses the center of the array.
 
     Returns:
-        array (np.ndarray): The transformed array.
+        result (tuple): The tuple
+            contains:
+             - lin_mat (np.ndarray): The N-sized linear square matrix.
+             - offset (np.ndarray): The offset along each axis in px.
 
     See Also:
-        scipy.ndimage.affine_transform
+        scipy.ndimage.affine_transform()
     """
     ndim = len(shape)
     if shift is None:
@@ -2337,7 +2511,7 @@ def multi_render(
     Render multiple geometrical masks into a single array.
 
     Args:
-        shape (int|Iterable[int]): The shape of the mask in px.
+        shape (int|Iterable[int]): The shape of the container in px.
         geom_shapes (Iterable): The
 
         n_dim (int|None): The number of dimensions.
