@@ -45,7 +45,7 @@ def read(
         dirpath (str): The working directory.
 
     Returns:
-        array (ndarray): The data read.
+        arr (ndarray): The data read.
     """
     filepath = os.path.join(dirpath, basename)
 
@@ -64,23 +64,23 @@ def read(
 
     # load data
     with open(filepath + '.cfl', 'r') as data_file:
-        array = np.fromfile(
+        arr = np.fromfile(
             data_file, dtype=np.complex64, count=data_size)
 
     # note: BART uses FORTRAN-style memory allocation
-    return array.reshape(shape, order='F')
+    return arr.reshape(shape, order='F')
 
 
 # ======================================================================
 def write(
-        array,
+        arr,
         basename,
         dirpath='.'):
     """
     Write a CFL header+data pair.
 
     Args:
-        array (ndarray): The array to save.
+        arr (ndarray): The array to save.
         basename (str): The base filename.
             Corresponding '.hdr' and '.cfl' files will be created/overwritten.
         dirpath (str): The working directory.
@@ -93,12 +93,12 @@ def write(
     # save header
     with open(filepath + '.hdr', 'w') as header_file:
         header_file.write(str('# Dimensions\n'))
-        header_file.write(str(' '.join([str(n) for n in array.shape])) + '\n')
+        header_file.write(str(' '.join([str(n) for n in arr.shape])) + '\n')
 
     # save data
     with open(filepath + '.cfl', 'w') as data_file:
         # note: BART uses FORTRAN-style memory allocation
-        array.astype(np.complex64, 'F').tofile(data_file)
+        arr.astype(np.complex64, 'F').tofile(data_file)
 
 
 # ======================================================================

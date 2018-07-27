@@ -127,7 +127,7 @@ def gen_phantom(
     elif phantom == 'cylinder':
         mask = mrt.geometry.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
-    img_append = mrt.geometry.render(mask, fill)
+    img_append = mrt.geometry.set_values(mask, fill)
     if append == APPEND_MODE['sum']:
         img += img_append
     elif append == APPEND_MODE['prod']:

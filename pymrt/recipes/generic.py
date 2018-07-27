@@ -224,7 +224,7 @@ def fix_phase_interval(arr):
         arr (np.ndarray): Array to be processed.
 
     Returns:
-        array (np.ndarray): An array scaled to (-pi,pi).
+        arr (np.ndarray): An array scaled to (-pi,pi).
 
     Examples:
         >>> fix_phase_interval(np.arange(8))
