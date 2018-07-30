@@ -268,7 +268,7 @@ def check_z_spectrum(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(np.geomspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -337,7 +337,7 @@ def check_z_spectrum2(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(np.geomspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -406,7 +406,7 @@ def check_z_spectrum_sparse(
             r2=(32.2581, 8.4746e4),
             k=(0.3456,),
             approx=(None, 'superlorentz_approx')),
-        frequencies=np.round(fc.util.sgnlogspace(50, 10000, 32)),
+        frequencies=np.round(np.geomspace(50, 10000, 32)),
         amplitudes=np.round(np.linspace(1, 5000, 24)),
         plot_data=True,
         save_file=None):
@@ -536,7 +536,7 @@ def check_fit_spin_model(
         return y_arr
 
     # simulate a measurement
-    freqs = fc.util.sgnlogspace(100.0, 300.0e3, 32)
+    freqs = np.geomspace(100.0, 300.0e3, 32)
     flip_angles = np.linspace(1.0, 1100.0, 32)
 
     x_data = np.array(tuple(itertools.product(freqs, flip_angles)))

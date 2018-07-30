@@ -152,6 +152,391 @@ def set_values(
 
 
 # ======================================================================
+def bresenham_line(
+        coord_a,
+        coord_b):
+    """
+    Yield the integer points lying on an N-dim line.
+
+    This uses an adaptation of the Bresenham algorithm.
+    Note that this only works with integer coordinates.
+
+    The size of the inputs must match.
+
+    Args:
+        coord_a (Iterable[int]): The coordinates of the starting point.
+        coord_b (Iterable[int]): The coordinates of the ending point.
+
+    Yields:
+        coord (tuple[int]): The coordinates of a point on the N-dim line.
+    """
+    n_dim = len(coord_a)
+    diffs = [abs(b - a) for a, b in zip(coord_a, coord_b)]
+    steps = [1 if a < b else -1 for a, b in zip(coord_a, coord_b)]
+    max_diff = max(diffs)
+    updates = [max_diff / 2] * n_dim
+    coord = list(coord_a)
+    for i in range(max_diff):
+        yield tuple(coord)
+        for i, (x, d, s, u) in enumerate(
+                zip(coord, diffs, steps, updates)):
+            updates[i] -= d
+            if u < 0:
+                coord[i] += s
+                updates[i] += max_diff
+
+
+# ======================================================================
+def bresenham_lines(
+        coords,
+        closed=False):
+    """
+    Yield the integer points lying on N-dim lines.
+
+    This uses an adaptation of the Bresenham algorithm.
+    Note that this only works with integer coordinates.
+
+    Args:
+        coords (Iterable[Iterable[int]]): The coordinates of the points.
+            The size of the items of `coords` must match.
+        closed (bool): Render a line between the first and last points.
+            This is used to generate closed lines.
+            If only two points are given, this parameter has no effect.
+
+    Yields:
+        coord (tuple[int]): The coordinates of a point on the N-dim lines.
+
+    See Also:
+        bresenham_line()
+    """
+    for coord_a, coord_b in zip(coords[:-1], coords[1:]):
+        for coord in bresenham_line(coord_a, coord_b):
+            yield coord
+    if closed and len(coords) > 2:
+        for coord in bresenham_line(coords[-1], coords[0]):
+            yield coord
+
+
+# ======================================================================
+def bresenham_curve(
+        coords,
+        deg=2):
+    """
+    Yield the integer points lying on an N-dim Bézier curve of given degree.
+
+    This uses an adaptation of the Bresenham algorithm.
+    Note that this only works with integer coordinates.
+
+    The size of the inputs must match.
+
+    Args:
+        coords (Iterable[int]): The coordinates of the Bézier points.
+            The first and the last points are the start and end points.
+            Intermediate points are used to compute the polynomial.
+            The length of `coords` expected depends on the degree, as
+            specified by `deg`, and must be equal to `deg + 1`.
+        deg (int): The degree of the polynomial generating the curve.
+            This must be larger than 0.
+            If 1, this is equivalent to `bresenham_line()` but slower.
+
+    Yields:
+        coord (tuple[int]): The coordinates of a point on the N-dim curve.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def bresenham_curves(
+        coords,
+        deg=2):
+    """
+    Yield the integer points lying on N-dim Bézier curves of given degree.
+
+    This uses an adaptation of the Bresenham algorithm.
+    Note that this only works with integer coordinates.
+
+    All curves must have the same degree.
+
+
+    Args:
+        coords (Iterable[Iterable[int]]): The coordinates of the points.
+            The size of the items of `coords` must match.
+            The number of elements of `coords` are considered in groups of
+            size `deg + 1` with
+        deg (int): The degree of the polynomial generating the curve.
+            This must be larger than 0.
+            If 1, this is equivalent to `bresenham_lines()` but slower.
+
+    Yields:
+        coord (tuple[int]): The coordinates of a point on the N-dim curves.
+
+    See Also:
+        bresenham_curve(), bresenham_line(), bresenham_lines()
+    """
+    gen_coords = [coords[i:len(coords) - deg + i:deg] for i in range(deg + 1)]
+    for _coords in zip(*gen_coords):
+        for coord in bresenham_curve(_coords):
+            yield coord
+
+
+# ======================================================================
+def center_of(
+        coords,
+        as_int=True):
+    """
+    Compute the geometric center of a number of points.
+
+    Args:
+        coords (Iterable[Iterable[int|float]): The input points.
+            These are the coordinates of the points.
+        as_int (bool): Approximate the result as integer.
+
+    Returns:
+        center (tuple[int|float]): The geometric center coordinates.
+            The result is generally a fractional number.
+            If `as_int` is True, this is approximated to the closest integer.
+    """
+    center = coords[0]
+    for i, coord in enumerate(coords[1:]):
+        center = tuple(
+            ((i + 1) * x0 + x) / (i + 2) for x, x0 in zip(coord, center))
+    if as_int:
+        center = tuple(int(round(x)) for x in center)
+    return center
+
+
+# ======================================================================
+def as_vector(
+        coord,
+        origin=None):
+    """
+    Interpret the point as a vector.
+
+    This is useful to perform mathematical operations using the standard
+    syntax.
+
+    Args:
+        coord (Iterable[int|float]): The N-dim point.
+        origin (Iterable[int|float]): An N-dim point used as origin.
+            If None, the null vector is used as the origin.
+
+    Returns:
+        vector (np.ndarray): The vector with respect to the origin.
+
+    Examples:
+        >>> as_vector([0, 3, 4])
+        array([0, 3, 4])
+        >>> as_vector([5, 0, 0])
+        array([5, 0, 0])
+    """
+    origin = np.array(origin) if origin else 0
+    return np.array(coord) - origin
+
+
+# ======================================================================
+def unit_vector(vector):
+    """
+    Compute the unit vector.
+
+    Args:
+        vector (np.ndarray): The input vector.
+
+    Returns:
+        u_vector (np.ndarray): The corresponding unit vector.
+
+    Examples:
+        >>> unit_vector(as_vector([0, 3, 4]))
+        array([0. , 0.6, 0.8])
+        >>> unit_vector(as_vector([5, 0, 0]))
+        array([1., 0., 0.])
+    """
+    return vector / np.linalg.norm(vector)
+
+
+# ======================================================================
+def angle_between(
+        coord_a,
+        coord_b,
+        origin=None):
+    """
+    Compute the angle between two vectors.
+
+    The vectors are identified by the given coordinates with respect to the
+    specified origin.
+
+    Args:
+        coord_a (Iterable[int|float]): The first input coordinates.
+        coord_b (Iterable[int|float]): The second input coordinates.
+        origin (Iterable[int|float]|None): The coordinates of the origin.
+
+    Returns:
+        angle (float): The angle between the two vectors in rad.
+
+    Examples:
+        >>> np.rad2deg(angle_between([0, 3, 4], [5, 0, 0]))
+        90.0
+        >>> angle = np.rad2deg(angle_between([0, 3, 4], [5, 0, 0], [1, 1, 1]))
+        >>> round(angle, 2)
+        124.54
+    """
+    u_vector_a = unit_vector(as_vector(coord_a, origin))
+    u_vector_b = unit_vector(as_vector(coord_b, origin))
+    angle = np.arccos(np.clip(np.dot(u_vector_a, u_vector_b), -1.0, 1.0))
+    return angle
+
+
+# ======================================================================
+def signed_angle_2d(
+        coord,
+        origin=None):
+    """
+    Compute the (signed) angle of a vector with respect to the first axis.
+
+    This only works in 2D.
+
+    Args:
+        coord (Iterable[int|float]): The input coordinates.
+        origin (Iterable[int|float]|None): The coordinates of the origin.
+
+    Returns:
+        angle (float): The angle between the two vectors in rad.
+
+    Examples:
+        >>> np.rad2deg(signed_angle_2d([1, 0]))
+        0.0
+        >>> np.rad2deg(signed_angle_2d([0, 1]))
+        90.0
+        >>> np.rad2deg(signed_angle_2d([1, 1]))
+        45.0
+        >>> np.rad2deg(signed_angle_2d([1, 1, 4]))
+        Traceback (most recent call last):
+            ...
+        AssertionError
+    """
+    u_vector = unit_vector(as_vector(coord, origin))
+    assert (u_vector.shape == (2,))
+    return np.arctan2(u_vector[1], u_vector[0])
+
+
+# ======================================================================
+def is_convex_2d(coords):
+    """
+    Determine if a simple polygon is convex.
+
+    This only works for simple polygons.
+
+    Args:
+        coords (Iterable[Iterable[int|float]]): The vertices of the polygon.
+
+    Returns:
+        is_convex (bool): If the specified polygon is convex.
+    """
+    coords = list(coords) + list(coords[:2])
+    dets = [
+        np.cross(as_vector(point_b, point_a), as_vector(point_c, point_b))
+        for point_a, point_b, point_c in
+        zip(coords[:-2], coords[1:-1], coords[2:])]
+    return all([det > 0 for det in dets]) or all([det < 0 for det in dets])
+
+
+# ======================================================================
+def is_simple_2d(coords):
+    """
+    Determine if a simple polygon is convex.
+
+    This only works for simple polygons.
+
+    Args:
+        coords (Iterable[Iterable[int|float]]): The vertices of the polygon.
+
+    Returns:
+        is_convex (bool): If the specified polygon is convex.
+    """
+    coords = list(coords) + list(coords[:2])
+    dets = [
+        np.cross(as_vector(point_b, point_a), as_vector(point_c, point_b))
+        for point_a, point_b, point_c in
+        zip(coords[:-2], coords[1:-1], coords[2:])]
+    return all([det > 0 for det in dets]) or all([det < 0 for det in dets])
+
+
+# ======================================================================
+def render_at(
+        shape,
+        coords):
+    """
+    Render at specific integer coordinates in a shape.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the container in px.
+        coords (Iterable[tuple(int)]): The coordinates to render.
+
+    Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
+    """
+    rendered = np.zeros(shape, dtype=bool)
+    for point in coords:
+        rendered[point] = True
+    return rendered
+
+
+# ======================================================================
+def polygon(
+        shape,
+        positions,
+        sorting=True,
+        filling=True,
+        rel_position=True):
+    """
+    Render a simple polygon.
+
+    Args:
+        shape (int|Iterable[int]): The shape of the container in px.
+        positions (Iterable[float|Iterable[float]]): The position of vertices.
+            The first iterable must consist of three or more items,
+            each describing a point as an iterable of floats
+            (with length matching the desired number of dimensions)
+            or a single float (repeated in all dimensions).
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+        sorting (bool): Sort the positions counter-clockwise.
+            This ensures that the resulting polygon is simple, i.e.
+            it is not self-intersecting.
+            Note that if the positions describe a non-convex polygon,
+            a different order of the positions of the vertices could result
+            in a different simple polygon.
+            For convex polygons, such ambiguity does not exists.
+        filling (bool): Fill the points inside the polygon.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` values.
+            Otherwise, they are interpreted as absolute (in px).
+            Uses `fc.num.grid_coord()` internally.
+
+    Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
+    """
+    n_dim = 2
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
+    positions = [
+        fc.util.auto_repeat(position, n_dim, check=True)
+        for position in positions]
+    coords = [
+        fc.num.coord(shape, position, rel_position, True)
+        for position in positions]
+    # : sort vertices
+    if sorting:
+        center = center_of(coords)
+        angles = [signed_angle_2d(coord, center) for coord in coords]
+        coords = list(list(zip(*sorted(zip(angles, coords))))[1])
+    # : render polygon
+    points = bresenham_lines(coords, True)
+    if sorting and filling:
+        raise NotImplementedError
+    return render_at(shape, points)
+
+
+# ======================================================================
 def square(
         shape,
         side,
@@ -174,13 +559,13 @@ def square(
         array([[False, False, False, False],
                [False,  True,  True, False],
                [False,  True,  True, False],
-               [False, False, False, False]], dtype=bool)
+               [False, False, False, False]])
         >>> square(5, 3)
         array([[False, False, False, False, False],
                [False,  True,  True,  True, False],
                [False,  True,  True,  True, False],
                [False,  True,  True,  True, False],
-               [False, False, False, False, False]], dtype=bool)
+               [False, False, False, False, False]])
     """
     return nd_cuboid(
         shape, side / 2.0, position, 2,
@@ -211,23 +596,23 @@ def rectangle(
            [False, False,  True,  True, False, False],
            [False, False,  True,  True, False, False],
            [False, False,  True,  True, False, False],
-           [False, False, False, False, False, False]], dtype=bool)
+           [False, False, False, False, False, False]])
     >>> rectangle(5, (2, 1))
     array([[False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
            [False,  True,  True,  True, False],
-           [False,  True,  True,  True, False]], dtype=bool)
+           [False,  True,  True,  True, False]])
     >>> rectangle(4, (1, 0.5), 0)
     array([[ True, False, False, False],
            [ True, False, False, False],
            [False, False, False, False],
-           [False, False, False, False]], dtype=bool)
+           [False, False, False, False]])
     >>> rectangle(4, (2, 1), 0)
     array([[ True,  True, False, False],
            [ True,  True, False, False],
            [ True,  True, False, False],
-           [False, False, False, False]], dtype=bool)
+           [False, False, False, False]])
     """
     return nd_cuboid(
         shape, semisides, position, 2,
@@ -258,13 +643,13 @@ def rhombus(
                [False,  True,  True,  True, False],
                [ True,  True,  True,  True,  True],
                [False,  True,  True,  True, False],
-               [False, False,  True, False, False]], dtype=bool)
+               [False, False,  True, False, False]])
         >>> rhombus(5, (2, 1))
         array([[False, False,  True, False, False],
                [False, False,  True, False, False],
                [False,  True,  True,  True, False],
                [False, False,  True, False, False],
-               [False, False,  True, False, False]], dtype=bool)
+               [False, False,  True, False, False]])
     """
     return nd_superellipsoid(
         shape, semidiagonals, 1.0, position, 2,
@@ -295,19 +680,19 @@ def circle(
                [False, False,  True, False, False],
                [False,  True,  True,  True, False],
                [False, False,  True, False, False],
-               [False, False, False, False, False]], dtype=bool)
+               [False, False, False, False, False]])
         >>> circle(6, 2)
         array([[False, False, False, False, False, False],
                [False, False,  True,  True, False, False],
                [False,  True,  True,  True,  True, False],
                [False,  True,  True,  True,  True, False],
                [False, False,  True,  True, False, False],
-               [False, False, False, False, False, False]], dtype=bool)
+               [False, False, False, False, False, False]])
         >>> circle(4, 2, 0)
         array([[ True,  True,  True, False],
                [ True,  True, False, False],
                [ True, False, False, False],
-               [False, False, False, False]], dtype=bool)
+               [False, False, False, False]])
     """
     return nd_superellipsoid(
         shape, radius, 2.0, position, 2,
@@ -339,39 +724,18 @@ def ellipsis(
                [ True,  True,  True,  True,  True,  True],
                [ True,  True,  True,  True,  True,  True],
                [False,  True,  True,  True,  True, False],
-               [False, False, False, False, False, False]], dtype=bool)
+               [False, False, False, False, False, False]])
         >>> ellipsis(6, (5, 3), 0)
         array([[ True,  True,  True,  True, False, False],
                [ True,  True,  True, False, False, False],
                [ True,  True,  True, False, False, False],
                [ True,  True,  True, False, False, False],
                [ True,  True, False, False, False, False],
-               [ True, False, False, False, False, False]], dtype=bool)
+               [ True, False, False, False, False, False]])
     """
     return nd_superellipsoid(
         shape, semiaxes, 2.0, position, 2,
         rel_position=True, rel_sizes=False)
-
-
-# ======================================================================
-def polygon(
-        shape,
-        vertices,
-        position=0.5):
-    """
-    Render a simple polygon.
-
-    Args:
-        shape (int|Iterable[int]): The shape of the container in px.
-        vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
-        position (float|Iterable[float]): The position of the center.
-            Values are relative to the lowest edge.
-            They are interpreted as relative to the shape.
-
-    Returns:
-        rendered (np.ndarray[bool]): The rendered geometrical object.
-    """
-    raise NotImplementedError
 
 
 # ======================================================================
@@ -412,7 +776,7 @@ def cube(
                [[False, False, False, False],
                 [False, False, False, False],
                 [False, False, False, False],
-                [False, False, False, False]]], dtype=bool)
+                [False, False, False, False]]])
     """
     return nd_cuboid(
         shape, side / 2.0, position, 3,
@@ -452,7 +816,7 @@ def cuboid(
                [[False, False, False, False, False, False],
                 [False, False, False, False, False, False],
                 [False, False, False, False, False, False],
-                [False, False, False, False, False, False]]], dtype=bool)
+                [False, False, False, False, False, False]]])
     """
     return nd_cuboid(
         shape, semisides, position, 3,
@@ -495,8 +859,7 @@ def rhomboid(
                 [False, False, False, False, False, False, False],
                 [False, False, False,  True, False, False, False],
                 [False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False]]],\
- dtype=bool)
+                [False, False, False, False, False, False, False]]])
     """
     return nd_superellipsoid(
         shape, semidiagonals, 1.0, position, 3,
@@ -533,7 +896,7 @@ def sphere(
         <BLANKLINE>
                [[False, False, False],
                 [False,  True, False],
-                [False, False, False]]], dtype=bool)
+                [False, False, False]]])
         >>> sphere(5, 2)
         array([[[False, False, False, False, False],
                 [False, False, False, False, False],
@@ -563,7 +926,7 @@ def sphere(
                 [False, False, False, False, False],
                 [False, False,  True, False, False],
                 [False, False, False, False, False],
-                [False, False, False, False, False]]], dtype=bool)
+                [False, False, False, False, False]]])
     """
     return nd_superellipsoid(
         shape, radius, 2.0, position, 3,
@@ -618,7 +981,7 @@ def ellipsoid(
                 [False, False, False, False, False],
                 [False, False, False, False, False],
                 [False, False, False, False, False],
-                [False, False, False, False, False]]], dtype=bool)
+                [False, False, False, False, False]]])
     """
     return nd_superellipsoid(
         shape, semiaxes, 2.0, position, 3,
@@ -667,7 +1030,7 @@ def cylinder(
                [[False, False, False, False],
                 [False, False, False, False],
                 [False, False, False, False],
-                [False, False, False, False]]], dtype=bool)
+                [False, False, False, False]]])
     """
     n_dim = 3
     shape = fc.util.auto_repeat(shape, n_dim)
@@ -682,27 +1045,6 @@ def cylinder(
     return nd_prism(
         base, shape[axis], axis, height, position[axis],
         rel_position=True, rel_sizes=False)
-
-
-# ======================================================================
-def polyhedron(
-        shape,
-        vertices,
-        position=0.5):
-    """
-    Render a simple polyhedron.
-
-    Args:
-        shape (int|Iterable[int]): The shape of the container in px.
-        vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
-        position (float|Iterable[float]): The position of the center.
-            Values are relative to the lowest edge.
-            They are interpreted as relative to the shape.
-
-    Returns:
-        rendered (np.ndarray[bool]): The rendered geometrical object.
-    """
-    raise NotImplementedError
 
 
 # ======================================================================
@@ -756,65 +1098,24 @@ def extrema_to_semisizes_position(minima, maxima, num=None):
 
 
 # ======================================================================
-def bresenham_line(
-        point_a,
-        point_b):
+def polyhedron(
+        shape,
+        vertices,
+        position=0.5):
     """
-    Yield the integer points lying on an N-dim line.
-
-    This uses an adaptation of the Bresenham algorithm to multiple dimensions.
+    Render a simple polyhedron.
 
     Args:
-        point_a (Iterable[int]): The coordinates of the starting point.
-        point_b (Iterable[int]): The coordinates of the ending point.
-            Size of `point_a` and `point_b` must match.
+        shape (int|Iterable[int]): The shape of the container in px.
+        vertices (Iterable[Iterable[float]): Coordinates of the vertices in px.
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            They are interpreted as relative to the shape.
 
-    Yields:
-        point (tuple[int]): A point on the N-dim line.
+    Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
     """
-    n_dim = len(point_a)
-    diffs = [abs(b - a) for a, b in zip(point_a, point_b)]
-    steps = [1 if a < b else -1 for a, b in zip(point_a, point_b)]
-    max_diff = max(diffs)
-    updates = [max_diff / 2] * n_dim
-    to_render = list(point_a)
-    for i in range(max_diff):
-        yield tuple(to_render)
-        for i, (x, d, s, u) in enumerate(
-                zip(to_render, diffs, steps, updates)):
-            updates[i] -= d
-            if u < 0:
-                to_render[i] += s
-                updates[i] += max_diff
-
-
-# ======================================================================
-def bresenham_lines(
-        points,
-        closed=False):
-    """
-    Yield the integer points lying on N-dim lines.
-
-    This uses an adaptation of the Bresenham algorithm.
-
-    Args:
-        points (Iterable[int]): The coordinates of the starting point.
-        closed (bool): Render a line between the first and last points.
-            This is used to generate closed lines.
-            If only two points are given, this parameter has no effect.
-
-    Yields:
-        point (tuple[int]): A point on the N-dim lines.
-
-    See Also:
-        bresenham_line()
-    """
-    for point_a, point_b in zip(points[:-1], points[1:]):
-        for point in bresenham_line(point_a, point_b):
-            yield point
-    if closed and len(points) > 2:
-        for point in bresenham_line(points[-1], points[0]):
-            yield point
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -857,47 +1158,26 @@ def nd_lines(
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len(tuple(shape) + tuple(positions))
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
     positions = [
         fc.util.auto_repeat(position, n_dim, check=True)
         for position in positions]
     coords = [
         fc.num.coord(shape, position, rel_position, True)
         for position in positions]
-    rendered = np.zeros(shape, dtype=bool)
-    for point in bresenham_lines(coords, closed):
-        rendered[point] = True
+    rendered = render_at(shape, bresenham_lines(coords, closed))
     return rendered
-
-
-# ======================================================================
-def nd_curve(
-        point_a,
-        point_b):
-    """
-    Yield the integer points lying on an N-dim Bézier curve.
-
-    This uses an adaptation of the Bresenham algorithm.
-
-    Args:
-        point_a (Iterable[int]): The coordinates of the starting point.
-        point_b (Iterable[int]): The coordinates of the ending point.
-            Size of `point_a` and `point_b` must match.
-
-    Yields:
-        point (tuple[int]): A point on the N-dim curve.
-    """
-    raise NotImplementedError
 
 
 # ======================================================================
 def nd_curves(
         shape,
         positions,
-        is_closed=False,
+        deg=2,
         n_dim=None,
         rel_position=True):
     """
-    Render a series of N-dim Bézier curves.
+    Render a series of N-dim Bézier curves of given degree.
 
     The positions are aligned to the integer grid defined by the shape.
 
@@ -924,7 +1204,17 @@ def nd_curves(
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
     """
-    raise NotImplementedError
+    if not n_dim:
+        n_dim = fc.util.combine_iter_len(tuple(shape) + tuple(positions))
+    shape = fc.util.auto_repeat(shape, n_dim, check=True)
+    positions = [
+        fc.util.auto_repeat(position, n_dim, check=True)
+        for position in positions]
+    coords = [
+        fc.num.coord(shape, position, rel_position, True)
+        for position in positions]
+    rendered = render_at(shape, bresenham_curves(coords, deg))
+    return rendered
 
 
 # ======================================================================
@@ -1273,46 +1563,46 @@ def nd_gradient(
     Examples:
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2))):
         ...     print(arr)
-        [[ 0.]
-         [ 1.]]
+        [[0.]
+         [1.]]
         [[-2.  2.]]
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), dense=True):
         ...     print(arr)
-        [[ 0.  0.]
-         [ 1.  1.]]
+        [[0. 0.]
+         [1. 1.]]
         [[-2.  2.]
          [-2.  2.]]
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), int, True):
         ...     print(arr)
-        [[ 0.  0.]
-         [ 1.  1.]]
+        [[0. 0.]
+         [1. 1.]]
         [[-2.  2.]
          [-2.  2.]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-2, 2, 2)), float, True, np.logspace):
         ...     print(arr)
-        [[  1.   1.]
-         [ 10.  10.]]
-        [[  1.00000000e-02   1.00000000e+02]
-         [  1.00000000e-02   1.00000000e+02]]
+        [[ 1.  1.]
+         [10. 10.]]
+        [[1.e-02 1.e+02]
+         [1.e-02 1.e+02]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-2, 2, 2)), float, True,
         ...         (np.linspace, np.logspace)):
         ...     print(arr)
-        [[ 0.  0.]
-         [ 1.  1.]]
-        [[  1.00000000e-02   1.00000000e+02]
-         [  1.00000000e-02   1.00000000e+02]]
+        [[0. 0.]
+         [1. 1.]]
+        [[1.e-02 1.e+02]
+         [1.e-02 1.e+02]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, True):
         ...     print(arr)
-        [[[ 0.  0.]
-          [ 0.  0.]
-          [ 0.  0.]]
+        [[[0. 0.]
+          [0. 0.]
+          [0. 0.]]
         <BLANKLINE>
-         [[ 1.  1.]
-          [ 1.  1.]
-          [ 1.  1.]]]
+         [[1. 1.]
+          [1. 1.]
+          [1. 1.]]]
         [[[-1. -1.]
           [ 0.  0.]
           [ 1.  1.]]
@@ -1370,11 +1660,11 @@ def nd_dirac_delta(
 
     Examples:
         >>> nd_dirac_delta((5, 5), 0.5, 1)
-        array([[ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  1.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.]])
+        array([[0., 0., 0., 0., 0.],
+               [0., 0., 0., 0., 0.],
+               [0., 0., 1., 0., 0.],
+               [0., 0., 0., 0., 0.],
+               [0., 0., 0., 0., 0.]])
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len((shape, position))
@@ -1587,25 +1877,25 @@ def reframe(
     Examples:
         >>> arr = np.ones((2, 3))
         >>> reframe(arr, (4, 5))
-        array([[ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  1.,  1.,  1.,  0.],
-               [ 0.,  1.,  1.,  1.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.]])
+        array([[0., 0., 0., 0., 0.],
+               [0., 1., 1., 1., 0.],
+               [0., 1., 1., 1., 0.],
+               [0., 0., 0., 0., 0.]])
         >>> reframe(arr, (4, 5), 0)
-        array([[ 1.,  1.,  1.,  0.,  0.],
-               [ 1.,  1.,  1.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.]])
+        array([[1., 1., 1., 0., 0.],
+               [1., 1., 1., 0., 0.],
+               [0., 0., 0., 0., 0.],
+               [0., 0., 0., 0., 0.]])
         >>> reframe(arr, (4, 5), (2, 0))
-        array([[ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.],
-               [ 1.,  1.,  1.,  0.,  0.],
-               [ 1.,  1.,  1.,  0.,  0.]])
+        array([[0., 0., 0., 0., 0.],
+               [0., 0., 0., 0., 0.],
+               [1., 1., 1., 0., 0.],
+               [1., 1., 1., 0., 0.]])
         >>> reframe(arr, (4, 5), (0.0, 1.0))
-        array([[ 0.,  0.,  1.,  1.,  1.],
-               [ 0.,  0.,  1.,  1.,  1.],
-               [ 0.,  0.,  0.,  0.,  0.],
-               [ 0.,  0.,  0.,  0.,  0.]])
+        array([[0., 0., 1., 1., 1.],
+               [0., 0., 1., 1., 1.],
+               [0., 0., 0., 0., 0.],
+               [0., 0., 0., 0., 0.]])
     """
     new_shape = fc.util.auto_repeat(new_shape, arr.ndim, check=True)
     position = fc.util.auto_repeat(position, arr.ndim, check=True)
@@ -2122,7 +2412,7 @@ def weighted_center(
         labels=None,
         index=None):
     """
-    Determine the covariance mass matrix with respect to the origin.
+    Determine the weighted mean of the rendered objects inside an array.
 
     .. math::
         \\sum_i w_i (\\vec{x}_i - \\vec{o}_i)
