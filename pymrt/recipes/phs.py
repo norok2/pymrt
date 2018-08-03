@@ -392,9 +392,10 @@ def unwrap_region_merging(
     unprocessed = set(range(2, num_labels + 1))
     for i in range(2, num_labels + 1):
         costs = {}
+        u_d_mask = sp.ndimage.binary_dilation(u_mask)  # dilated unwrap mask
         for j in unprocessed:
             t_mask = labels_arr == j
-            t_f_mask = sp.ndimage.binary_dilation(u_mask) * t_mask
+            t_f_mask = u_d_mask * t_mask
             if sum(t_f_mask):
                 u_f_mask = u_mask * sp.ndimage.binary_dilation(t_mask)
                 t_f_val = np.mean(arr[t_f_mask])  # value at target frontier
