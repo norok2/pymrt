@@ -346,8 +346,10 @@ def unwrap_laplacian_corrected(
 # ======================================================================
 def unwrap_region_merging(
         arr,
-        split=8,
-        step=2 * np.pi):
+        split=6,
+        select=min,
+        step=2 * np.pi,
+        threshold=None):
     """
     Accurate unwrap using a region-merging approach.
 
@@ -356,27 +358,34 @@ def unwrap_region_merging(
     Args:
         arr (np.ndarray): The input array.
         split (int): The number of bins for splitting the regions.
+        select (callable|None): The function for selecting the optimal region.
+            If callable, must have the signature:
+            select(Iterable) -> float
+            The input of the `select` function are merging costs of the
+            other regions.
         step (float): The size of the wrap discontinuity.
             For phase this is 2 * PI.
+        threshold (float|None): The threshold above which regions are matched.
+            If None, this is computed as `step / 2`.
 
     Returns:
         arr (np.ndarray): The output array.
     """
+    if not threshold:
+        threshold = step / 2
     arr_min, arr_max = arr.min(), arr.max()
     if abs(arr_max - arr_min) > step:
         warnings.warn('The input is not properly wrapped')
-    split_bin = (arr_max - arr_min) / split
     num_labels = 0
     labels_arr = np.zeros_like(arr, dtype=int)
-    for i in range(split):
-        split_min, split_max = arr_min + split_bin * i, arr_min + split_bin * (
-                i + 1)
-        mask = (arr >= split_min) * (arr <= split_max)
+    splits = np.linspace(arr_min, arr_max, split + 1, endpoint=True)
+    for i, (split_min, split_max) in enumerate(zip(splits[:-1], splits[1:])):
+        mask = (arr >= split_min) if i == 0 else (arr > split_min)
+        mask *= (arr <= split_max)
         label_arr, num_label = sp.ndimage.label(mask)
         offset = (label_arr > 0) * (num_labels)
         labels_arr = labels_arr + offset + label_arr
         num_labels += num_label
-
     u_arr = arr.copy()
     u_mask = (labels_arr == 1)
     u_arr[~u_mask] = 0.0
@@ -388,17 +397,21 @@ def unwrap_region_merging(
             t_f_mask = sp.ndimage.binary_dilation(u_mask) * t_mask
             if sum(t_f_mask):
                 u_f_mask = u_mask * sp.ndimage.binary_dilation(t_mask)
-                t_f_val = np.mean(u_arr[t_f_mask])  # value at target frontier
+                t_f_val = np.mean(arr[t_f_mask])  # value at target frontier
                 u_f_val = np.mean(u_arr[u_f_mask])  # value at unwrap frontier
-                cost = abs(u_f_val - t_f_val)
-                if cost > (step / 2):
-                    t_step = (u_f_val - t_f_val) // (step / 2) * step
+                cost = (u_f_val - t_f_val)
+                if abs(cost) > threshold:
+                    t_step = np.sign(cost) * ((abs(cost) // step + 1) * step)
                 else:
                     t_step = 0
-                costs = {cost: (j, t_step)}
-        min_cost = min(costs.keys())
-        j, t_step = costs[min_cost]
-        t_mask = labels_arr == j
+                if select:
+                    costs[cost] = (j, t_step)
+                else:
+                    break
+        if select:
+            cost_key = select(costs.keys())
+            j, t_step = costs[cost_key]
+            t_mask = labels_arr == j
         u_arr[t_mask] += arr[t_mask] + t_step
         u_mask += t_mask
         unprocessed.remove(j)
