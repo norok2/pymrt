@@ -16,10 +16,12 @@ import warnings  # Warning control
 import collections  # Container datatypes
 
 # :: External Imports
+import scipy as sp  # SciPy (signal and image processing library)
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
+import scipy.ndimage  # SciPy: ND-image Manipulation
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 import flyingcircus.util  # FlyingCircus: generic basic utilities
@@ -262,13 +264,7 @@ def unwrap_laplacian(
     See Also:
         Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
     """
-    if pad_width:
-        shape = arr.shape
-        pad_width = fc.util.auto_pad_width(pad_width, shape)
-        mask = tuple(slice(lower, -upper) for (lower, upper) in pad_width)
-        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
-    else:
-        mask = tuple(slice(None)) * arr.ndim
+    arr, mask = fc.num.padding(arr, pad_width)
 
     # from pymrt.base import laplacian, inv_laplacian
     # from numpy import real, sin, cos
@@ -350,7 +346,8 @@ def unwrap_laplacian_corrected(
 # ======================================================================
 def unwrap_region_merging(
         arr,
-        split=8):
+        split=8,
+        step=2 * np.pi):
     """
     Accurate unwrap using a region-merging approach.
 
@@ -358,11 +355,54 @@ def unwrap_region_merging(
 
     Args:
         arr (np.ndarray): The input array.
+        split (int): The number of bins for splitting the regions.
+        step (float): The size of the wrap discontinuity.
+            For phase this is 2 * PI.
 
     Returns:
         arr (np.ndarray): The output array.
     """
-    raise NotImplementedError
+    arr_min, arr_max = arr.min(), arr.max()
+    if abs(arr_max - arr_min) > step:
+        warnings.warn('The input is not properly wrapped')
+    split_bin = (arr_max - arr_min) / split
+    num_labels = 0
+    labels_arr = np.zeros_like(arr, dtype=int)
+    for i in range(split):
+        split_min, split_max = arr_min + split_bin * i, arr_min + split_bin * (
+                i + 1)
+        mask = (arr >= split_min) * (arr <= split_max)
+        label_arr, num_label = sp.ndimage.label(mask)
+        offset = (label_arr > 0) * (num_labels)
+        labels_arr = labels_arr + offset + label_arr
+        num_labels += num_label
+
+    u_arr = arr.copy()
+    u_mask = (labels_arr == 1)
+    u_arr[~u_mask] = 0.0
+    unprocessed = set(range(2, num_labels + 1))
+    for i in range(2, num_labels + 1):
+        costs = {}
+        for j in unprocessed:
+            t_mask = labels_arr == j
+            t_f_mask = sp.ndimage.binary_dilation(u_mask) * t_mask
+            if sum(t_f_mask):
+                u_f_mask = u_mask * sp.ndimage.binary_dilation(t_mask)
+                t_f_val = np.mean(u_arr[t_f_mask])  # value at target frontier
+                u_f_val = np.mean(u_arr[u_f_mask])  # value at unwrap frontier
+                cost = abs(u_f_val - t_f_val)
+                if cost > (step / 2):
+                    t_step = (u_f_val - t_f_val) // (step / 2) * step
+                else:
+                    t_step = 0
+                costs = {cost: (j, t_step)}
+        min_cost = min(costs.keys())
+        j, t_step = costs[min_cost]
+        t_mask = labels_arr == j
+        u_arr[t_mask] += arr[t_mask] + t_step
+        u_mask += t_mask
+        unprocessed.remove(j)
+    return u_arr
 
 
 # ======================================================================
@@ -398,10 +438,11 @@ def unwrap_sorting_path(
 
 
     if unwrap_axes:
-        loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
-                    for j, dim in enumerate(arr.shape)]
+        loop_gen = [
+            (slice(None),) if j in unwrap_axes else range(dim)
+            for j, dim in enumerate(arr.shape)]
     else:
-        loop_gen = [slice(None)] * arr.ndim
+        loop_gen = (slice(None),) * arr.ndim
     arr = arr.copy()
     for indexes in itertools.product(*loop_gen):
         arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
