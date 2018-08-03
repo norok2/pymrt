@@ -265,10 +265,10 @@ def unwrap_laplacian(
     if pad_width:
         shape = arr.shape
         pad_width = fc.util.auto_pad_width(pad_width, shape)
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
+        mask = tuple(slice(lower, -upper) for (lower, upper) in pad_width)
         arr = np.pad(arr, pad_width, 'constant', constant_values=0)
     else:
-        mask = [slice(None)] * arr.ndim
+        mask = tuple(slice(None)) * arr.ndim
 
     # from pymrt.base import laplacian, inv_laplacian
     # from numpy import real, sin, cos
@@ -349,7 +349,8 @@ def unwrap_laplacian_corrected(
 
 # ======================================================================
 def unwrap_region_merging(
-        arr):
+        arr,
+        split=8):
     """
     Accurate unwrap using a region-merging approach.
 
@@ -395,13 +396,31 @@ def unwrap_sorting_path(
     """
     from skimage.restoration import unwrap_phase
 
+
     if unwrap_axes:
         loop_gen = [[slice(None)] if j in unwrap_axes else range(dim)
                     for j, dim in enumerate(arr.shape)]
     else:
         loop_gen = [slice(None)] * arr.ndim
+    arr = arr.copy()
     for indexes in itertools.product(*loop_gen):
         arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
+    return arr
+
+
+# ======================================================================
+def unwrap_iter(arr):
+    """
+    Iterate one-dimensional unwrapping over all directions.
+
+    Args:
+        arr (np.ndarray): The input array.
+
+    Returns:
+        arr (np.ndarray): The unwrapped array.
+    """
+    for i in range(arr.ndim):
+        arr = np.unwrap(arr, axis=i)
     return arr
 
 

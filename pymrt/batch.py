@@ -1035,9 +1035,9 @@ def compute_generic(
         if verbose >= VERB_LVL['medium']:
             print('Opts:\t{}'.format(json.dumps(opts)))
         images, affines = [], []
-        mask = [
+        mask = tuple(
             (slice(*dim) if dim is not None else slice(None))
-            for dim in opts['mask']]
+            for dim in opts['mask'])
         for source in sources:
             if verbose > VERB_LVL['none']:
                 print('Source:\t{}'.format(os.path.basename(source)))
@@ -1046,9 +1046,9 @@ def compute_generic(
             image, affine, header = mrt.input_output.load(source, meta=True)
             # fix mask if shapes are different
             if opts['adapt_mask']:
-                mask = [
+                mask = tuple(
                     (mask[i] if i < len(mask) else slice(None))
-                    for i in range(len(image.shape))]
+                    for i in range(len(image.shape)))
             images.append(image[mask])
             affines.append(affine)
         if 'compute_func' in opts:

@@ -322,14 +322,8 @@ def qsm_remove_background_milf(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    if pad_width:
-        shape = db0_arr.shape
-        pad_width = fc.util.auto_pad_width(pad_width, shape)
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
-        db0_arr = np.pad(db0_arr, pad_width, 'constant', constant_values=0)
-        mask_arr = np.pad(mask_arr, pad_width, 'constant', constant_values=0)
-    else:
-        mask = [slice(None)] * db0_arr.ndim
+    db0_arr, mask = fc.num.padding(db0_arr, pad_width)
+    mask_arr, mask = fc.num.padding(mask_arr, pad_width)
 
     kernel_k = np.fft.fftshift(fc.num.laplace_kernel(db0_arr.shape))
 
@@ -398,14 +392,8 @@ def qsm_remove_background_sharp(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    if pad_width:
-        shape = db0_arr.shape
-        pad_width = fc.util.auto_pad_width(pad_width, shape)
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
-        db0_arr = np.pad(db0_arr, pad_width, 'constant', constant_values=0)
-        mask_arr = np.pad(mask_arr, pad_width, 'constant', constant_values=0)
-    else:
-        mask = [slice(None)] * db0_arr.ndim
+    db0_arr, mask = fc.num.padding(db0_arr, pad_width)
+    mask_arr, mask = fc.num.padding(mask_arr, pad_width)
 
     if rel_radius:
         radius = mrt.geometry.rel2abs(max(db0_arr.shape), radius)
