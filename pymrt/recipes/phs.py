@@ -38,6 +38,7 @@ from pymrt import msg, dbg
 
 from pymrt.recipes import generic
 from pymrt.recipes.generic import fix_phase_interval as fix_interval
+from flyingcircus.num import wrap_cyclic as wrap
 
 
 # ======================================================================
@@ -241,15 +242,22 @@ def unwrap_laplacian(
         arr,
         pad_width=0):
     """
-    Super-fast multi-dimensional Laplacian-based Fourier unwrap.
+    Multi-dimensional Laplacian-based Fourier unwrap.
 
-    Phase unwrap by using the following equality:
+    Given the Laplacian operator:
 
     L = (d / dx)^2
 
+    phase unwrap by using the following equality:
+
+    L(phi_u) = im(exp(-i * phi) * L(exp(i * phi))
+
+    which can be solved for `phi_u` (phase unwrapped) by:
+
     L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
 
-    phi = IL(L(phi)) = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
+    phi_u = IL(L(phi_u)) = IL(im(exp(-i * phi) * L(exp(i * phi))) =
+          = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
 
     Args:
         arr (np.ndarray): The input array.
@@ -262,7 +270,10 @@ def unwrap_laplacian(
         arr (np.ndarray): The unwrapped array.
 
     See Also:
-        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+        - Schofield, Marvin A., and Yimei Zhu. “Fast Phase Unwrapping
+          Algorithm for Interferometric Applications.” Optics Letters 28,
+          no. 14 (July 15, 2003): 1194–96.
+          https://doi.org/10.1364/OL.28.001194.
     """
     arr, mask = fc.num.padding(arr, pad_width)
 
@@ -286,21 +297,27 @@ def unwrap_laplacian(
 
 
 # ======================================================================
-def unwrap_laplacian_corrected(
+def unwrap_laplacian_congr(
         arr,
-        pad_width=0):
+        pad_width=0.0,
+        congruences=16,
+        discont=lambda x: x >= 3 * np.pi / 2,
+        discont_mask=None):
     """
-    Super-fast multi-dimensional corrected Laplacian-based Fourier unwrap.
+    Multi-dimensional congruence-corrected Laplacian-based Fourier unwrap.
 
-    EXPERIMENTAL!
+    This performs a simple congruence correction, where the unwrapped phase
+    is summed with an offset that compensate for the Laplacian numerical
+    errors, so that the difference between the wrapped and the unwrapped
+    phases are multiple of 2π.
 
-    Phase unwrap by using the following equality:
+    The congruence step is chosen to be the one that minimizes the number
+    of discontinuities. The discontinuities are computed by summing up all the
+    the points where the absolute of the gradient along a given dimension
+    is larger than π.
 
-    L = (d / dx)^2
-
-    L(phi) = cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi))
-
-    phi = IL(L(phi)) = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
+    Note that phase wraps may still be present if there are gradient
+    components (whose Laplacian is 0) that are larger than 2π.
 
     Args:
         arr (np.ndarray): The input array.
@@ -308,44 +325,52 @@ def unwrap_laplacian_corrected(
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to the maximum size.
+        congruences (int): The number of congruence values to test.
+        discont (callable): The discontinuity condition.
+            This is computed on the absolute of the gradient for all axis.
+            Must have the signature:
+            is_discont(np.ndarray[float]) -> np.ndarray[bool].
+        discont_mask (np.ndarray[bool]|None): The discontinuity mask.
+            This serves to exclude portions of the array where discontinuities
+            are irrelevant (e.g. due to noise).
+            If None, all array is considered.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
 
     See Also:
-        Schofield, M. A. and Y. Zhu (2003). Optics Letters 28(14): 1194-1196.
+        - Schofield, Marvin A., and Yimei Zhu. “Fast Phase Unwrapping
+          Algorithm for Interferometric Applications.” Optics Letters 28,
+          no. 14 (July 15, 2003): 1194–96.
+          https://doi.org/10.1364/OL.28.001194.
+        - Robinson, Simon Daniel, Kristian Bredies, Diana Khabipova,
+          Barbara Dymerska, José P. Marques, and Ferdinand Schweser.
+          “An Illustrated Comparison of Processing Methods for MR Phase
+          Imaging and QSM: Combining Array Coil Signals and Phase Unwrapping.”
+          NMR in Biomedicine, January 1, 2016, n/a-n/a.
+          https://doi.org/10.1002/nbm.3601.
+
     """
-    raise NotImplementedError
-    if pad_width:
-        shape = arr.shape
-        pad_width = fc.util.auto_pad_width(pad_width, shape)
-        mask = [slice(lower, -upper) for (lower, upper) in pad_width]
-        arr = np.pad(arr, pad_width, 'constant', constant_values=0)
-    else:
-        mask = [slice(None)] * arr.ndim
-
-    # from pymrt.base import laplacian, inv_laplacian
-    # from numpy import real, sin, cos
-    # arr = real(inv_laplacian(
-    #     cos(arr) * laplacian(sin(arr)) - sin(arr) * laplacian(cos(arr))))
-
-    cos_arr = np.cos(arr)
-    sin_arr = np.sin(arr)
-    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape))
-    arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
-               sin_arr * ifftn(kk_2 * fftn(cos_arr)))
-    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
-    arr *= kk_2
-    del cos_arr, sin_arr, kk_2
-    arr = np.real(ifftn(arr))
-
-    arr = arr[mask]
-    return arr
+    if discont_mask is None:
+        discont_mask = tuple(slice(None) for _ in range(arr.ndim))
+    u_arr = unwrap_laplacian(arr, pad_width)
+    num_discont = []
+    for congruence in range(congruences):
+        step = 2 * np.pi * congruence / congruences
+        c_arr = u_arr + step + wrap(arr - u_arr - step)
+        num_discont.append(np.sum([
+            discont(np.abs(np.gradient(c_arr[discont_mask], axis=j)))
+            for j in range(arr.ndim)]))
+    congruence = np.argmin(num_discont)
+    step = 2 * np.pi * congruence / congruences
+    u_arr = u_arr + step + wrap(arr - u_arr - step)
+    return u_arr
 
 
 # ======================================================================
 def unwrap_region_merging(
         arr,
+        mask=None,
         split=6,
         select=min,
         step=2 * np.pi,
@@ -357,6 +382,7 @@ def unwrap_region_merging(
 
     Args:
         arr (np.ndarray): The input array.
+        mask
         split (int): The number of bins for splitting the regions.
         select (callable|None): The function for selecting the optimal region.
             If callable, must have the signature:
@@ -370,7 +396,13 @@ def unwrap_region_merging(
 
     Returns:
         arr (np.ndarray): The output array.
+
+    See Also:
+        - Jenkinson, Mark. “Fast, Automated, N-Dimensional Phase-Unwrapping
+          Algorithm.” Magnetic Resonance in Medicine 49, no. 1
+          (January 1, 2003): 193–97. https://doi.org/10.1002/mrm.10354.
     """
+    arr = fc.num.apply_mask(arr, mask)
     if not threshold:
         threshold = step / 2
     arr_min, arr_max = arr.min(), arr.max()
@@ -380,10 +412,11 @@ def unwrap_region_merging(
     labels_arr = np.zeros_like(arr, dtype=int)
     splits = np.linspace(arr_min, arr_max, split + 1, endpoint=True)
     for i, (split_min, split_max) in enumerate(zip(splits[:-1], splits[1:])):
-        mask = (arr >= split_min) if i == 0 else (arr > split_min)
-        mask *= (arr <= split_max)
-        label_arr, num_label = sp.ndimage.label(mask)
-        offset = (label_arr > 0) * (num_labels)
+        s_mask = (arr >= split_min) if i == 0 else (arr > split_min)
+        s_mask *= (arr <= split_max)
+        label_arr, num_label = sp.ndimage.label(
+            fc.num.apply_mask(s_mask, mask))
+        offset = fc.num.apply_mask(label_arr > 0, mask) * (num_labels)
         labels_arr = labels_arr + offset + label_arr
         num_labels += num_label
     u_arr = arr.copy()
@@ -393,10 +426,11 @@ def unwrap_region_merging(
     for i in range(2, num_labels + 1):
         costs = {}
         u_d_mask = sp.ndimage.binary_dilation(u_mask)  # dilated unwrap mask
+        # `t_mask`, `t_step` will be defined after the loop (by construction)
         for j in unprocessed:
             t_mask = labels_arr == j
             t_f_mask = u_d_mask * t_mask
-            if sum(t_f_mask):
+            if np.sum(t_f_mask) > 0:
                 u_f_mask = u_mask * sp.ndimage.binary_dilation(t_mask)
                 t_f_val = np.mean(arr[t_f_mask])  # value at target frontier
                 u_f_val = np.mean(u_arr[u_f_mask])  # value at unwrap frontier
@@ -417,6 +451,26 @@ def unwrap_region_merging(
         u_mask += t_mask
         unprocessed.remove(j)
     return u_arr
+
+
+# ======================================================================
+def unwrap_gradient(
+        arr,
+        pad_width=0):
+    """
+
+    Args:
+        arr:
+        pad_width:
+
+    Returns:
+
+    See Also:
+        - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
+          Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
+          (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
+    """
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -445,9 +499,14 @@ def unwrap_sorting_path(
         arr (np.ndarray): The unwrapped array.
 
     See Also:
-        skimage.restoration.unwrap_phase
-        Herraez, M. A. et al. (2002). Journal Applied Optics 41(35): 7437.
+        - skimage.restoration.unwrap_phase()
+        - Herráez, Miguel Arevallilo, David R. Burton, Michael J. Lalor, and
+          Munther A. Gdeisat. “Fast Two-Dimensional Phase-Unwrapping Algorithm
+          Based on Sorting by Reliability Following a Noncontinuous Path.”
+          Applied Optics 41, no. 35 (December 10, 2002): 7437.
+          https://doi.org/10.1364/AO.41.007437.
     """
+    # todo: pure Python + NumPy implementation?
     from skimage.restoration import unwrap_phase
 
 
@@ -464,42 +523,33 @@ def unwrap_sorting_path(
 
 
 # ======================================================================
-def unwrap_iter(arr):
+def unwrap_1d_iter(
+        arr,
+        axes=None):
     """
     Iterate one-dimensional unwrapping over all directions.
 
     Args:
         arr (np.ndarray): The input array.
+        axes (Iterable[int]|int|None): The dimensions along which to unwrap.
+            If Int, unwrapping in a single dimension is performed.
+            If None, unwrapping is performed in all dimensions from 0 to -1.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
     """
-    for i in range(arr.ndim):
+    if axes is None:
+        axes = tuple(range(arr.ndim))
+    axes = fc.util.auto_repeat(axes, 1)
+    for i in axes:
         arr = np.unwrap(arr, axis=i)
     return arr
 
 
 # ======================================================================
-def unwrap_cnn(
-        arr):
-    """
-    Fast unwrap using Convolutional Neural Networks.
-
-    EXPERIMENTAL!
-
-    Args:
-        arr (np.ndarray): The input array.
-
-    Returns:
-        arr (np.ndarray): The output array.
-    """
-    raise NotImplementedError
-
-
-# ======================================================================
 def unwrap(
         arr,
-        method='laplacian',
+        method='laplacian_congr',
         method_kws=None):
     """
     Perform phase unwrap.
@@ -517,20 +567,16 @@ def unwrap(
     Returns:
         arr (np.ndarray): The unwrapped array.
     """
+    methods = (
+        'laplacian_congr', 'laplacian', 'sorting_path', 'region_merging',
+        '1d_iter')
     method = method.lower()
     method_kws = {} if method_kws is None else dict(method_kws)
-    if method == 'laplacian':
-        method = unwrap_laplacian
-    elif method == 'sorting_path':
-        method = unwrap_sorting_path
-    elif method == 'region_merging':
-        method = unwrap_region_merging
-    elif method == 'laplacian_corrected':
-        method = unwrap_laplacian_corrected
-    elif method == 'cnn':
-        method = unwrap_cnn
+    if method in methods:
+        method = exec('unwrap_' + method)
     else:
-        text = 'Unknown unwrap method `{}`'.format(method)
+        text = 'Unknown unwrap method `{}`. Using default `{}`.'.format(
+            method, methods[0])
         warnings.warn(text)
     if callable(method):
         arr = method(arr, **method_kws)
