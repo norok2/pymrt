@@ -744,7 +744,7 @@ def frame(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.frame,
+        in_filepath, out_filepath, fc.num.frame,
         borders, background, use_longest)
 
 
@@ -771,7 +771,7 @@ def reframe(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.reframe,
+        in_filepath, out_filepath, fc.num.reframe,
         new_shape, background)
 
 
@@ -804,7 +804,7 @@ def multi_reframe(
     """
     simple_filter_n_1(
         in_filepaths, out_filepath,
-        mrt.geometry.multi_reframe,
+        fc.num.multi_reframe,
         new_shape=new_shape, background=background, dtype=dtype)
 
 
@@ -847,7 +847,7 @@ def zoom(
         geometry.resample()
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.zoom,
+        in_filepath, out_filepath, fc.num.zoom,
         factors, window, interp_order, extra_dim, fill_dim)
 
 
@@ -873,7 +873,7 @@ def resample(
         new_shape (tuple[int|None]): New dimensions of the array.
         aspect (callable|Iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
-            This is passed to `pymrt.geometry.shape2zoom()`.
+            This is passed to `fc.num.shape2zoom()`.
         window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
@@ -892,7 +892,7 @@ def resample(
         geometry.zoom()
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, mrt.geometry.resample,
+        in_filepath, out_filepath, fc.num.resample,
         new_shape, aspect, window, extra_dim, fill_dim, interp_order)
 
 
@@ -939,7 +939,7 @@ def multi_resample(
     """
     simple_filter_n_1(
         in_filepaths, out_filepath,
-        mrt.geometry.multi_resample,
+        fc.num.multi_resample,
         new_shape=new_shape, lossless=lossless, window=window,
         interp_order=interp_order, extra_dim=extra_dim, fill_dim=fill_dim,
         dtype=dtype)

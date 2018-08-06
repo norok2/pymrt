@@ -396,7 +396,7 @@ def qsm_remove_background_sharp(
     mask_arr, mask = fc.num.padding(mask_arr, pad_width)
 
     if rel_radius:
-        radius = mrt.geometry.rel2abs(max(db0_arr.shape), radius)
+        radius = fc.num.rel2abs(max(db0_arr.shape), radius)
 
     # # generate the spherical kernel
     sphere = mrt.geometry.sphere(db0_arr.shape, radius).astype(complex)

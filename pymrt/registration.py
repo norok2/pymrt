@@ -107,7 +107,7 @@ def params_to_affine(
         shift = params[:n_dim]
         params = params[n_dim:]
     if 'rotation' in transform or transform in ['rigid']:
-        linear = mrt.geometry.angles2linear(params)
+        linear = fc.num.angles2linear(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
@@ -141,7 +141,7 @@ def set_init_parameters(
     # :: set up shift
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
-            shift = mrt.geometry.weighted_center(moving) - mrt.geometry.weighted_center(fixed)
+            shift = fc.num.weighted_center(moving) - fc.num.weighted_center(fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
         else:  # 'none' or not known
@@ -151,7 +151,7 @@ def set_init_parameters(
     # :: set up other parameters, according to transform
     if 'rotation' in transform or transform in ['rigid']:
         # todo: use inertia for rotation angles?
-        num_angles = mrt.geometry.num_angles_from_dim(moving.ndim)
+        num_angles = fc.num.num_angles_from_dim(moving.ndim)
         if init_guess_other == 'random':
             angles = np.random.rand(num_angles) * np.pi / 2.0
         else:  # 'none' or not known
@@ -170,8 +170,8 @@ def set_init_parameters(
     elif transform == 'affine':
         if init_guess_other == 'weights':
             # todo: improve to find real rotation
-            rot_moving = mrt.geometry.rotation_axes(moving)
-            rot_fixed = mrt.geometry.rotation_axes(fixed)
+            rot_moving = fc.num.rotation_axes(moving)
+            rot_fixed = fc.num.rotation_axes(fixed)
             linear = np.dot(rot_fixed.transpose(), rot_moving)
         elif init_guess_other == 'random':
             linear = np.random.rand(moving.ndim, moving.ndim)
@@ -213,18 +213,18 @@ def _discrete_generator(transform, n_dim):
                 yield linear, shift
     elif transform == 'pi/2_rotation':
         shift = np.zeros((n_dim,))
-        num_angles = mrt.geometry.num_angles_from_dim(n_dim)
+        num_angles = fc.num.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
-            linear = mrt.geometry.angles2linear(angles)
+            linear = fc.num.angles2linear(angles)
             yield linear, shift
     elif transform == 'pi/2_rotation+':
         shift = np.zeros((n_dim,))
-        num_angles = mrt.geometry.num_angles_from_dim(n_dim)
+        num_angles = fc.num.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             for diagonal in itertools.product([-1, 1], repeat=n_dim):
                 linear = np.dot(
                     np.diag(diagonal).astype(np.float),
-                    mrt.geometry.angles2linear(angles))
+                    fc.num.angles2linear(angles))
                 yield linear, shift
     else:
         shift = np.zeros(n_dim)
@@ -449,7 +449,7 @@ def my_reg(array_list, *args, **kwargs):
     # # ... and finally perform finer registration
     # linear, shift = affine_registration(img, ref, *args, **kwargs)
     # img = sp.ndimage.affine_transform(img, linear, shift)
-    # print(mrt.geometry.encode_affine(linear, shift))
+    # print(fc.num.encode_affine(linear, shift))
     return img
 
 

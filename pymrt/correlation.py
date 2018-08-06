@@ -421,11 +421,11 @@ def apply_mask(
         img[~mask.astype(bool)] = mask_val
         if container:
             img = img[container]
-        img = mrt.geometry.frame(img, 0.1, 0.0)
+        img = fc.num.frame(img, 0.1, 0.0)
         return img
 
-    if fc.util.check_redo([in_filepath, mask_filepath], [out_filepath],
-                          force):
+    if fc.util.check_redo(
+            [in_filepath, mask_filepath], [out_filepath], force):
         msg('RunMsk: {}'.format(os.path.basename(out_filepath)))
         mrt.input_output.simple_filter_n_1(
             [in_filepath, mask_filepath], out_filepath,
@@ -1050,7 +1050,7 @@ def registering(
     # log the name of the reference image
     log_filepath = os.path.join(out_dirpath, log_filename)
     if fc.util.check_redo(
-                    in_filepath_list + [ref_filepath], [log_filepath], force):
+            in_filepath_list + [ref_filepath], [log_filepath], force):
         with open(log_filepath, 'w') as log_file:
             log_file.write(ref_filepath)
             log_file.close()
