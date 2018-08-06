@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PyMRT: parse Bruker raw data.
-
-EXPERIMENTAL!
+PyMRT: generate numerical phantoms
 """
 
 # ======================================================================
@@ -266,13 +264,13 @@ def render(
     return arr
 
 
-import numex.gui_tk_mpl
+# import numex.gui_tk_mpl
 
 # arr = render(256, 'shepp_logan_toft')
 # mrt.plot.quick(arr.T, origin='lower')
 
-arr = render(256, 'shepp_logan_3d')
-numex.gui_tk_mpl.explore(arr)
+# arr = render(256, 'shepp_logan_3d')
+# numex.gui_tk_mpl.explore(arr)
 
 
 # ======================================================================
