@@ -22,14 +22,18 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import scipy.ndimage  # SciPy: ND-image Manipulation
+import scipy.sparse  # SciPy: Sparse Matrices
+# import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
 import flyingcircus.util  # FlyingCircus: generic basic utilities
 import flyingcircus.num  # FlyingCircus: generic numerical utilities
+import skimage.restoration
 
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
+import pymrt.correction
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -238,9 +242,126 @@ def dphs_to_phs(
 
 
 # ======================================================================
+def fix_rounding(
+        w_arr,
+        u_arr,
+        step=2 * np.pi):
+    """
+    Compute the rounding-correction for wrapped data.
+
+    This computes the closest integer such that the differences between the
+    wrapped and the unwrapped data are multiples of `step`.
+
+    This is typically used for correcting unwrapped data from Fourier-based
+    methods, like e.g. Laplacian.
+
+    For phase data the step must be 2π.
+
+    Note: `pymrt.recipes.phs.congruence_correction()` offers a more robust
+    approach against noisy data.
+
+    Args:
+        w_arr (np.ndarray): The wrapped phase.
+        u_arr (np.ndarray): The approximate unwrapped phase.
+        step (float): The size of the wrap discontinuity.
+            For phase data this is 2π.
+
+    Returns:
+        u_arr (np.ndarray): The corrected unwrapped phase.
+
+    See Also:
+        - Robinson, Simon Daniel, Kristian Bredies, Diana Khabipova,
+          Barbara Dymerska, José P. Marques, and Ferdinand Schweser.
+          “An Illustrated Comparison of Processing Methods for MR Phase
+          Imaging and QSM: Combining Array Coil Signals and Phase Unwrapping.”
+          NMR in Biomedicine, January 1, 2016, n/a-n/a.
+          https://doi.org/10.1002/nbm.3601.
+    """
+    k = np.round(0.5 * (u_arr - w_arr) / (step / 2))
+    return step * k + w_arr
+
+
+# ======================================================================
+def fix_congruence(
+        w_arr,
+        u_arr,
+        step=2 * np.pi,
+        congruences=16,
+        discont=lambda x: x >= 3 * np.pi / 2,
+        discont_mask=None):
+    """
+    Compute the congruence-correction for wrapped data.
+
+    This performs a simple congruence correction, where the unwrapped data
+    is summed with an offset that compensate for the small numerical errors,
+    so that the differences between the wrapped and the unwrapped data
+    are multiples of `step`.
+
+    This is typically used for correcting unwrapped data from Fourier-based
+    methods, like e.g. Laplacian.
+
+    For phase data the step must be 2π.
+
+    The congruence step is chosen to be the one that minimizes the number
+    of discontinuities. The discontinuities are computed by summing up all the
+    the points where the absolute of the gradient along a given dimension
+    is larger than π.
+
+    Note that phase wraps may still be present if there are gradient
+    components (whose Laplacian is 0) that are larger than 2π.
+
+    This approach is numerically more stable than the approximation by
+    rounding to 2π multiples, especially in the presence of noise.
+
+    Args:
+        w_arr (np.ndarray): The wrapped phase.
+        u_arr (np.ndarray): The approximate unwrapped phase.
+        step (float): The size of the wrap discontinuity.
+            For phase data this is 2π.
+        congruences (int|None): The number of congruence values to test.
+            If None, no correction is performed.
+        discont (callable): The discontinuity condition.
+            This is computed on the absolute of the gradient for all axis.
+            Must have the signature:
+            is_discont(np.ndarray[float]) -> np.ndarray[bool].
+        discont_mask (np.ndarray[bool]|None): The discontinuity mask.
+            This serves to exclude portions of the array where discontinuities
+            are irrelevant (e.g. due to noise).
+            If None, all array is considered.
+
+    Returns:
+        u_arr (np.ndarray): The corrected unwrapped phase.
+
+    See Also:
+        - Robinson, Simon Daniel, Kristian Bredies, Diana Khabipova,
+          Barbara Dymerska, José P. Marques, and Ferdinand Schweser.
+          “An Illustrated Comparison of Processing Methods for MR Phase
+          Imaging and QSM: Combining Array Coil Signals and Phase Unwrapping.”
+          NMR in Biomedicine, January 1, 2016, n/a-n/a.
+          https://doi.org/10.1002/nbm.3601.
+    """
+    if congruences is not None:
+        if discont_mask is None:
+            discont_mask = tuple(slice(None) for _ in range(w_arr.ndim))
+        num_discont = []
+        for congruence in range(congruences):
+            phs_step = step * congruence / congruences
+            c_arr = u_arr + phs_step + wrap(w_arr - u_arr - phs_step)
+            num_discont.append(np.sum([
+                discont(np.abs(np.gradient(c_arr[discont_mask], axis=j)))
+                for j in range(w_arr.ndim)]))
+        congruence = np.argmin(num_discont)
+        phs_step = step * congruence / congruences
+        u_arr = u_arr + phs_step + wrap(w_arr - u_arr - phs_step)
+    return u_arr
+
+
+# ======================================================================
 def unwrap_laplacian(
         arr,
-        pad_width=0):
+        pad_width=0,
+        denoising=None,
+        denoising_kws=None):
     """
     Multi-dimensional Laplacian-based Fourier unwrap.
 
@@ -260,11 +381,19 @@ def unwrap_laplacian(
           = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
 
     Args:
-        arr (np.ndarray): The input array.
+        arr (np.ndarray): The input wrapped phase array.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to the maximum size.
+        denoising (callable|None): The denoising function.
+            If callable, must have the following signature:
+            denoising(np.ndarray, ...) -> np.ndarray.
+            It is applied to `np.cos(arr)` and `np.sin(arr)` separately.
+        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+            These are passed to the function specified in `denoising`.
+            If tuple[tuple], must be convertible to a dictionary.
+            If None, no keyword arguments will be passed.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
@@ -284,7 +413,12 @@ def unwrap_laplacian(
 
     cos_arr = np.cos(arr)
     sin_arr = np.sin(arr)
-    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape))
+    if callable(denoising):
+        denoising_kws = dict(denoising_kws) \
+            if denoising_kws is not None else {}
+        cos_arr = denoising(cos_arr, **denoising_kws)
+        sin_arr = denoising(sin_arr, **denoising_kws)
+    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape, factors=arr.shape))
     arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk_2 * fftn(cos_arr)))
     kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
@@ -297,48 +431,41 @@ def unwrap_laplacian(
 
 
 # ======================================================================
-def unwrap_laplacian_congr(
+def unwrap_laplacian_c(
         arr,
         pad_width=0.0,
+        denoising=None,
+        denoising_kws=None,
         congruences=16,
         discont=lambda x: x >= 3 * np.pi / 2,
         discont_mask=None):
     """
     Multi-dimensional congruence-corrected Laplacian-based Fourier unwrap.
 
-    This performs a simple congruence correction, where the unwrapped phase
-    is summed with an offset that compensate for the Laplacian numerical
-    errors, so that the difference between the wrapped and the unwrapped
-    phases are multiple of 2π.
-
-    The congruence step is chosen to be the one that minimizes the number
-    of discontinuities. The discontinuities are computed by summing up all the
-    the points where the absolute of the gradient along a given dimension
-    is larger than π.
-
-    Note that phase wraps may still be present if there are gradient
-    components (whose Laplacian is 0) that are larger than 2π.
+    The unwrapped phase is computed by: `pymrt.recipes.phs.unwrap_laplacian()`.
+    Then, the congruence correction is performed using:
+    `pymrt.recipes.phs.congruence_correction()`
 
     Args:
-        arr (np.ndarray): The input array.
+        arr (np.ndarray): The input wrapped phase array.
         pad_width (float|int): Size of the padding to use.
-            This is useful for mitigating border effects.
-            If int, it is interpreted as absolute size.
-            If float, it is interpreted as relative to the maximum size.
+            See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
+        denoising (callable|None): The denoising function.
+            See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
+        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+            See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         congruences (int): The number of congruence values to test.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
         discont (callable): The discontinuity condition.
-            This is computed on the absolute of the gradient for all axis.
-            Must have the signature:
-            is_discont(np.ndarray[float]) -> np.ndarray[bool].
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
         discont_mask (np.ndarray[bool]|None): The discontinuity mask.
-            This serves to exclude portions of the array where discontinuities
-            are irrelevant (e.g. due to noise).
-            If None, all array is considered.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
 
     See Also:
+
         - Schofield, Marvin A., and Yimei Zhu. “Fast Phase Unwrapping
           Algorithm for Interferometric Applications.” Optics Letters 28,
           no. 14 (July 15, 2003): 1194–96.
@@ -349,22 +476,129 @@ def unwrap_laplacian_congr(
           Imaging and QSM: Combining Array Coil Signals and Phase Unwrapping.”
           NMR in Biomedicine, January 1, 2016, n/a-n/a.
           https://doi.org/10.1002/nbm.3601.
+    """
+    u_arr = unwrap_laplacian(arr, pad_width, denoising, denoising_kws)
+    return fix_congruence(
+        arr, u_arr, 2 * np.pi, congruences, discont, discont_mask)
+
+
+# ======================================================================
+def unwrap_gradient(
+        arr,
+        pad_width=0,
+        denoising=None,
+        denoising_kws=None):
+    """
+    Multi-dimensional Gradient-based Fourier unwrap.
+
+    Args:
+        arr (np.ndarray): The input wrapped phase array.
+        pad_width (float|int): Size of the padding to use.
+            This is useful for mitigating border effects.
+            If int, it is interpreted as absolute size.
+            If float, it is interpreted as relative to the maximum size.
+        denoising (callable|None): The denoising function.
+            If callable, must have the following signature:
+            denoising(np.ndarray, ...) -> np.ndarray.
+            It is applied to the real and imaginary part of `np.exp(1j * arr)`
+            separately, using `flyingcircus.num.filter_cx()`.
+        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+            These are passed to the function specified in `denoising`.
+            If tuple[tuple], must be convertible to a dictionary.
+            If None, no keyword arguments will be passed.
+
+    Returns:
+        arr (np.ndarray): The unwrapped array.
+
+    See Also:
+        - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
+          Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
+          (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
+    """
+    arr, mask = fc.num.padding(arr, pad_width)
+
+    arr = np.exp(1j * arr)
+    if callable(denoising):
+        denoising_kws = dict(denoising_kws) \
+            if denoising_kws is not None else {}
+        arr = fc.num.filter_cx(arr, denoising, (), denoising_kws)
+    kks = [
+        fftshift(kk)
+        for kk in fc.num.gradient_kernels(arr.shape, factors=arr.shape)]
+    grads = np.gradient(arr)
+
+    u_arr = np.zeros(arr.shape, dtype=complex)
+    kk_2 = np.zeros(arr.shape, dtype=complex)
+    for kk, grad in zip(kks, grads):
+        u_arr += -1j * kk * fftn(np.real(-1j * grad / arr))
+        kk_2 += kk ** 2
+    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
+    arr = np.real(ifftn(kk_2 * u_arr)) / (2 * np.pi)
+    return arr[mask]
+
+
+# ======================================================================
+def unwrap_gradient_c(
+        arr,
+        pad_width=0.0,
+        denoising=None,
+        denoising_kws=None,
+        congruences=16,
+        discont=lambda x: x >= 3 * np.pi / 2,
+        discont_mask=None):
+    """
+    Multi-dimensional congruence-corrected Gradient-based Fourier unwrap.
+
+    The unwrapped phase is computed by: `pymrt.recipes.phs.unwrap_gradient()`.
+    Then, the congruence correction is performed using:
+    `pymrt.recipes.phs.congruence_correction()`
+
+    Args:
+        arr (np.ndarray): The input wrapped phase array.
+        pad_width (float|int): Size of the padding to use.
+            See `pymrt.recipes.phs.unwrap_gradient()` for more info.
+        denoising (callable|None): The denoising function.
+            See `pymrt.recipes.phs.unwrap_gradient()` for more info.
+        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+            See `pymrt.recipes.phs.unwrap_gradient()` for more info.
+        congruences (int): The number of congruence values to test.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
+        discont (callable): The discontinuity condition.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
+        discont_mask (np.ndarray[bool]|None): The discontinuity mask.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
+
+    Returns:
+        arr (np.ndarray): The unwrapped array.
+
+    See Also:
+        - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
+          Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
+          (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
+        - Robinson, Simon Daniel, Kristian Bredies, Diana Khabipova,
+          Barbara Dymerska, José P. Marques, and Ferdinand Schweser.
+          “An Illustrated Comparison of Processing Methods for MR Phase
+          Imaging and QSM: Combining Array Coil Signals and Phase Unwrapping.”
+          NMR in Biomedicine, January 1, 2016, n/a-n/a.
+          https://doi.org/10.1002/nbm.3601.
+    """
+    u_arr = unwrap_gradient(arr, pad_width, denoising, denoising_kws)
+    return fix_congruence(
+        arr, u_arr, 2 * np.pi, congruences, discont, discont_mask)
+
+
+# ======================================================================
+def unwrap_sorting_path(arr):
+    """
+    Unwrap using sorting by reliability following a non-continuous path.
+
+    Args:
+        arr:
+
+    Returns:
 
     """
-    if discont_mask is None:
-        discont_mask = tuple(slice(None) for _ in range(arr.ndim))
-    u_arr = unwrap_laplacian(arr, pad_width)
-    num_discont = []
-    for congruence in range(congruences):
-        step = 2 * np.pi * congruence / congruences
-        c_arr = u_arr + step + wrap(arr - u_arr - step)
-        num_discont.append(np.sum([
-            discont(np.abs(np.gradient(c_arr[discont_mask], axis=j)))
-            for j in range(arr.ndim)]))
-    congruence = np.argmin(num_discont)
-    step = 2 * np.pi * congruence / congruences
-    u_arr = u_arr + step + wrap(arr - u_arr - step)
-    return u_arr
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -378,10 +612,12 @@ def unwrap_region_merging(
     """
     Accurate unwrap using a region-merging approach.
 
+    Note this can be EXTREMELY slow.
+
     EXPERIMENTAL!
 
     Args:
-        arr (np.ndarray): The input array.
+        arr (np.ndarray): The input wrapped phase array.
         mask
         split (int): The number of bins for splitting the regions.
         select (callable|None): The function for selecting the optimal region.
@@ -390,7 +626,7 @@ def unwrap_region_merging(
             The input of the `select` function are merging costs of the
             other regions.
         step (float): The size of the wrap discontinuity.
-            For phase this is 2 * PI.
+            For phase data this is 2π.
         threshold (float|None): The threshold above which regions are matched.
             If None, this is computed as `step / 2`.
 
@@ -454,27 +690,7 @@ def unwrap_region_merging(
 
 
 # ======================================================================
-def unwrap_gradient(
-        arr,
-        pad_width=0):
-    """
-
-    Args:
-        arr:
-        pad_width:
-
-    Returns:
-
-    See Also:
-        - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
-          Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
-          (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
-    """
-    raise NotImplementedError
-
-
-# ======================================================================
-def unwrap_sorting_path(
+def unwrap_sorting_path_2d_3d(
         arr,
         unwrap_axes=(0, 1, 2),
         wrap_around=False,
@@ -482,12 +698,12 @@ def unwrap_sorting_path(
     """
     2D/3D unwrap using sorting by reliability following a non-continous path.
 
-    This is a wrapper around the function `skimage.restoration.unwrap_phase`
-    
+    This is a wrapper around the function `skimage.restoration.unwrap_phase()`
+    which can only handle 2D and 3D data.
     If higher dimensionality input, loop through extra dimensions.
 
     Args:
-        arr (np.ndarray): The input array.
+        arr (np.ndarray): The input wrapped phase array.
         unwrap_axes (tuple[int]): Axes along which unwrap is performed.
             Must have length 2 or 3.
         wrap_around (bool|Iterable[bool]|None): Circular unwrap.
@@ -506,10 +722,6 @@ def unwrap_sorting_path(
           Applied Optics 41, no. 35 (December 10, 2002): 7437.
           https://doi.org/10.1364/AO.41.007437.
     """
-    # todo: pure Python + NumPy implementation?
-    from skimage.restoration import unwrap_phase
-
-
     if unwrap_axes:
         loop_gen = [
             (slice(None),) if j in unwrap_axes else range(dim)
@@ -518,38 +730,75 @@ def unwrap_sorting_path(
         loop_gen = (slice(None),) * arr.ndim
     arr = arr.copy()
     for indexes in itertools.product(*loop_gen):
-        arr[indexes] = unwrap_phase(arr[indexes], wrap_around, seed)
+        arr[indexes] = skimage.restoration.unwrap_phase(
+            arr[indexes], wrap_around, seed)
     return arr
 
 
 # ======================================================================
 def unwrap_1d_iter(
         arr,
-        axes=None):
+        axes=None,
+        denoising=sp.ndimage.gaussian_filter,
+        denoising_kws=(('sigma', 1.0),),
+        congruences=16,
+        discont=lambda x: x >= 3 * np.pi / 2,
+        discont_mask=None):
     """
     Iterate one-dimensional unwrapping over all directions.
 
+    This is effective in multi-dimensional unwrapping provided that
+    the image is sufficiently smooth.
+
+    This can be achieved by numerically achieved by up-sampling followed by
+    down-sampling.
+
     Args:
-        arr (np.ndarray): The input array.
+        arr (np.ndarray): The input wrapped phase array.
         axes (Iterable[int]|int|None): The dimensions along which to unwrap.
             If Int, unwrapping in a single dimension is performed.
             If None, unwrapping is performed in all dimensions from 0 to -1.
+        denoising (callable|None): The denoising function.
+            If callable, must have the following signature:
+            denoising(np.ndarray, ...) -> np.ndarray.
+            It is applied to the real and imaginary part of `np.exp(1j * arr)`
+            separately, using `flyingcircus.num.filter_cx()` and then
+            converted back to a phase with `np.angle()` before applying the
+            unwrapping.
+        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+            These are passed to the function specified in `denoising`.
+            If tuple[tuple], must be convertible to a dictionary.
+            If None, no keyword arguments will be passed.
+        congruences (int): The number of congruence values to test.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
+        discont (callable): The discontinuity condition.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
+        discont_mask (np.ndarray[bool]|None): The discontinuity mask.
+            See `pymrt.recipes.phs.congruence_correction()` for more info.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
     """
+    u_arr = arr.copy()
+    if callable(denoising):
+        denoising_kws = dict(denoising_kws) \
+            if denoising_kws is not None else {}
+        u_arr = np.angle(
+            fc.num.filter_cx(np.exp(1j * u_arr), denoising, (), denoising_kws))
     if axes is None:
         axes = tuple(range(arr.ndim))
     axes = fc.util.auto_repeat(axes, 1)
     for i in axes:
-        arr = np.unwrap(arr, axis=i)
-    return arr
+        u_arr = np.unwrap(u_arr, axis=i)
+    u_arr = fix_congruence(
+        arr, u_arr, 2 * np.pi, congruences, discont, discont_mask)
+    return u_arr
 
 
 # ======================================================================
 def unwrap(
         arr,
-        method='laplacian_congr',
+        method='laplacian_c',
         method_kws=None):
     """
     Perform phase unwrap.
@@ -560,16 +809,21 @@ def unwrap(
         arr (np.ndarray): The input array.  
         method (str): The unwrap method.
             Accepted values are:
+             - 'laplacian_c': use `pymrt.recipes.phs.unwrap_laplacian_c()`.
              - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
+             - 'gradient_c': use `pymrt.recipes.phs.unwrap_gradient_c()`.
+             - 'gradient': use `pymrt.recipes.phs.unwrap_gradient()`.
+             - 'region_merging': use `pymrt.recipes.phs.unwrap_gradient()`.
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
+             - '1d_iter': use `pymrt.recipes.phs.unwrap_1d_iter()`.
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:
         arr (np.ndarray): The unwrapped array.
     """
     methods = (
-        'laplacian_congr', 'laplacian', 'sorting_path', 'region_merging',
-        '1d_iter')
+        'laplacian_c', 'laplacian', 'gradient', 'gradient_c',
+        'sorting_path', 'region_merging', 'sorting_path_2d_3d', '1d_iter')
     method = method.lower()
     method_kws = {} if method_kws is None else dict(method_kws)
     if method in methods:
