@@ -327,7 +327,7 @@ def sn_split_calib_region(
         arr,
         s_region=None,
         n_region=None,
-        region_shape=fc.num.nd_cuboid,
+        region_shape=mrt.geometry.nd_cuboid,
         region_shape_kws=None):
     """
     Separate signal from noise a calibration region.
