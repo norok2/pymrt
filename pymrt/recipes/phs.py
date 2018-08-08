@@ -357,6 +357,48 @@ def fix_congruence(
 
 
 # ======================================================================
+def reliab_diff2(
+        arr,
+        step=2 * np.pi):
+    """
+    Compute the reliability weighting for unwrapping.
+
+    This is based on second differences of neighboring voxels.
+
+    Args:
+        arr (np.ndarray): The wrapped phase array.
+        step (float): The size of the wrap discontinuity.
+            For phase data this is 2π.
+
+    Returns:
+        reliab_arr (np.ndarray): The reliability weighting.
+
+    See Also:
+        - Herráez, Miguel Arevallilo, David R. Burton, Michael J. Lalor, and
+          Munther A. Gdeisat. “Fast Two-Dimensional Phase-Unwrapping Algorithm
+          Based on Sorting by Reliability Following a Noncontinuous Path.”
+          Applied Optics 41, no. 35 (December 10, 2002): 7437.
+          https://doi.org/10.1364/AO.41.007437.
+    """
+    reliab_arr = np.zeros(arr.shape)
+    windows = (slice(None, -2), slice(1, -1), slice(2, None))
+    slices = list(itertools.product(*[windows for _ in range(arr.ndim)]))
+    mid_point = len(slices) // 2
+    mid_slice = slices[mid_point]
+    # the slices are paired: `j` is in the "opposite" direction as `-j -1`
+    # `wrap` implements `gamma` from the paper
+    diffs = [
+        wrap(arr[slices[j]] - arr[mid_slice], step, step / 2) -
+        wrap(arr[mid_slice] - arr[slices[-j - 1]], step, step / 2)
+        for j in range(mid_point)]
+    diff2_arr = np.sqrt(sum([x ** 2 for x in diffs]))
+    reliab_arr[mid_slice][diff2_arr != 0] = 1 / diff2_arr[diff2_arr != 0]
+    reliab_arr[mid_slice][diff2_arr == 0] = np.inf
+    reliab_arr[np.isnan(arr)] = np.nan
+    return reliab_arr
+
+
+# ======================================================================
 def unwrap_laplacian(
         arr,
         pad_width=0,
@@ -381,7 +423,7 @@ def unwrap_laplacian(
           = IL(cos(phi) * L(sin(phi)) - sin(phi) * L(cos(phi)))
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
@@ -396,7 +438,7 @@ def unwrap_laplacian(
             If None, no keyword arguments will be passed.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
 
     See Also:
         - Schofield, Marvin A., and Yimei Zhu. “Fast Phase Unwrapping
@@ -447,7 +489,7 @@ def unwrap_laplacian_c(
     `pymrt.recipes.phs.congruence_correction()`
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         pad_width (float|int): Size of the padding to use.
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         denoising (callable|None): The denoising function.
@@ -462,7 +504,7 @@ def unwrap_laplacian_c(
             See `pymrt.recipes.phs.congruence_correction()` for more info.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
 
     See Also:
 
@@ -492,7 +534,7 @@ def unwrap_gradient(
     Multi-dimensional Gradient-based Fourier unwrap.
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         pad_width (float|int): Size of the padding to use.
             This is useful for mitigating border effects.
             If int, it is interpreted as absolute size.
@@ -508,7 +550,7 @@ def unwrap_gradient(
             If None, no keyword arguments will be passed.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
 
     See Also:
         - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
@@ -554,7 +596,7 @@ def unwrap_gradient_c(
     `pymrt.recipes.phs.congruence_correction()`
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         pad_width (float|int): Size of the padding to use.
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
         denoising (callable|None): The denoising function.
@@ -569,7 +611,7 @@ def unwrap_gradient_c(
             See `pymrt.recipes.phs.congruence_correction()` for more info.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
 
     See Also:
         - Volkov, Vyacheslav V., and Yimei Zhu. “Deterministic Phase
@@ -588,17 +630,68 @@ def unwrap_gradient_c(
 
 
 # ======================================================================
-def unwrap_sorting_path(arr):
+def unwrap_sorting_path(
+        arr,
+        step=2 * np.pi,
+        reliab=reliab_diff2,
+        reliab_kws=None):
     """
     Unwrap using sorting by reliability following a non-continuous path.
 
+    This is an n-dimensional implementation.
+
     Args:
-        arr:
+        arr (np.ndarray): The wrapped phase array.
+        step (float): The size of the wrap discontinuity.
+            For phase data this is 2π.
+        reliab (callable): The function for computing reliability.
+        reliab_kws (dict|tuple[tuple]|None): Keyword arguments.
+            These are passed to the function specified in `reliab`.
+            If tuple[tuple], must be convertible to a dictionary.
+            If None, no keyword arguments will be passed.
 
     Returns:
+        arr (np.ndarray): The unwrapped phase array.
 
+    See Also:
+        - Herráez, Miguel Arevallilo, David R. Burton, Michael J. Lalor, and
+          Munther A. Gdeisat. “Fast Two-Dimensional Phase-Unwrapping Algorithm
+          Based on Sorting by Reliability Following a Noncontinuous Path.”
+          Applied Optics 41, no. 35 (December 10, 2002): 7437.
+          https://doi.org/10.1364/AO.41.007437.
     """
-    raise NotImplementedError
+    shape = arr.shape
+    reliab_kws = dict(reliab_kws) if reliab_kws is not None else {}
+    reliab_arr = reliab(arr, step, **reliab_kws)
+    edges_arr, orig_idx_arr, dest_idx_arr = fc.num.compute_edge_weights(
+        reliab_arr)
+    del reliab_arr
+    sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
+
+    arr = arr.copy().ravel()
+    orig_idx_arr = orig_idx_arr.ravel()
+    dest_idx_arr = dest_idx_arr.ravel()
+    group_arr = np.arange(arr.size)
+    is_grouped = np.zeros(group_arr.shape, dtype=bool)
+    num_nan = np.count_nonzero(np.isnan(edges_arr))
+    for i in range(num_nan, len(sorted_edges_indices)):
+        orig_idx = orig_idx_arr[sorted_edges_indices[i]]
+        dest_idx = dest_idx_arr[sorted_edges_indices[i]]
+        if group_arr[orig_idx] == group_arr[dest_idx]:
+            continue
+        # : ensure that the origin group is updated
+        if is_grouped[orig_idx] and not is_grouped[dest_idx]:
+            orig_idx, dest_idx = dest_idx, orig_idx
+        # : perform unwrapping
+        diff_val = np.floor(
+            (arr[dest_idx] - arr[orig_idx] + (step / 2)) / step) * step
+        to_change = group_arr == group_arr[orig_idx]
+        if diff_val != 0.0:
+            arr[to_change] += diff_val
+        # : bookkeeping of modified indexes
+        is_grouped[orig_idx] = is_grouped[dest_idx] = True
+        group_arr[to_change] = group_arr[dest_idx]
+    return arr.reshape(shape)
 
 
 # ======================================================================
@@ -617,8 +710,11 @@ def unwrap_region_merging(
     EXPERIMENTAL!
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
-        mask
+        arr (np.ndarray): The wrapped phase array.
+        mask (np.ndarray[bool]|None): The mask array.
+            This serves to restrict the computation only to the masked values
+            of `arr`, e.g. to remove noise-dominated regions.
+            If None, all array is considered.
         split (int): The number of bins for splitting the regions.
         select (callable|None): The function for selecting the optimal region.
             If callable, must have the signature:
@@ -703,7 +799,7 @@ def unwrap_sorting_path_2d_3d(
     If higher dimensionality input, loop through extra dimensions.
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         unwrap_axes (tuple[int]): Axes along which unwrap is performed.
             Must have length 2 or 3.
         wrap_around (bool|Iterable[bool]|None): Circular unwrap.
@@ -712,7 +808,7 @@ def unwrap_sorting_path_2d_3d(
             See also: skimage.restoration.unwrap_phase.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
 
     See Also:
         - skimage.restoration.unwrap_phase()
@@ -721,6 +817,11 @@ def unwrap_sorting_path_2d_3d(
           Based on Sorting by Reliability Following a Noncontinuous Path.”
           Applied Optics 41, no. 35 (December 10, 2002): 7437.
           https://doi.org/10.1364/AO.41.007437.
+        - Abdul-Rahman, Hussein, Munther Gdeisat, David Burton, and Michael
+          Lalor. “Fast Three-Dimensional Phase-Unwrapping Algorithm Based on
+          Sorting by Reliability Following a Non-Continuous Path.”
+          In SPIE 5856, 5856:32–40. 3 Aug 2005, 2005.
+          https://doi.org/10.1117/12.611415.
     """
     if unwrap_axes:
         loop_gen = [
@@ -754,7 +855,7 @@ def unwrap_1d_iter(
     down-sampling.
 
     Args:
-        arr (np.ndarray): The input wrapped phase array.
+        arr (np.ndarray): The wrapped phase array.
         axes (Iterable[int]|int|None): The dimensions along which to unwrap.
             If Int, unwrapping in a single dimension is performed.
             If None, unwrapping is performed in all dimensions from 0 to -1.
@@ -777,7 +878,7 @@ def unwrap_1d_iter(
             See `pymrt.recipes.phs.congruence_correction()` for more info.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
     """
     u_arr = arr.copy()
     if callable(denoising):
@@ -819,7 +920,7 @@ def unwrap(
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
     Returns:
-        arr (np.ndarray): The unwrapped array.
+        arr (np.ndarray): The unwrapped phase array.
     """
     methods = (
         'laplacian_c', 'laplacian', 'gradient', 'gradient_c',
