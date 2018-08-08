@@ -215,8 +215,8 @@ def sn_split_signals(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal1_arr: The first signal component array.
-                - signal2_arr: The second signal component array.
+             - signal1_arr: The first signal component array.
+             - signal2_arr: The second signal component array.
 
     Examples:
         >>> arr = np.array((0, 0, 1, 1, 1, 1, 0, 0))
@@ -280,8 +280,8 @@ def sn_split_test_retest(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     signal_arr = (test_arr + retest_arr) / 2
     noise_arr = (test_arr - retest_arr) / 2
@@ -305,8 +305,8 @@ def sn_split_multi_acq(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     axis = -1
     num = len(arrs)
@@ -360,8 +360,8 @@ def sn_split_calib_region(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
 
     """
     # todo: fix implementation
@@ -394,8 +394,8 @@ def sn_split_optim(arr):
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     threshold = mrt.segmentation.threshold_optim(arr)
     signal_mask = arr > threshold
@@ -426,8 +426,8 @@ def sn_split_otsu(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     corrections = fc.util.auto_repeat(corrections, 2, check=True)
     otsu = mrt.segmentation.threshold_otsu(arr)
@@ -461,8 +461,8 @@ def sn_split_relative(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
 
     See Also:
         segmentation.threshold_relative(),
@@ -500,8 +500,8 @@ def sn_split_percentile(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
 
     See Also:
         segmentation.threshold_percentile()
@@ -538,8 +538,8 @@ def sn_split_mean_std(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     thresholds = sorted(
         mrt.segmentation.threshold_mean_std(arr, std_steps, mean_steps),
@@ -596,8 +596,8 @@ def sn_split_thresholds(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
 
     See Also:
         segmentation.auto_thresholds()
@@ -647,8 +647,8 @@ def sn_split_denoise(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
     """
     method_kws = {} if method_kws is None else dict(method_kws)
     signal_arr = denoise(arr, method, method_kws)
@@ -697,8 +697,8 @@ def sn_split(
     Returns:
         result (tuple[np.ndarray]): The tuple
             contains:
-                - signal_arr: The signal array.
-                - noise_arr: The noise array.
+             - signal_arr: The signal array.
+             - noise_arr: The noise array.
 
     Raises:
         ValueError: If `method` is unknown.
