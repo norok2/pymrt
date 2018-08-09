@@ -19,6 +19,7 @@ from __future__ import (
 # import flyingcircus as fc
 from flyingcircus import msg, dbg, elapsed, report, pkg_paths
 from flyingcircus import VERB_LVL, VERB_LVL_NAMES, D_VERB_LVL
+from flyingcircus import HAS_JIT, jit
 
 # ======================================================================
 # :: Version
