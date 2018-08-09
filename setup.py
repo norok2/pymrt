@@ -201,4 +201,4 @@ setup(
 
 # ======================================================================
 # :: create user directory
-from pymrt import _pkg_paths
+from pymrt import pkg_paths
