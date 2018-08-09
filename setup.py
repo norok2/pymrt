@@ -154,7 +154,7 @@ setup(
         'pytk',
         'numex',
         'flyingcircus',
-        'numba',
+        # 'numba',
     ],
 
     setup_requires=[
