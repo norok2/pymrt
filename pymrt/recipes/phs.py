@@ -16,8 +16,8 @@ import warnings  # Warning control
 import collections  # Container datatypes
 
 # :: External Imports
-import scipy as sp  # SciPy (signal and image processing library)
 import numpy as np  # NumPy (multidimensional numerical arrays library)
+import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
@@ -39,6 +39,7 @@ from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
+from pymrt import HAS_JIT, jit
 
 from pymrt.recipes import generic
 from pymrt.recipes.generic import fix_phase_interval as fix_interval
@@ -640,6 +641,9 @@ def unwrap_sorting_path(
 
     This is an n-dimensional implementation.
 
+    A faster implementation is available in:
+    `pymrt.recipes.phs.unwrap_sorting_path_()`.
+
     Args:
         arr (np.ndarray): The wrapped phase array.
         step (float): The size of the wrap discontinuity.
@@ -663,34 +667,91 @@ def unwrap_sorting_path(
     shape = arr.shape
     reliab_kws = dict(reliab_kws) if reliab_kws is not None else {}
     reliab_arr = reliab(arr, step, **reliab_kws)
-    edges_arr, orig_idx_arr, dest_idx_arr = fc.num.compute_edge_weights(
-        reliab_arr)
+    edges_arr, orig_idx_arr, dest_idx_arr = \
+        fc.num.compute_edge_weights(reliab_arr)
     del reliab_arr
     sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
-
-    arr = arr.copy().ravel()
     orig_idx_arr = orig_idx_arr.ravel()
     dest_idx_arr = dest_idx_arr.ravel()
+    arr = arr.ravel().copy()
     group_arr = np.arange(arr.size)
-    is_grouped = np.zeros(group_arr.shape, dtype=bool)
+    group_sizes = np.ones(group_arr.shape, dtype=int)
     num_nan = np.count_nonzero(np.isnan(edges_arr))
     for i in range(num_nan, len(sorted_edges_indices)):
-        orig_idx = orig_idx_arr[sorted_edges_indices[i]]
-        dest_idx = dest_idx_arr[sorted_edges_indices[i]]
-        if group_arr[orig_idx] == group_arr[dest_idx]:
+        keep_idx = orig_idx_arr[sorted_edges_indices[i]]
+        move_idx = dest_idx_arr[sorted_edges_indices[i]]
+        if group_arr[keep_idx] == group_arr[move_idx]:
             continue
         # : ensure that the origin group is updated
-        if is_grouped[orig_idx] and not is_grouped[dest_idx]:
-            orig_idx, dest_idx = dest_idx, orig_idx
+        if group_sizes[group_arr[keep_idx]] < group_sizes[group_arr[move_idx]]:
+            keep_idx, move_idx = move_idx, keep_idx
         # : perform unwrapping
         diff_val = np.floor(
-            (arr[dest_idx] - arr[orig_idx] + (step / 2)) / step) * step
-        to_change = group_arr == group_arr[orig_idx]
+            (arr[move_idx] - arr[keep_idx] + (step / 2)) / step) * step
+        to_change = group_arr == group_arr[keep_idx]
         if diff_val != 0.0:
             arr[to_change] += diff_val
         # : bookkeeping of modified indexes
-        is_grouped[orig_idx] = is_grouped[dest_idx] = True
-        group_arr[to_change] = group_arr[dest_idx]
+        group_arr[to_change] = group_arr[move_idx]
+        group_sizes[group_arr[keep_idx]] += group_sizes[group_arr[move_idx]]
+        group_sizes[group_arr[move_idx]] -= group_sizes[group_arr[move_idx]]
+    return arr.reshape(shape)
+
+
+# ======================================================================
+def unwrap_sorting_path_(
+        arr,
+        step=2 * np.pi):
+    """
+    Unwrap using sorting by reliability following a non-continuous path.
+
+    This is identical to `pymrt.recipes.phs.unwrap_sorting_path()`, except
+    that it can be decorated with Numba JIT for (hopefully) faster execution.
+
+    Args:
+        arr (np.ndarray): The wrapped phase array.
+        step (float): The size of the wrap discontinuity.
+            For phase data this is 2π.
+
+    Returns:
+        arr (np.ndarray): The unwrapped phase array.
+
+    See Also:
+        - Herráez, Miguel Arevallilo, David R. Burton, Michael J. Lalor, and
+          Munther A. Gdeisat. “Fast Two-Dimensional Phase-Unwrapping Algorithm
+          Based on Sorting by Reliability Following a Noncontinuous Path.”
+          Applied Optics 41, no. 35 (December 10, 2002): 7437.
+          https://doi.org/10.1364/AO.41.007437.
+    """
+    shape = arr.shape
+    reliab_arr = reliab_diff2(arr, step)
+    edges_arr, orig_idx_arr, dest_idx_arr = \
+        fc.num.compute_edge_weights(reliab_arr)
+    sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
+    orig_idx_arr = orig_idx_arr.ravel()
+    dest_idx_arr = dest_idx_arr.ravel()
+    arr = arr.ravel().copy()
+    group_arr = np.arange(arr.size)
+    group_sizes = np.ones(group_arr.shape, dtype=int)
+    num_nan = np.count_nonzero(np.isnan(edges_arr))
+    for i in range(num_nan, len(sorted_edges_indices)):
+        keep_idx = orig_idx_arr[sorted_edges_indices[i]]
+        move_idx = dest_idx_arr[sorted_edges_indices[i]]
+        if group_arr[keep_idx] == group_arr[move_idx]:
+            continue
+        # : ensure that the origin group is updated
+        if group_sizes[group_arr[keep_idx]] < group_sizes[group_arr[move_idx]]:
+            keep_idx, move_idx = move_idx, keep_idx
+        # : perform unwrapping
+        diff_val = np.floor(
+            (arr[move_idx] - arr[keep_idx] + (step / 2)) / step) * step
+        to_change = group_arr == group_arr[keep_idx]
+        if diff_val != 0.0:
+            arr[to_change] += diff_val
+        # : bookkeeping of modified indexes
+        group_arr[to_change] = group_arr[move_idx]
+        group_sizes[group_arr[keep_idx]] += group_sizes[group_arr[move_idx]]
+        group_sizes[group_arr[move_idx]] -= group_sizes[group_arr[move_idx]]
     return arr.reshape(shape)
 
 
@@ -914,8 +975,10 @@ def unwrap(
              - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'gradient_c': use `pymrt.recipes.phs.unwrap_gradient_c()`.
              - 'gradient': use `pymrt.recipes.phs.unwrap_gradient()`.
-             - 'region_merging': use `pymrt.recipes.phs.unwrap_gradient()`.
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
+             - 'sorting_path_': use `pymrt.recipes.phs.unwrap_sorting_path_()`.
+             - 'region_merging': use `pymrt.recipes.phs.unwrap_gradient()`.
+
              - '1d_iter': use `pymrt.recipes.phs.unwrap_1d_iter()`.
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
@@ -924,7 +987,8 @@ def unwrap(
     """
     methods = (
         'laplacian_c', 'laplacian', 'gradient', 'gradient_c',
-        'sorting_path', 'region_merging', 'sorting_path_2d_3d', '1d_iter')
+        'sorting_path', 'sorting_path_', 'region_merging',
+        'sorting_path_2d_3d', '1d_iter')
     method = method.lower()
     method_kws = {} if method_kws is None else dict(method_kws)
     if method in methods:
