@@ -735,21 +735,21 @@ def unwrap_sorting_path_(
     group_sizes = np.ones(group_arr.shape, dtype=int)
     num_nan = np.count_nonzero(np.isnan(edges_arr))
     for i in range(num_nan, len(sorted_edges_indices)):
-        keep_idx = orig_idx_arr[sorted_edges_indices[i]]
-        move_idx = dest_idx_arr[sorted_edges_indices[i]]
-        if group_arr[keep_idx] == group_arr[move_idx]:
+        move_idx = orig_idx_arr[sorted_edges_indices[i]]
+        keep_idx = dest_idx_arr[sorted_edges_indices[i]]
+        if group_arr[move_idx] == group_arr[keep_idx]:
             continue
         # : ensure that the origin group is updated
-        if group_sizes[group_arr[keep_idx]] < group_sizes[group_arr[move_idx]]:
-            keep_idx, move_idx = move_idx, keep_idx
+        if group_sizes[group_arr[move_idx]] < group_sizes[group_arr[keep_idx]]:
+            move_idx, keep_idx = keep_idx, move_idx
         # : perform unwrapping
         diff_val = np.floor(
-            (arr[move_idx] - arr[keep_idx] + (step / 2)) / step) * step
-        to_change = group_arr == group_arr[keep_idx]
+            (arr[keep_idx] - arr[move_idx] + (step / 2)) / step) * step
+        move_mask = group_arr == group_arr[move_idx]
         if diff_val != 0.0:
-            arr[to_change] += diff_val
+            arr[move_mask] += diff_val
         # : bookkeeping of modified indexes
-        group_arr[to_change] = group_arr[move_idx]
+        group_arr[move_mask] = group_arr[keep_idx]
         group_sizes[group_arr[keep_idx]] += group_sizes[group_arr[move_idx]]
         group_sizes[group_arr[move_idx]] -= group_sizes[group_arr[move_idx]]
     return arr.reshape(shape)
