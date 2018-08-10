@@ -680,21 +680,25 @@ def unwrap_sorting_path(
     for i in range(num_nan, len(sorted_edges_indices)):
         move_idx = orig_idx_arr[sorted_edges_indices[i]]
         keep_idx = dest_idx_arr[sorted_edges_indices[i]]
-        if group_arr[move_idx] == group_arr[keep_idx]:
+        if group_arr[move_idx] == group_arr[keep_idx] or \
+                group_sizes[group_arr[move_idx]] < 1 or \
+                group_sizes[group_arr[keep_idx]] < 1:
             continue
         # : ensure that the origin group is updated
-        if group_sizes[group_arr[move_idx]] < group_sizes[group_arr[keep_idx]]:
+        if group_sizes[group_arr[move_idx]] > group_sizes[group_arr[keep_idx]]:
             move_idx, keep_idx = keep_idx, move_idx
         # : perform unwrapping
         diff_val = np.floor(
             (arr[keep_idx] - arr[move_idx] + (step / 2)) / step) * step
-        move_mask = group_arr == group_arr[move_idx]
+        # separate case for improved performances
+        move_mask = (group_arr == group_arr[move_idx]) \
+            if group_sizes[group_arr[move_idx]] > 1 else move_idx
         if diff_val != 0.0:
             arr[move_mask] += diff_val
         # : bookkeeping of modified indexes
-        group_arr[move_mask] = group_arr[keep_idx]
         group_sizes[group_arr[keep_idx]] += group_sizes[group_arr[move_idx]]
         group_sizes[group_arr[move_idx]] -= group_sizes[group_arr[move_idx]]
+        group_arr[move_mask] = group_arr[keep_idx]
     return arr.reshape(shape)
 
 
@@ -737,21 +741,25 @@ def unwrap_sorting_path_(
     for i in range(num_nan, len(sorted_edges_indices)):
         move_idx = orig_idx_arr[sorted_edges_indices[i]]
         keep_idx = dest_idx_arr[sorted_edges_indices[i]]
-        if group_arr[move_idx] == group_arr[keep_idx]:
+        if group_arr[move_idx] == group_arr[keep_idx] or \
+                group_sizes[group_arr[move_idx]] < 1 or \
+                group_sizes[group_arr[keep_idx]] < 1:
             continue
         # : ensure that the origin group is updated
-        if group_sizes[group_arr[move_idx]] < group_sizes[group_arr[keep_idx]]:
+        if group_sizes[group_arr[move_idx]] > group_sizes[group_arr[keep_idx]]:
             move_idx, keep_idx = keep_idx, move_idx
         # : perform unwrapping
         diff_val = np.floor(
             (arr[keep_idx] - arr[move_idx] + (step / 2)) / step) * step
-        move_mask = group_arr == group_arr[move_idx]
+        # separate case for improved performances
+        move_mask = (group_arr == group_arr[move_idx]) \
+            if group_sizes[group_arr[move_idx]] > 1 else move_idx
         if diff_val != 0.0:
             arr[move_mask] += diff_val
         # : bookkeeping of modified indexes
-        group_arr[move_mask] = group_arr[keep_idx]
         group_sizes[group_arr[keep_idx]] += group_sizes[group_arr[move_idx]]
         group_sizes[group_arr[move_idx]] -= group_sizes[group_arr[move_idx]]
+        group_arr[move_mask] = group_arr[keep_idx]
     return arr.reshape(shape)
 
 
