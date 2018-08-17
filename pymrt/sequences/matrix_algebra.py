@@ -56,14 +56,15 @@ import sympy as sym  # SymPy (symbolic CAS library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
-import scipy.optimize  # SciPy: Optimization
+# import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
+# import mpl_toolkits.mplot3d as mpl3  # Matplotlib's 3D support
+# import scipy.optimize  # SciPy: Optimization
 import scipy.integrate  # SciPy: Integration
 import scipy.interpolate  # SciPy: Interpolation
-import scipy.constants  # SciPy: Constants
+# import scipy.spatial  # SciPy: Spatial algorithms and data structures
+# import scipy.constants  # SciPy: Constants
 # import sp.ndimage  # SciPy: Multidimensional image processing
-import scipy.linalg  # SciPy: Linear Algebra
+# import scipy.linalg  # SciPy: Linear Algebra
 import scipy.stats  # SciPy: Statistical functions
 import scipy.misc  # SciPy: Miscellaneous routines
 import flyingcircus.util  # FlyingCircus: generic basic utilities
@@ -449,6 +450,9 @@ def dynamics_operator(
             [0.0, -w_c, -w1y],
             [w_c, 0.0, w1x],
             [w1y, -w1x, 0.0]])
+        # same as above
+        # bloch_core = fc.num.to_self_adjoint_matrix(
+        #     [-w_c, -w1y, w1x], skew=True)
         if lineshape:
             r_rf = _sat_rate_lineshape(
                 spin_model.r2[i], spin_model.w0[i], w_c, w1, lineshape)
