@@ -19,14 +19,17 @@ import os  # Miscellaneous operating system interfaces
 import shutil  # High-level file operations
 
 # :: External Imports
-import numpy as np  # NumPy (multidimensional numerical arrays library)
+# import numpy as np  # NumPy (multidimensional numerical arrays library)
+import flyingcircus as fc
 import PIL as pil  # Python Imaging Library
 
+import flyingcircus.util
+# import flyingcircus.num
 import PIL.Image, PIL.ImageChops
 
 # :: Local Imports
-import pymrt as mrt
-import pymrt.utils
+# import pymrt as mrt
+# import pymrt.utils
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
