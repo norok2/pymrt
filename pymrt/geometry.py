@@ -448,7 +448,7 @@ def polygon(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.grid_coord()` internally.
+            Uses `fc.num.grid()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1085,7 +1085,7 @@ def nd_lines(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.grid_coord()` internally.
+            Uses `fc.num.coord()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1136,7 +1136,7 @@ def nd_curves(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.grid_coord()` internally.
+            Uses `fc.num.coord()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1206,11 +1206,11 @@ def nd_cuboid(
     # fix relative units
     if rel_sizes:
         semisizes = fc.num.rel2abs(shape, semisizes)
-    position = fc.num.grid_coord(
+    xx = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
     # create the rendered object
     rendered = np.ones(shape, dtype=bool)
-    for x_i, semisize in zip(position, semisizes):
+    for x_i, semisize in zip(xx, semisizes):
         rendered *= (np.abs(x_i) <= semisize)
     return rendered
 
@@ -1276,13 +1276,13 @@ def nd_superellipsoid(
         semisizes = fc.num.rel2abs(shape, semisizes)
     # print('Semisizes: {}'.format(semisizes))  # DEBUG
     # print('Shape: {}'.format(shape))  # DEBUG
-    position = fc.num.grid_coord(
+    xx = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
-    # print('Position: {}'.format(position))  # DEBUG
+    # print('X: {}'.format(xx))  # DEBUG
 
     # create the rendered
     rendered = np.zeros(shape, dtype=float)
-    for x_i, semisize, index in zip(position, semisizes, indexes):
+    for x_i, semisize, index in zip(xx, semisizes, indexes):
         rendered += (np.abs(x_i / semisize) ** index)
     rendered = rendered <= 1.0
 
@@ -1330,9 +1330,9 @@ def nd_prism(
     # get correct position
     if rel_sizes:
         size = fc.num.rel2abs((extra_dim,), size)
-    position = fc.num.grid_coord(
+    xx = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
-    extra_rendered = np.abs(position) <= (size / 2.0)
+    extra_rendered = np.abs(xx) <= (size / 2.0)
     # calculate rendered object shape
     shape = (
             base.shape[:axis] + (extra_dim,) + base.shape[axis:])
@@ -1424,9 +1424,9 @@ def nd_cone(
     # get correct position
     if rel_sizes:
         size = fc.num.rel2abs((extra_dim,), size)
-    position = fc.num.grid_coord(
+    xx = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
-    extra_rendered = np.abs(position) <= (size / 2.0)
+    extra_rendered = np.abs(xx) <= (size / 2.0)
     # calculate rendered object shape
     shape = (
             base.shape[:axis] + (extra_dim,) + base.shape[axis:])
