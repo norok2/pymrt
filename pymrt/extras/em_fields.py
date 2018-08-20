@@ -11,23 +11,23 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-import os  # Miscellaneous operating system interfaces
+# import os  # Miscellaneous operating system interfaces
 # import shutil  # High-level file operations
-import math  # Mathematical functions
+# import math  # Mathematical functions
 # import time  # Time access and conversions
-import datetime  # Basic date and time types
+# import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
 # import argparse  # Parser for command-line options, arguments and subcommands
-import itertools  # Functions creating iterators for efficient looping
+# import itertools  # Functions creating iterators for efficient looping
 # import subprocess  # Subprocess management
 # import multiprocessing  # Process-based parallelism
 # import csv  # CSV File Reading and Writing [CSV: Comma-Separated Values]
 # import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
-import struct  # Interpret strings as packed binary data
-import doctest  # Test interactive Python examples
-import glob  # Unix style pathname pattern expansion
-import warnings  # Warning control
+# import struct  # Interpret strings as packed binary data
+# import doctest  # Test interactive Python examples
+# import glob  # Unix style pathname pattern expansion
+# import warnings  # Warning control
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -81,7 +81,7 @@ class CircularLoop(object):
             current (int|float): The current circulating in the loop.
         """
         self.center = self._to_3d(np.array(center))
-        self.normal = self._to_3d(np.array(normal) / np.linalg.norm(normal))
+        self.normal = self._to_3d(fc.num.normalize(normal))
         self.radius = radius
         self.current = current
 
@@ -101,17 +101,26 @@ class CircularLoop(object):
 
 
 # ======================================================================
-def is_vector_field(shape):
+def is_vector_field(
+        shape,
+        index=0):
     """
     Check if a given array qualifies as a vector field.
 
+    A N-dim array can be a vector field if for a given index, the number
+    of dims is at least as the size of the array for that specific index.
+    For example, a ND array can represent a 3D vector field if the dimension
+    identified by has size at most N.
+
     Args:
-        arr (np.ndarray): The input array.
+        shape (Iterable[int]): The shape of the array.
+        index (int): The dimension satisfying the vector field relationship.
+            When the index is 0, this is consistent with `np.mgrid()`.
 
     Returns:
         result (bool): True if `arr` can be a vector field, False otherwise.
     """
-    return len(shape[:-1]) == shape[-1]
+    return len(shape[:index]) <= shape[index]
 
 
 # ======================================================================
@@ -127,17 +136,23 @@ def b_circular_loop(
     2D plane and the only the field in that plane is computed.
 
     Args:
-        fov_arr (np.ndarray): The Field-Of-View (FOV) array.
+        shape (int|Iterable[int]): The shape of the container in px.
+
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from `shape`.
         circ_loop (CircularLoop): The circular loop.
+        rel_position (bool): Interpret positions as relative values.
+            If True, position values are interpreted as relative,
+            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
+            Otherwise, they are interpreted as absolute (in px).
 
     Returns:
         b_arr (np.ndarray): The B 3D-vector field.
-            The last dim contains the cartesian components of the field:
-            B_x = b_arr[..., 0], B_y = b_arr[..., 1], etc.
+            The first dim contains the cartesian components of the field:
+            B_x = b_arr[0, ...], B_y = b_arr[1, ...], etc.
             Even if the input is 2D, the result is always a 3D vector field
-            (with the 3rd dim equal to 1).
             The 3D vector field is represented as a 4D array
-            (with the 4th dim of size 3).
+            (with the 1st dim of size 3).
 
     References:
         - Bergeman, T., Gidon Erez, and Harold J. Metcalf. “Magnetostatic
@@ -151,26 +166,35 @@ def b_circular_loop(
     # : extend 2D to 3D
     # check compatibility of given parameters
     shape = fc.util.auto_repeat(shape, n_dim, check=True)
-
-    xx, yy, zz = fc.num.grid_coord(
+    # : generate coordinates
+    normal = np.array([0., 0., 1.])
+    # : rotate coordinates ([0, 0, 1] is the standard loop normal)
+    xx = fc.num.grid_coord(
         shape, circ_loop.center, is_relative=rel_position, use_int=False)
-    xx, yy, zz = fc.num.rotate_3d_grid_coord(xx, yy, zz)
-    # rr = np.sqrt(xx ** 2 + yy ** 2 + zz ** 2)  # inlined
+    rot_matrix = fc.num.rotation_3d_from_vectors(normal, circ_loop.normal)
+    irot_matrix = fc.num.rotation_3d_from_vectors(circ_loop.normal, normal)
+    if not np.all(normal == circ_loop.normal):
+        xx = fc.num.grid_transform(xx, rot_matrix)
+    # inline `rr2` for lower memory footprint (but execution will be slower)
+    # todo: make sure that circ_loop honor `is_relative` directive
+    rr2 = (xx[0] ** 2 + xx[1] ** 2 + xx[2] ** 2)
     aa = circ_loop.radius
     cc = circ_loop.current * sp.constants.mu_0 / np.pi
-    rho2 = (xx ** 2 + yy ** 2)
-    ah2 = aa ** 2 + (xx ** 2 + yy ** 2 + zz ** 2) - 2 * aa * np.sqrt(rho2)
-    bh2 = aa ** 2 + (xx ** 2 + yy ** 2 + zz ** 2) + 2 * aa * np.sqrt(rho2)
+    rho2 = (xx[0] ** 2 + xx[1] ** 2)
+    ah2 = aa ** 2 + rr2 - 2 * aa * np.sqrt(rho2)
+    bh2 = aa ** 2 + rr2 + 2 * aa * np.sqrt(rho2)
     ekk2 = sp.special.ellipe(1 - ah2 / bh2)
     kkk2 = sp.special.ellipkm1(ah2 / bh2)
-    # gh = xx ** 2 - yy ** 2
-    b_x = cc * xx * zz / (2 * ah2 * np.sqrt(bh2) * rho2) * (
-            (aa ** 2 + (xx ** 2 + yy ** 2 + zz ** 2)) * ekk2 - ah2 * kkk2)
-    b_y = cc * yy * zz / (2 * ah2 * np.sqrt(bh2) * rho2) * (
-            (aa ** 2 + (xx ** 2 + yy ** 2 + zz ** 2)) * ekk2 - ah2 * kkk2)
+    # gh = xx[0] ** 2 - xx[1] ** 2  # not used for the field formulae
+    b_x = cc * xx[0] * xx[2] / (2 * ah2 * np.sqrt(bh2) * rho2) * (
+            (aa ** 2 + rr2) * ekk2 - ah2 * kkk2)
+    b_y = cc * xx[1] * xx[2] / (2 * ah2 * np.sqrt(bh2) * rho2) * (
+            (aa ** 2 + rr2) * ekk2 - ah2 * kkk2)
     b_z = cc / (2 * ah2 * np.sqrt(bh2)) * (
-            (aa ** 2 - (xx ** 2 + yy ** 2 + zz ** 2)) * ekk2 + ah2 * kkk2)
-    return np.stack((b_x, b_y, b_z), -1)
+            (aa ** 2 - rr2) * ekk2 + ah2 * kkk2)
+    b_arr = np.stack((b_x, b_y, b_z), 0)
+    b_arr = fc.num.grid_transform(b_arr, irot_matrix)
+    return b_arr
 
 
 # ======================================================================
@@ -193,32 +217,35 @@ def b_circular_loops(
             The 3D vector field is represented as a 4D array
             (with the 4th dim of size 3).
     """
-    b_arr = np.zeros(tuple(fov_arr.shape) + (fov_arr.ndim,))
+    b_arr = np.zeros(tuple(shape) + (len(shape),))
     for circ_loop in circ_loops:
-        b_arr += b_circular_loop(fov_arr, circ_loop)
+        b_arr += b_circular_loop(shape, circ_loop)
     return b_arr
 
 
 # ======================================================================
 def field_magnitude(
         arr,
-        field_dims=3):
+        index=0):
     """
     Compute the magnitude of the vector field.
 
     Args:
-        arr:
+        arr (np.ndarray): The input vector field.
+        index (int): The dimension satisfying the vector field relationship.
+            When the index is 0, this is consistent with `np.mgrid()`.
 
     Returns:
-
+        arr (np.ndarray): The vector field magnitude.
     """
-    assert (is_vector_field(arr.shape[:field_dims + 1]))
-    return np.sqrt(np.sum(arr ** 2, axis=field_dims))
+    assert (is_vector_field(arr.shape))
+    return np.sqrt(np.sum(arr ** 2, axis=index))
 
 
 # ======================================================================
 def field_phase(
         arr,
+        index=0,
         axes=(0, 1)):
     """
     Compute the orthogonal phase of the vector field.
@@ -227,19 +254,41 @@ def field_phase(
     (with the 4th dim of size 3).
 
     Args:
-        arr:
+        arr (np.ndarray): The input vector field.
+        index (int): The dimension satisfying the vector field relationship.
+            When the index is 0, this is consistent with `np.mgrid()`.
+        axes (Iterable[int]): The vector field components to use.
+            Only the first 2 values are used.
 
     Returns:
-
+        arr (np.ndarray): The vector field phase for the specified axes.
     """
-    assert (is_vector_field(arr.shape[:4]))
-    return np.arctan2(arr[:, :, :, axes[0], ...], arr[:, :, :, axes[1], ...])
+    assert (is_vector_field(arr.shape))
+    masks = [
+        tuple(
+            slice(None) if i != index else axis
+            for i, d in enumerate(arr.shape))
+        for axis in axes]
+    return np.arctan2(arr[masks[0]], arr[masks[1]])
 
 
-b_arr = b_circular_loop(
-    4, CircularLoop([0.5, 0.5, 0.5], [1, 1, 1], 1, 1)) * 1e6
-print(b_arr[0, 0, 0])
-print(field_magnitude(b_arr))
+# ======================================================================
+def helmoltz_loops(
+        shape,
+        radius=0.4,
+        distance=None,
+        n_dim=3):
+    raise NotImplementedError
+
+
+# ======================================================================
+def maxwell_loops(
+        shape,
+        radius=0.4,
+        distances=None,
+        n_dim=3):
+    raise NotImplementedError
+
 
 # ======================================================================
 elapsed(__file__[len(PATH['base']) + 1:])
