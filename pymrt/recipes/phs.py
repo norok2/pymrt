@@ -461,12 +461,12 @@ def unwrap_laplacian(
             if denoising_kws is not None else {}
         cos_arr = denoising(cos_arr, **denoising_kws)
         sin_arr = denoising(sin_arr, **denoising_kws)
-    kk_2 = fftshift(fc.num.laplace_kernel(arr.shape, factors=arr.shape))
-    arr = fftn(cos_arr * ifftn(kk_2 * fftn(sin_arr)) -
-               sin_arr * ifftn(kk_2 * fftn(cos_arr)))
-    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
-    arr *= kk_2
-    del cos_arr, sin_arr, kk_2
+    kk2 = fftshift(fc.num.laplace_kernel(arr.shape, factors=arr.shape))
+    arr = fftn(cos_arr * ifftn(kk2 * fftn(sin_arr)) -
+               sin_arr * ifftn(kk2 * fftn(cos_arr)))
+    kk2[kk2 != 0] = 1.0 / kk2[kk2 != 0]
+    arr *= kk2
+    del cos_arr, sin_arr, kk2
     arr = np.real(ifftn(arr))
 
     arr = arr[mask]
@@ -571,12 +571,12 @@ def unwrap_gradient(
     grads = np.gradient(arr)
 
     u_arr = np.zeros(arr.shape, dtype=complex)
-    kk_2 = np.zeros(arr.shape, dtype=complex)
+    kk2 = np.zeros(arr.shape, dtype=complex)
     for kk, grad in zip(kks, grads):
         u_arr += -1j * kk * fftn(np.real(-1j * grad / arr))
-        kk_2 += kk ** 2
-    kk_2[kk_2 != 0] = 1.0 / kk_2[kk_2 != 0]
-    arr = np.real(ifftn(kk_2 * u_arr)) / (2 * np.pi)
+        kk2 += kk ** 2
+    kk2[kk2 != 0] = 1.0 / kk2[kk2 != 0]
+    arr = np.real(ifftn(kk2 * u_arr)) / (2 * np.pi)
     return arr[mask]
 
 

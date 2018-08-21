@@ -349,7 +349,7 @@ def qsm_remove_background_sharp(
         radius=range(11, 3, -2),
         threshold=np.spacing(1.0),
         pad_width=0.3,
-        rel_radius=True):
+        rel_radius=max):
     """
     Filter out the background component of the phase using SHARP.
 
@@ -376,7 +376,10 @@ def qsm_remove_background_sharp(
             If not Iterable, all dims will have the same value.
             If int, it is interpreted as absolute size.
             If float, it is interpreted as relative to the maximum size.
-        rel_radius (bool): Interpret the radius as relative to dims.
+        rel_radius (bool|callable): Interpret sizes as relative values.
+            Determine the interpretation of `radius` using `shape`.
+            Uses `fc.num.coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
         db0i_arr (np.ndarray): The internal magnetic field variation in ppb.
@@ -395,8 +398,7 @@ def qsm_remove_background_sharp(
     db0_arr, mask = fc.num.padding(db0_arr, pad_width)
     mask_arr, mask = fc.num.padding(mask_arr, pad_width)
 
-    if rel_radius:
-        radius = fc.num.rel2abs(max(db0_arr.shape), radius)
+    radius = fc.num.coord(db0_arr.shape, radius, rel_radius, use_int=False)
 
     # # generate the spherical kernel
     sphere = mrt.geometry.sphere(db0_arr.shape, radius).astype(complex)

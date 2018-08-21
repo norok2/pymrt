@@ -1080,7 +1080,8 @@ def nd_lines(
             This is used to generate closed lines.
             If only two positions are given, this parameter has no effect.
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the other parameters.
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `position` must be iterable.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
@@ -1094,7 +1095,7 @@ def nd_lines(
         bresenham_line(), bresenham_lines()
     """
     if not n_dim:
-        n_dim = fc.util.combine_iter_len(tuple(shape) + tuple(positions))
+        n_dim = fc.util.combine_iter_len((shape,) + tuple(positions))
     shape = fc.util.auto_repeat(shape, n_dim, check=True)
     positions = [
         fc.util.auto_repeat(position, n_dim, check=True)
@@ -1127,11 +1128,10 @@ def nd_curves(
             or a single float (repeated in all dimensions).
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
-        is_closed (bool): Draw a line between the first and last positions.
-            This is used to generate closed lines.
-            If only two positions are given, this parameter has no effect.
+        deg (int): The degree of the curves.
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the other parameters.
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `positions` must be iterable.
         rel_position (bool): Interpret positions as relative values.
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
@@ -1141,8 +1141,9 @@ def nd_curves(
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
     """
+    # todo: handle curve-degree properly
     if not n_dim:
-        n_dim = fc.util.combine_iter_len(tuple(shape) + tuple(positions))
+        n_dim = fc.util.combine_iter_len((shape,) + tuple(positions))
     shape = fc.util.auto_repeat(shape, n_dim, check=True)
     positions = [
         fc.util.auto_repeat(position, n_dim, check=True)
@@ -1182,17 +1183,16 @@ def nd_cuboid(
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the other parameters.
-        rel_position (bool): Interpret positions as relative values.
-            If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` values.
-            Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.grid_coord()` internally.
-        rel_sizes (bool): Interpret sizes as relative values.
-            If True, `semisizes` values are interpreted as relative,
-            i.e. they are scaled for `shape` values.
-            Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.rel2abs()` internally.
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `position`, `semisizes` must be iterable.
+        rel_position (bool|callable): Interpret positions as relative values.
+            Determine the interpretation of `position` using `shape`.
+            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            parameter for more details.
+        rel_sizes (bool|callable): Interpret sizes as relative values.
+            Determine the interpretation of `semisizes` using `shape`.
+            Uses `fc.num.coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1204,8 +1204,8 @@ def nd_cuboid(
     position = fc.util.auto_repeat(position, n_dim, check=True)
     semisizes = fc.util.auto_repeat(semisizes, n_dim, check=True)
     # fix relative units
-    if rel_sizes:
-        semisizes = fc.num.rel2abs(shape, semisizes)
+    semisizes = fc.num.coord(
+        shape, semisizes, is_relative=rel_sizes, use_int=False)
     xx = fc.num.grid_coord(
         shape, position, is_relative=rel_position, use_int=False)
     # create the rendered object
@@ -1248,22 +1248,23 @@ def nd_superellipsoid(
         indexes (float|tuple[float]): The exponent of the summed terms.
             If 2, generates n-dim ellipsoids.
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the other parameters.
-        rel_position (bool): Interpret positions as relative values.
-            If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
-        rel_sizes (bool): Interpret sizes as relative values.
-            If True, `semisizes` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `position`, `semisizes`, `indexes` must be
+            iterable.
+        rel_position (bool|callable): Interpret positions as relative values.
+            Determine the interpretation of `position`.
+            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            parameter for more details.
+        rel_sizes (bool|callable): Interpret sizes as relative values.
+            Determine the interpretation of `semisizes`.
+            Uses `fc.num.coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     if not n_dim:
-        n_dim = fc.util.combine_iter_len(
-            (shape, position, semisizes, indexes))
+        n_dim = fc.util.combine_iter_len((shape, position, semisizes, indexes))
 
     # check compatibility of given parameters
     shape = fc.util.auto_repeat(shape, n_dim, check=True)
@@ -1272,8 +1273,8 @@ def nd_superellipsoid(
     indexes = fc.util.auto_repeat(indexes, n_dim, check=True)
 
     # get correct position
-    if rel_sizes:
-        semisizes = fc.num.rel2abs(shape, semisizes)
+    semisizes = fc.num.coord(
+        shape, semisizes, is_relative=rel_sizes, use_int=False)
     # print('Semisizes: {}'.format(semisizes))  # DEBUG
     # print('Shape: {}'.format(shape))  # DEBUG
     xx = fc.num.grid_coord(
@@ -1311,14 +1312,14 @@ def nd_prism(
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
             This setting only affects the extra shape dimension.
-        rel_position (bool): Interpret positions as relative value.
-            If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
-        rel_sizes (bool): Interpret sizes as relative value.
-            If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
+        rel_position (bool|callable): Interpret positions as relative values.
+            Determine the interpretation of `position` using `extra_dim`.
+            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            parameter for more details.
+        rel_sizes (bool|callable): Interpret sizes as relative values.
+            Determine the interpretation of `size` using `extra_dim`.
+            Uses `fc.num.coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1328,8 +1329,8 @@ def nd_prism(
         raise ValueError(
             'axis of orientation must not exceed the number of dimensions')
     # get correct position
-    if rel_sizes:
-        size = fc.num.rel2abs((extra_dim,), size)
+    size = fc.num.coord(
+        (extra_dim,), size, is_relative=rel_sizes, use_int=False)[0]
     xx = fc.num.grid_coord(
         (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
     extra_rendered = np.abs(xx) <= (size / 2.0)
@@ -1356,8 +1357,21 @@ def nd_superellipsoidal_prism(
         n_dim=None,
         rel_position=True,
         rel_sizes=True):
-    # todo: ensure n_dim is not none
-    # todo: nd_superellipsoidal_come is the same except nd_prims -> nd_cone
+    """
+
+    Args:
+        shape:
+        axis:
+        semisizes:
+        indexes:
+        position:
+        n_dim:
+        rel_position:
+        rel_sizes:
+
+    Returns:
+
+    """
     if not n_dim:
         n_dim = fc.util.combine_iter_len((shape, position, semisizes))
     axis = axis % n_dim
@@ -1392,52 +1406,7 @@ def nd_cone(
         position=0.5,
         rel_position=True,
         rel_sizes=True):
-    """
-    Render a N-dim cone.
-
-    Args:
-        base (np.ndarray): Base (N-1)-dim rendered object to stack as prism.
-        extra_dim (int): Size of the new dimension to be added.
-        axis (int): Orientation of the prism in the N-dim space.
-        size (float): The size of the prism height.
-            The values interpretation depend on `rel_size`.
-        position (float): The relative position of the center.
-            Values are relative to the lowest edge.
-            The values interpretation depend on `rel_position`.
-            This setting only affects the extra shape dimension.
-        rel_position (bool): Interpret positions as relative value.
-            If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
-        rel_sizes (bool): Interpret sizes as relative value.
-            If True, `size` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
-
-    Returns:
-        rendered (np.ndarray[bool]): The rendered geometrical object.
-    """
-    n_dim = base.ndim + 1
-    if axis > n_dim:
-        raise ValueError(
-            'axis of orientation must not exceed the number of dimensions')
-    # get correct position
-    if rel_sizes:
-        size = fc.num.rel2abs((extra_dim,), size)
-    xx = fc.num.grid_coord(
-        (extra_dim,), (position,), is_relative=rel_position, use_int=False)[0]
-    extra_rendered = np.abs(xx) <= (size / 2.0)
-    # calculate rendered object shape
-    shape = (
-            base.shape[:axis] + (extra_dim,) + base.shape[axis:])
-    # create indefinite prism
-    rendered = np.zeros(shape, dtype=bool)
-    for i in range(extra_dim):
-        if extra_rendered[i]:
-            index = [slice(None)] * n_dim
-            index[axis] = i
-            rendered[tuple(index)] = base
-    return rendered
+    raise NotImplementedError
 
 
 # ======================================================================
@@ -1583,17 +1552,27 @@ def nd_dirac_delta(
         shape,
         position=0.5,
         value=np.inf,
-        n_dim=None):
+        n_dim=None,
+        rel_position=True):
     """
     Generate an approximation of Dirac's Delta function.
 
     Args:
-        shape ():
-        position ():
-        value ():
-        n_dim ():
+        shape (int|Iterable[int]): The shape of the container in px.
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+            The values interpretation depend on `rel_position`.
+        value (int|float): The value of the peak.
+        n_dim (int|None): The number of dimensions.
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `position` must be iterable.
+        rel_position (bool|callable): Interpret positions as relative values.
+            Determine the interpretation of `position` using `shape`.
+            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
+        rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
         >>> nd_dirac_delta((5, 5), 0.5, 1)
@@ -1602,6 +1581,13 @@ def nd_dirac_delta(
                [0., 0., 1., 0., 0.],
                [0., 0., 0., 0., 0.],
                [0., 0., 0., 0., 0.]])
+        >>> nd_dirac_delta(4, (0.5, 0.5), 9)
+        array([[0., 0., 0., 0.],
+               [0., 0., 0., 0.],
+               [0., 0., 9., 0.],
+               [0., 0., 0., 0.]])
+        >>> nd_dirac_delta(11, 0.5, np.inf)
+        array([ 0.,  0.,  0.,  0.,  0., inf,  0.,  0.,  0.,  0.,  0.])
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len((shape, position))
@@ -1610,7 +1596,8 @@ def nd_dirac_delta(
     shape = fc.util.auto_repeat(shape, n_dim, check=True)
     position = fc.util.auto_repeat(position, n_dim, check=True)
 
-    origin = fc.num.coord(shape, position, use_int=True)
+    origin = fc.num.coord(
+        shape, position, is_relative=rel_position, use_int=True)
 
     rendered = np.zeros(shape)
     rendered[tuple(slice(i, i + 1) for i in origin)] = value
@@ -1636,15 +1623,16 @@ def nd_polytope(
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the other parameters.
-        rel_position (bool): Interpret positions as relative values.
-            If True, position values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
-        rel_sizes (bool): Interpret sizes as relative values.
-            If True, `vertices` values are interpreted as relative,
-            i.e. they are scaled for `shape` using `fc.num.grid_coord()`.
-            Otherwise, they are interpreted as absolute (in px).
+            If None, the number of dims is guessed from the other parameters,
+            but one of `shape`, `position` must be iterable.
+        rel_position (bool|callable): Interpret positions as relative values.
+            Determine the interpretation of `position` using `shape`.
+            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            parameter for more details.
+        rel_sizes (bool|callable): Interpret sizes as relative values.
+            Determine the interpretation of `vertices` using `shape`.
+            Uses `fc.num.coord()` internally, see its `is_relative`
+            parameter for more details.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1660,24 +1648,25 @@ def multi_render(
         affine_kws=(('order', 0),),
         dtype=np.float):
     """
-    Render multiple geometrical masks into a single array.
+    Render multiple geometrical objects into a single array.
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        geom_shapes (Iterable): The
-
+        geom_shapes (Iterable): The geometrical shapes to render.
+            # todo:
         n_dim (int|None): The number of dimensions.
-            If None, the number of dims is guessed from the shape parameter.
+            If None, the number of dims is guessed from the `shape` parameter,
+            which must be iterable.
         affine_kws (dict|Iterable|None): Keyword parameters for the affine.
             These parameters are passed to `scipy.ndimage.affine_transform()`
             upon application of the (eventual) rotation.
             If Iterable, must be possible to cast to dict.
             If None, no parameter is set.
         dtype (np.dtype): The Numpy data type of the rendered array.
-            Note that this will be used also for the internal interpolations.
+            Note that this will be used also for the internal interpolations!
 
     Returns:
-        arr (np.ndarray): The
+        rendered (np.ndarray[bool]): The rendered geometrical object(s).
     """
     # check that ellipsoids parameters have the right size
     if n_dim is None:
@@ -1687,7 +1676,7 @@ def multi_render(
     inner_shape = [min(shape)] * n_dim
     affine_kws = \
         {} if affine_kws is None else dict(affine_kws)
-    arr = np.zeros(shape, dtype=dtype)
+    rendered = np.zeros(shape, dtype=dtype)
     for scale, geom_shape, inner_pos, angles, outer_pos in geom_shapes:
         # generate the base geometric shape
         geom_name = geom_shape[0]
@@ -1720,13 +1709,14 @@ def multi_render(
                 lin_mat = np.eye(n_dim)
             else:
                 lin_mat = fc.num.angles2linear(angles, n_dim)
-            inner_pos = fc.num.rel2abs(inner_shape, inner_pos)
+            inner_pos = fc.num.coord(inner_shape, inner_pos, True, False)
             lin_mat, offset = fc.num.prepare_affine(
                 inner_shape, lin_mat, inner_pos)
-            arr += fc.num.reframe(scale * sp.ndimage.affine_transform(
-                geom_arr.astype(dtype),
-                lin_mat, offset, **affine_kws), shape, outer_pos)
-    return arr
+            rendered += fc.num.reframe(
+                scale * sp.ndimage.affine_transform(
+                    geom_arr.astype(dtype), lin_mat, offset, **affine_kws),
+                shape, outer_pos)
+    return rendered
 
 
 # ======================================================================
