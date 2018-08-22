@@ -207,7 +207,7 @@ def cx_div(
         result (float|complex|np.ndarray): The pseud-ratio array.
     """
     result = arr1 * arr2 / (
-        np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
+            np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
         result = fc.num.scale(result, values_interval, (-0.5, 0.5))
     return result
@@ -330,7 +330,8 @@ def referencing(
         combines = fc.util.auto_repeat(combines, num_refs, True, True)
         are_mask_arr = [
             isinstance(mask, np.array) and (
-                np.issubdtype(mask.dtype, np.bool) and arr.shape == mask.shape)
+                    np.issubdtype(mask.dtype,
+                                  np.bool) and arr.shape == mask.shape)
             for mask in masks]
         are_mask_borders = [
             len(mask) == len(arr.shape) and all(
@@ -354,8 +355,9 @@ def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     arr = np.abs(arr)
     log_arr = np.zeros_like(arr)
     # calculate logarithm only of strictly positive values
-    log_arr[arr > zero_cutoff] = (
-        np.log(arr[arr > zero_cutoff] * np.exp(exp_factor)))
+    mask = tuple(slice(None) for d in arr.shape) \
+        if zero_cutoff is None else np.abs(arr) > zero_cutoff
+    log_arr[mask] = (np.log(arr[mask] * np.exp(exp_factor)))
     return log_arr
 
 
@@ -366,7 +368,8 @@ def _post_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     axis = -1
     for i in range(arr.shape[axis]):
         if i < arr.shape[axis] - 1:
-            mask = np.abs(arr[..., i]) > zero_cutoff
+            mask = tuple(slice(None) for d in arr[..., i].shape) \
+                if zero_cutoff is None else np.abs(arr[..., i]) > zero_cutoff
             arr[..., i][mask] = -1.0 / arr[..., i][mask]
         else:
             arr[..., i] = np.exp(arr[..., i] - exp_factor)
@@ -412,6 +415,7 @@ def fit_exp_loglin(
             A value different from zero, may improve numerical stability
             for very large or very small data.
         zero_cutoff (float|None): The threshold value for masking zero values.
+            If None, no cut-off is performed.
 
     Returns:
         results (dict): The calculated information.
@@ -438,8 +442,8 @@ def fit_exp_loglin(
         method_kws = dict(eval(variant))
     except Exception as e:  # avoid crashing for invalid variant
         text = (
-            'While evaluating `variant`: {variant},' +
-            'the following exception occurred: {e}.').format(**locals())
+                'While evaluating `variant`: {variant},' +
+                'the following exception occurred: {e}.').format(**locals())
         warnings.warn(text)
         method_kws = {}
 
@@ -497,6 +501,7 @@ def fit_exp_curve_fit(
             If 0 or None, the number of workers is determined automatically.
         exp_factor (float|None):
         zero_cutoff (float|None): The threshold value for masking zero values.
+            If None, no cut-off is performed.
 
     Returns:
         results (dict): The calculated information.
@@ -965,8 +970,8 @@ def fit_exp(
         method = eval(method)
     if not callable(method):
         text = (
-            'Unknown method `{}` in `recipes.generic.fit_exp(). ' +
-            'Using fallback `{}`.'.format(method, methods[0]))
+                'Unknown method `{}` in `recipes.generic.fit_exp(). ' +
+                'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
         method = eval(methods[0])
 

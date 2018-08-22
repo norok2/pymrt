@@ -71,7 +71,7 @@ def combine_sens(
     assert (arr.shape == sens.shape)
     combined = np.sum(sens.conj() * arr, axis=coil_axis)
     if norm:
-        epsilon = np.finfo(np.float).eps
+        epsilon = np.spacing(1.0)
         combined /= (np.sum(np.abs(sens) ** 2, axis=coil_axis) + epsilon)
     return combined
 
@@ -506,7 +506,7 @@ def adaptive_iter(
     msg('threshold={}'.format(threshold), verbose, VERB_LVL['debug'])
     msg('max_iter={}'.format(max_iter), verbose, VERB_LVL['debug'])
 
-    epsilon = np.finfo(np.float).eps
+    epsilon = np.spacing(1.0)
     other_axes = tuple(range(0, arr.ndim - 1))
 
     with np.errstate(divide='ignore', invalid='ignore'):
