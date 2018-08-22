@@ -64,6 +64,10 @@ from pymrt import msg, dbg
 
 # ======================================================================
 class CircularLoop(object):
+    """
+    Circular loop object for electro-magnetic simulations.
+    """
+
     def __init__(
             self,
             radius=0.25,
@@ -71,6 +75,7 @@ class CircularLoop(object):
             normal=(0., 0., 1.),
             current=1.):
         """
+        Define the circular loop.
 
         Args:
             center (Iterable[int|float]): The center of the loop.
@@ -421,8 +426,58 @@ def stacked_circular_loops_alt(
 
 
 # ======================================================================
-def cylinder_with_circular_loops():
-    raise NotImplementedError
+def cylinder_with_circular_loops(
+        diameter=0.8,
+        height=0.8,
+        direction=(0., 0., 1.),
+        radiuses=None,
+        distance_factors=1,
+        currents=1,
+        n_series=4,
+        loops_per_serie=2,
+        n_loops=None):
+    # todo: check correctness
+    if not n_loops and n_series and loops_per_serie:
+        n_loops = n_series * loops_per_serie
+    elif n_loops and not n_series and loops_per_serie:
+        n_series = n_loops // loops_per_serie
+        if n_loops % loops_per_serie:
+            text = 'Values of `n_loops={}` and `loops_per_serie={}` ' \
+                   'do not match.'.format(n_loops, loops_per_serie)
+            raise ValueError(text)
+    elif n_loops and n_series and not loops_per_serie:
+        loops_per_serie = n_loops // n_series
+        if n_loops % n_series:
+            text = 'Values of `n_loops={}` and `n_series={}` ' \
+                   'do not match.'.format(n_loops, n_series)
+            raise ValueError(text)
+    else:
+        text = 'At least two of `n_loops`, `n_series` and `loops_per_serie` ' \
+               'must be larger than 0'
+        raise ValueError(text)
+    currents = fc.util.auto_repeat(currents, n_loops, check=True)
+    if not radiuses:
+        radiuses = height / loops_per_serie / 2
+    currents = fc.util.auto_repeat(currents, n_loops, check=True)
+    distance_factors = fc.util.auto_repeat(
+        distance_factors, loops_per_serie - 1)
+    distances = (0,) + tuple(distance_factors)
+    centers, normals = [], []
+    for i in range(n_series):
+        r = diameter / 2
+        phi = 2. * np.pi * i / n_series
+        for k in fc.num.distances2displacements(distances):
+            centers.append([r * np.cos(phi), r * np.sin(phi), k])
+            normals.append([-r * np.sin(phi), r * np.cos(phi), k])
+    orientation = np.array((0., 0., 1.))
+    rot_matrix = fc.num.rotation_3d_from_vectors(orientation, direction)
+    circ_loops = [
+        CircularLoop(
+            radius, np.dot(rot_matrix, center), np.dot(rot_matrix, normal),
+            current)
+        for radius, center, normal, current
+        in zip(radiuses, centers, normals, currents)]
+    return circ_loops
 
 
 # ======================================================================
