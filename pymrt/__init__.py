@@ -13,6 +13,7 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
+import os  # Miscellaneous operating system interfaces
 
 # ======================================================================
 # :: External Imports
@@ -67,7 +68,7 @@ print(MY_GREETINGS)
 PATH = pkg_paths(__file__, INFO['name'], INFO['author'], INFO['version'])
 
 # ======================================================================
-elapsed()
+elapsed(__file__[len(os.path.dirname(PATH['base'])) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
