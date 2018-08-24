@@ -380,7 +380,7 @@ def stacked_circular_loops(
         positions,
         currents,
         position=0.5,
-        normal=(0, 0, 1),
+        normal=(0., 1., 0.),
         n_loops=None):
     """
     Generate parallel circular loops.
@@ -425,7 +425,7 @@ def stacked_circular_loops_alt(
         distance_factors=None,
         current_factors=1,
         position=0.5,
-        normal=(0., 0., 1.),
+        normal=(0., 1., 0.),
         radius=0.25,
         current=1,
         n_loops=None):
@@ -473,6 +473,58 @@ def stacked_circular_loops_alt(
         [k * current for k in current_factors],
         position, normal,
         n_loops)
+
+
+# ======================================================================
+def crossing_circular_loops(
+        position=0.5,
+        direction=(0., 0., 1.),
+        radiuses=0.4,
+        angles=None,
+        currents=1,
+        n_loops=None):
+    """
+    Generate circular loops sharing the same diameter.
+
+    Args:
+        position (float|Iterable[float]): The position of the center.
+            Values are relative to the lowest edge.
+        direction (Iterable[int|float]: The direction of the shared diameter.
+            Must have size 3.
+        radiuses (int|float|Iterable[int|float]): The loop radiuses.
+            If int or float, the same value is used for all loops.
+            If Iterable, its size must be `n_loops`.
+        angles (int|float|Iterable[int|float]|None): The loop angles in deg.
+            This is the tilting of the circular loop around `direction`.
+            If int or float, a single loop is assumed.
+            If Iterable, its size must be `n_loops`.
+            If None, the angles are linearly distributed in the [0, 180) range,
+            resulting in equally angularly spaced loops.
+        currents (int|float|Iterable[int|float]): The currents in the loops.
+        n_loops (int|None): The number of loops.
+            If None, this is inferred from the other parameters, but at least
+            one of `radiuses`, `angles`, `currents` must be iterable.
+
+    Returns:
+        circ_loops (list[CircularLoop]): The circular loops.
+    """
+    n_dim = 3
+    position = np.array(fc.util.auto_repeat(position, n_dim, check=True))
+    if not n_loops:
+        n_loops = fc.util.combine_iter_len((angles, radiuses, currents))
+    angles = np.linspace(0.0, 180.0, n_loops, False)
+    radiuses = fc.util.auto_repeat(radiuses, n_loops, check=True)
+    currents = fc.util.auto_repeat(currents, n_loops, check=True)
+    orientation = (0., 0., 1.)
+    rot_matrix = fc.num.rotation_3d_from_vectors(orientation, direction)
+    normal = np.dot(rot_matrix, (0., 1., 0.))
+    normals = [
+        np.dot(fc.num.rotation_3d_from_vector(orientation, angle), normal)
+        for angle in angles]
+    circ_loops = [
+        CircularLoop(radius, position, normal, current)
+        for radius, normal, current in zip(radiuses, normals, currents)]
+    return circ_loops
 
 
 # ======================================================================
@@ -643,7 +695,7 @@ def sphere_with_circular_loops(
 # ======================================================================
 def helmholtz_uniform(
         position=0.5,
-        normal=(0., 0., 1.),
+        normal=(0., 1., 0.),
         radius=0.25,
         current=1):
     """
@@ -680,7 +732,7 @@ def helmholtz_uniform(
 # ======================================================================
 def maxwell_gradient(
         position=0.5,
-        normal=(0., 0., 1.),
+        normal=(0., 1., 0.),
         radius=0.25,
         current=1):
     """
@@ -706,7 +758,7 @@ def maxwell_gradient(
         - https://en.wikipedia.org/wiki/Maxwell_coil
     """
     radius_factors = (1., 1.)
-    distance_factors = np.sqrt(3.)
+    distance_factors = (3. ** 0.5)
     current_factors = (1., -1.)
     return stacked_circular_loops_alt(
         radius_factors, distance_factors, current_factors,
@@ -716,7 +768,7 @@ def maxwell_gradient(
 # ======================================================================
 def maxwell_uniform(
         position=0.5,
-        normal=(0, 0, 1),
+        normal=(0., 1., 0.),
         radius=0.25,
         current=1):
     """
@@ -741,8 +793,8 @@ def maxwell_uniform(
     See Also:
         - https://en.wikipedia.org/wiki/Maxwell_coil
     """
-    radius_factors = (np.sqrt(3. / 7.), 1., np.sqrt(3. / 7.))
-    distance_factors = (np.sqrt(3. / 7.), np.sqrt(3. / 7.))
+    radius_factors = ((3. / 7.) ** 0.5, 1., (3. / 7.) ** 0.5)
+    distance_factors = ((3. / 7.) ** 0.5, (3. / 7.) ** 0.5)
     current_factors = (49., 64., 49.)
     return stacked_circular_loops_alt(
         radius_factors, distance_factors, current_factors,
@@ -750,12 +802,11 @@ def maxwell_uniform(
 
 
 # circ_loops = (CircularLoop(0.4, (0.5, 0.5, 0.5), (0, 1, 0), 1),)
-# circ_loops = stacked_circular_loops_alt(
-#     radius=0.4, current_factors=fc.num.alternating_array(8), normal=(0, 1,
-#  0))
-# circ_loops = helmoltz_uniform(normal=(0, 1, 0), radius=0.4)
+# circ_loops = stacked_circular_loops_alt(radius=0.4, normal=(0, 1, 0))
+circ_loops = crossing_circular_loops(n_loops=4)
 # circ_loops = cylinder_with_circular_loops(angle=0.0)
-circ_loops = sphere_with_circular_loops(n_loops=24)
+# circ_loops = sphere_with_circular_loops(n_loops=24)
+# circ_loops = helmoltz_uniform(normal=(0, 1, 0), radius=0.4)
 
 # from mpl_toolkits.mplot3d import axes3d
 # import matplotlib.pyplot as plt
