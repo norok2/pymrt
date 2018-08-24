@@ -2049,16 +2049,16 @@ def subplots(
     if rows is None and cols is None:
         if num_row is None and num_col is None:
             if isinstance(aspect_ratio, float):
-                num_col = np.ceil(np.sqrt(num_plots * aspect_ratio))
+                num_col = np.ceil((num_plots * aspect_ratio) ** 0.5)
             elif isinstance(aspect_ratio, str):
                 if 'exact' in aspect_ratio:
                     num_col, num_row = fc.util.optimal_shape(num_plots)
                     if 'portrait' in aspect_ratio:
                         num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
-                    num_row = np.ceil(np.sqrt(num_plots))
+                    num_row = np.ceil((num_plots) ** 0.5)
             else:  # plot_aspect == 'landscape'
-                num_row = int(np.floor(np.sqrt(num_plots)))
+                num_row = int(np.floor((num_plots) ** 0.5))
 
         if num_row is None and num_col > 0:
             num_row = int(np.ceil(num_plots / num_col))

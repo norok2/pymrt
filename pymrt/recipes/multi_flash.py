@@ -479,7 +479,7 @@ def triple_approx(
                 fa1 * fa2 * arr1 * arr2 * tr1 * tr3 +
                 fa2 * fa3 * arr2 * arr3 * tr1 * tr2 -
                 fa1 * fa3 * arr1 * arr3 * tr1 * tr2)
-        eta_fa_arr = sign * np.sqrt(2) * np.sqrt(
+        eta_fa_arr = sign * (2.0 ** 0.5) * np.sqrt(
             (fa1 ** 2 * fa2 * arr1 * arr3 * tr2 * tr3) / eta_fa_arr -
             (fa1 ** 2 * fa3 * arr1 * arr2 * tr2 * tr3) / eta_fa_arr -
             (fa1 * fa2 ** 2 * arr2 * arr3 * tr1 * tr3) / eta_fa_arr +

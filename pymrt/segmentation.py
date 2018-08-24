@@ -466,7 +466,7 @@ def threshold_rayleigh(
     Returns:
         threshold (float): The threshold value.
     """
-    mu_sigma_ratio = np.sqrt(np.pi / (4 - np.pi))
+    mu_sigma_ratio = (np.pi / (4 - np.pi)) ** 0.5
     min_val = np.min(arr)
     max_val = np.max(arr)
     threshold = min_val
