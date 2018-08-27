@@ -119,6 +119,16 @@ class InfiniteWire(object):
         self.current = current
 
     # --------------------------------
+    def __str__(self):
+        text = '(p={}, n={}, i={})'.format(
+            self.position, self.direction, self.current)
+        return text
+
+    # --------------------------------
+    def __repr__(self):
+        return self.__str__()
+
+    # --------------------------------
     def b_field(
             self,
             shape,
@@ -241,6 +251,16 @@ class CircularLoop(object):
         self.normal = _to_3d(fc.num.normalize(normal))
         self.radius = radius
         self.current = current
+
+    # --------------------------------
+    def __str__(self):
+        text = '(r={}, c={}, n={}, i={})'.format(
+            self.radius, self.center, self.normal, self.current)
+        return text
+
+    # --------------------------------
+    def __repr__(self):
+        return self.__str__()
 
     # --------------------------------
     def b_field(
@@ -503,6 +523,52 @@ def field_phase(
 
 
 # ======================================================================
+def cylinder_with_infinite_wires(
+        n_wires=8,
+        currents=1,
+        position=0.5,
+        diameters=0.6,
+        angle=0.0,
+        angle_offset=0.0,
+        direction=(0., 0., 1.)):
+    """
+
+
+    Args:
+        n_wires:
+        currents:
+        position:
+        diameters:
+        angle:
+        angle_offset:
+        direction:
+
+    Returns:
+
+    """
+    n_dim = 3
+    if n_wires is None:
+        n_wires = fc.util.combine_iter_len((currents,))
+    position = np.array(fc.util.auto_repeat(position, n_dim, check=True))
+    diameters = fc.util.auto_repeat(diameters, 2, check=True)
+    currents = fc.util.auto_repeat(currents, n_wires, check=True)
+    orientation = np.array((0., 0., 1.))
+    rot_matrix = np.dot(
+        fc.num.rotation_3d_from_vector(orientation, angle),
+        fc.num.rotation_3d_from_vectors(orientation, direction))
+    positions, directions = [], []
+    for i in range(n_wires):
+        a, b = [x / 2.0 for x in diameters]
+        phi = 2. * np.pi * i / n_wires + angle_offset
+        pos = np.array([a * np.cos(phi), b * np.sin(phi), 0])
+        positions.append(np.dot(rot_matrix, pos) + position)
+    infinite_wires = [
+        InfiniteWire(position, direction, current)
+        for position, current in zip(positions, currents)]
+    return infinite_wires
+
+
+# ======================================================================
 def stacked_circular_loops(
         radiuses,
         positions,
@@ -658,8 +724,9 @@ def crossing_circular_loops(
 # ======================================================================
 def cylinder_with_circular_loops(
         position=0.5,
+        diameters=0.6,
         angle=0.0,
-        diameter=0.6,
+        angle_offset=0.0,
         height=0.8,
         direction=(0., 0., 1.),
         radiuses=None,
@@ -671,12 +738,18 @@ def cylinder_with_circular_loops(
     """
     Generate circular loops along the lateral surface of a cylinder.
 
+    The cylinder may have circular or elliptical basis.
+
     Args:
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
-        angle (int|float): The rotation of the cylinder in deg.
-        diameter (int|float): The diameter of the cylinder.
-        height (int|float): The height of the cylinder in deg.
+        diameters (int|float|Iterable[int|float]): The axes / diameter.
+            If int or float, this is the diameter of the circular cylinder.
+            If Iterable with size equal to 2 these are the major and minor
+            axes of the elliptical cylinder.
+        angle (int|float): The rotation of the cylinder basis in deg.
+        angle_offset (int|float): The phase offset of the angle in deg.
+        height (int|float): The height of the cylinder.
         direction (Iterable[int|float]: The direction of the cylinder.
             Must have size 3.
         radiuses (int|float|Iterable[int|float]|None): The loop radiuses.
@@ -726,6 +799,7 @@ def cylinder_with_circular_loops(
                'must be larger than 0'
         raise ValueError(text)
     position = np.array(fc.util.auto_repeat(position, n_dim, check=True))
+    diameters = fc.util.auto_repeat(diameters, 2, check=True)
     currents = fc.util.auto_repeat(currents, n_loops, check=True)
     if not radiuses:
         radiuses = height / loops_per_series / 2
@@ -741,12 +815,13 @@ def cylinder_with_circular_loops(
         fc.num.rotation_3d_from_vectors(orientation, direction))
     centers, normals = [], []
     for i in range(n_series):
-        r = diameter / 2
-        phi = 2. * np.pi * i / n_series
+        a, b = [x / 2 for x in diameters]
+        phi = 2. * np.pi * i / n_series + angle_offset
         for k in fc.num.distances2displacements(distances):
-            center = np.array([r * np.cos(phi), r * np.sin(phi), k])
+            center = np.array([a * np.cos(phi), b * np.sin(phi), k])
             centers.append(np.dot(rot_matrix, center) + position)
-            normal = np.array([-np.cos(phi), -np.sin(phi), 0])
+            normal = fc.num.normalize(
+                np.array([-a * np.cos(phi), -b * np.sin(phi), 0]))
             normals.append(np.dot(rot_matrix, normal))
     circ_loops = [
         CircularLoop(radius, center, normal, current)
@@ -928,6 +1003,33 @@ def maxwell_uniform(
         radius_factors, distance_factors, current_factors,
         position, normal, radius, current)
 
+
+elements = cylinder_with_infinite_wires(
+    diameters=(0.8, 0.8),
+    angle_offset=90 / 16,
+    currents=fc.num.alternating_array(8))
+
+
+for element in elements:
+    print(element)
+
+from numex.gui_tk_mpl import explore
+
+num = 100
+arr = sum_b_fields(num, elements)
+mag_arr = field_magnitude(arr)
+# mag_arr = arr[2]
+# max_arr = np.max(arr)
+# threshold = mag_arr[num // 2, num // 2, num // 2] * 2
+threshold = np.quantile(mag_arr, 0.96)
+mask = mag_arr > threshold
+mag_arr[mask] = threshold
+explore(mag_arr / np.max(mag_arr))
+
+from pymrt.recipes import phs
+
+phs_arr = field_phase(arr, axes=(0, 1))
+# explore(phs.unwrap_sorting_path_2d_3d(phs_arr))
 
 # ======================================================================
 elapsed(__file__[len(PATH['base']) + 1:])
