@@ -567,7 +567,7 @@ def cylinder_with_infinite_wires(
     positions = [
         position + np.dot(
             rot_matrix, np.array([a * np.cos(phi), b * np.sin(phi), 0]))
-        for phi in fc.num.angles_in_ellipsis(
+        for phi in fc.num.angles_in_ellipse(
             n_wires, a, b, np.deg2rad(angle_offset))]
     infinite_wires = [
         InfiniteWire(position_, direction, current)
@@ -822,7 +822,7 @@ def cylinder_with_circular_loops(
         fc.num.rotation_3d_from_vectors(orientation, direction))
     centers, normals = [], []
     a, b = [x / 2 for x in diameters]
-    for phi in fc.num.angles_in_ellipsis(
+    for phi in fc.num.angles_in_ellipse(
             n_series, a, b, np.deg2rad(angle_offset)):
         for k in fc.num.distances2displacements(distances):
             center = np.array([a * np.cos(phi), b * np.sin(phi), k])

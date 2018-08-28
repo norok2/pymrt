@@ -334,7 +334,7 @@ def sn_split_calib_region(
 
     EXPERIMENTAL!
 
-    Use a n-dim superellipsis or cuboid as calibration regions for signal
+    Use a n-dim superellipsoid or cuboid as calibration regions for signal
     and noise estimation.
 
     Args:

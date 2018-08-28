@@ -8,7 +8,7 @@ The 2D geometrical shapes currently available are:
 - rectangle
 - rhombus
 - circle
-- ellipsis
+- ellipse
 
 The 3D geometrical shapes currently available are:
 - cube
@@ -637,16 +637,16 @@ def circle(
 
 
 # ======================================================================
-def ellipsis(
+def ellipse(
         shape,
         semiaxes,
         position=0.5):
     """
-    Render an ellipsis.
+    Render an ellipse.
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semiaxes (float|tuple[float]): The semiaxes of the ellipsis in px.
+        semiaxes (float|tuple[float]): The semiaxes of the ellipse in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -655,14 +655,14 @@ def ellipsis(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> ellipsis(6, (2, 3))
+        >>> ellipse(6, (2, 3))
         array([[False, False, False, False, False, False],
                [False,  True,  True,  True,  True, False],
                [ True,  True,  True,  True,  True,  True],
                [ True,  True,  True,  True,  True,  True],
                [False,  True,  True,  True,  True, False],
                [False, False, False, False, False, False]])
-        >>> ellipsis(6, (5, 3), 0)
+        >>> ellipse(6, (5, 3), 0)
         array([[ True,  True,  True,  True, False, False],
                [ True,  True,  True, False, False, False],
                [ True,  True,  True, False, False, False],
@@ -1744,9 +1744,9 @@ def _self_test_interactive():
     numex.gui_tk_mpl.explore(rectangle(dim, (l1, l2), pos))
     numex.gui_tk_mpl.explore(rhombus(dim, (l1, l2), pos))
     numex.gui_tk_mpl.explore(circle(dim, l1, pos))
-    numex.gui_tk_mpl.explore(ellipsis(dim, (l1, l2), pos))
+    numex.gui_tk_mpl.explore(ellipse(dim, (l1, l2), pos))
     # :: - Position test
-    numex.gui_tk_mpl.explore(ellipsis(dim, (l1, l2), (0.2, 0.7)))
+    numex.gui_tk_mpl.explore(ellipse(dim, (l1, l2), (0.2, 0.7)))
 
     # :: 3D Tests
     # :: - shape test
