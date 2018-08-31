@@ -448,7 +448,7 @@ def polygon(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.grid()` internally.
+            Uses `flyingcircus.num.grid()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1086,7 +1086,7 @@ def nd_lines(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.coord()` internally.
+            Uses `flyingcircus.num.coord()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1136,7 +1136,7 @@ def nd_curves(
             If True, position values are interpreted as relative,
             i.e. they are scaled for `shape` values.
             Otherwise, they are interpreted as absolute (in px).
-            Uses `fc.num.coord()` internally.
+            Uses `flyingcircus.num.coord()` internally.
 
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
@@ -1187,11 +1187,11 @@ def nd_cuboid(
             but one of `shape`, `position`, `semisizes` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of `position` using `shape`.
-            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `semisizes` using `shape`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.coord()` internally, see its `is_relative`
             parameter for more details.
 
     Returns:
@@ -1253,11 +1253,11 @@ def nd_superellipsoid(
             iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of `position`.
-            Uses `fc.num.grid_coord()` internally, see its `is_relative`
-            parameter for more details.
+            Uses `flyingcircus.num.grid_coord()` internally, see its
+            `is_relative` parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `semisizes`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.coord()` internally, see its `is_relative`
             parameter for more details.
 
     Returns:
@@ -1314,11 +1314,11 @@ def nd_prism(
             This setting only affects the extra shape dimension.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of `position` using `extra_dim`.
-            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `size` using `extra_dim`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.coord()` internally, see its `is_relative`
             parameter for more details.
 
     Returns:

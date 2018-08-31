@@ -378,7 +378,7 @@ def qsm_remove_background_sharp(
             If float, it is interpreted as relative to the maximum size.
         rel_radius (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `radius` using `shape`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.coord()` internally, see its `is_relative`
             parameter for more details.
 
     Returns:
