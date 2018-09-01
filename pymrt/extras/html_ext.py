@@ -132,7 +132,7 @@ def to_image(
 
     # export intermediate HTML output
     if html_filepath is True or method == 'webkit':
-        html_filepath = fc.util.change_ext(save_filepath, 'html')
+        html_filepath = fc.util.change_ext(save_filepath, 'htm')
     if html_filepath:
         with open(html_filepath, 'wb+') as file_obj:
             file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))
