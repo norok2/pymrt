@@ -6,10 +6,8 @@ pymrt.registration: generic simple registration.
 
 # ======================================================================
 # :: Future Imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
 
 # ======================================================================
 # :: Python Standard Library Imports
@@ -50,16 +48,18 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util
+import flyingcircus.num
+
+# :: Internal Imports
+import pymrt as mrt
+import pymrt.config
 
 # :: Local Imports
-import pymrt as mrt
-# import pymrt.input_output
-import pymrt.geometry
-# from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
-from pymrt.config import EXT_CMD
 
 
 # ======================================================================
@@ -141,7 +141,8 @@ def set_init_parameters(
     # :: set up shift
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
-            shift = fc.num.weighted_center(moving) - fc.num.weighted_center(fixed)
+            shift = \
+                fc.num.weighted_center(moving) - fc.num.weighted_center(fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
         else:  # 'none' or not known
@@ -329,7 +330,7 @@ def affine_registration(
     if fixed_weights is not None:
         fixed = fixed * fixed_weights
 
-    # check that transform is supported
+    # : check that transform is supported
     continuous_transforms = (
         'affine', 'rigid', 'translation', 'rotation', 'scaling',
         'translation_rotation', 'translation_scaling')
@@ -397,7 +398,7 @@ def external_registration(
     fix_nii.to_filename(fix_filepath)
     # generate
     if tool.startswith('FSL'):
-        cmd = EXT_CMD['fsl/5.0/flirt']
+        cmd = mrt.config.EXT_CMD['fsl/5.0/flirt']
         fc.util.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension
@@ -405,71 +406,12 @@ def external_registration(
 
 
 # ======================================================================
-# :: test
-# s1 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
-# /s018__MP2RAGE_e' \
-#      '=post0,l=2__T1.nii.gz'
-# s2 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
-# /s020__MP2RAGE_e' \
-#      '=post2,l=2__T1.nii.gz'
-# s3 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
-# /s031__MP2RAGE_e' \
-#      '=pre0,l=2__T1.nii.gz'
-# t12 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
-# /s018__MP2RAGE_e' \
-#       '=post0,l=2,reg=s2__T1.nii.gz'
-# t13 = '~/hd2/cache/ecm-mri/sandbox/test/T1_sample2
-# /s018__MP2RAGE_e' \
-#       '=post0,l=2,reg=s3__T1.nii.gz'
-
-
-s1 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
-     '-3D_e=pre0,l=1__T2S.nii.gz'
-s2 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s015__ME-FLASH' \
-     '-3D_e=post0,l=1__T2S.nii.gz'
-t12 = '~/hd2/cache/ecm-mri/sandbox/test/T2S_sample1/s050__ME-FLASH' \
-      '-3D_e=pre0,l=1,reg__T2S.nii.gz'
-
-import pymrt.input_output
-
-
-def my_reg(array_list, *args, **kwargs):
-    img = array_list[0]
-    ref = array_list[1]
-    # # at first translate...
-    # linear, shift = affine_registration(
-    #     img, ref, transform='translation', init_guess=('weights', 'weights'))
-    # # print(shift)
-    # img = sp.ndimage.affine_transform(img, linear, shift)
-    # ... then reorient
-    linear, shift = affine_registration(
-        img, ref, transform='reflection', interp_order=0)
-    print(linear)
-    img = sp.ndimage.affine_transform(img, linear, shift)
-    # # ... and finally perform finer registration
-    # linear, shift = affine_registration(img, ref, *args, **kwargs)
-    # img = sp.ndimage.affine_transform(img, linear, shift)
-    # print(fc.num.encode_affine(linear, shift))
-    return img
-
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
     msg(__doc__.strip())
-    begin_time = datetime.datetime.now()
-
-    # for idx, (linear, shift) in enumerate(_discrete_generator(
-    # 'reflection', 3)):
-    #     print(idx)
-    #     print(linear)
-    # mrt.input_output.simple_filter_n_1(
-    #     [s1, s2], t12, my_reg,
-    #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
-
-    # mrt.input_output.simple_filter_n_1(
-    #     [s1, s3], t13, my_reg,
-    #     transform='rigid', interp_order=1, init_guess=('none', 'none'))
-
-    end_time = datetime.datetime.now()
-    print('ExecTime: {}'.format(end_time - begin_time))
+    doctest.testmod()
     msg(report())
