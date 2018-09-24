@@ -91,7 +91,8 @@ def set_values(
 # ======================================================================
 def bresenham_line(
         coord_a,
-        coord_b):
+        coord_b,
+        endpoint=False):
     """
     Yield the integer points lying on an N-dim line.
 
@@ -102,7 +103,12 @@ def bresenham_line(
 
     Args:
         coord_a (Iterable[int]): The coordinates of the starting point.
+            The starting point is included.
         coord_b (Iterable[int]): The coordinates of the ending point.
+            The endind point is excluded, unless `endpoint == True`.
+        endpoint (bool): Determine wether to yield the last point.
+            If True, the endpoint (`coord_b`) is yielded at last.
+            Otherwise, the endpoint (`coord_b`) is not yielded.
 
     Yields:
         coord (tuple[int]): The coordinates of a point on the N-dim line.
@@ -121,6 +127,8 @@ def bresenham_line(
             if u < 0:
                 coord[i] += s
                 updates[i] += max_diff
+    if endpoint:
+        yield tuple(coord_b)
 
 
 # ======================================================================
@@ -412,6 +420,9 @@ def render_at(
         rendered (np.ndarray[bool]): The rendered geometrical object.
     """
     rendered = np.zeros(shape, dtype=bool)
+    # : slower
+    # mask = tuple(zip(*coords))
+    # rendered[mask] = True
     for point in coords:
         rendered[point] = True
     return rendered
