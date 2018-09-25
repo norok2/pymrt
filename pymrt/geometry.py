@@ -119,7 +119,7 @@ def bresenham_line(
     max_diff = max(diffs)
     updates = [max_diff / 2] * n_dim
     coord = list(coord_a)
-    for i in range(max_diff):
+    for i in range(max_diff + 1):
         yield tuple(coord)
         for i, (x, d, s, u) in enumerate(
                 zip(coord, diffs, steps, updates)):
