@@ -290,10 +290,10 @@ def unit_vector(vector):
         u_vector (np.ndarray): The corresponding unit vector.
 
     Examples:
-        >>> unit_vector(as_vector([0, 3, 4]))
-        array([0. , 0.6, 0.8])
-        >>> unit_vector(as_vector([5, 0, 0]))
-        array([1., 0., 0.])
+        >>> print(unit_vector(as_vector([0, 3, 4])))
+        [ 0.   0.6  0.8]
+        >>> print(unit_vector(as_vector([5, 0, 0])))
+        [ 1.  0.  0.]
     """
     return vector / np.linalg.norm(vector)
 
@@ -321,7 +321,7 @@ def angle_between(
         >>> np.rad2deg(angle_between([0, 3, 4], [5, 0, 0]))
         90.0
         >>> angle = np.rad2deg(angle_between([0, 3, 4], [5, 0, 0], [1, 1, 1]))
-        >>> round(angle, 2)
+        >>> print(np.round(angle, 2))
         124.54
     """
     u_vector_a = unit_vector(as_vector(coord_a, origin))
@@ -429,6 +429,58 @@ def render_at(
 
 
 # ======================================================================
+def fill_convex(
+        arr,
+        border=True,
+        fill=True):
+    """
+    Fill a convex N-dimensional geometrical object from its outer shape.
+
+    Args:
+        arr (np.ndarray): The array containing the outer shape of the object.
+        border: The value to use to identify the border.
+        fill: The value to use for the filling.
+
+    Returns:
+        arr (np.ndarray): The filled geometrical object.
+
+    Examples:
+        >>> points = ((1, 1), (0, 6), (5, 4), (4, 2))
+        >>> line_points = tuple(x for x in bresenham_lines(points, True))
+        >>> arr = render_at((8, 8), line_points)
+        >>> print(arr)
+        [[False False False False  True  True  True False]
+         [False  True  True  True False False  True False]
+         [False  True False False False  True False False]
+         [False False  True False False  True False False]
+         [False False  True False  True False False False]
+         [False False False  True  True False False False]
+         [False False False False False False False False]
+         [False False False False False False False False]]
+        >>> arr = fill_convex(arr)
+        >>> print(arr)
+        [[False False False False  True  True  True False]
+         [False  True  True  True  True  True  True False]
+         [False  True  True  True  True  True False False]
+         [False False  True  True  True  True False False]
+         [False False  True  True  True False False False]
+         [False False False  True  True False False False]
+         [False False False False False False False False]
+         [False False False False False False False False]]
+    """
+    shape = arr.shape
+    arr = arr.reshape((shape[0], -1))
+    for i in range(arr.shape[1]):
+        mask = slice(None), slice(i, i + 1)
+        line = arr[mask]
+        j = np.where(line == border)[0]
+        if len(j):
+            start, stop = np.min(j), np.max(j)
+            line[start:stop] = fill
+    return arr.reshape(shape)
+
+
+# ======================================================================
 def polygon(
         shape,
         positions,
@@ -503,17 +555,17 @@ def square(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> square(4, 2)
-        array([[False, False, False, False],
-               [False,  True,  True, False],
-               [False,  True,  True, False],
-               [False, False, False, False]])
-        >>> square(5, 3)
-        array([[False, False, False, False, False],
-               [False,  True,  True,  True, False],
-               [False,  True,  True,  True, False],
-               [False,  True,  True,  True, False],
-               [False, False, False, False, False]])
+        >>> print(square(4, 2))
+        [[False False False False]
+         [False  True  True False]
+         [False  True  True False]
+         [False False False False]]
+        >>> print(square(5, 3))
+        [[False False False False False]
+         [False  True  True  True False]
+         [False  True  True  True False]
+         [False  True  True  True False]
+         [False False False False False]]
     """
     return nd_cuboid(
         shape, side / 2.0, position, 2,
@@ -538,29 +590,30 @@ def rectangle(
     Returns:
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
-    >>> rectangle(6, (2, 1))
-    array([[False, False, False, False, False, False],
-           [False, False,  True,  True, False, False],
-           [False, False,  True,  True, False, False],
-           [False, False,  True,  True, False, False],
-           [False, False,  True,  True, False, False],
-           [False, False, False, False, False, False]])
-    >>> rectangle(5, (2, 1))
-    array([[False,  True,  True,  True, False],
-           [False,  True,  True,  True, False],
-           [False,  True,  True,  True, False],
-           [False,  True,  True,  True, False],
-           [False,  True,  True,  True, False]])
-    >>> rectangle(4, (1, 0.5), 0)
-    array([[ True, False, False, False],
-           [ True, False, False, False],
-           [False, False, False, False],
-           [False, False, False, False]])
-    >>> rectangle(4, (2, 1), 0)
-    array([[ True,  True, False, False],
-           [ True,  True, False, False],
-           [ True,  True, False, False],
-           [False, False, False, False]])
+    Examples:
+        >>> print(rectangle(6, (2, 1)))
+        [[False False False False False False]
+         [False False  True  True False False]
+         [False False  True  True False False]
+         [False False  True  True False False]
+         [False False  True  True False False]
+         [False False False False False False]]
+        >>> print(rectangle(5, (2, 1)))
+        [[False  True  True  True False]
+         [False  True  True  True False]
+         [False  True  True  True False]
+         [False  True  True  True False]
+         [False  True  True  True False]]
+        >>> print(rectangle(4, (1, 0.5), 0))
+        [[ True False False False]
+         [ True False False False]
+         [False False False False]
+         [False False False False]]
+        >>> print(rectangle(4, (2, 1), 0))
+        [[ True  True False False]
+         [ True  True False False]
+         [ True  True False False]
+         [False False False False]]
     """
     return nd_cuboid(
         shape, semisides, position, 2,
@@ -586,18 +639,18 @@ def rhombus(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> rhombus(5, 2)
-        array([[False, False,  True, False, False],
-               [False,  True,  True,  True, False],
-               [ True,  True,  True,  True,  True],
-               [False,  True,  True,  True, False],
-               [False, False,  True, False, False]])
-        >>> rhombus(5, (2, 1))
-        array([[False, False,  True, False, False],
-               [False, False,  True, False, False],
-               [False,  True,  True,  True, False],
-               [False, False,  True, False, False],
-               [False, False,  True, False, False]])
+        >>> print(rhombus(5, 2))
+        [[False False  True False False]
+         [False  True  True  True False]
+         [ True  True  True  True  True]
+         [False  True  True  True False]
+         [False False  True False False]]
+        >>> print(rhombus(5, (2, 1)))
+        [[False False  True False False]
+         [False False  True False False]
+         [False  True  True  True False]
+         [False False  True False False]
+         [False False  True False False]]
     """
     return nd_superellipsoid(
         shape, semidiagonals, 1.0, position, 2,
@@ -623,24 +676,24 @@ def circle(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> circle(5, 1)
-        array([[False, False, False, False, False],
-               [False, False,  True, False, False],
-               [False,  True,  True,  True, False],
-               [False, False,  True, False, False],
-               [False, False, False, False, False]])
-        >>> circle(6, 2)
-        array([[False, False, False, False, False, False],
-               [False, False,  True,  True, False, False],
-               [False,  True,  True,  True,  True, False],
-               [False,  True,  True,  True,  True, False],
-               [False, False,  True,  True, False, False],
-               [False, False, False, False, False, False]])
-        >>> circle(4, 2, 0)
-        array([[ True,  True,  True, False],
-               [ True,  True, False, False],
-               [ True, False, False, False],
-               [False, False, False, False]])
+        >>> print(circle(5, 1))
+        [[False False False False False]
+         [False False  True False False]
+         [False  True  True  True False]
+         [False False  True False False]
+         [False False False False False]]
+        >>> print(circle(6, 2))
+        [[False False False False False False]
+         [False False  True  True False False]
+         [False  True  True  True  True False]
+         [False  True  True  True  True False]
+         [False False  True  True False False]
+         [False False False False False False]]
+        >>> print(circle(4, 2, 0))
+        [[ True  True  True False]
+         [ True  True False False]
+         [ True False False False]
+         [False False False False]]
     """
     return nd_superellipsoid(
         shape, radius, 2.0, position, 2,
@@ -666,20 +719,20 @@ def ellipse(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> ellipse(6, (2, 3))
-        array([[False, False, False, False, False, False],
-               [False,  True,  True,  True,  True, False],
-               [ True,  True,  True,  True,  True,  True],
-               [ True,  True,  True,  True,  True,  True],
-               [False,  True,  True,  True,  True, False],
-               [False, False, False, False, False, False]])
-        >>> ellipse(6, (5, 3), 0)
-        array([[ True,  True,  True,  True, False, False],
-               [ True,  True,  True, False, False, False],
-               [ True,  True,  True, False, False, False],
-               [ True,  True,  True, False, False, False],
-               [ True,  True, False, False, False, False],
-               [ True, False, False, False, False, False]])
+        >>> print(ellipse(6, (2, 3)))
+        [[False False False False False False]
+         [False  True  True  True  True False]
+         [ True  True  True  True  True  True]
+         [ True  True  True  True  True  True]
+         [False  True  True  True  True False]
+         [False False False False False False]]
+        >>> print(ellipse(6, (5, 3), 0))
+        [[ True  True  True  True False False]
+         [ True  True  True False False False]
+         [ True  True  True False False False]
+         [ True  True  True False False False]
+         [ True  True False False False False]
+         [ True False False False False False]]
     """
     return nd_superellipsoid(
         shape, semiaxes, 2.0, position, 2,
@@ -705,26 +758,26 @@ def cube(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> cube(4, 2)
-        array([[[False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False]],
+        >>> print(cube(4, 2))
+        [[[False False False False]
+          [False False False False]
+          [False False False False]
+          [False False False False]]
         <BLANKLINE>
-               [[False, False, False, False],
-                [False,  True,  True, False],
-                [False,  True,  True, False],
-                [False, False, False, False]],
+         [[False False False False]
+          [False  True  True False]
+          [False  True  True False]
+          [False False False False]]
         <BLANKLINE>
-               [[False, False, False, False],
-                [False,  True,  True, False],
-                [False,  True,  True, False],
-                [False, False, False, False]],
+         [[False False False False]
+          [False  True  True False]
+          [False  True  True False]
+          [False False False False]]
         <BLANKLINE>
-               [[False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False]]])
+         [[False False False False]
+          [False False False False]
+          [False False False False]
+          [False False False False]]]
     """
     return nd_cuboid(
         shape, side / 2.0, position, 3,
@@ -750,21 +803,21 @@ def cuboid(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> cuboid((3, 4, 6), (0.5, 2, 1))
-        array([[[False, False, False, False, False, False],
-                [False, False, False, False, False, False],
-                [False, False, False, False, False, False],
-                [False, False, False, False, False, False]],
+        >>> print(cuboid((3, 4, 6), (0.5, 2, 1)))
+        [[[False False False False False False]
+          [False False False False False False]
+          [False False False False False False]
+          [False False False False False False]]
         <BLANKLINE>
-               [[False, False,  True,  True, False, False],
-                [False, False,  True,  True, False, False],
-                [False, False,  True,  True, False, False],
-                [False, False,  True,  True, False, False]],
+         [[False False  True  True False False]
+          [False False  True  True False False]
+          [False False  True  True False False]
+          [False False  True  True False False]]
         <BLANKLINE>
-               [[False, False, False, False, False, False],
-                [False, False, False, False, False, False],
-                [False, False, False, False, False, False],
-                [False, False, False, False, False, False]]])
+         [[False False False False False False]
+          [False False False False False False]
+          [False False False False False False]
+          [False False False False False False]]]
     """
     return nd_cuboid(
         shape, semisides, position, 3,
@@ -790,24 +843,24 @@ def rhomboid(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> rhomboid((3, 5, 7), (1, 1, 2))
-        array([[[False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False],
-                [False, False, False,  True, False, False, False],
-                [False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False]],
+        >>> print(rhomboid((3, 5, 7), (1, 1, 2)))
+        [[[False False False False False False False]
+          [False False False False False False False]
+          [False False False  True False False False]
+          [False False False False False False False]
+          [False False False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False, False, False],
-                [False, False, False,  True, False, False, False],
-                [False,  True,  True,  True,  True,  True, False],
-                [False, False, False,  True, False, False, False],
-                [False, False, False, False, False, False, False]],
+         [[False False False False False False False]
+          [False False False  True False False False]
+          [False  True  True  True  True  True False]
+          [False False False  True False False False]
+          [False False False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False],
-                [False, False, False,  True, False, False, False],
-                [False, False, False, False, False, False, False],
-                [False, False, False, False, False, False, False]]])
+         [[False False False False False False False]
+          [False False False False False False False]
+          [False False False  True False False False]
+          [False False False False False False False]
+          [False False False False False False False]]]
     """
     return nd_superellipsoid(
         shape, semidiagonals, 1.0, position, 3,
@@ -833,48 +886,48 @@ def sphere(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> sphere(3, 1)
-        array([[[False, False, False],
-                [False,  True, False],
-                [False, False, False]],
+        >>> print(sphere(3, 1))
+        [[[False False False]
+          [False  True False]
+          [False False False]]
         <BLANKLINE>
-               [[False,  True, False],
-                [ True,  True,  True],
-                [False,  True, False]],
+         [[False  True False]
+          [ True  True  True]
+          [False  True False]]
         <BLANKLINE>
-               [[False, False, False],
-                [False,  True, False],
-                [False, False, False]]])
-        >>> sphere(5, 2)
-        array([[[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False,  True, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]],
+         [[False False False]
+          [False  True False]
+          [False False False]]]
+        >>> print(sphere(5, 2))
+        [[[False False False False False]
+          [False False False False False]
+          [False False  True False False]
+          [False False False False False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False, False, False, False, False]],
+         [[False False False False False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False,  True, False, False],
-                [False,  True,  True,  True, False],
-                [ True,  True,  True,  True,  True],
-                [False,  True,  True,  True, False],
-                [False, False,  True, False, False]],
+         [[False False  True False False]
+          [False  True  True  True False]
+          [ True  True  True  True  True]
+          [False  True  True  True False]
+          [False False  True False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False, False, False, False, False]],
+         [[False False False False False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False,  True, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]]])
+         [[False False False False False]
+          [False False False False False]
+          [False False  True False False]
+          [False False False False False]
+          [False False False False False]]]
     """
     return nd_superellipsoid(
         shape, radius, 2.0, position, 3,
@@ -900,36 +953,36 @@ def ellipsoid(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> ellipsoid(5, (1., 2., 1.5))
-        array([[[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]],
+        >>> print(ellipsoid(5, (1., 2., 1.5)))
+        [[[False False False False False]
+          [False False False False False]
+          [False False False False False]
+          [False False False False False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False,  True, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]],
+         [[False False False False False]
+          [False False False False False]
+          [False False  True False False]
+          [False False False False False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False,  True, False, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False,  True,  True,  True, False],
-                [False, False,  True, False, False]],
+         [[False False  True False False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False  True  True  True False]
+          [False False  True False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False,  True, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]],
+         [[False False False False False]
+          [False False False False False]
+          [False False  True False False]
+          [False False False False False]
+          [False False False False False]]
         <BLANKLINE>
-               [[False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False],
-                [False, False, False, False, False]]])
+         [[False False False False False]
+          [False False False False False]
+          [False False False False False]
+          [False False False False False]
+          [False False False False False]]]
     """
     return nd_superellipsoid(
         shape, semiaxes, 2.0, position, 3,
@@ -959,26 +1012,26 @@ def cylinder(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> cylinder(4, 2, 2, 0)
-        array([[[False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False]],
+        >>> print(cylinder(4, 2, 2, 0))
+        [[[False False False False]
+          [False False False False]
+          [False False False False]
+          [False False False False]]
         <BLANKLINE>
-               [[False,  True,  True, False],
-                [ True,  True,  True,  True],
-                [ True,  True,  True,  True],
-                [False,  True,  True, False]],
+         [[False  True  True False]
+          [ True  True  True  True]
+          [ True  True  True  True]
+          [False  True  True False]]
         <BLANKLINE>
-               [[False,  True,  True, False],
-                [ True,  True,  True,  True],
-                [ True,  True,  True,  True],
-                [False,  True,  True, False]],
+         [[False  True  True False]
+          [ True  True  True  True]
+          [ True  True  True  True]
+          [False  True  True False]]
         <BLANKLINE>
-               [[False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False],
-                [False, False, False, False]]])
+         [[False False False False]
+          [False False False False]
+          [False False False False]
+          [False False False False]]]
     """
     n_dim = 3
     shape = fc.util.auto_repeat(shape, n_dim)
@@ -1198,7 +1251,8 @@ def nd_cuboid(
             but one of `shape`, `position`, `semisizes` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of `position` using `shape`.
-            Uses `flyingcircus.num.grid_coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.grid_coord()` internally, see its
+            `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `semisizes` using `shape`.
@@ -1325,7 +1379,8 @@ def nd_prism(
             This setting only affects the extra shape dimension.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of `position` using `extra_dim`.
-            Uses `flyingcircus.num.grid_coord()` internally, see its `is_relative`
+            Uses `flyingcircus.num.grid_coord()` internally, see its
+            `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `size` using `extra_dim`.
@@ -1480,60 +1535,60 @@ def nd_gradient(
     Examples:
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2))):
         ...     print(arr)
-        [[0.]
-         [1.]]
+        [[ 0.]
+         [ 1.]]
         [[-2.  2.]]
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), dense=True):
         ...     print(arr)
-        [[0. 0.]
-         [1. 1.]]
+        [[ 0.  0.]
+         [ 1.  1.]]
         [[-2.  2.]
          [-2.  2.]]
         >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), int, True):
         ...     print(arr)
-        [[0. 0.]
-         [1. 1.]]
-        [[-2.  2.]
-         [-2.  2.]]
+        [[0 0]
+         [1 1]]
+        [[-2  2]
+         [-2  2]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-2, 2, 2)), float, True, np.logspace):
         ...     print(arr)
-        [[ 1.  1.]
-         [10. 10.]]
-        [[1.e-02 1.e+02]
-         [1.e-02 1.e+02]]
+        [[  1.   1.]
+         [ 10.  10.]]
+        [[  1.00000000e-02   1.00000000e+02]
+         [  1.00000000e-02   1.00000000e+02]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-2, 2, 2)), float, True,
         ...         (np.linspace, np.logspace)):
         ...     print(arr)
-        [[0. 0.]
-         [1. 1.]]
-        [[1.e-02 1.e+02]
-         [1.e-02 1.e+02]]
+        [[ 0.  0.]
+         [ 1.  1.]]
+        [[  1.00000000e-02   1.00000000e+02]
+         [  1.00000000e-02   1.00000000e+02]]
         >>> for arr in nd_gradient(
         ...         ((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, True):
         ...     print(arr)
-        [[[0. 0.]
-          [0. 0.]
-          [0. 0.]]
+        [[[0 0]
+          [0 0]
+          [0 0]]
         <BLANKLINE>
-         [[1. 1.]
-          [1. 1.]
-          [1. 1.]]]
-        [[[-1. -1.]
-          [ 0.  0.]
-          [ 1.  1.]]
+         [[1 1]
+          [1 1]
+          [1 1]]]
+        [[[-1 -1]
+          [ 0  0]
+          [ 1  1]]
         <BLANKLINE>
-         [[-1. -1.]
-          [ 0.  0.]
-          [ 1.  1.]]]
-        [[[-2.  2.]
-          [-2.  2.]
-          [-2.  2.]]
+         [[-1 -1]
+          [ 0  0]
+          [ 1  1]]]
+        [[[-2  2]
+          [-2  2]
+          [-2  2]]
         <BLANKLINE>
-         [[-2.  2.]
-          [-2.  2.]
-          [-2.  2.]]]
+         [[-2  2]
+          [-2  2]
+          [-2  2]]]
     """
     num_gens = len(gen_ranges)
     generators = fc.util.auto_repeat(
@@ -1553,7 +1608,7 @@ def nd_gradient(
         new_shape = tuple(n if j == i else 1 for j, n in enumerate(shape))
         arr = arr.reshape(new_shape)
         if dense:
-            arr = np.zeros(shape) + arr
+            arr = np.zeros(shape, dtype=dtype) + arr
         arrs.append(arr)
     return arrs
 
@@ -1586,19 +1641,19 @@ def nd_dirac_delta(
         rendered (np.ndarray[bool]): The rendered geometrical object.
 
     Examples:
-        >>> nd_dirac_delta((5, 5), 0.5, 1)
-        array([[0., 0., 0., 0., 0.],
-               [0., 0., 0., 0., 0.],
-               [0., 0., 1., 0., 0.],
-               [0., 0., 0., 0., 0.],
-               [0., 0., 0., 0., 0.]])
-        >>> nd_dirac_delta(4, (0.5, 0.5), 9)
-        array([[0., 0., 0., 0.],
-               [0., 0., 0., 0.],
-               [0., 0., 9., 0.],
-               [0., 0., 0., 0.]])
-        >>> nd_dirac_delta(11, 0.5, np.inf)
-        array([ 0.,  0.,  0.,  0.,  0., inf,  0.,  0.,  0.,  0.,  0.])
+        >>> print(nd_dirac_delta((5, 5), 0.5, 1))
+        [[ 0.  0.  0.  0.  0.]
+         [ 0.  0.  0.  0.  0.]
+         [ 0.  0.  1.  0.  0.]
+         [ 0.  0.  0.  0.  0.]
+         [ 0.  0.  0.  0.  0.]]
+        >>> print(nd_dirac_delta(4, (0.5, 0.5), 9))
+        [[ 0.  0.  0.  0.]
+         [ 0.  0.  0.  0.]
+         [ 0.  0.  9.  0.]
+         [ 0.  0.  0.  0.]]
+        >>> print(nd_dirac_delta(11, 0.5, np.inf))
+        [  0.   0.   0.   0.   0.  inf   0.   0.   0.   0.   0.]
     """
     if not n_dim:
         n_dim = fc.util.combine_iter_len((shape, position))
