@@ -481,6 +481,64 @@ def fill_convex(
 
 
 # ======================================================================
+def unfill(
+        arr,
+        structure=None,
+        border=1):
+    """
+    Fill a convex N-dimensional geometrical object from its outer shape.
+
+    Args:
+        arr (np.ndarray): The array containing the outer shape of the object.
+        structure: The structuring element for the erosion.
+            See `structure` parameter of `scipy.ndimage.binary_erosion()`.
+        border (int): The border thickness in px.
+            See `iterations` parameter of `scipy.ndimage.binary_erosion()`.
+
+    Returns:
+        arr (np.ndarray): The filled geometrical object.
+
+    Examples:
+        >>> points = ((1, 1), (0, 6), (5, 4), (4, 2))
+        >>> line_points = tuple(x for x in bresenham_lines(points, True))
+        >>> arr = render_at((8, 8), line_points)
+        >>> print(arr)
+        [[False False False False  True  True  True False]
+         [False  True  True  True False False  True False]
+         [False  True False False False  True False False]
+         [False False  True False False  True False False]
+         [False False  True False  True False False False]
+         [False False False  True  True False False False]
+         [False False False False False False False False]
+         [False False False False False False False False]]
+        >>> np.all(unfill(arr) == arr)
+        True
+        >>> full_arr = fill_convex(arr)
+        >>> print(full_arr)
+        [[False False False False  True  True  True False]
+         [False  True  True  True  True  True  True False]
+         [False  True  True  True  True  True False False]
+         [False False  True  True  True  True False False]
+         [False False  True  True  True False False False]
+         [False False False  True  True False False False]
+         [False False False False False False False False]
+         [False False False False False False False False]]
+        >>> hollow_arr = unfill(full_arr.T).T
+        >>> print(hollow_arr)
+        [[False False False False  True  True  True False]
+         [False  True  True  True False False  True False]
+         [False  True False False False  True False False]
+         [False False  True False False  True False False]
+         [False False  True False  True False False False]
+         [False False False  True  True False False False]
+         [False False False False False False False False]
+         [False False False False False False False False]]
+    """
+    eroded = sp.ndimage.binary_erosion(arr, structure, border)
+    return arr - eroded
+
+
+# ======================================================================
 def polygon(
         shape,
         positions,
