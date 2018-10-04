@@ -158,8 +158,7 @@ def main():
 
     data, meta = mrt.input_output.load(args.input, meta=True)
     data = mrt.segmentation.auto_mask(data, **kws).astype(args.dtype)
-    mrt.input_output.save(
-        args.output, data, **{k: v for k, v in meta.items()})
+    mrt.input_output.save(args.output, data, **dict(meta.items()))
 
     end_time = datetime.datetime.now()
     if args.verbose > VERB_LVL['low']:

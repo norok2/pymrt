@@ -243,7 +243,7 @@ def check_approx_propagator(
             kwargs_items = [{}]
             names = mode_params.keys()
             for values in itertools.product(*[mode_params[i] for i in names]):
-                kwargs_items.append({k: v for k, v in zip(names, values)})
+                kwargs_items.append(dict(zip(names, values)))
             for kwargs in kwargs_items:
                 pulse = Pulse.shaped(
                     40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c,
