@@ -62,11 +62,11 @@ from pymrt import msg, dbg
 
 # ======================================================================
 def zig_zag_cartesian_2d(
-        t=100,
-        initial=(-1, -1),
+        t=0.01,
+        initial=(0, 0),
         final=(1, 1),
-        blips=0.2,
-        num_blips=None,
+        scales=(1, 1),
+        blips=None,
         mask_blips=True):
     """
 
@@ -81,9 +81,10 @@ def zig_zag_cartesian_2d(
         mask_blips:
 
     Returns:
-        x:
-        y:
-        mask:
+        result (tuple): The tuple
+            contains:
+             - x_i (np.ndarray):
+             - mask (np.ndarray):
     """
     if mask_blips:
         raise NotImplementedError
@@ -91,5 +92,11 @@ def zig_zag_cartesian_2d(
         mask = np.ones(t.shape, dtype=bool)
     if isinstance(t, int):
         t = np.linspace(0.0, 1.0, t)
+    elif isinstance(t, float):
+        t = np.arange(0.0, 1.0 + np.spacing(1.0), t)
+    if not blips:
+        blips = t[1] - t[0]
 
-    return x, y, mask
+    return x_i, mask
+
+
