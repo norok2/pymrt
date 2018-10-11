@@ -46,6 +46,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
+import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import flyingcircus.util  # FlyingCircus: generic basic utilities
 import flyingcircus.num  # FlyingCircus: generic numerical utilities
@@ -66,8 +67,8 @@ def zig_zag_cartesian_2d(
         initial=(0, 0),
         final=(1, 1),
         scales=(1, 1),
-        blips=None,
-        mask_blips=True):
+        blip_size=None,
+        num_blips=None):
     """
 
 
@@ -86,17 +87,38 @@ def zig_zag_cartesian_2d(
              - x_i (np.ndarray):
              - mask (np.ndarray):
     """
-    if mask_blips:
-        raise NotImplementedError
-    else:
-        mask = np.ones(t.shape, dtype=bool)
     if isinstance(t, int):
         t = np.linspace(0.0, 1.0, t)
     elif isinstance(t, float):
         t = np.arange(0.0, 1.0 + np.spacing(1.0), t)
-    if not blips:
-        blips = t[1] - t[0]
+    t_res = t[1] - t[0]
+    if not blip_size and not num_blips:
+        blip_size = t_res
+    if not blip_size:
+        blip_size = (final[1] - initial[1]) / num_blips
+    else:  # if not num_blips
+        num_blips = (final[1] - initial[1]) / blip_size
+    num_trains = num_blips + 1
+    train_size = final[0] - initial[0]
+    traj_size = train_size * num_trains + blip_size * num_blips
+    print(blip_size, num_blips, train_size, num_trains, traj_size)
+    x_i = np.zeros((2, t.size))
+    duty = blip_size / train_size
+    print(duty, num_trains, t_res)
+    # assert(duty / num_trains >= t_res)
+    print(duty, t[1] - t[0], num_trains)
+    blips_mask = (1.0 - sp.signal.square(
+        (num_trains - 2 * duty) * 2.0 * np.pi * t, 1.0 - duty)) / 2
+    print(blips_mask)
+    print(x_i)
+    assert(t_re)
+    return x_i
 
-    return x_i, mask
+import matplotlib.pyplot as plt
 
+x_i = zig_zag_cartesian_2d(num_blips=6)
 
+fig, ax = plt.subplots()
+ax.plot(x_i[0], x_i[1])
+
+plt.show()
