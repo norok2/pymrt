@@ -63,8 +63,9 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.naming
 import pymrt.geometry
-import pymrt.plot as pmp
+import pymrt.plot
 import pymrt.segmentation
+import pymrt.animate
 
 # from pymrt import INFO
 # from pymrt import VERB_LVL, D_VERB_LVL
@@ -1146,7 +1147,7 @@ def plot_sample2d(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:arr.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    result = pmp.sample2d(arr, *args, **kwargs)
+    result = mrt.plot.sample2d(arr, *args, **kwargs)
     return result
 
 
@@ -1177,7 +1178,7 @@ def plot_sample2d_anim(
         resolution = np.array(
             [round(x, 3) for x in obj.get_header()['pixdim'][1:arr.ndim + 1]])
         kwargs.update({'resolution': resolution})
-    mov = pmp.sample2d_anim(arr, *args, **kwargs)
+    mov = mrt.animate.sample2d(arr, *args, **kwargs)
     return mov
 
 
@@ -1211,7 +1212,7 @@ def plot_histogram1d(
         mask = obj_mask.get_data().astype(bool)
     else:
         mask = slice(None)
-    result = pmp.histogram1d(arr[mask], *args, **kwargs)
+    result = mrt.plot.histogram1d(arr[mask], *args, **kwargs)
     return result
 
 
@@ -1248,7 +1249,7 @@ def plot_histogram1d_list(
         obj = nib.load(in_filepath)
         arr = obj.get_data()
         arr_list.append(arr[mask])
-    result = pmp.histogram1d_list(arr_list, *args, **kwargs)
+    result = mrt.plot.histogram1d_list(arr_list, *args, **kwargs)
     return result
 
 
@@ -1294,7 +1295,7 @@ def plot_histogram2d(
     else:
         mask2 = slice(None)
     result = \
-        pmp.histogram2d(arr1[mask1], arr2[mask2], *args, **kwargs)
+        mrt.plot.histogram2d(arr1[mask1], arr2[mask2], *args, **kwargs)
 
     return result
 

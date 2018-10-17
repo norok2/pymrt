@@ -63,8 +63,9 @@ import flyingcircus.num  # FlyingCircus: generic numerical utilities
 import pymrt as mrt
 import pymrt.utils
 
-# from pymrt import INFO
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
 # ======================================================================
