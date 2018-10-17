@@ -15,7 +15,7 @@ from __future__ import (
 # import sys  # System-specific parameters and functions
 # import shutil  # High-level file operations
 # import math  # Mathematical functions
-# import time  # Time access and conversions
+import time  # Time access and conversions
 # import datetime  # Basic date and time types
 # import operator  # Standard operators as functions
 # import collections  # Container datatypes
@@ -64,36 +64,21 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.plot
 
-# from pymrt import INFO
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report
 from pymrt import msg, dbg
 
-fig, ax = plt.subplots()
 
-x = np.arange(0, 2*np.pi, 0.01)
-line, = ax.plot(x, np.sin(x))
-
-
-def init():  # only required for blitting to give a clean slate.
-    line.set_ydata([np.nan] * len(x))
-    return line,
-
-
-def animate(i):
-    line.set_ydata(np.sin(x + i / 100))  # update the data.
-    return line,
-
-
-animation = mpl.animation.FuncAnimation(
-    fig, animate, init_func=init, interval=20, blit=True, save_count=50)
+MSEC_IN_SEC = 1000
 
 
 # ======================================================================
 def sample2d(
-        array,
+        arr,
         axis=None,
         step=1,
-        duration=10,
+        duration=10000,
         title=None,
         array_interval=None,
         ticks_limit=None,
@@ -102,7 +87,6 @@ def sample2d(
         cbar_kws=None,
         cbar_txt=None,
         text_color=None,
-        text_list=None,
         resolution=None,
         size_info=None,
         more_texts=None,
@@ -116,7 +100,7 @@ def sample2d(
 
     Parameters
     ==========
-    array : ndarray
+    arr : ndarray
         The original 3D array.
     axis : int (optional)
         The slicing axis. If None, use the shortest one.
@@ -143,7 +127,7 @@ def sample2d(
         The figure object containing the plot.
 
     """
-    if array.ndim != 3:
+    if arr.ndim != 3:
         raise IndexError('3D array required')
     if ax is None:
         fig = plt.figure()
@@ -151,12 +135,12 @@ def sample2d(
     else:
         fig = plt.gcf()
     if axis is None:
-        axis = np.argmin(array.shape)
-    sample = fc.num.ndim_slice(array, axis, 0)
+        axis = np.argmin(arr.shape)
+    sample = fc.num.ndim_slice(arr, axis, 0)
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = fc.num.minmax(array)
+        array_interval = fc.num.minmax(arr)
     if not cmap:
         if not fc.util.is_same_sign(array_interval):
             cmap = mpl.cm.get_cmap('RdBu_r')
@@ -201,15 +185,12 @@ def sample2d(
                  sample.shape[1] * 0.025 + size_info_px),
                 (sample.shape[0] * 0.965, sample.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
-    # include additional text
-    if text_list is not None:
-        for text_kws in text_list:
-            ax.text(**dict(text_kws))
-    n_frames = array.shape[axis]
+
+    n_frames = arr.shape[axis]
     plots = []
     data = []
     for i in range(0, n_frames, step):
-        sample = fc.num.ndim_slice(array, axis, i)
+        sample = fc.num.ndim_slice(arr, axis, i)
         pax = ax.imshow(
             sample, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
@@ -233,21 +214,112 @@ def sample2d(
     mov = mpl.animation.ArtistAnimation(fig, plots, blit=False)
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
-        save_kwargs = {'fps': n_frames / step / duration}
+        save_kwargs = {'fps': n_frames / step / duration / MSEC_IN_SEC}
         if save_kws is None:
             save_kws = {}
         save_kwargs.update(save_kws)
         mov.save(save_filepath, **dict(save_kws))
         msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
-    return data, fig
+    return data, fig, mov
 
 
 # ======================================================================
-def animate_trajectory(
+def trajectory_2d(
         trajectory,
+        duration=10000,
+        last_frame_duration=3000,
+        support_intervals=None,
+        plot_kws=(('marker', 'o'), ('linewidth', 1)),
+        ticks_limit=None,
+        title=None,
+        more_texts=None,
+        ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
-    pass
+    n_dims, n_points = trajectory.shape
+    if n_dims != 2:
+        raise IndexError('2D trajectory required')
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+    if title:
+        ax.set_title(title)
+    if support_intervals is None:
+        support_intervals = (
+            fc.num.minmax(trajectory[0]), fc.num.minmax(trajectory[1]))
+
+    n_frames = int(n_points * (1 + last_frame_duration / duration))
+    data = trajectory
+
+    if plot_kws is None:
+        plot_kws = {}
+
+    line, = ax.plot([], [], **dict(plot_kws))
+    # points = ax.scatter([], [])
+    ax.grid()
+    x_data, y_data = [], []
+
+    def data_gen():
+        for i in range(n_points):
+            yield trajectory[0, i], trajectory[1, i]
+        for i in range(n_frames - n_points):
+            yield None, None
+
+    def init():
+        xlim_size = np.ptp(support_intervals[0])
+        ylim_size = np.ptp(support_intervals[1])
+        ax.set_xlim(
+            (support_intervals[0][0] - 0.1 * xlim_size,
+             support_intervals[0][1] + 0.1 * xlim_size))
+        ax.set_ylim(
+            (support_intervals[1][0] - 0.1 * ylim_size,
+             support_intervals[1][1] + 0.1 * ylim_size))
+        del x_data[:]
+        del y_data[:]
+        line.set_data(x_data, y_data)
+        # points.set_offsets(np.c_[x_data, y_data])
+        return line,  # points
+
+    def run(data_generator):
+        # update the data
+        x, y = data_generator
+        x_data.append(x)
+        y_data.append(y)
+        line.set_data(x_data, y_data)
+        # points.set_offsets(np.c_[x_data, y_data])
+        return line,  # points
+
+    mov = mpl.animation.FuncAnimation(
+        fig, run, data_gen, init_func=init, save_count=n_frames,
+        blit=False, repeat=False, repeat_delay=None,
+        interval=duration / n_frames)
+
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+        fig.tight_layout()
+        save_kwargs = dict(
+            fps=n_frames / duration / MSEC_IN_SEC, writer='mencoder',
+            codec='libx264', save_count=n_frames)
+        if save_kws is None:
+            save_kws = {}
+        save_kwargs.update(save_kws)
+        mov.save(save_filepath, **dict(save_kws))
+        msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        # plt.close(fig)
+    return trajectory, fig, mov
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
+
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())

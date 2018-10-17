@@ -68,8 +68,7 @@ def zig_zag_cartesian_2d(
         train_size,
         blip_size=1,
         num_trains=None,
-        num_blips=None,
-        step=1):
+        num_blips=None):
     """
     Generate a zig-zag cartesian trajectory.
 
@@ -78,13 +77,16 @@ def zig_zag_cartesian_2d(
         blip_size:
         num_trains:
         num_blips:
-        step:
 
     Returns:
         result (tuple): The tuple
             contains:
              - x_i (np.ndarray): The coordinates of the trajectory.
              - mask (np.ndarray): The mask for the zig-zag trains.
+
+    Examples:
+        >>>
+        todo: finish docs
     """
     if not num_trains and not num_blips:
         text = 'At least one of `num_trains` and `num_blips` must be not None'
@@ -93,8 +95,8 @@ def zig_zag_cartesian_2d(
         num_trains = num_blips + 1
     elif not num_blips:
         num_blips = num_trains - 1
-    train = np.arange(0, abs(train_size), step) * np.sign(train_size)
-    blip = np.arange(1, abs(blip_size), step) * np.sign(blip_size)
+    train = np.arange(0, abs(train_size)) * np.sign(train_size)
+    blip = np.arange(1, abs(blip_size)) * np.sign(blip_size)
     x, y, mask = [], [], []
     y_offset = 0
     for j in range(num_trains):
@@ -113,50 +115,79 @@ def zig_zag_cartesian_2d(
 # ======================================================================
 def zig_zag_linear_2d(
         train_size,
-        num_trains,
-        step=1):
+        num_trains):
     """
     Generate a zig-zag linear trajectory.
 
+    This is defined as a train of points with monotonic y-axis
+    increase/decrease, and alternate monotonic x-axis oscillations.
+
     Args:
-        train_size:
-        normal_size:
-        num_trains:
-        num_blips:
-        step:
+        train_size (int): The number of points of the train.
+            Its sign determines the direction of the train: if positive goes
+            in the direction of positive x-axis, otherwise goes in the
+            other direction.
+        num_trains (int): The number of trains.
+            Its sign determines the direction of subsequent trains: if
+            positive goes in the direction of positive y-axis, otherwise goes
+            in the other direction.
 
     Returns:
         result (tuple): The tuple
             contains:
              - x_i (np.ndarray): The coordinates of the trajectory.
              - mask (np.ndarray): The mask for the zig-zag trains.
+
+    Examples:
+        >>> traj, mask = zig_zag_linear_2d(6, 2)
+        >>> print(traj)
+        [[ 0  1  2  3  4  5  4  3  2  1  0]
+         [ 0  1  2  3  4  5  6  7  8  9 10]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True  True]
+        >>> traj, mask = zig_zag_linear_2d(4, 3)
+        >>> print(traj)
+        [[0 1 2 3 2 1 0 1 2 3]
+         [0 1 2 3 4 5 6 7 8 9]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True]
+        >>> traj, mask = zig_zag_linear_2d(-4, 3)
+        >>> print(traj)
+        [[ 0 -1 -2 -3 -2 -1  0 -1 -2 -3]
+         [ 0  1  2  3  4  5  6  7  8  9]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True]
+        >>> traj, mask = zig_zag_linear_2d(4, -3)
+        >>> print(traj)
+        [[ 0  1  2  3  2  1  0  1  2  3]
+         [ 0 -1 -2 -3 -4 -5 -6 -7 -8 -9]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True]
+        >>> traj, mask = zig_zag_linear_2d(-4, -3)
+        >>> print(traj)
+        [[ 0 -1 -2 -3 -2 -1  0 -1 -2 -3]
+         [ 0 -1 -2 -3 -4 -5 -6 -7 -8 -9]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True]
     """
     num_points = (abs(train_size) - 1) * abs(num_trains) + 1
-    train = np.arange(0, abs(train_size), step) * np.sign(train_size)
+    train = np.arange(0, abs(train_size)) * np.sign(train_size)
     x = [0]
-    for j in range(num_trains):
+    for j in range(abs(num_trains)):
         slicing = slice(-2, None, -1) if j % 2 else slice(1, None, 1)
         x.extend(train[slicing].tolist())
-    y = np.arange(0, num_points, step)
+    y = np.arange(0, num_points) * np.sign(num_trains)
     mask = np.ones(num_points, dtype=bool)
     return np.stack([x, y]), mask
 
 
-import matplotlib.pyplot as plt
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
 
-traj_up, train_mask = zig_zag_cartesian_2d(11, 2, num_blips=4)
-traj_dn, train_mask = zig_zag_linear_2d(-11, -5)
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
 
-print(traj_dn.shape)
-print(traj_dn)
-
-traj_up = reframe(traj_up, bounds=5)
-traj_dn = reframe(traj_dn, bounds=5)
-
-fig, ax = plt.subplots()
-ax.axis('equal')
-ax.scatter(traj_up[0], traj_up[1])
-ax.plot(traj_up[0], traj_up[1])
-ax.scatter(traj_dn[0], traj_dn[1])
-ax.plot(traj_dn[0], traj_dn[1])
-plt.show()
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())
