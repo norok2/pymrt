@@ -39,6 +39,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -46,6 +47,8 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
+import flyingcircus.util
+import flyingcircus.num
 
 # :: Local Imports
 import pymrt as mrt
@@ -59,17 +62,20 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def shepp_logan():
+def shepp_logan_like(
+        values=1.0):
     """
-    The classical Shepp-Logan phantom.
+    The Shepp-Logan phantom with custom intensity values.
+
+    Args:
+        values (int|float|Iterable[int|float]): Intensities of the ellipses.
+            If Iterable, must have a length of 10.
 
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
             These are of the form: [val, semizes, position, angles].
-            They can be passed directly to
-            `pymrt.extras.num_phantom.render_geom_shapes()`.
+            They can be passed directly to `mrt.geometry.multi_render()`.
             See this function for more details.
-
 
     References:
         - Shepp, L. A., and B. F. Logan. “The Fourier Reconstruction of a
@@ -83,28 +89,49 @@ def shepp_logan():
           paper.
     """
     geom_shapes = [
-        [+2.00, ['ellipsoid', [0.3450, 0.4600]], [+0.0000, +0.0000], [+000.],
-         None],
-        [-0.98, ['ellipsoid', [0.3312, 0.4370]], [+0.0000, -0.0092], [+000.],
-         None],
-        [-0.02, ['ellipsoid', [0.1550, 0.0550]], [+0.1100, +0.0000], [+108.],
-         None],  # 90 + 18
-        [-0.02, ['ellipsoid', [0.2050, 0.0800]], [-0.1100, +0.0000], [+072.],
-         None],  # 90 - 18
-        [+0.01, ['ellipsoid', [0.1250, 0.1050]], [+0.0000, +0.1750], [+000.],
-         None],
-        [+0.01, ['ellipsoid', [0.0230, 0.0230]], [+0.0000, +0.0500], [+000.],
-         None],
-        [+0.01, ['ellipsoid', [0.0230, 0.0230]], [+0.0000, -0.0500], [+000.],
-         None],
-        [+0.01, ['ellipsoid', [0.0230, 0.0115]], [-0.0400, -0.3025], [+000.],
-         None],
-        [+0.01, ['ellipsoid', [0.0115, 0.0115]], [+0.0000, -0.3025], [+000.],
-         None],
-        [+0.01, ['ellipsoid', [0.0115, 0.0230]], [+0.0300, -0.3025], [+000.],
-         None],
-    ]
+        [['ellipsoid', [0.3450, 0.4600]], [+0.0000, +0.0000], [+000.], None],
+        [['ellipsoid', [0.3312, 0.4370]], [+0.0000, -0.0092], [+000.], None],
+        # angle: 108 = 90 + 18
+        [['ellipsoid', [0.1550, 0.0550]], [+0.1100, +0.0000], [+108.], None],
+        # angle: 72 = 90 - 18
+        [['ellipsoid', [0.2050, 0.0800]], [-0.1100, +0.0000], [+072.], None],
+        [['ellipsoid', [0.1250, 0.1050]], [+0.0000, +0.1750], [+000.], None],
+        [['ellipsoid', [0.0230, 0.0230]], [+0.0000, +0.0500], [+000.], None],
+        [['ellipsoid', [0.0230, 0.0230]], [+0.0000, -0.0500], [+000.], None],
+        [['ellipsoid', [0.0230, 0.0115]], [-0.0400, -0.3025], [+000.], None],
+        [['ellipsoid', [0.0115, 0.0115]], [+0.0000, -0.3025], [+000.], None],
+        [['ellipsoid', [0.0115, 0.0230]], [+0.0300, -0.3025], [+000.], None], ]
+    fc.util.auto_repeat(values, len(geom_shapes), False, True)
+    geom_shapes = [
+        ([value] + geom_shape)
+        for value, geom_shape in zip(values, geom_shapes)]
     return geom_shapes
+
+
+# ======================================================================
+def shepp_logan():
+    """
+    The classical Shepp-Logan phantom.
+
+    Returns:
+        geom_shapes (Iterable[Iterable]): The geometric specifications.
+            These are of the form: [val, semizes, position, angles].
+            They can be passed directly to `mrt.geometry.multi_render()`.
+            See this function for more details.
+
+    References:
+        - Shepp, L. A., and B. F. Logan. “The Fourier Reconstruction of a
+          Head Section.” IEEE Transactions on Nuclear Science 21, no. 3 (June
+          1974): 21–43. https://doi.org/10.1109/TNS.1974.6499235.
+
+    Notes:
+        - This is implemented based on `pymrt.geometry.nd_superellipsoid()`
+          and therefore the sizes and the inner positions are halved, while
+          angular values are defined differently compared to the reference
+          paper.
+    """
+    return shepp_logan_like(
+        [2.00, -0.98, -0.02, -0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
 
 
 # ======================================================================
@@ -115,8 +142,7 @@ def shepp_logan_toft():
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
             These are of the form: [val, semizes, position, angles].
-            They can be passed directly to
-            `pymrt.extras.num_phantom.render_geom_shapes()`.
+            They can be passed directly to `mrt.geometry.multi_render()`.
             See this function for more details.
 
     References:
@@ -130,11 +156,8 @@ def shepp_logan_toft():
           angular values are defined differently compared to the reference
           paper.
     """
-    new_vals = [1.0, -0.8, -0.2, -0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    geom_shapes = [
-        ([new_val] + geom_shape[1:])
-        for new_val, geom_shape in zip(new_vals, shepp_logan())]
-    return geom_shapes
+    return shepp_logan_like(
+        [1.0, -0.8, -0.2, -0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
 
 # ======================================================================
@@ -145,8 +168,7 @@ def kak_roberts():
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
             These are of the form: [val, semizes, position, angles].
-            They can be passed directly to
-            `pymrt.extras.num_phantom.render_geom_shapes()`.
+            They can be passed directly to `mrt.geometry.multi_render()`.
             See this function for more details.
 
     References:
@@ -262,15 +284,6 @@ def render(
         method = mrt.geometry.multi_render
     arr = method(**method_kws) if callable(method) else None
     return arr
-
-
-# import numex.gui_tk_mpl
-
-# arr = render(256, 'shepp_logan_toft')
-# mrt.plot.quick(arr.T, origin='lower')
-
-# arr = render(256, 'shepp_logan_3d')
-# numex.gui_tk_mpl.explore(arr)
 
 
 # ======================================================================
