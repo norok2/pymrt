@@ -42,9 +42,19 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def reframe(
+def scale(
         trajectory,
         bounds=(-1, 1)):
+    """
+    Reframe the boundaries of a trajectory.
+
+    Args:
+        trajectory:
+        bounds:
+
+    Returns:
+
+    """
     n_dims = trajectory.shape[0]
     try:
         len(bounds)
@@ -64,29 +74,107 @@ def reframe(
 
 
 # ======================================================================
-def zig_zag_cartesian_2d(
+def zoom(
+        trajectory,
+        factors=1):
+    """
+    Scale a trajectory.
+
+    Args:
+        trajectory:
+        zoom:
+
+    Returns:
+
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def zig_zag_blipped_2d(
         train_size,
         blip_size=1,
         num_trains=None,
-        num_blips=None):
+        num_blips=None,
+        modulation=np.zeros_like,
+        modulation_kws=None):
     """
-    Generate a zig-zag cartesian trajectory.
+    Generate a zig-zag blipped trajectory.
 
     Args:
-        train_size:
-        blip_size:
-        num_trains:
-        num_blips:
+        train_size (int): The number of points of the train.
+            Its sign determines the direction of the train: if positive goes
+            in the direction of positive x-axis, otherwise goes in the
+            other direction.
+        blip_size (int): The number of points of the blip.
+            Its sign determines the direction of blip: if positive goes in the
+            direction of positive y-axis, otherwise goes in the other
+            direction.
+        num_trains (int|None): The number of trains.
+            If None, it is calculated from the number of blips.
+            The following equation must hold: `num_trains - num_blips == 1`.
+        num_blips (int|None): The number of blips.
+            If None, it is calculated from the number of trains.
+            The following equation must hold: `num_trains - num_blips == 1`.
+        modulation (callable): The modulation of the trains.
+            Must have the following signature:
+            func(np.ndarray, **modulation_kws) -> np.ndarray
+        modulation_kws (dict|tuple|None): Keyword arguments for `modulation`.
+            If tuple, must produce a valid dict upon casting.
 
     Returns:
         result (tuple): The tuple
             contains:
-             - x_i (np.ndarray): The coordinates of the trajectory.
+             - trajectory (np.ndarray): The coordinates of the trajectory.
              - mask (np.ndarray): The mask for the zig-zag trains.
 
     Examples:
-        >>>
-        todo: finish docs
+        >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
+        >>> print(traj)
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+        >>> print(mask)
+        [ True  True  True  True  True  True  True  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(3, 2, 3)
+        >>> print(traj)
+        [[0 1 2 2 2 1 0 0 0 1 2]
+         [0 0 0 1 2 2 2 3 4 4 4]]
+        >>> print(mask)
+        [ True  True  True False  True  True  True False  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(-3, 2, 3)
+        >>> print(traj)
+        [[ 0 -1 -2 -2 -2 -1  0  0  0 -1 -2]
+         [ 0  0  0  1  2  2  2  3  4  4  4]]
+        >>> print(mask)
+        [ True  True  True False  True  True  True False  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(3, -2, 3)
+        >>> print(traj)
+        [[ 0  1  2  2  2  1  0  0  0  1  2]
+         [ 0  0  0 -1 -2 -2 -2 -3 -4 -4 -4]]
+        >>> print(mask)
+        [ True  True  True False  True  True  True False  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(-3, -2, 3)
+        >>> print(traj)
+        [[ 0 -1 -2 -2 -2 -1  0  0  0 -1 -2]
+         [ 0  0  0 -1 -2 -2 -2 -3 -4 -4 -4]]
+        >>> print(mask)
+        [ True  True  True False  True  True  True False  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(3, 2, num_blips=2)
+        >>> print(traj)
+        [[0 1 2 2 2 1 0 0 0 1 2]
+         [0 0 0 1 2 2 2 3 4 4 4]]
+        >>> print(mask)
+        [ True  True  True False  True  True  True False  True  True  True]
+
+        >>> traj, mask = zig_zag_blipped_2d(3, 2, 5, 2)
+        Traceback (most recent call last):
+            ....
+        AssertionError
     """
     if not num_trains and not num_blips:
         text = 'At least one of `num_trains` and `num_blips` must be not None'
@@ -95,6 +183,8 @@ def zig_zag_cartesian_2d(
         num_trains = num_blips + 1
     elif not num_blips:
         num_blips = num_trains - 1
+    assert (num_trains - num_blips == 1)
+    modulation_kws = {} if modulation_kws is None else dict(modulation_kws)
     train = np.arange(0, abs(train_size)) * np.sign(train_size)
     blip = np.arange(1, abs(blip_size)) * np.sign(blip_size)
     x, y, mask = [], [], []
@@ -102,14 +192,14 @@ def zig_zag_cartesian_2d(
     for j in range(num_trains):
         slicing = slice(None, None, -1) if j % 2 else slice(None, None, 1)
         x.extend(train[slicing].tolist())
-        y.extend((np.zeros_like(train) + y_offset).tolist())
+        y.extend((modulation(train, **modulation_kws) + y_offset).tolist())
         mask.extend(np.ones_like(train, dtype=bool).tolist())
         if j < num_blips:
             x.extend([train[0 if j % 2 else -1]] * blip.size)
             y.extend((blip + y_offset).tolist())
             mask.extend(np.zeros_like(blip, dtype=bool).tolist())
         y_offset += blip_size
-    return np.array([x, y]), mask
+    return np.array([x, y]), np.array(mask)
 
 
 # ======================================================================
@@ -135,7 +225,7 @@ def zig_zag_linear_2d(
     Returns:
         result (tuple): The tuple
             contains:
-             - x_i (np.ndarray): The coordinates of the trajectory.
+             - trajectory (np.ndarray): The coordinates of the trajectory.
              - mask (np.ndarray): The mask for the zig-zag trains.
 
     Examples:
@@ -145,24 +235,28 @@ def zig_zag_linear_2d(
          [ 0  1  2  3  4  5  6  7  8  9 10]]
         >>> print(mask)
         [ True  True  True  True  True  True  True  True  True  True  True]
+
         >>> traj, mask = zig_zag_linear_2d(4, 3)
         >>> print(traj)
         [[0 1 2 3 2 1 0 1 2 3]
          [0 1 2 3 4 5 6 7 8 9]]
         >>> print(mask)
         [ True  True  True  True  True  True  True  True  True  True]
+
         >>> traj, mask = zig_zag_linear_2d(-4, 3)
         >>> print(traj)
         [[ 0 -1 -2 -3 -2 -1  0 -1 -2 -3]
          [ 0  1  2  3  4  5  6  7  8  9]]
         >>> print(mask)
         [ True  True  True  True  True  True  True  True  True  True]
+
         >>> traj, mask = zig_zag_linear_2d(4, -3)
         >>> print(traj)
         [[ 0  1  2  3  2  1  0  1  2  3]
          [ 0 -1 -2 -3 -4 -5 -6 -7 -8 -9]]
         >>> print(mask)
         [ True  True  True  True  True  True  True  True  True  True]
+
         >>> traj, mask = zig_zag_linear_2d(-4, -3)
         >>> print(traj)
         [[ 0 -1 -2 -3 -2 -1  0 -1 -2 -3]
@@ -179,6 +273,87 @@ def zig_zag_linear_2d(
     y = np.arange(0, num_points) * np.sign(num_trains)
     mask = np.ones(num_points, dtype=bool)
     return np.stack([x, y]), mask
+
+
+# ======================================================================
+def zig_zag_blipped_sinusoidal_2d(
+        train_size,
+        blip_size=1,
+        num_trains=None,
+        num_blips=None,
+        wavelength=None,
+        amplitude=None,
+        phase=0.0):
+    """
+    Generate a zig-zag blipped trajectory with harmonic trains.
+
+    This is generated using a `sin(x)` function.
+
+    Args:
+        train_size (int): The number of points of the train.
+            Its sign determines the direction of the train: if positive goes
+            in the direction of positive x-axis, otherwise goes in the
+            other direction.
+        blip_size (int): The number of points of the blip.
+            Its sign determines the direction of blip: if positive goes in the
+            direction of positive y-axis, otherwise goes in the other
+            direction.
+        num_trains (int|None): The number of trains.
+            If None, it is calculated from the number of blips.
+            The following equation must hold: `num_trains - num_blips == 1`.
+        num_blips (int|None): The number of blips.
+            If None, it is calculated from the number of trains.
+            The following equation must hold: `num_trains - num_blips == 1`.
+        wavelength (int|float|None):
+        amplitude (int|float|None):
+        phase (int|float): The phase of the sinusoidal modulation in rad.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - trajectory (np.ndarray): The coordinates of the trajectory.
+             - mask (np.ndarray): The mask for the zig-zag trains.
+
+    Examples:
+
+    """
+    if not wavelength:
+        wavelength = train_size
+    if not amplitude:
+        amplitude = blip_size / 2.0
+    if not phase:
+        phase = 0.0
+
+    def modulation(x):
+        return amplitude * np.sin(2.0 * np.pi * x / wavelength + phase)
+
+    return zig_zag_blipped_2d(
+        train_size, blip_size, num_trains, num_blips, modulation)
+
+
+# ======================================================================
+def density(
+        trajectory,
+        mask=None):
+    """
+    Compute the spatial density.
+
+    Args:
+        trajectory:
+        mask:
+
+    Returns:
+
+    """
+    n_dims, n_all_points = trajectory.shape
+    if mask is None:
+        mask = slice(None)
+        n_points = n_all_points
+    else:
+        n_points = np.sum(mask)
+    bounds = tuple(fc.num.minmax(trajectory[i, mask]) for i in range(n_dims))
+    bound_sizes = tuple(np.ptp(interval) for interval in bounds)
+    return fc.util.prod(bound_sizes) / n_points
 
 
 # ======================================================================
