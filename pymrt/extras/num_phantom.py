@@ -28,6 +28,8 @@ import struct  # Interpret strings as packed binary data
 import doctest  # Test interactive Python examples
 import glob  # Unix style pathname pattern expansion
 import warnings  # Warning control
+import copy  # Shallow and deep copy operations
+import random  # Generate pseudo-random numbers
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
@@ -115,9 +117,9 @@ def shepp_logan():
 
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
-            These are of the form: [val, semizes, position, angles].
-            They can be passed directly to `mrt.geometry.multi_render()`.
-            See this function for more details.
+            These are of the form: [val, [name, *args], position, angles].
+            See the `geom_shapes` parameter of `pymrt.geometry.multi_render()`
+            for more details.
 
     References:
         - Shepp, L. A., and B. F. Logan. “The Fourier Reconstruction of a
@@ -141,9 +143,9 @@ def shepp_logan_toft():
 
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
-            These are of the form: [val, semizes, position, angles].
-            They can be passed directly to `mrt.geometry.multi_render()`.
-            See this function for more details.
+            These are of the form: [val, [name, *args], position, angles].
+            See the `geom_shapes` parameter of `pymrt.geometry.multi_render()`
+            for more details.
 
     References:
         - Shepp, L. A., and B. F. Logan. “The Fourier Reconstruction of a
@@ -167,9 +169,9 @@ def kak_roberts():
 
     Returns:
         geom_shapes (Iterable[Iterable]): The geometric specifications.
-            These are of the form: [val, semizes, position, angles].
-            They can be passed directly to `mrt.geometry.multi_render()`.
-            See this function for more details.
+            These are of the form: [val, [name, *args], position, angles].
+            See the `geom_shapes` parameter of `pymrt.geometry.multi_render()`
+            for more details.
 
     References:
         - Young, Tzay Y., and K. S. Fu, eds. Handbook of Pattern Recognition
@@ -249,6 +251,32 @@ def metere_brain_fmri_4d():
 # ======================================================================
 def metere_brain_motion_4d():
     raise NotImplementedError
+
+
+# ======================================================================
+def randomize(
+        geom_shapes,
+        interval=0.1j,
+        fallback_interval=5j):
+    """
+    Randomize the numerical parameters of the geometrical elements.
+
+    Args:
+        geom_shapes (Iterable): The geometric specifications.
+            These are of the form: [val, [name, *args], position, angles].
+            See the `geom_shapes` parameter of `pymrt.geometry.multi_render()`
+            for more details.
+        interval:
+        fallback_interval:
+
+    Returns:
+        rand_geom_shapes (Iterable): The randomized geometric specifications.
+    """
+    rand_geom_shapes = fc.util.deep_filter_map(
+        geom_shapes,
+        lambda x: fc.num.scaled_randomizer(x, interval, fallback_interval),
+        lambda x: isinstance(x, (int, float)))
+    return rand_geom_shapes
 
 
 # ======================================================================
