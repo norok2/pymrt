@@ -353,7 +353,7 @@ def density(
         n_points = np.sum(mask)
     bounds = tuple(fc.num.minmax(trajectory[i, mask]) for i in range(n_dims))
     bound_sizes = tuple(np.ptp(interval) for interval in bounds)
-    return fc.util.prod(bound_sizes) / n_points
+    return n_points / fc.util.prod(bound_sizes)
 
 
 # ======================================================================
