@@ -21,6 +21,7 @@ CHANGELOG.*
 tests/data/
 
 # additional
+unversioned/
 notebooks/
 
 # images
