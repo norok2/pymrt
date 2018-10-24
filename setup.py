@@ -174,7 +174,7 @@ setup(
     },
     include_package_data=True,
 
-    data_files=[('share/icons', ['artwork/pymrt_logo.svgz'])],
+    data_files=[('share/icons', ['artwork/pymrt_logo.svg'])],
 
     entry_points={
         'console_scripts': [
