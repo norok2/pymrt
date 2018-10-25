@@ -199,9 +199,11 @@ def cx_div(
         regularization (float|int): Parameter for the regularization.
             This parameter is added to the denominator of the expression
             for preventing undefined values when both s1 and s2 vanish.
-        values_interval (tuple[float|int]|None): The output values interval.
+        values_interval (Any): The output values interval.
             The standard values are linearly converted to this range.
             If None, the natural [-0.5, 0.5] interval will be used.
+            See `flyingcircus.num.valid_interval()` for details on the
+            accepted input.
 
     Returns:
         result (float|complex|np.ndarray): The pseud-ratio array.
@@ -209,6 +211,7 @@ def cx_div(
     result = arr1 * arr2 / (
             np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
+        values_interval = fc.num.valid_interval(values_interval)
         result = fc.num.scale(result, values_interval, (-0.5, 0.5))
     return result
 

@@ -472,9 +472,10 @@ def rho_mp2rage(
             the average of the magnitude images.
             Larger values of this parameter will have the side effect of
             denoising the background.
-        values_interval (tuple[float|int]|None): The output values interval.
+        values_interval (Any): The output values interval.
             The standard values are linearly converted to this range.
             If None, the natural [-0.5, 0.5] interval will be used.
+
 
     Returns:
         rho_arr (float|np.ndarray): The calculated rho image from
@@ -491,6 +492,7 @@ def rho_mp2rage(
     rho_arr = np.real(inv1_arr.conj() * inv2_arr /
                       (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
+        values_interval = fc.num.valid_interval(values_interval)
         rho_arr = fc.num.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
 
@@ -986,7 +988,7 @@ def compute_generic(
         opts (dict):
             Accepted options:
                 - types (list[str]): List of image types to use for results.
-                - mask: (tuple[tuple[int]): Slicing for each dimension.
+                - mask: (Iterable[Iterable[int]): Slicing for each dimension.
                 - adapt_mask (bool): adapt over- or under-sized mask.
                 - dtype (str): data type to be used for the target images.
                 - compute_func (str): function used for the computation.

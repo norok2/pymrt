@@ -76,7 +76,7 @@ def dipole_kernel(
     Args:
         shape (Iterable[int]): 3D-shape of the dipole kernel array.
             If not a 3D array, the function fails.
-        origin (float|tuple[float]): Relative position of the origin.
+        origin (float|Iterable[float]): Relative position of the origin.
             Values are in the [0, 1] interval.
         b0_direction (np.ndarray|None): The direction of the magnetic field B0.
             Must be either a 3D unit vector (versor) or None.

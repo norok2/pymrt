@@ -433,9 +433,9 @@ def unwrap_laplacian(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to `np.cos(arr)` and `np.sin(arr)` separately.
-        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+        denoising_kws (dict|Iterable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
-            If tuple[tuple], must be convertible to a dictionary.
+            If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
 
     Returns:
@@ -495,7 +495,7 @@ def unwrap_laplacian_c(
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         denoising (callable|None): The denoising function.
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
-        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+        denoising_kws (dict|Iterable|None): Keyword arguments.
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         congruences (int): The number of congruence values to test.
             See `pymrt.recipes.phs.congruence_correction()` for more info.
@@ -545,9 +545,9 @@ def unwrap_gradient(
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
             separately, using `fc.num.filter_cx()`.
-        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+        denoising_kws (dict|Iterable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
-            If tuple[tuple], must be convertible to a dictionary.
+            If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
 
     Returns:
@@ -602,7 +602,7 @@ def unwrap_gradient_c(
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
         denoising (callable|None): The denoising function.
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
-        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+        denoising_kws (dict|Iterable|None): Keyword arguments.
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
         congruences (int): The number of congruence values to test.
             See `pymrt.recipes.phs.congruence_correction()` for more info.
@@ -649,9 +649,9 @@ def unwrap_sorting_path(
         step (float): The size of the wrap discontinuity.
             For phase data this is 2π.
         reliab (callable): The function for computing reliability.
-        reliab_kws (dict|tuple[tuple]|None): Keyword arguments.
+        reliab_kws (dict|Iterable|None): Keyword arguments.
             These are passed to the function specified in `reliab`.
-            If tuple[tuple], must be convertible to a dictionary.
+            If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
 
     Returns:
@@ -869,7 +869,7 @@ def unwrap_sorting_path_2d_3d(
 
     Args:
         arr (np.ndarray): The wrapped phase array.
-        unwrap_axes (tuple[int]): Axes along which unwrap is performed.
+        unwrap_axes (Iterable[int]): Axes along which unwrap is performed.
             Must have length 2 or 3.
         wrap_around (bool|Iterable[bool]|None): Circular unwrap.
             See also: skimage.restoration.unwrap_phase.
@@ -935,9 +935,9 @@ def unwrap_1d_iter(
             separately, using `fc.num.filter_cx()` and then
             converted back to a phase with `np.angle()` before applying the
             unwrapping.
-        denoising_kws (dict|tuple[tuple]|None): Keyword arguments.
+        denoising_kws (dict|Iterable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
-            If tuple[tuple], must be convertible to a dictionary.
+            If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
         congruences (int): The number of congruence values to test.
             See `pymrt.recipes.phs.congruence_correction()` for more info.
