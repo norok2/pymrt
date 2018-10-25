@@ -73,7 +73,7 @@ def set_values(
 
     Args:
         rendered (np.ndarray[bool]): The rendered object.
-        fill (tuple[bool|int|float]): Values to use.
+        fill (Iterable[bool|int|float]): Values to use.
             The first value is used for the rendered object.
             The second value is used for everything else.
         dtype (np.dtype): Desired output data-type.
@@ -640,7 +640,7 @@ def rectangle(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semisides (tuple[float]): The semisides of the rectangle in px.
+        semisides (Iterable[float]): The semisides of the rectangle in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -688,7 +688,7 @@ def rhombus(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semidiagonals (float|tuple[float]): The rhombus semidiagonas in px.
+        semidiagonals (float|Iterable[float]): The rhombus semidiagonas in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -768,7 +768,7 @@ def ellipse(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semiaxes (float|tuple[float]): The semiaxes of the ellipse in px.
+        semiaxes (float|Iterable[float]): The semiaxes of the ellipse in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -852,7 +852,7 @@ def cuboid(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semisides (tuple[float]): The semisides of the cuboid in px.
+        semisides (Iterable[float]): The semisides of the cuboid in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -892,7 +892,7 @@ def rhomboid(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semidiagonals (tuple[float]): The semidiagonals of the rhomboid in px.
+        semidiagonals (Iterable[float]): The rhomboid semidiagonals in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -1002,7 +1002,7 @@ def ellipsoid(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semiaxes (float|tuple[float]): The semiaxes of the ellipsoid in px.
+        semiaxes (float|Iterable[float]): The semiaxes of the ellipsoid in px.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             They are interpreted as relative to the shape.
@@ -1100,7 +1100,7 @@ def cylinder(
     base_position = tuple(
         dim for i, dim in enumerate(position) if axis % n_dim != i)
     base = circle(base_shape, radius, base_position)
-    # use n-dim function
+    # use N-dim function
     return nd_prism(
         base, shape[axis], axis, height, position[axis],
         rel_position=True, rel_sizes=False)
@@ -1299,7 +1299,7 @@ def nd_cuboid(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semisizes (float|Iterable[float]): The N-dim cuboid semisides sizes.
+        semisizes (float|Iterable[float]): The cuboid semisides sizes.
             The values interpretation depend on `rel_sizes`.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
@@ -1363,13 +1363,13 @@ def nd_superellipsoid(
 
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
-        semisizes (float|Iterable[float]): The N-dim superellipsoid axes sizes.
+        semisizes (float|Iterable[float]): The superellipsoid axes semisizes.
             The values interpretation depend on `rel_sizes`.
         position (float|Iterable[float]): The position of the center.
             Values are relative to the lowest edge.
             The values interpretation depend on `rel_position`.
-        indexes (float|tuple[float]): The exponent of the summed terms.
-            If 2, generates n-dim ellipsoids.
+        indexes (float|Iterable[float]): The exponent of the summed terms.
+            If 2, generates ellipsoids.
         n_dim (int|None): The number of dimensions.
             If None, the number of dims is guessed from the other parameters,
             but one of `shape`, `position`, `semisizes`, `indexes` must be
@@ -1549,30 +1549,44 @@ def nd_superellipsoidal_cone(
 
 # ======================================================================
 def nd_gradient(
-        gen_ranges,
+        shape,
+        gen_ranges=None,
         dtype=float,
         dense=False,
         generators=np.linspace,
-        generators_kws=None):
+        generators_kws=None,
+        n_dim=None):
     """
     Generate N-dimensional gradient data arrays.
 
     This is useful for generating simulation data patterns.
 
     Args:
-        gen_ranges (Iterable[Iterable]): Generator ranges and numbers.
-            An Iterable of size 3 Iterables: (start, stop, number) where
-            start and stop are the extrema of the range to cover, and number
-            indicate the number of samples.
+        shape (int|Iterable[int]|None): The shape of the container in px.
+            If None, this is determined from the slice.step in `gen_ranges`.
+            At least one of `shape` and the slice.step info in `gen_ranges`
+            must be specified.
+            If both are specified, the info therein must match.
+        gen_ranges (Iterable[tuple]|None): Generator ranges and numbers.
+            An Iterable of 2 or 3-tuples: the first two are always interpreted
+            as the the extrema of the range to cover, while the third (when
+            present) indicates the number of samples.
+            If the number of samples is not specified (or is set to None),
+            this info is taken from the `shape` parameter.
+            If both `shape` and the third tuple element are specified,
+            the info therein must match.
+            If None, the shape information is used to generate the values,
+            using (0, dim - 1, dim) for dim in shape.
         dtype (data-type): Desired output data-type.
             See `np.ndarray()` for more.
+            If `gen_ranges` is None, defaults to `int`.
         dense (bool): Generate dense results.
             If True, the results have full sizes.
             Otherwise, constant dimensions are keept to size of 1,
             which ensures them being broadcast-safe.
         generators (callable|Iterable[callable]): The range generator(s).
-            A generator must have signature:
-            f(any, any, int, **kws) -> Iterable
+            A generator `func` must have signature:
+            func(any, any, int, **kws) -> Iterable
             If callable, the same generator is used for all dimensions.
             If Iterable, each generator generate the data corresponding to its
             position in the Iterable, and its length must match the length of
@@ -1587,44 +1601,49 @@ def nd_gradient(
 
 
     Returns:
-        arrs (list[np.ndarray]): The broadcast-safe n-dim gradient arrays.
+        arrs (list[np.ndarray]): The broadcast-safe N-dim gradient arrays.
             The actual shape depend on `dense`.
 
     Examples:
-        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2))):
+        >>> for arr in nd_gradient(None, ((0, 1, 2), (-2, 2, 2))):
         ...     print(arr)
-        [[ 0.]
-         [ 1.]]
+        [[0.]
+         [1.]]
         [[-2.  2.]]
-        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), dense=True):
+        >>> for arr in nd_gradient(
+        ...         None, ((0, 1, 2), (-2, 2, 2)), dense=True):
         ...     print(arr)
-        [[ 0.  0.]
-         [ 1.  1.]]
+        [[0. 0.]
+         [1. 1.]]
         [[-2.  2.]
          [-2.  2.]]
-        >>> for arr in nd_gradient(((0, 1, 2), (-2, 2, 2)), int, True):
+        >>> for arr in nd_gradient(
+        ...         None, ((0, 1, 2), (-2, 2, 2)), int, True):
         ...     print(arr)
         [[0 0]
          [1 1]]
         [[-2  2]
          [-2  2]]
         >>> for arr in nd_gradient(
-        ...         ((0, 1, 2), (-2, 2, 2)), float, True, np.logspace):
+        ...         None, ((0, 1, 2), (-2, 2, 2)), float, True,
+        ...         np.logspace):
         ...     print(arr)
-        [[  1.   1.]
-         [ 10.  10.]]
-        [[  1.00000000e-02   1.00000000e+02]
-         [  1.00000000e-02   1.00000000e+02]]
+        [[ 1.  1.]
+         [10. 10.]]
+        [[1.e-02 1.e+02]
+         [1.e-02 1.e+02]]
         >>> for arr in nd_gradient(
-        ...         ((0, 1, 2), (-2, 2, 2)), float, True,
+        ...         None, ((0, 1, 2), (-2, 2, 2)), float, True,
         ...         (np.linspace, np.logspace)):
         ...     print(arr)
-        [[ 0.  0.]
-         [ 1.  1.]]
-        [[  1.00000000e-02   1.00000000e+02]
-         [  1.00000000e-02   1.00000000e+02]]
+        [[0. 0.]
+         [1. 1.]]
+        [[1.e-02 1.e+02]
+         [1.e-02 1.e+02]]
+
         >>> for arr in nd_gradient(
-        ...         ((0, 1, 2), (-1, 1, 3), (-2, 2, 2)), int, True):
+        ...         None, ((0, 1, 2), (-1, 1, 3), (-2, 2, 2)),
+        ...         int, True):
         ...     print(arr)
         [[[0 0]
           [0 0]
@@ -1647,18 +1666,91 @@ def nd_gradient(
          [[-2  2]
           [-2  2]
           [-2  2]]]
+        >>> for arr in nd_gradient((2, 20)):
+        ...     print(arr)
+        [[0]
+         [1]]
+        [[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19]]
+        >>> for arr in nd_gradient((3, 16), dense=True):
+        ...     print(arr)
+        [[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+         [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+         [2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2]]
+        [[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15]
+         [ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15]
+         [ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15]]
+        >>> for arr in nd_gradient((3, 5), (4, 6), dense=True):
+        ...     print(arr)
+        [[4. 4. 4. 4. 4.]
+         [5. 5. 5. 5. 5.]
+         [6. 6. 6. 6. 6.]]
+        [[4.  4.5 5.  5.5 6. ]
+         [4.  4.5 5.  5.5 6. ]
+         [4.  4.5 5.  5.5 6. ]]
+        >>> for arr in nd_gradient((3, 5), ((4, 6), (3, 5))):
+        ...     print(arr)
+        [[4.]
+         [5.]
+         [6.]]
+        [[3.  3.5 4.  4.5 5. ]]
+        >>> for arr in nd_gradient((3, 5), ((4, 6, 3), (3, 5))):
+        ...     print(arr)
+        [[4.]
+         [5.]
+         [6.]]
+        [[3.  3.5 4.  4.5 5. ]]
+        >>> for arr in nd_gradient((3, 5), ((4, 6), (3, 5, 5))):
+        ...     print(arr)
+        [[4.]
+         [5.]
+         [6.]]
+        [[3.  3.5 4.  4.5 5. ]]
+        >>> for arr in nd_gradient((3, 5), ((4, 6), (3, 5, 5))):
+        ...     print(arr)
+        [[4.]
+         [5.]
+         [6.]]
+        [[3.  3.5 4.  4.5 5. ]]
+        >>> nd_gradient((3, 5), ((4, 6, 5), (4, 6, 5)))
+        Traceback (most recent call last):
+            ...
+        ValueError: Info in `shape` and `gen_shapes` do not match.
+        >>> nd_gradient((3, 5), ((4, 6, None),))
+        Traceback (most recent call last):
+            ...
+        AssertionError
     """
-    num_gens = len(gen_ranges)
-    generators = fc.util.auto_repeat(
-        generators, num_gens, check=True)
-    generators_kws = fc.util.auto_repeat(
-        generators_kws, num_gens, check=True)
+    if not n_dim:
+        n_dim = fc.util.combine_iter_len((shape, gen_ranges))
 
-    shape = tuple(num for start, stop, num in gen_ranges)
+    generators = fc.util.auto_repeat(
+        generators, n_dim, check=True)
+    generators_kws = fc.util.auto_repeat(
+        generators_kws, n_dim, check=True)
+
+    if not shape:
+        shape = tuple(gen_range[2] for gen_range in gen_ranges)
+
+    if not gen_ranges:
+        gen_ranges = tuple((0, dim - 1, dim) for dim in shape)
+        dtype = int
+    else:
+        nesting_level = fc.util.nesting_level(gen_ranges)
+        gen_ranges = fc.util.auto_repeat(
+            gen_ranges, n_dim, nesting_level == 1, True)
 
     arrs = []
-    for i, ((start, stop, num), generator, generator_kws) in \
-            enumerate(zip(gen_ranges, generators, generators_kws)):
+    for i, (dim, gen_range, generator, generator_kws) in \
+            enumerate(zip(shape, gen_ranges, generators, generators_kws)):
+        if len(gen_range) == 2:
+            num = dim
+            start, stop = gen_range
+        else:
+            start, stop, num = gen_range
+        if not num:
+            num = dim
+        elif num != dim:
+            raise ValueError('Info in `shape` and `gen_shapes` do not match.')
         if generator_kws is None:
             generator_kws = {}
         arr = np.array(
@@ -1777,11 +1869,11 @@ def multi_render(
     Args:
         shape (int|Iterable[int]): The shape of the container in px.
         geom_shapes (Iterable): The geometrical shapes to render.
-            Each element must have the following structure:
-            [intensity, geom_shape, inner_pos, angles, outer_pos]
+            These are of the form:
+            (intensity, [name, *args], shift, angles, position)
             where:
              - intensity (int|float|complex): The intensity of the object.
-             - geom_shape (tuple): The tuple describing the object.
+             - geom_spec (tuple): The tuple describing the object.
                 The first element is the name as str, all the remaining
                 elements are passed to the generating function.
                 Accepted values are:
@@ -1790,15 +1882,14 @@ def multi_render(
                  - 'c', 'cuboid': uses `nd_cuboid()`
                  - 'p', 'prism': uses `nd_superellipsoidal_prism()`
                  - 'g', 'gradient': uses `nd_gradient()`
-             - inner_pos (float|tuple[float]): The inner position
-                in rel. units.
+             - shift (float|Iterable[float]): The shift in rel. units.
                 This is relative to the smallest cuboid inscribed in `shape`.
              - angles (int|float|Iterable[int|float]): The rotation angles
                 in deg.
                 These describe the rotations as generated by
                 `flyingcircus.num.angles2linear()` for the specified `n_dim`.
-             - outer_pos (float|tuple[float]|None): The outer position
-                if rel. units.
+             - position (float|Iterable[float]|None): The position
+                in rel. units.
                 This is relative to `shape`.
         n_dim (int|None): The number of dimensions.
             If None, the number of dims is guessed from the `shape` parameter,
@@ -1823,45 +1914,45 @@ def multi_render(
     affine_kws = \
         {} if affine_kws is None else dict(affine_kws)
     rendered = np.zeros(shape, dtype=dtype)
-    for intensity, geom_shape, inner_pos, angles, outer_pos in geom_shapes:
+    for intensity, geom_spec, shift, angles, position in geom_shapes:
         # generate the base geometric shape
-        geom_name = geom_shape[0]
+        geom_name = geom_spec[0]
         geom_arr = None
         if geom_name in ('e', 'ellipsoid'):
-            semisizes = geom_shape[1]
+            semisizes = geom_spec[1]
             geom_arr = nd_superellipsoid(inner_shape, semisizes)
         elif geom_name in ('s', 'superellipsoid'):
-            indexes, semisizes = geom_shape[1:]
+            semisizes, indexes = geom_spec[1:]
             geom_arr = nd_superellipsoid(inner_shape, semisizes, indexes)
         elif geom_name in ('c', 'cuboid'):
-            semisizes = geom_shape[1]
+            semisizes = geom_spec[1]
             geom_arr = nd_cuboid(inner_shape, semisizes)
         elif geom_name in ('p', 'prism'):
-            axis, semisizes, indexes = geom_shape[1:]
+            axis, semisizes, indexes = geom_spec[1:]
             geom_arr = nd_superellipsoidal_prism(
-                inner_shape, axis, semisizes, indexes)
+                inner_shape, axis % n_dim, semisizes, indexes)
         elif geom_name in ('g', 'gradient'):
-            gen_ranges = geom_shape[1]
-            geom_arr = nd_gradient(gen_ranges)
+            gen_ranges = geom_spec[1]
+            geom_arr = np.sum(nd_gradient(inner_shape, gen_ranges), 0)
         else:
             text = ('unknown name `{geom_name}` while rendering with '
                     '`pymrt.geometry.multi_render`'.format(**locals()))
             warnings.warn(text)
-        if outer_pos is None:
-            outer_pos = 0.5
+        if position is None:
+            position = 0.5
         if geom_arr is not None:
             # compute position and linear transformation matrix
             if angles is None:
                 lin_mat = np.eye(n_dim)
             else:
                 lin_mat = fc.num.angles2linear(angles, n_dim)
-            inner_pos = fc.num.coord(inner_shape, inner_pos, True, False)
+            shift = fc.num.coord(inner_shape, shift, True, False)
             lin_mat, offset = fc.num.prepare_affine(
-                inner_shape, lin_mat, inner_pos)
+                inner_shape, lin_mat, shift)
             rendered += fc.num.reframe(
                 intensity * sp.ndimage.affine_transform(
                     geom_arr.astype(dtype), lin_mat, offset, **affine_kws),
-                shape, outer_pos)
+                shape, position)
     return rendered
 
 
