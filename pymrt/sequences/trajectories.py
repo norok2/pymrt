@@ -173,7 +173,7 @@ def zig_zag_blipped_2d(
 
         >>> traj, mask = zig_zag_blipped_2d(3, 2, 5, 2)
         Traceback (most recent call last):
-            ....
+            ...
         AssertionError
     """
     if not num_trains and not num_blips:
