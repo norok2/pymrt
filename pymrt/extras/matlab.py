@@ -83,7 +83,7 @@ def read(
     except NotImplementedError:
         # load new-style MATLAB v7.3+ files (effectively HDF5)
         data = {}
-        h5file = h5py.File(filepath)
+        h5file = h5py.File(filepath, 'r')
         for k, v in h5file.items():
             if not exclude_keys(k):
                 data[k] = np.array(v)
