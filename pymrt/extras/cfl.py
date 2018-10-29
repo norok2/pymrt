@@ -76,8 +76,8 @@ def read(
         arr = np.fromfile(
             data_file, dtype=np.complex64, count=data_size)
 
-    # note: BART uses FORTRAN-style memory allocation
-    return arr.reshape(shape, order='F')
+    # BART uses FORTRAN-style memory allocation with column-major ordering
+    arr.T.astype(np.complex64, 'F').tofile(data_file)
 
 
 # ======================================================================
