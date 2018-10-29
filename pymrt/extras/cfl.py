@@ -34,23 +34,32 @@ from pymrt import msg, dbg
 
 # ======================================================================
 def read(
-        basename,
+        filepath,
         dirpath='.'):
     """
     Read a CFL header+data pair.
 
     Args:
-        basename (str): The base filename.
+        filepath (str): The file path.
+            If extension is not set, it will be generated automatically,
+            otherwise either of '.hdr' or '.cfl' can be used.
             Corresponding '.hdr' and '.cfl' files must exist.
         dirpath (str): The working directory.
 
     Returns:
         arr (ndarray): The data read.
     """
-    filepath = os.path.join(dirpath, basename)
+    # determine base filepath
+    mask = slice(None, -4, None) \
+        if filepath.endswith('.hdr') or filepath.endswith('.cfl') \
+        else slice(None)
+    base_filepath = filepath[mask]
+
+    if dirpath != '.':
+        base_filepath = os.path.join(dirpath, base_filepath)
 
     # load header
-    with open(filepath + '.hdr', 'r') as header_file:
+    with open(base_filepath + '.hdr', 'r') as header_file:
         header_file.readline()  # skip comment line
         dim_line = header_file.readline()
 
@@ -63,7 +72,7 @@ def read(
     data_size = int(np.prod(shape))
 
     # load data
-    with open(filepath + '.cfl', 'r') as data_file:
+    with open(base_filepath + '.cfl', 'r') as data_file:
         arr = np.fromfile(
             data_file, dtype=np.complex64, count=data_size)
 
@@ -74,29 +83,40 @@ def read(
 # ======================================================================
 def write(
         arr,
-        basename,
-        dirpath='.'):
+        filepath,
+        dirpath='.',
+        default_dims=(1,) * 16):
     """
     Write a CFL header+data pair.
 
     Args:
         arr (ndarray): The array to save.
-        basename (str): The base filename.
+        filepath (str): The file path.
+            If extension is not set, it will be generated automatically,
+            otherwise either of '.hdr' or '.cfl' can be used.
             Corresponding '.hdr' and '.cfl' files will be created/overwritten.
         dirpath (str): The working directory.
 
     Returns:
         None.
     """
-    filepath = os.path.join(dirpath, basename)
+    # determine base filepath
+    mask = slice(None, -4, None) \
+        if filepath.endswith('.hdr') or filepath.endswith('.cfl') \
+        else slice(None)
+    base_filepath = filepath[mask]
+
+    if dirpath != '.':
+        base_filepath = os.path.join(dirpath, base_filepath)
 
     # save header
-    with open(filepath + '.hdr', 'w') as header_file:
+    with open(base_filepath + '.hdr', 'w') as header_file:
         header_file.write(str('# Dimensions\n'))
-        header_file.write(str(' '.join([str(n) for n in arr.shape])) + '\n')
+        dimensions = arr.shape + default_dims[arr.ndim:]
+        header_file.write(str(' '.join([str(d) for d in dimensions])) + '\n')
 
     # save data
-    with open(filepath + '.cfl', 'w') as data_file:
+    with open(base_filepath + '.cfl', 'w') as data_file:
         # note: BART uses FORTRAN-style memory allocation
         arr.astype(np.complex64, 'F').tofile(data_file)
 
