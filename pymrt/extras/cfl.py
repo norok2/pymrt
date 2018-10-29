@@ -76,8 +76,8 @@ def read(
         arr = np.fromfile(
             data_file, dtype=np.complex64, count=data_size)
 
-    # BART uses FORTRAN-style memory allocation with column-major ordering
-    arr.T.astype(np.complex64, 'F').tofile(data_file)
+    # BART uses FORTRAN-style memory allocation
+    return arr.reshape(shape, order='F')
 
 
 # ======================================================================
@@ -117,8 +117,8 @@ def write(
 
     # save data
     with open(base_filepath + '.cfl', 'w') as data_file:
-        # note: BART uses FORTRAN-style memory allocation
-        arr.astype(np.complex64, 'F').tofile(data_file)
+        # BART uses FORTRAN-style memory allocation with column-major ordering
+        arr.T.astype(np.complex64, 'F').tofile(data_file)
 
 
 # ======================================================================
