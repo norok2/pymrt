@@ -91,6 +91,84 @@ def zoom(
 
 
 # ======================================================================
+def to_nd(
+        trajectory,
+        new_dims=None):
+    """
+    Convert any trajectory to an N-dim trajectory.
+
+    Args:
+        trajectory (np.ndarray): The coordinates of the trajectory.
+            This can represent any dim trajectory.
+            If n_dim < new_dims, the other dimensions are set to 0.
+            If n_dim == new_dims, the trajectory is left untouched.
+            If n_dim > new_dims, only the first `new_dims` dims of the
+            trajectory are kept.
+        new_dims (int|None): The number of dims of the new trajectory.
+            If larger than 0, a new trajectory with the specified number of
+            dims is obtained.
+            If equal to 0, an empty trajectory is obtained.
+            If smaller than 0, the number of dims is reduced by the specified
+            amount.
+            If None, the trajectory is left untouched.
+
+    Returns:
+        trajectory (np.ndarray): The coordinates of the trajectory.
+            This represents the N-dim trajectory.
+
+    Examples:
+        >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
+        >>> print(traj)
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+        >>> print(to_nd(traj))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+        >>> print(to_nd(traj, 3))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]
+         [0 0 0 0 0 0 0 0 0 0]]
+        >>> print(to_nd(to_nd(traj, 3), 3))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]
+         [0 0 0 0 0 0 0 0 0 0]]
+        >>> print(to_nd(np.concatenate((traj, traj), axis=0), 3))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]
+         [0 1 2 3 4 4 3 2 1 0]]
+        >>> print(to_nd(traj, 5))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]
+         [0 0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0 0]]
+        >>> print(to_nd(to_nd(traj, 10), 2))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+        >>> print(to_nd(traj, 1))
+        [[0 1 2 3 4 4 3 2 1 0]]
+        >>> print(to_nd(traj, 0))
+        []
+        >>> print(to_nd(to_nd(traj, 5), -2))
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]
+         [0 0 0 0 0 0 0 0 0 0]]
+    """
+    n_dims, n_points = trajectory.shape
+    if new_dims is None:
+        new_dims = n_dims
+    if n_dims < new_dims:
+        return np.concatenate(
+            (trajectory,
+             np.zeros((new_dims - n_dims, n_points), dtype=trajectory.dtype)),
+            axis=0)
+    elif n_dims > new_dims:
+        return trajectory[0:new_dims, ...]
+    else:
+        return trajectory
+
+
+# ======================================================================
 def zig_zag_blipped_2d(
         train_size,
         blip_size=1,
@@ -226,7 +304,7 @@ def zig_zag_linear_2d(
         result (tuple): The tuple
             contains:
              - trajectory (np.ndarray): The coordinates of the trajectory.
-             - mask (np.ndarray): The mask for the zig-zag trains.
+             - mask (np.ndarray): The mask for the trains.
 
     Examples:
         >>> traj, mask = zig_zag_linear_2d(6, 2)
@@ -264,14 +342,14 @@ def zig_zag_linear_2d(
         >>> print(mask)
         [ True  True  True  True  True  True  True  True  True  True]
     """
-    num_points = (abs(train_size) - 1) * abs(num_trains) + 1
+    n_points = (abs(train_size) - 1) * abs(num_trains) + 1
     train = np.arange(0, abs(train_size)) * np.sign(train_size)
     x = [0]
     for j in range(abs(num_trains)):
         slicing = slice(-2, None, -1) if j % 2 else slice(1, None, 1)
         x.extend(train[slicing].tolist())
-    y = np.arange(0, num_points) * np.sign(num_trains)
-    mask = np.ones(num_points, dtype=bool)
+    y = np.arange(0, n_points) * np.sign(num_trains)
+    mask = np.ones(n_points, dtype=bool)
     return np.stack([x, y]), mask
 
 
@@ -312,7 +390,7 @@ def zig_zag_blipped_sinusoidal_2d(
         result (tuple): The tuple
             contains:
              - trajectory (np.ndarray): The coordinates of the trajectory.
-             - mask (np.ndarray): The mask for the zig-zag trains.
+             - mask (np.ndarray): The mask for the trains.
 
     Examples:
 
@@ -339,21 +417,22 @@ def density(
     Compute the spatial density.
 
     Args:
-        trajectory:
-        mask:
+        trajectory (np.ndarray): The coordinates of the trajectory.
+        mask (np.ndarray|None): The mask for the trains.
 
     Returns:
 
+
     """
-    n_dims, n_all_points = trajectory.shape
+    n_dims, n_points = trajectory.shape
     if mask is None:
         mask = slice(None)
-        n_points = n_all_points
+        n_valid_points = n_points
     else:
-        n_points = np.sum(mask)
+        n_valid_points = np.sum(mask)
     bounds = tuple(fc.num.minmax(trajectory[i, mask]) for i in range(n_dims))
     bound_sizes = tuple(np.ptp(interval) for interval in bounds)
-    return n_points / fc.util.prod(bound_sizes)
+    return n_valid_points / fc.util.prod(bound_sizes)
 
 
 # ======================================================================
