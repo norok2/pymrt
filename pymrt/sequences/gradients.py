@@ -62,7 +62,8 @@ def moment_to_k_value(
 
     Args:
         moment (int|float|np.ndarray): The moment of the gradient in T/m*s.
-        species (str): The species to consider of the gyromagnetic ratio.
+        species (str): The species to consider for the gyromagnetic ratio.
+            See `pymrt.constants.GAMMA_BAR` for the available species.
 
     Returns:
         k_value (int|float|np.ndarray): The k-space value in 1/m.
@@ -82,7 +83,8 @@ def k_value_to_moment(
 
     Args:
         k_value (int|float|np.ndarray): The k-space value in 1/m.
-        species (str): The species to consider of the gyromagnetic ratio.
+        species (str): The species to consider for the gyromagnetic ratio.
+            See `pymrt.constants.GAMMA_BAR` for the available species.
 
     Returns:
         moment (int|float|np.ndarray): The moment of the gradient in T/m*s.
@@ -123,6 +125,42 @@ def length_to_k_value(length):
         k_value (int|float|np.ndarray): The k-space value in 1/m.
     """
     return 1 / length
+
+
+# ======================================================================
+def moment_to_length(
+        moment,
+        species='1H'):
+    """
+    Compute the spatial length associated with a gradient moment.
+
+    Args:
+        moment (int|float|np.ndarray): The moment of the gradient in T/m*s.
+        species (str): The species to consider for the gyromagnetic ratio.
+            See `pymrt.constants.GAMMA_BAR` for the available species.
+
+    Returns:
+        length (int|float|np.ndarray): The spatial length in m.
+    """
+    return k_value_to_length(moment_to_k_value(moment, species))
+
+
+# ======================================================================
+def length_to_moment(
+        length,
+        species='1H'):
+    """
+    Compute the gradient moment associated with a spatial length.
+
+    Args:
+        length (int|float|np.ndarray): The spatial length in m.
+        species (str): The species to consider for the gyromagnetic ratio.
+            See `pymrt.constants.GAMMA_BAR` for the available species.
+
+    Returns:
+        moment (int|float|np.ndarray): The moment of the gradient in T/m*s.
+    """
+    return k_value_to_moment(length_to_k_value(length), species)
 
 
 # ======================================================================
