@@ -164,26 +164,6 @@ def length_to_moment(
 
 
 # ======================================================================
-def moment_to_time(
-        moment,
-        amplitude):
-    """
-    Compute the time associated to a gradient moment for a specific amplitude.
-
-    The amplitude is assumed to be constant.
-    The time could be either a dwell time or the total time.
-
-    Args:
-        moment (int|float|np.ndarray): The moment of the gradient in T/m*s.
-        amplitude (int|float|np.ndarray): The amplitude of the gradient in T/m.
-
-    Returns:
-        time_ (int|float|np.ndarray): The time value in s.
-    """
-    return moment / amplitude
-
-
-# ======================================================================
 def freq2duration(freq):
     return 1.0 / freq / 2.0
 
@@ -194,7 +174,46 @@ def duration2freq(duration):
 
 
 # ======================================================================
-def calc_moment_trapz(
+def calc_constant(
+        duration=None,
+        amplitude=None,
+        moment=None):
+    """
+    Compute the missing parameter for a constant gradient.
+    
+    This assumes the relationship: moment = duration * amplitude
+
+    Args:
+        duration (int|float|np.ndarray|None): The gradient duration in s.
+        moment (int|float|np.ndarray|None): The gradient moment in T/m*s.
+        amplitude (int|float|np.ndarray|None): The gradient amplitude in T/m.
+
+    Returns:
+        result (int|float|np.ndarray): The result value.
+            This is the value that is not specified in the parameters.
+    
+    Examples:
+        >>> calc_constant(100, 50)
+        5000
+        >>> calc_constant(None, 50, 5000)
+        100.0
+        >>> calc_constant(100, None, 5000)
+        50.0
+    """
+    if duration is not None and amplitude is not None:
+        return duration * amplitude
+    elif duration is not None and moment is not None:
+        return moment / duration
+    elif moment is not None and amplitude is not None:
+        return moment / amplitude
+    else:
+        text = 'At least two of `time_`, `amplitude` and `moment` ' \
+               'must be different from None.'
+        raise ValueError(text)
+
+
+# ======================================================================
+def calc_trapz(
         grad,
         slew_rate,
         duration,
@@ -247,7 +266,7 @@ def calc_moment_trapz(
 
 
 # ======================================================================
-def gradient_moment_sinusoidal(
+def calc_sinusoidal(
         grad,
         freq):
     """
