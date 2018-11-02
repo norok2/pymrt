@@ -569,6 +569,7 @@ def sample2d(
         resolution=None,
         size_info=None,
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -725,6 +726,11 @@ def sample2d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
 
+    if more_elements is not None:
+        for element_func, element_kargs, element_kws in more_elements:
+            getattr(ax, element_func)(
+                *tuple(element_kargs), **dict(element_kws))
+
     # save plot
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
@@ -854,7 +860,7 @@ def sample3d_view2d(
         # todo: fix this
         for i, v in enumerate(views):
             if v.shape[0] != views[0].shape[0] and \
-                            v.shape[1] != views[0].shape[1]:
+                    v.shape[1] != views[0].shape[1]:
                 views[i] = v.transpose()
 
         x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
