@@ -222,11 +222,13 @@ def calc_trapz(
         verbose=D_VERB_LVL):
     """
     Perform gradient computations based on trapezoidal shape.
+
+    #todo: fix issues with duty
     """
     original_duration = duration
     if not duty:
         duty = 0.0
-    has_plateau = True if duty else False
+    has_plateau = True if duty > 0.0 else False
     min_rise_time = fc.util.num_align(grad / slew_rate, raster)
 
     if fc.util.num_align(duration * (1.0 - duty), raster) <= 2 * min_rise_time:
@@ -253,16 +255,22 @@ def calc_trapz(
     else:
         plateau = fc.util.num_align(
             duration - 2 * rise_time, raster, 'closest')
+        if plateau < 0.0:
+            plateau = 0.0
         moment = slew_rate * rise_time ** 2 + plateau * grad
         raster_duration = 2 * rise_time + plateau
-    if (not np.isclose(raster_duration, original_duration) and
-            raster_duration > original_duration):
+    if (not np.isclose(raster_duration, original_duration, atol=raster / 2)
+            and raster_duration > original_duration):
         msg(
             'Duration must be increased to: {} s (was: {})'.format(
                 raster_duration, original_duration),
             verbose, VERB_LVL['medium'])
-    duty = 1 - (2 * rise_time) / duration
+    duty = 1 - (2 * rise_time) / raster_duration
     return moment, raster_duration, duty
+
+
+print(calc_trapz(GRAD_SPEC['siemens.skyra']['G'],
+                 GRAD_SPEC['siemens.skyra']['SR'], 10e-6))
 
 
 # ======================================================================
