@@ -164,16 +164,6 @@ def length_to_moment(
 
 
 # ======================================================================
-def freq2duration(freq):
-    return 1.0 / freq / 2.0
-
-
-# ======================================================================
-def duration2freq(duration):
-    return 1.0 / duration / 2.0
-
-
-# ======================================================================
 def calc_constant(
         duration=None,
         amplitude=None,
@@ -186,8 +176,8 @@ def calc_constant(
 
     Args:
         duration (int|float|np.ndarray|None): Gradient duration in s.
-        moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
         amplitude (int|float|np.ndarray|None): Gradient amplitude in T/m.
+        moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
 
     Returns:
         result (tuple): The tuple
@@ -200,10 +190,13 @@ def calc_constant(
     Examples:
         >>> calc_constant(100, 50)
         (100, 50, inf, 5000)
-        >>> calc_constant(None, 50, 5000)
-        (100.0, 50, inf, 5000)
-        >>> calc_constant(100, None, 5000)
-        (100, 50.0, inf, 5000)
+
+        >>> results = [
+        ...     calc_constant(100.0, 50.0, None),
+        ...     calc_constant(100.0, None, 5000.0),
+        ...     calc_constant(None, 50.0, 5000.0)]
+        >>> np.all([np.isclose(result, results[0]) for result in results])
+        True
     """
     slew_rate = np.inf
     if duration is not None and amplitude is not None and moment is None:
@@ -220,19 +213,249 @@ def calc_constant(
 
 
 # ======================================================================
-def calc_trapz(
+def calc_triangular(
+        duration=None,
+        amplitude=None,
+        slew_rate=None,
+        moment=None):
+    """
+    Perform gradient computations based on triangular shape.
+
+    Args:
+        duration (int|float|np.ndarray|None): Gradient duration in s.
+        amplitude (int|float|np.ndarray|None): Gradient amplitude in T/m.
+        slew_rate (int|float|np.ndarray|None): Gradient slew rate in T/m/s.
+        moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - duration (int|float|np.ndarray): Gradient duration in s.
+             - amplitude (int|float|np.ndarray): Gradient amplitude in T/m.
+             - slew_rate (int|float|np.ndarray): Gradient slew rate in T/m/s.
+             - moment (int|float|np.ndarray): Gradient moment in T/m*s.
+
+    Examples:
+        >>> [round(x, 6) for x in calc_triangular(5.0, 10.0, None, None)]
+        [5.0, 10.0, 4.0, 25.0]
+
+        >>> results = [
+        ...     calc_triangular(5.0, 10.0, None, None),
+        ...     calc_triangular(5.0, None, 4.0, None),
+        ...     calc_triangular(5.0, None, None, 25.0),
+        ...     calc_triangular(None, 10.0, 4.0, None),
+        ...     calc_triangular(None, 10.0, None, 25.0),
+        ...     calc_triangular(None, None, 4.0, 25.0)]
+        >>> np.all([np.isclose(result, results[0]) for result in results])
+        True
+
+        >>> # overconditioned
+        >>> calc_triangular(5.0, 10.0, 4.0, None)
+        Traceback (most recent call last):
+            ...
+        ValueError: Exactly two of `duration`, `amplitude`, `slew_rate`,\
+ `moment` must be different from None.
+
+        >>> # underconditioned
+        >>> calc_triangular(5.0, None, None, None)
+        Traceback (most recent call last):
+            ...
+        ValueError: Exactly two of `duration`, `amplitude`, `slew_rate`,\
+ `moment` must be different from None.
+    """
+
+    d, a, s, m = duration, amplitude, slew_rate, moment
+
+    if d is not None and a is not None and s is None and m is None:
+        slew_rate = 2 * amplitude / duration
+        moment = duration * amplitude / 2
+    elif d is not None and a is None and s is not None and m is None:
+        amplitude = slew_rate * duration / 2
+        moment = slew_rate * duration ** 2 / 4
+    elif d is not None and a is None and s is None and m is not None:
+        amplitude = 2 * moment / duration
+        slew_rate = 4 * moment / duration ** 2
+    elif d is None and a is not None and s is not None and m is None:
+        duration = 2 * amplitude / slew_rate
+        moment = amplitude ** 2 / slew_rate
+    elif d is None and a is not None and s is None and m is not None:
+        duration = 2 * moment / amplitude
+        slew_rate = amplitude ** 2 / moment
+    elif d is None and a is None and s is not None and m is not None:
+        duration = 2 * (moment / slew_rate) ** 0.5
+        amplitude = (moment * slew_rate) ** 0.5
+    else:
+        text = 'Exactly two of `duration`, `amplitude`,' \
+               ' `slew_rate`, `moment` must be different from None.'
+        raise ValueError(text)
+    return duration, amplitude, slew_rate, moment
+
+
+# ======================================================================
+def calc_trapezoidal(
         duration=None,
         amplitude=None,
         slew_rate=None,
         moment=None,
-        duty=0.3,
-        raster=10e-6,
-        verbose=D_VERB_LVL):
+        plateau=None):
     """
     Perform gradient computations based on trapezoidal shape.
 
+    The duration refer to the full trapezium, including the rise up and down.
+
+    Args:
+        duration (int|float|np.ndarray|None): Gradient duration in s.
+        amplitude (int|float|np.ndarray|None): Gradient amplitude in T/m.
+        slew_rate (int|float|np.ndarray|None): Gradient slew rate in T/m/s.
+        moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - duration (int|float|np.ndarray): Gradient duration in s.
+             - amplitude (int|float|np.ndarray): Gradient amplitude in T/m.
+             - slew_rate (int|float|np.ndarray): Gradient slew rate in T/m/s.
+             - moment (int|float|np.ndarray): Gradient moment in T/m*s.
+             - frequency (int|float|np.ndarray): Gradient frequency in Hz.
+
+    Examples:
+        >>> [round(x, 6) for x in calc_sinusoidal(5.0, 10.0, None, None)]
+        [5.0, 10.0, 12.566371, 15.915494, 0.2]
+
+        >>> results = [
+        ...     calc_sinusoidal(5.0, 10.0, None, None),
+        ...     calc_sinusoidal(5.0, None, 12.566371, None),
+        ...     calc_sinusoidal(5.0, None, None, 15.915494),
+        ...     calc_sinusoidal(None, 10.0, 12.566371, None),
+        ...     calc_sinusoidal(None, 10.0, None, 15.915494),
+        ...     calc_sinusoidal(None, None, 12.566371, 15.915494)]
+        >>> np.all([np.isclose(result, results[0]) for result in results])
+        True
+
     #todo: fix issues with duty
     """
+
+    d, a, s, m = duration, amplitude, slew_rate, moment
+
+    if d is not None and a is not None and s is not None and m is None:
+        min_rise_time = amplitude / slew_rate
+        plateau = duration - 2 * min_rise_time
+
+    return duration, amplitude, slew_rate, moment, duty
+
+
+# ======================================================================
+def calc_sinusoidal(
+        duration=None,
+        amplitude=None,
+        slew_rate=None,
+        moment=None,
+        frequency=None):
+    """
+    Perform gradient computations based on sinusoidal shape.
+
+    The moment computation is based on half the period.
+    The duration and the frequency refer to the full sinusoidal shape.
+
+    Args:
+        duration (int|float|np.ndarray|None): Gradient duration in s.
+        amplitude (int|float|np.ndarray|None): Gradient amplitude in T/m.
+        slew_rate (int|float|np.ndarray|None): Gradient slew rate in T/m/s.
+        moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
+        frequency (int|float|np.ndarray|None): Gradient frequency in Hz.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+             - duration (int|float|np.ndarray): Gradient duration in s.
+             - amplitude (int|float|np.ndarray): Gradient amplitude in T/m.
+             - slew_rate (int|float|np.ndarray): Gradient slew rate in T/m/s.
+             - moment (int|float|np.ndarray): Gradient moment in T/m*s.
+             - frequency (int|float|np.ndarray): Gradient frequency in Hz.
+
+    Examples:
+        >>> [round(x, 6) for x in calc_sinusoidal(5.0, 10.0, None, None)]
+        [5.0, 10.0, 12.566371, 15.915494, 0.2]
+
+        >>> results = [
+        ...     calc_sinusoidal(5.0, 10.0, None, None),
+        ...     calc_sinusoidal(5.0, None, 12.566371, None),
+        ...     calc_sinusoidal(5.0, None, None, 15.915494),
+        ...     calc_sinusoidal(None, 10.0, 12.566371, None),
+        ...     calc_sinusoidal(None, 10.0, None, 15.915494),
+        ...     calc_sinusoidal(None, None, 12.566371, 15.915494)]
+        >>> np.all([np.isclose(result, results[0]) for result in results])
+        True
+
+        >>> # overconditioned
+        >>> calc_sinusoidal(5.0, 10.0, 4.0, None)
+        Traceback (most recent call last):
+            ...
+        ValueError: Exactly two of `duration` (or `frequency`), `amplitude`,\
+ `slew_rate`, `moment` must be different from None.
+
+        >>> # underconditioned
+        >>> calc_sinusoidal(5.0, None, None, None)
+        Traceback (most recent call last):
+            ...
+        ValueError: Exactly two of `duration` (or `frequency`), `amplitude`,\
+ `slew_rate`, `moment` must be different from None.
+
+        >>> [round(x, 6) for x in calc_sinusoidal(None, 10.0, None, None, 0.2)]
+        [5.0, 10.0, 12.566371, 15.915494, 0.2]
+
+        >>> # redundant frequency
+        >>> calc_sinusoidal(5.0, 10.0, None, None, 0.2)
+        Traceback (most recent call last):
+            ...
+        ValueError: Parameters `duration` and `frequency` are mutually\
+ exclusive.
+    """
+    # integrate(G * sin(2*%pi*f*x), x, 0, 1 / 2 / f);
+    if duration is None and frequency is not None:
+        duration = 1 / frequency
+    elif duration is not None and frequency is not None:
+        text = 'Parameters `duration` and `frequency` are mutually exclusive.'
+        raise ValueError(text)
+
+    d, a, s, m = duration, amplitude, slew_rate, moment
+
+    # todo: uniform syntax
+    if d is not None and a is not None and s is None and m is None:
+        moment = amplitude * duration / np.pi
+        slew_rate = 2 * np.pi * amplitude / duration
+    elif d is None and a is not None and s is None and m is not None:
+        duration = moment / amplitude * np.pi
+        slew_rate = 2 * amplitude ** 2 / moment
+    elif a is not None and d is None and m is None and s is not None:
+        duration = 2 * np.pi * amplitude / slew_rate
+        moment = amplitude * duration / np.pi
+    elif a is None and d is not None and m is not None and s is None:
+        amplitude = np.pi * moment / duration
+        slew_rate = 2 * np.pi ** 2 * moment / duration ** 2
+    elif a is None and d is not None and m is None and s is not None:
+        amplitude = duration * slew_rate / (2 * np.pi)
+        moment = duration ** 2 * slew_rate / (2 * np.pi ** 2)
+    elif a is None and d is None and m is not None and s is not None:
+        amplitude = (moment * slew_rate / 2) ** 0.5
+        duration = np.pi * (2 * moment / slew_rate) ** 0.5
+    else:
+        text = 'Exactly two of `duration` (or `frequency`), `amplitude`,' \
+               ' `slew_rate`, `moment` must be different from None.'
+        raise ValueError(text)
+    if frequency is None:
+        frequency = 1 / duration
+    return duration, amplitude, slew_rate, moment, frequency
+
+
+# ======================================================================
+def calc_trapz(
+        grad,
+        slew_rate,
+        duration,
+        duty=0.5,
+        raster=10e-6,
+        verbose=D_VERB_LVL):
     original_duration = duration
     if not duty:
         duty = 0.0
@@ -275,57 +498,15 @@ def calc_trapz(
             verbose, VERB_LVL['medium'])
     duty = 1 - (2 * rise_time) / raster_duration
     return moment, raster_duration, duty
-    # return duration, amplitude, slew_rate, moment, duty
 
 
 # ======================================================================
-def calc_sinusoidal(
-        duration=None,
-        amplitude=None,
-        slew_rate=None,
-        moment=None,
-        frequency=None):
-    """
-    Perform gradient computations based on sinusoidal shape.
+elapsed(__file__[len(PATH['base']) + 1:])
 
-    Args:
+# ======================================================================
+if __name__ == '__main__':
+    import doctest  # Test interactive Python examples
 
-    Returns:
-
-    Examples:
-        >>> [np.round(x, 3) for x in calc_sinusoidal(5, 10, None, None, None)]
-        [10, 5, 3.142, 15.915, 0.05]
-    """
-    # integrate(G * sin(2*%pi*f*x), x, 0, 1 / 2 / f);
-    if frequency is None and duration is not None:
-        frequency = duration2freq(duration)
-    elif duration is None and frequency is not None:
-        duration = freq2duration(frequency)
-    elif frequency is None and duration is None:
-        text = 'At least two of `duration`, `frequency` ' \
-               'must be different from None.'
-        raise ValueError(text)
-    else:
-        assert (np.isclose(frequency, duration2freq(duration)))
-
-    a, d, m, s = amplitude, duration, moment, slew_rate
-
-    if a is not None and d is not None and m is None and s is None:
-        moment = amplitude * duration / np.pi
-        slew_rate = 2 * np.pi * amplitude / duration
-    elif a is not None and d is None and m is not None and s is None:
-        duration = moment / amplitude * np.pi
-        slew_rate = 2 * amplitude ** 2 / moment
-    elif a is not None and d is None and m is None and s is not None:
-        duration = 2 * np.pi * amplitude / slew_rate
-        moment = amplitude * duration / np.pi
-    elif a is None and d is not None and m is not None and s is None:
-        amplitude = np.pi * moment / duration
-        slew_rate = 2 * np.pi ** 2 * moment / duration ** 2
-    elif a is None and d is not None and m is None and s is not None:
-        amplitude = duration * slew_rate / (2 * np.pi)
-        moment = duration ** 2 * slew_rate / (2 * np.pi ** 2)
-    elif a is None and d is None and m is not None and s is not None:
-        amplitude = (moment * slew_rate / 2) ** 0.5
-        duration = np.pi * (2.0 * moment / slew_rate)
-    return duration, amplitude, slew_rate, moment, frequency
+    msg(__doc__.strip())
+    doctest.testmod()
+    msg(report())
