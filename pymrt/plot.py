@@ -154,10 +154,12 @@ def simple(
         y_datas,
         title=None,
         labels=(None, None),
+        limits=(None, None),
         styles=None,
         legends=None,
         legend_kws=None,
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -173,8 +175,11 @@ def simple(
         x_datas = fc.util.auto_repeat(x_datas, len(y_datas), True, True)
     if legends is None:
         legends = fc.util.auto_repeat(None, len(y_datas), check=True)
-    for x_data, y_data, legend in zip(x_datas, y_datas, legends):
-        pax = ax.plot(x_data, y_data, label=legend)
+    if styles is None:
+        legends = fc.util.auto_repeat({}, len(y_datas), check=True)
+    for x_data, y_data, legend, style \
+            in zip(x_datas, y_datas, legends, styles):
+        pax = ax.plot(x_data, y_data, label=legend, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format(**locals()))
@@ -182,12 +187,21 @@ def simple(
         ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
         ax.set_ylabel(labels[1].format(**locals()))
+    if limits[0]:
+        ax.set_xlim(limits[0])
+    if limits[1]:
+        ax.set_ylim(limits[1])
     if any([legend for legend in legends]):
         ax.legend(**(legend_kws if legend_kws is not None else {}))
     # include additional text
     if more_texts is not None:
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
+    # include additional elements
+    if more_elements is not None:
+        for element_func, element_kargs, element_kws in more_elements:
+            getattr(ax, element_func)(
+                *tuple(element_kargs), **dict(element_kws))
     # save figure to file
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
@@ -253,6 +267,7 @@ def multi(
         legend_kws=None,
         method='errorbars',  # 'errorarea', # 'dotted+solid',
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -411,6 +426,12 @@ def multi(
     if more_texts is not None:
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
+
+    # include additional elements
+    if more_elements is not None:
+        for element_func, element_kargs, element_kws in more_elements:
+            getattr(ax, element_func)(
+                *tuple(element_kargs), **dict(element_kws))
 
     # save figure to file
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
@@ -726,6 +747,7 @@ def sample2d(
         for text_kws in more_texts:
             ax.text(**dict(text_kws))
 
+    # include additional elements
     if more_elements is not None:
         for element_func, element_kargs, element_kws in more_elements:
             getattr(ax, element_func)(
@@ -1734,7 +1756,7 @@ def bar_chart(
     # create a new figure
     if ax is None:
         fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        ax = fig.gca()
     else:
         fig = plt.gcf()
 
@@ -1810,24 +1832,37 @@ def bar_chart(
 
 # ======================================================================
 def heatmap(
-        table,
+        data,
+        x_ticks=None,
+        y_ticks=None,
         x_label=None,
         y_label=None,
         title=None,
         tick_top=True,
+        y_axis_invert=True,
         ax=None,
         **kwargs):
     # create a new figure
     if ax is None:
         fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        ax = fig.gca()
     else:
         fig = plt.gcf()
 
-    ax = sns.heatmap(table, ax=ax, **kwargs)
+    ax = sns.heatmap(data, ax=ax, **kwargs)
+
+    if x_ticks is not None:
+        ax.set_xticks(x_ticks)
+    if y_ticks is not None:
+        ax.set_yticks(y_ticks)
+
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
     if tick_top:
         ax.xaxis.tick_top()
+    else:
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+    if y_axis_invert:
+        ax.invert_yaxis()
 
     if x_label:
         ax.set_xlabel(x_label)
@@ -1836,7 +1871,7 @@ def heatmap(
     if title:
         ax.set_title(title, y=1.08 if tick_top else None)
 
-    return table, fig
+    return data, fig
 
 
 # ======================================================================
