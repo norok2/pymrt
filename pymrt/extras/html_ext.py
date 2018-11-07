@@ -131,13 +131,13 @@ def to_image(
         method = available_methods[0]
 
     # export intermediate HTML output
-    if html_filepath is True or method == 'webkit':
+    if html_filepath is True or method.startswith('webkit-'):
         html_filepath = fc.util.change_ext(save_filepath, 'htm')
     if html_filepath:
         with open(html_filepath, 'wb+') as file_obj:
             file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))
 
-    if method == 'webkit':
+    if method.startswith('webkit-'):
         d_webkit_dpi = 96
         d_webkit_width = 1024
         zoom = dpi / d_webkit_dpi
