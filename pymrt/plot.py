@@ -1838,8 +1838,8 @@ def heatmap(
         x_label=None,
         y_label=None,
         title=None,
-        tick_top=True,
-        y_axis_invert=True,
+        tick_top=False,
+        y_axis_invert=False,
         ax=None,
         **kwargs):
     # create a new figure
@@ -1869,7 +1869,7 @@ def heatmap(
     if y_label:
         ax.set_ylabel(y_label)
     if title:
-        ax.set_title(title, y=1.08 if tick_top else None)
+        ax.set_title(title, y=1.08 if tick_top else 1.0)
 
     return data, fig
 
