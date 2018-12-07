@@ -709,7 +709,7 @@ def sample2d(
             only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
             if only_extremes:
                 cbar.ax.text(
-                    1.5, 0.5, cbar_txt, fontsize='medium', rotation=90,
+                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90,
                     va='center', ha='left')
                 # cbar.ax.set_ylabel(cbar_txt)
             else:
