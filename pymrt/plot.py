@@ -58,6 +58,7 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 import scipy.stats  # SciPy: Statistical functions
 import flyingcircus.util  # FlyingCircus: generic basic utilities
 import flyingcircus.num  # FlyingCircus: generic numerical utilities
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # :: Local Imports
 import pymrt as mrt
@@ -80,6 +81,27 @@ PLOT_LINESTYLES = ('-', '--', '-.', ':')
 # ======================================================================
 # def plot_with_adjusting_parameters()
 # TODO: make a plot with possibility to adjust params
+
+# ======================================================================
+def _ensure_fig_ax(ax):
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.gca()
+    else:
+        fig = plt.gcf()
+    return fig, ax
+
+
+# ======================================================================
+def _save_plot(save_filepath, save_kws, tight_layout_kws, fig, force, verbose):
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+        tight_layout_kws = dict(tight_layout_kws) \
+            if tight_layout_kws is not None else {}
+        fig.tight_layout(**tight_layout_kws)
+        save_kws = dict(save_kws) if save_kws is not None else {}
+        fig.savefig(save_filepath, **save_kws)
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
 
 
 # ======================================================================
@@ -149,6 +171,49 @@ def _manage_ticks_limit(ticks_limit, ax):
 
 
 # ======================================================================
+def _manage_colorbar(cbar_kws, cbar_txt, ax, pax):
+    if cbar_kws is not None and cbar_txt is not None:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
+        if cbar_txt is not None:
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            if only_extremes:
+                cbar.ax.text(
+                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90,
+                    va='center', ha='left', transform=cbar.ax.transAxes)
+                # cbar.set_label(cbar_txt, labelpad=-36)
+                # cbar.ax.yaxis.set_label_position('left')
+            else:
+                cbar.set_label(cbar_txt)
+
+
+# ======================================================================
+def _more_texts(more_texts, ax):
+    if more_texts is not None:
+        for text_kws in more_texts:
+            text_kws = dict(text_kws) if text_kws is not None else {}
+            ax.text(**text_kws)
+
+
+# ======================================================================
+def _more_elements(more_elements, ax):
+    if more_elements is not None:
+        for element_func, element_kargs, element_kws in more_elements:
+            getattr(ax, element_func)(
+                *tuple(element_kargs), **dict(element_kws))
+
+
+# ======================================================================
+def get_ax_size(ax, fig):
+    bbox = ax.get_window_extent().transformed(ax.dpi_scale_trans.inverted())
+    width, height = bbox.width, bbox.height
+    width *= fig.dpi
+    height *= fig.dpi
+    return width, height
+
+
+# ======================================================================
 def simple(
         x_datas,
         y_datas,
@@ -165,12 +230,7 @@ def simple(
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
-    # plot figure
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
     if isinstance(x_datas, np.ndarray):
         x_datas = fc.util.auto_repeat(x_datas, len(y_datas), True, True)
     if legends is None:
@@ -193,23 +253,9 @@ def simple(
         ax.set_ylim(limits[1])
     if any([legend for legend in legends]):
         ax.legend(**(legend_kws if legend_kws is not None else {}))
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-    # include additional elements
-    if more_elements is not None:
-        for element_func, element_kargs, element_kws in more_elements:
-            getattr(ax, element_func)(
-                *tuple(element_kargs), **dict(element_kws))
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
+    _more_texts(more_texts, ax)
+    _more_elements(more_elements, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return (x_datas, y_datas), fig
 
 
@@ -222,28 +268,13 @@ def empty(
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
-
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
+    fig, ax = _ensure_fig_ax(ax)
 
     ax.axis('off')
     ax.set_aspect(1)
 
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return fig
 
 
@@ -307,11 +338,7 @@ def multi(
     method = method.lower()
     shared_axis = shared_axis.lower()
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     handles = []
 
@@ -422,26 +449,9 @@ def multi(
         else:
             twin_ax.set_title(title.format(**locals()))
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-
-    # include additional elements
-    if more_elements is not None:
-        for element_func, element_kargs, element_kws in more_elements:
-            getattr(ax, element_func)(
-                *tuple(element_kargs), **dict(element_kws))
-
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _more_elements(more_elements, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return handles, fig
 
 
@@ -486,11 +496,7 @@ def legend(
     """
     method = method.lower()
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     handles = []
 
@@ -554,20 +560,8 @@ def legend(
     ax.axis('off')
     ax.set_aspect(1)
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return handles
 
 
@@ -633,11 +627,7 @@ def sample2d(
     # todo: transpose/swapaxes/moveaxes/rollaxes
     data_dim = 2
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     # prepare data
     if axis is None:
@@ -695,25 +685,7 @@ def sample2d(
         interpolation=interpolation)
 
     _manage_ticks_limit(ticks_limit, ax)
-
-    # set colorbar
-    if cbar_kws is not None:
-        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
-        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
-        if cbar_txt is not None:
-            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            if only_extremes:
-                cbar.ax.text(
-                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90,
-                    va='center', ha='left')
-                # cbar.ax.set_ylabel(cbar_txt)
-            else:
-                cbar.set_label(cbar_txt)
+    _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
 
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
@@ -744,26 +716,9 @@ def sample2d(
                 (data.shape[0] * 0.965, data.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-
-    # include additional elements
-    if more_elements is not None:
-        for element_func, element_kargs, element_kws in more_elements:
-            getattr(ax, element_func)(
-                *tuple(element_kargs), **dict(element_kws))
-
-    # save plot
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _more_elements(more_elements, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return data, fig
 
 
@@ -803,11 +758,7 @@ def sample3d_view2d(
     data_dim = 3
     view_dim = 2
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     # prepare data
     if axis is None:
@@ -937,23 +888,7 @@ def sample3d_view2d(
         interpolation=interpolation)
 
     _manage_ticks_limit(ticks_limit, ax)
-
-    # set colorbar
-    if cbar_kws is not None:
-        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
-        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
-        if cbar_txt is not None:
-            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            if only_extremes:
-                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='medium',
-                             rotation=90)
-            else:
-                cbar.set_label(cbar_txt)
+    _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
 
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
@@ -984,23 +919,11 @@ def sample3d_view2d(
                 (view.shape[0] * 0.965, view.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-
     if not frame:
         ax.axis('off')
 
-    # save plot
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return data, fig
 
 
@@ -1065,11 +988,7 @@ def sample2d_multi(
     # todo: transpose/swapaxes/moveaxes/rollaxes
     data_dim = 2
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     assert all([arr.shape == arrs[0].shape for arr in arrs])
     num_arrs = len(arrs)
@@ -1139,22 +1058,7 @@ def sample2d_multi(
             data, cmap=cmap, vmin=array_interval[0], vmax=array_interval[1],
             interpolation=interpolation)
 
-    # set colorbar
-    if cbar_kws is not None:
-        from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
-        # cbar = ax.figure.colorbar(plot, ax=ax, **dict(cbar_kws))
-        if cbar_txt is not None:
-            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            if only_extremes:
-                cbar.ax.text(
-                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90)
-            else:
-                cbar.set_label(cbar_txt)
+    _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
 
     # print resolution information and draw a ruler
     if size_info is not None and resolution is not None:
@@ -1185,20 +1089,8 @@ def sample2d_multi(
                 (data.shape[0] * 0.965, data.shape[0] * 0.965),
                 color=text_color, linewidth=2.5)
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-
-    # save plot
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
-
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return data, fig
 
 
@@ -1285,11 +1177,7 @@ def histogram1d(
         hist[hist > 0.0] = scale(hist[hist > 0.0])
         scale = 'custom'
     # plot figure
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
     pax = ax.plot(fc.util.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
@@ -1298,18 +1186,8 @@ def histogram1d(
         ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
         ax.set_ylabel(labels[1].format(**locals()))
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return (hist, bin_edges), fig
 
 
@@ -1422,11 +1300,7 @@ def histogram1d_list(
     style_cycler = itertools.cycle(styles)
 
     # prepare histograms
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
     ax.set_aspect('auto')
     data = []
     for i, array in enumerate(arrays):
@@ -1464,18 +1338,8 @@ def histogram1d_list(
         ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
         ax.set_ylabel(labels[1].format(**locals()))
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return data, fig
 
 
@@ -1643,33 +1507,32 @@ def histogram2d(
     # adjust histogram intensity range
     if hist_val_interval is None:
         hist_val_interval = (np.floor(np.min(hist)), np.ceil(np.max(hist)))
-    # create a new figure
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
     # plot figure
     pax = ax.imshow(
         hist, cmap=cmap, origin='lower', interpolation=interpolation,
         aspect=aspect,
         vmin=hist_val_interval[0], vmax=hist_val_interval[1],
         extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
-    # plot the color bar
-    if cbar_kws is not None:
-        cbar = ax.figure.colorbar(pax, ax=ax, **dict(cbar_kws))
-        if cbar_txt is not None:
-            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            if only_extremes:
-                cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
-            else:
-                cbar.set_label(cbar_txt)
-        if ticks_limit is not None:
-            if ticks_limit > 0:
-                cbar.locator = mpl.ticker.MaxNLocator(nbins=ticks_limit)
-            else:
-                cbar.set_ticks([])
-            cbar.update_ticks()
+    _manage_ticks_limit(ticks_limit, ax)
+    _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
+    # # plot the color bar
+    # if cbar_kws is not None:
+    #     cbar = ax.figure.colorbar(pax, ax=ax, **dict(cbar_kws))
+    #     if cbar_txt is not None:
+    #         only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks'])
+    #  == 2
+    #         if only_extremes:
+    #             cbar.ax.text(2.0, 0.5, cbar_txt, fontsize='small',
+    # rotation=90)
+    #         else:
+    #             cbar.set_label(cbar_txt)
+    #     if ticks_limit is not None:
+    #         if ticks_limit > 0:
+    #             cbar.locator = mpl.ticker.MaxNLocator(nbins=ticks_limit)
+    #         else:
+    #             cbar.set_ticks([])
+    #         cbar.update_ticks()
     # plot first bisector
     if bisector:
         ax.autoscale(False)
@@ -1697,20 +1560,10 @@ def histogram2d(
         ax.set_xlabel(labels[0].format(**locals()))
     if labels[1]:
         ax.set_ylabel(labels[1].format(**locals()))
-    # fine-tune ticks
+
     _manage_ticks_limit(ticks_limit, ax)
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            ax.text(**dict(text_kws))
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout()
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
+    _more_texts(more_texts, ax)
+    _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return (hist, x_edges, y_edges), fig
 
 
@@ -1755,12 +1608,7 @@ def bar_chart(
     # todo: add support for stacked bars
     # todo: add support for variable bar_width
 
-    # create a new figure
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     num_series = len(series)
     if groups is not None:
@@ -1844,12 +1692,7 @@ def heatmap(
         y_axis_invert=False,
         ax=None,
         **kwargs):
-    # create a new figure
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
+    fig, ax = _ensure_fig_ax(ax)
 
     ax = sns.heatmap(data, ax=ax, **kwargs)
 
@@ -2081,22 +1924,13 @@ def subplots(
         else:
             fig.legend(**dict(legend_kws))
 
-    # include additional text
-    if more_texts is not None:
-        for text_kws in more_texts:
-            fig.text(**dict(text_kws))
-    # save figure to file
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        fig.tight_layout(
-            rect=[
-                0.0 + label_pads[0] + borders[0],
-                0.0 + borders[1],
-                1.0 - legend_pad - borders[2],
-                1.0 - label_pads[1] - borders[3]],
-            pad=1.0, h_pad=pads[0], w_pad=pads[1])
-        if save_kws is None:
-            save_kws = {}
-        fig.savefig(save_filepath, **dict(save_kws))
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
+    _more_texts(more_texts, fig)
+    tight_layout_kws = dict(
+        rect=[
+            0.0 + label_pads[0] + borders[0],
+            0.0 + borders[1],
+            1.0 - legend_pad - borders[2],
+            1.0 - label_pads[1] - borders[3]],
+        pad=1.0, h_pad=pads[0], w_pad=pads[1])
+    _save_plot(save_filepath, save_kws, tight_layout_kws, fig, force, verbose)
     return fig
