@@ -72,7 +72,7 @@ from pymrt import msg, dbg
 # ======================================================================
 # :: MatPlotLib-related constants
 # standard plot resolutions
-D_PLOT_DPI = 72
+D_PLOT_DPI = mpl.rcParams['figure.dpi']
 # colors and linestyles
 PLOT_COLORS = tuple(x['color'] for x in mpl.rcParams['axes.prop_cycle'])
 PLOT_LINESTYLES = ('-', '--', '-.', ':')
@@ -85,24 +85,26 @@ PLOT_LINESTYLES = ('-', '--', '-.', ':')
 
 # ======================================================================
 def _ensure_fig_ax(ax):
+    """
+    Ensure valid Matplotlib axes and figure, even if the input is None.
+
+    Args:
+        ax (mpl.axes|None): A Matplotlib axes.
+            If None, it ensures a valid Matplotlib axes.
+            Otherwise, the ax input is unchanged.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+            - fig (mpl.Figure): A valid Matplotlib figure.
+            - ax (mpl.axes): A valid Matplotlib axes.
+    """
     if ax is None:
         fig = plt.figure()
         ax = fig.gca()
     else:
         fig = plt.gcf()
     return fig, ax
-
-
-# ======================================================================
-def _save_plot(save_filepath, save_kws, tight_layout_kws, fig, force, verbose):
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        tight_layout_kws = dict(tight_layout_kws) \
-            if tight_layout_kws is not None else {}
-        fig.tight_layout(**tight_layout_kws)
-        save_kws = dict(save_kws) if save_kws is not None else {}
-        fig.savefig(save_filepath, **save_kws)
-        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
-        plt.close(fig)
 
 
 # ======================================================================
@@ -148,9 +150,20 @@ def _color_series(
 
 
 # ======================================================================
-def _transparent_cmaps_from_colors(
+def _transparent_cmap_from_color(
         color,
         threshold=0.0):
+    """
+    Generate transparent colormap from a single color.
+
+    Args:
+        color (str|tuple): A valid color.
+        threshold (int|float): Threshold for transparency.
+            Values below the threshold are set to be transparent.
+
+    Returns:
+        result (mpl.Colormap): A Matplotlib colormap.
+    """
     return mpl.colors.LinearSegmentedColormap.from_list(
         'my_cmap_{}'.format(color),
         [(0.00, (0, 0, 0, 0)),
@@ -159,8 +172,78 @@ def _transparent_cmaps_from_colors(
 
 
 # ======================================================================
-def _manage_ticks_limit(ticks_limit, ax):
-    # plot ticks in plotting axes
+def _ax_sizes_pt(ax):
+    """
+    Compute the size of the Matplotlib axes in pt.
+
+    Args:
+        ax (mpl.axes): A Matplotlib axes.
+
+    Returns:
+        sizes (tuple[float]): The size of the Matplotlib axes in pt.
+    """
+    bbox = ax.get_window_extent().transformed(
+        ax.figure.dpi_scale_trans.inverted())
+    sizes = tuple(size * ax.figure.dpi for size in (bbox.width, bbox.height))
+    return sizes
+
+
+# ======================================================================
+def _manage_colorbar(
+        cbar_kws,
+        cbar_txt,
+        ax,
+        pax):
+    """
+    Manage the input for displaying a Matplotlib colorbar.
+
+    Args:
+        cbar_kws (dict|tuple): The keyword arguments to pass to `colorbar()`
+            See `mpl.figure.colorbar()` for more.
+        cbar_txt (str): The text to use as label for the colorbar.
+        ax (mpl.axes): A Matplotlib axes.
+        pax (mpl.axes): The plotted Matplotlib AxesImage.
+
+    Returns:
+        None.
+    """
+    if cbar_kws is not None or cbar_txt is not None:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
+        if cbar_txt is not None:
+            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
+            if only_extremes:
+                cbar.ax.text(
+                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90,
+                    verticalalignment='center', horizontalalignment='left',
+                    transform=cbar.ax.transAxes)
+                # ax_sizes_pt = _ax_sizes_pt(ax)
+                # cbar.set_label(cbar_txt, labelpad=-ax_sizes_pt[0] * 0.075)
+                # cbar.ax.yaxis.set_label_position('left')
+            else:
+                cbar.set_label(cbar_txt)
+
+
+# ======================================================================
+def _manage_ticks_limit(
+        ticks_limit,
+        ax):
+    """
+    Manage the input for displaying the Matplotlib ticks in the axis.
+
+    Args:
+        ticks_limit (int): The parameter determining the ticks behavior.
+            This affects both x- and y- axis.
+            If `ticks_limit > 0`, this is the number of bins, and the number
+            of ticks will be `ticks_limit + 1`.
+            If `ticks_limit == 0` no ticks are being displayed.
+            If `ticks_limit < 0` the axis itself is not displayed.
+        ax (mpl.axes): A Matplotlib axes.
+
+    Returns:
+        None.
+    """
     if ticks_limit is not None:
         if ticks_limit > 0:
             ax.locator_params(nbins=ticks_limit)
@@ -172,25 +255,18 @@ def _manage_ticks_limit(ticks_limit, ax):
 
 
 # ======================================================================
-def _manage_colorbar(cbar_kws, cbar_txt, ax, pax):
-    if cbar_kws is not None and cbar_txt is not None:
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        cbar = ax.figure.colorbar(pax, cax=cax, **dict(cbar_kws))
-        if cbar_txt is not None:
-            only_extremes = 'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-            if only_extremes:
-                cbar.ax.text(
-                    2.0, 0.5, cbar_txt, fontsize='medium', rotation=90,
-                    va='center', ha='left', transform=cbar.ax.transAxes)
-                # cbar.set_label(cbar_txt, labelpad=-36)
-                # cbar.ax.yaxis.set_label_position('left')
-            else:
-                cbar.set_label(cbar_txt)
-
-
-# ======================================================================
 def _more_texts(more_texts, ax):
+    """
+    Manage the input for adding more texts.
+
+    Args:
+        more_texts (Iterable): List of keyword arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+
+    Returns:
+        None.
+    """
     if more_texts is not None:
         for text_kws in more_texts:
             text_kws = dict(text_kws) if text_kws is not None else {}
@@ -199,6 +275,22 @@ def _more_texts(more_texts, ax):
 
 # ======================================================================
 def _more_elements(more_elements, ax):
+    """
+    Manage the input for adding more elements.
+
+    Args:
+        more_elements (Iterable[Iterable]): List of extra methods/parameters.
+            Each item consists of:
+            - element_func (str): Name of the method of `mpl.axes`.
+              `ax.element_func` must be callable.
+            - element_args (Iterable): Positional arguments.
+            - element_kws (dict|tuple): Keyword arguments.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+
+    Returns:
+        None.
+    """
     if more_elements is not None:
         for element_func, element_kargs, element_kws in more_elements:
             getattr(ax, element_func)(
@@ -206,24 +298,51 @@ def _more_elements(more_elements, ax):
 
 
 # ======================================================================
-def get_ax_size(ax, fig):
-    bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
-    width *= fig.dpi
-    height *= fig.dpi
-    return width, height
+def _save_plot(
+        save_filepath,
+        save_kws,
+        tight_layout_kws,
+        fig,
+        force,
+        verbose):
+    """
+    Manage the input for saving the plot to file.
+
+    Args:
+        save_filepath (str|None): The file path where the plot is saved to.
+            If None, no output is saved.
+            If filepath exists a new plot is saved only if `force == True`.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            Frequently used parameters are: `dpi` and `format`.
+        tight_layout_kws (dict|tuple): Keyword arguments for `tight_layout()`.
+            Uses the method of `mpl.figure`.
+        fig (mpl.Figure): A Matplotlib figure.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        None.
+    """
+    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+        tight_layout_kws = dict(tight_layout_kws) \
+            if tight_layout_kws is not None else {}
+        fig.tight_layout(**tight_layout_kws)
+        save_kws = dict(save_kws) if save_kws is not None else {}
+        fig.savefig(save_filepath, **save_kws)
+        msg('Plot: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
+        plt.close(fig)
 
 
 # ======================================================================
 def simple(
         x_datas,
         y_datas,
-        title=None,
         labels=(None, None),
         limits=(None, None),
         styles=None,
         legends=None,
         legend_kws=None,
+        title=None,
         more_texts=None,
         more_elements=None,
         ax=None,
@@ -231,6 +350,36 @@ def simple(
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
+    """
+
+    Args:
+        x_datas:
+        y_datas:
+        labels:
+        limits:
+        styles:
+        legends:
+        legend_kws (dict|tuple): Keyword arguments for `mpl.axes.legend()`.
+        title (str|None): The plot title.
+            If None, no title is set.
+        more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        more_elements (Iterable[Iterable]|None): List of extra elements.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+        save_filepath (str|None): The file path where the plot is saved to.
+            See `pymrt.plot._save_plot()` for more info.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            See `pymrt.plot._save_plot()` for more info.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+        result (tuple): The tuple
+            contains:
+            - data: The plotted data.
+            - fig: The plotted figure.
+    """
     fig, ax = _ensure_fig_ax(ax)
     if isinstance(x_datas, np.ndarray):
         x_datas = fc.util.auto_repeat(x_datas, len(y_datas), True, True)
@@ -262,21 +411,43 @@ def simple(
 
 # ======================================================================
 def empty(
-        more_texts,
         title=None,
+        more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
         force=False,
         verbose=D_VERB_LVL):
+    """
+
+    Args:
+        title (str|None): The plot title.
+            If None, no title is set.
+        more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        more_elements (Iterable[Iterable]|None): List of extra elements.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+        save_filepath (str|None): The file path where the plot is saved to.
+            See `pymrt.plot._save_plot()` for more info.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            See `pymrt.plot._save_plot()` for more info.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
+
+    Returns:
+
+    """
     fig, ax = _ensure_fig_ax(ax)
 
     ax.axis('off')
     ax.set_aspect(1)
 
     _more_texts(more_texts, ax)
+    _more_elements(more_elements, ax)
     _save_plot(save_filepath, save_kws, None, fig, force, verbose)
-    return fig
+    return None, fig
 
 
 # ======================================================================
@@ -295,9 +466,9 @@ def multi(
         shared_axis='y',
         groups=None,
         colors=PLOT_COLORS,
-        title=None,
         legend_kws=None,
         method='errorbars',  # 'errorarea', # 'dotted+solid',
+        title=None,
         more_texts=None,
         more_elements=None,
         ax=None,
@@ -323,18 +494,24 @@ def multi(
         shared_axis ():
         groups ():
         colors ():
-        title ():
         legend_kws ():
         method ():
-        more_texts ():
-        ax ():
-        save_filepath ():
-        save_kws ():
-        force ():
-        verbose ():
+        title (str|None): The plot title.
+            If None, no title is set.
+        more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        more_elements (Iterable[Iterable]|None): List of extra elements.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+        save_filepath (str|None): The file path where the plot is saved to.
+            See `pymrt.plot._save_plot()` for more info.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            See `pymrt.plot._save_plot()` for more info.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
 
     Returns:
-
+        TODO:
     """
     method = method.lower()
     shared_axis = shared_axis.lower()
@@ -465,6 +642,7 @@ def legend(
         legend_kws=None,
         method='errorbars',  # 'errorarea', # 'dotted+solid',
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -474,23 +652,25 @@ def legend(
     Plot multiple curves including optional errorbars and twin axes.
 
     Args:
-        y_lbls ():
-        dy_labels ():
-        x_label ():
-        y_label ():
-        twin_indexes ():
-        shared_axis ():
-        groups ():
-        colors ():
-        title ():
-        legend_kws ():
-        method ():
-        more_texts ():
-        ax ():
-        save_filepath ():
-        save_kws ():
-        force ():
-        verbose ():
+        y_labels:
+        dy_labels:
+        groups:
+        colors:
+        legend_kws:
+        method:
+        title (str|None): The plot title.
+            If None, no title is set.
+        more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        more_elements (Iterable[Iterable]|None): List of extra elements.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+        save_filepath (str|None): The file path where the plot is saved to.
+            See `pymrt.plot._save_plot()` for more info.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            See `pymrt.plot._save_plot()` for more info.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
 
     Returns:
 
@@ -562,6 +742,7 @@ def legend(
     ax.set_aspect(1)
 
     _more_texts(more_texts, ax)
+    _more_elements(more_elements, ax)
     _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return handles
 
@@ -571,19 +752,19 @@ def sample2d(
         arr,
         axis=None,
         index=None,
-        title=None,
         array_interval=None,
         ticks_limit=None,
         interpolation='nearest',
         orientation=None,
         flip_ud=False,
         flip_lr=False,
-        cmap=None,
-        cbar_kws=None,
-        cbar_txt=None,
         text_color=None,
         resolution=None,
         size_info=None,
+        cmap=None,
+        cbar_kws=None,
+        cbar_txt=None,
+        title=None,
         more_texts=None,
         more_elements=None,
         ax=None,
@@ -592,38 +773,25 @@ def sample2d(
         force=False,
         verbose=D_VERB_LVL):
     """
-    Plot a 2D sample image of an ND array.
+    Plot a 2D sample image of an N-dim array.
 
-    TODO: fix documentation!!!
+    Args:
+        title (str|None): The plot title.
+            If None, no title is set.
+        more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
+            See `pymrt.plot._more_texts()` for more info.
+        more_elements (Iterable[Iterable]|None): List of extra elements.
+            See `pymrt.plot._more_elements()` for more info.
+        ax (mpl.axes): A Matplotlib axes.
+        save_filepath (str|None): The file path where the plot is saved to.
+            See `pymrt.plot._save_plot()` for more info.
+        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+            See `pymrt.plot._save_plot()` for more info.
+        force (bool): Force new processing.
+        verbose (int): Set level of verbosity.
 
-    Parameters
-    ==========
-    arr : ndarray
-        The original 3D array.
-    axis : int (optional)
-        The slicing axis. If None, use the shortest one.
-    index : int (optional)
-        The slicing index. If None, mid-value is taken.
-    title : str (optional)
-        The title of the plot.
-    array_interval : 2-tuple (optional)
-        The (min, max) values interval.
-    cmap : MatPlotLib ColorMap (optional)
-        The colormap to be used for displaying the histogram.
-    use_new_figure : bool (optional)
-        Plot the histogram in a new figure.
-    close_figure : bool (optional)
-        Close the figure after saving (useful for batch processing).
-    save_filepath : str (optional)
-        The path to which the plot is to be saved. If unset, no output.
-
-    Returns
-    =======
-    data : ndarray
-        The sliced (N-1)D-array.
-    plot : matplotlib.pyplot.Figure
-        The figure object containing the plot.
-
+    Returns:
+        todo:
     """
     # todo: transpose/swapaxes/moveaxes/rollaxes
     data_dim = 2
@@ -668,16 +836,11 @@ def sample2d(
         ax.set_title(title)
     if array_interval is None:
         array_interval = fc.num.minmax(arr)
+    same_sign = fc.util.is_same_sign(array_interval)
     if not cmap:
-        if not fc.util.is_same_sign(array_interval):
-            cmap = mpl.cm.get_cmap('RdBu_r')
-        else:
-            cmap = mpl.cm.get_cmap('gray_r')
+        cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
     if not text_color:
-        if not fc.util.is_same_sign(array_interval):
-            text_color = 'k'
-        else:
-            text_color = 'k'
+        text_color = 'k'
     ax.set_aspect('equal')
 
     # plot data
@@ -871,16 +1034,11 @@ def sample3d_view2d(
         ax.set_title(title)
     if array_interval is None:
         array_interval = fc.num.minmax(arr)
+    same_sign = fc.util.is_same_sign(array_interval)
     if not cmap:
-        if not fc.util.is_same_sign(array_interval):
-            cmap = mpl.cm.get_cmap('RdBu_r')
-        else:
-            cmap = mpl.cm.get_cmap('gray_r')
+        cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
     if not text_color:
-        if not fc.util.is_same_sign(array_interval):
-            text_color = 'k'
-        else:
-            text_color = 'k'
+        text_color = 'k'
     ax.set_aspect('equal')
 
     # plot data
@@ -1043,16 +1201,11 @@ def sample2d_multi(
 
         if array_interval is None:
             array_interval = fc.num.minmax(arr)
+        same_sign = fc.util.is_same_sign(array_interval)
         if not cmap:
-            if not fc.util.is_same_sign(array_interval):
-                cmap = mpl.cm.get_cmap('RdBu_r')
-            else:
-                cmap = mpl.cm.get_cmap('gray_r')
+            cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
         if not text_color:
-            if not fc.util.is_same_sign(array_interval):
-                text_color = 'k'
-            else:
-                text_color = 'k'
+            text_color = 'k'
 
         # plot data
         pax = ax.imshow(
@@ -1439,12 +1592,9 @@ def histogram2d(
         stats_kws (None): TODO
         cbar_kws (None): TODO
         cbar_txt (None): TODO
-        use_new_figure (bool): Plot the histogram in a new figure.
-        close_figure (bool): Close the figure after saving.
         save_filepath (str): The file path where the plot is saved to.
-            If unset, no output.
-        ax (matplotlib.axes): The Axes object to use for plotting.
-            If None, gets the current Axes object.
+            If unset, no output is saved.
+        ax (matplotlib.axes): The Matplotlib Axes object used for plotting.
 
     Returns:
         hist2d (np.ndarray): The calculated 2D histogram.
@@ -1537,8 +1687,8 @@ def histogram2d(
     # plot first bisector
     if bisector:
         ax.autoscale(False)
-        ax.plot(array_interval[0], array_interval[1], bisector,
-                label='bisector')
+        ax.plot(
+            array_interval[0], array_interval[1], bisector, label='bisector')
     if stats_kws is not None:
         mask = np.ones_like(arr1 * arr2).astype(bool)
         mask *= (arr1 > array_interval[0][0]).astype(bool)
@@ -1546,7 +1696,7 @@ def histogram2d(
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
         stats_dict = fc.num.calc_stats(
-            arr1[mask] - arr2[mask], **stats_kws)
+            arr1[mask] - arr2[mask], **dict(stats_kws))
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *fc.util.format_value_error(
                 stats_dict['avg'], stats_dict['std'], 3))
