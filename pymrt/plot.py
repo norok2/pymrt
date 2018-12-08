@@ -82,6 +82,7 @@ PLOT_LINESTYLES = ('-', '--', '-.', ':')
 # def plot_with_adjusting_parameters()
 # TODO: make a plot with possibility to adjust params
 
+
 # ======================================================================
 def _ensure_fig_ax(ax):
     if ax is None:
@@ -206,7 +207,7 @@ def _more_elements(more_elements, ax):
 
 # ======================================================================
 def get_ax_size(ax, fig):
-    bbox = ax.get_window_extent().transformed(ax.dpi_scale_trans.inverted())
+    bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     width, height = bbox.width, bbox.height
     width *= fig.dpi
     height *= fig.dpi
