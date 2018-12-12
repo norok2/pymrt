@@ -42,24 +42,52 @@ from pymrt import msg, dbg
 
 
 # ======================================================================
-def scale(
-        trajectory,
+def reframe(
+        traj,
         bounds=(-1, 1)):
     """
-    Reframe the boundaries of a trajectory.
+    Scale the coordinates of the trajectory to be within the specified bounds.
 
     Args:
-        trajectory:
-        bounds:
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
+        bounds (Iterable[int|float|Iterable[int|float]: The scaling bounds.
+            If Iterable of int or float, must have size 2, corresponding to
+            the min and max bounds for all dimensions.
+            If Iterable of Iterable, the outer Iterable must match the
+            dimensions of the trajectory, while the inner Iterables must have
+            size 2, corresponding to the min and max bounds for each
+            dimensions.
 
     Returns:
+        traj (np.ndarray): The coordinates of the trajectory.
+            This is scaled to fit in the specified bounds.
 
+    Examples:
+        >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
+        >>> print(traj)
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+
+        >>> print(reframe(traj, (-1, 1)))
+        [[-1.  -0.5  0.   0.5  1.   1.   0.5  0.  -0.5 -1. ]
+         [-1.  -1.  -1.  -1.  -1.   1.   1.   1.   1.   1. ]]
+
+        >>> print(reframe(traj, ((0, 8), (0, 3))))
+        [[0. 2. 4. 6. 8. 8. 6. 4. 2. 0.]
+         [0. 0. 0. 0. 0. 3. 3. 3. 3. 3.]]
+
+        >>> print(reframe(traj, (2, 3, 1)))
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid `bounds` format.
+
+        >>> print(reframe(traj, ((0, 1, 8), (0, 3))))
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid `bounds` format.
     """
-    n_dims = trajectory.shape[0]
-    try:
-        len(bounds)
-    except (IndexError, TypeError):
-        bounds = (0, bounds)
+    n_dims = traj.shape[0]
     try:
         [len(x) for x in bounds]
     except (IndexError, TypeError):
@@ -67,38 +95,67 @@ def scale(
     if any(len(x) != 2 for x in bounds):
         text = 'Invalid `bounds` format.'
         raise ValueError(text)
-    trajectory = trajectory.astype(float)
+    traj = traj.astype(float)
     for i in range(n_dims):
-        trajectory[i] = fc.num.scale(trajectory[i], bounds[i])
-    return trajectory
+        traj[i] = fc.num.scale(traj[i], bounds[i])
+    return traj
 
 
 # ======================================================================
 def zoom(
-        trajectory,
+        traj,
         factors=1):
     """
-    Scale a trajectory.
+    Scale the coordinates of the trajectory by the specified factors.
 
     Args:
-        trajectory:
-        zoom:
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
+        factors (int|float|Iterable[int|float]): The scaling factor(s).
+            If int or float, the same factor is used for all dimensions.
+            If Iterable, must match the dimensions of the trajectory.
 
     Returns:
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
+            The values are scaled according to the specified factors.
 
+    Examples:
+        >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
+        >>> print(traj)
+        [[0 1 2 3 4 4 3 2 1 0]
+         [0 0 0 0 0 1 1 1 1 1]]
+
+        >>> print(zoom(traj, 2))
+        [[0 2 4 6 8 8 6 4 2 0]
+         [0 0 0 0 0 2 2 2 2 2]]
+
+        >>> print(zoom(traj, (2, 3)))
+        [[0 2 4 6 8 8 6 4 2 0]
+         [0 0 0 0 0 3 3 3 3 3]]
+
+        >>> print(zoom(traj, (2, 3, 1)))
+        Traceback (most recent call last):
+            ...
+        AssertionError
     """
-    raise NotImplementedError
+    n_dims = traj.shape[0]
+    factors = fc.util.auto_repeat(factors, n_dims, False, True)
+    factors = np.array(factors).reshape(-1, 1)
+    traj = traj * factors
+    return traj
 
 
 # ======================================================================
 def to_nd(
-        trajectory,
+        traj,
         new_dims=None):
     """
     Convert any trajectory to an N-dim trajectory.
 
     Args:
-        trajectory (np.ndarray): The coordinates of the trajectory.
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
             This can represent any dim trajectory.
             If n_dim < new_dims, the other dimensions are set to 0.
             If n_dim == new_dims, the trajectory is left untouched.
@@ -113,11 +170,14 @@ def to_nd(
             If None, the trajectory is left untouched.
 
     Returns:
-        trajectory (np.ndarray): The coordinates of the trajectory.
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (new_dims, n_points).
             This represents the N-dim trajectory.
 
     Examples:
         >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
+        >>> print(traj.shape)
+        (2, 10)
         >>> print(traj)
         [[0 1 2 3 4 4 3 2 1 0]
          [0 0 0 0 0 1 1 1 1 1]]
@@ -154,18 +214,18 @@ def to_nd(
          [0 0 0 0 0 1 1 1 1 1]
          [0 0 0 0 0 0 0 0 0 0]]
     """
-    n_dims, n_points = trajectory.shape
+    n_dims, n_points = traj.shape
     if new_dims is None:
         new_dims = n_dims
     if n_dims < new_dims:
         return np.concatenate(
-            (trajectory,
-             np.zeros((new_dims - n_dims, n_points), dtype=trajectory.dtype)),
+            (traj,
+             np.zeros((new_dims - n_dims, n_points), dtype=traj.dtype)),
             axis=0)
     elif n_dims > new_dims:
-        return trajectory[0:new_dims, ...]
+        return traj[0:new_dims, ...]
     else:
-        return trajectory
+        return traj
 
 
 # ======================================================================
@@ -203,8 +263,10 @@ def zig_zag_blipped_2d(
     Returns:
         result (tuple): The tuple
             contains:
-             - trajectory (np.ndarray): The coordinates of the trajectory.
+             - traj (np.ndarray): The coordinates of the trajectory.
+                    The shape is: (n_dim, n_points).
              - mask (np.ndarray): The mask for the zig-zag trains.
+                    The shape is: (n_dim, n_points).
 
     Examples:
         >>> traj, mask = zig_zag_blipped_2d(5, 1, 2)
@@ -303,8 +365,10 @@ def zig_zag_linear_2d(
     Returns:
         result (tuple): The tuple
             contains:
-             - trajectory (np.ndarray): The coordinates of the trajectory.
+             - traj (np.ndarray): The coordinates of the trajectory.
+                    The shape is: (n_dim, n_points).
              - mask (np.ndarray): The mask for the trains.
+                    The shape is: (n_dim, n_points).
 
     Examples:
         >>> traj, mask = zig_zag_linear_2d(6, 2)
@@ -389,9 +453,10 @@ def zig_zag_blipped_sinusoidal_2d(
     Returns:
         result (tuple): The tuple
             contains:
-             - trajectory (np.ndarray): The coordinates of the trajectory.
+             - traj (np.ndarray): The coordinates of the trajectory.
+                    The shape is: (n_dim, n_points).
              - mask (np.ndarray): The mask for the trains.
-
+                    The shape is: (n_dim, n_points).
     Examples:
 
     """
@@ -411,28 +476,123 @@ def zig_zag_blipped_sinusoidal_2d(
 
 # ======================================================================
 def density(
-        trajectory,
+        traj,
         mask=None):
     """
     Compute the spatial density.
 
+    This is the number of points divided by the min-max hyper-volume.
+
     Args:
-        trajectory (np.ndarray): The coordinates of the trajectory.
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
         mask (np.ndarray|None): The mask for the trains.
+            The shape is: (n_dim, n_points).
 
     Returns:
-
-
+        result (float): The density.
     """
-    n_dims, n_points = trajectory.shape
+    n_dims, n_points = traj.shape
     if mask is None:
         mask = slice(None)
         n_valid_points = n_points
     else:
         n_valid_points = np.sum(mask)
-    bounds = tuple(fc.num.minmax(trajectory[i, mask]) for i in range(n_dims))
+    bounds = tuple(fc.num.minmax(traj[i, mask]) for i in range(n_dims))
     bound_sizes = tuple(np.ptp(interval) for interval in bounds)
     return n_valid_points / fc.util.prod(bound_sizes)
+
+
+# ======================================================================
+def coverage(
+        traj,
+        shape,
+        mask=None):
+    """
+    Compute the histogram density coverage.
+
+    This is the percent of bins that are covered by the trajectory,
+    i.e. the bins that contain at least one point.
+
+    Args:
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
+        shape (Iterable[int]): The shape of the array.
+        mask (np.ndarray|None): The mask for the trains.
+            The shape is: (n_dim, n_points).
+
+    Returns:
+        result (float): The coverage.
+    """
+    if mask is None:
+        mask = slice(None)
+    hist, edges = np.histogramdd(traj[mask].T, shape)
+    max_hist = hist.size
+    nonzero_hist = np.sum(hist > 0)
+    return nonzero_hist / max_hist
+
+
+# ======================================================================
+def sampling_mask(
+        traj,
+        shape,
+        factors=1,
+        fit=True):
+    """
+    Generate a sampling mask of given size from a trajectory.
+
+    Args:
+        traj (np.ndarray): The coordinates of the trajectory.
+            The shape is: (n_dim, n_points).
+        shape (Iterable[int]): The shape of the array.
+        factors (int|float|Iterable[int|float]): The scaling factor(s).
+            The
+            If int or float, the same factor is used for all dimensions.
+            If Iterable, must match the dimensions of the trajectory.
+        fit (bool): Fit the entire trajectory within the shape.
+
+    Returns:
+        result (np.ndarray[bool]): The sampling mask.
+            This can be applied to any `nd.array` with a matching shape to
+            sample the specified trajectory.
+
+    Examples:
+        >>> traj = np.array(((0, 0), (1, 1), (2, 2))).T
+        >>> print(sampling_mask(traj, (3, 3)))
+        [[ True False False]
+         [False  True False]
+         [False False  True]]
+        >>> arr = np.arange(3 * 3).reshape((3, 3)) + 1
+        >>> print(arr * sampling_mask(traj, arr.shape))
+        [[1 0 0]
+         [0 5 0]
+         [0 0 9]]
+        >>> print(sampling_mask(traj, (3, 3), factors=2))
+        [[ True False False False False False]
+         [False False False False False False]
+         [False False  True False False False]
+         [False False False False False False]
+         [False False False False False False]
+         [False False False False False  True]]
+        >>> print(sampling_mask(traj, (3, 3), factors=3).astype(int))
+        [[1 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 1 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0 0 1]]
+    """
+    n_dim = len(shape)
+    factors = fc.util.auto_repeat(factors, n_dim, False, True)
+    shape = tuple(int(size * factor) for size, factor in zip(shape, factors))
+    if fit:
+        traj = reframe(traj, tuple((0, size - 1) for size in shape))
+    result = np.zeros(shape, dtype=bool)
+    result[tuple(x for x in np.round(traj).astype(int))] = True
+    return result
 
 
 # ======================================================================
