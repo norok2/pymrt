@@ -44,7 +44,7 @@ import pymrt.utils
 
 
 # ======================================================================
-def k2r_space(
+def k2r_space_cartesian(
         arr,
         axes=None):
     """
@@ -68,7 +68,7 @@ def k2r_space(
 
 
 # ======================================================================
-def r2k_space(
+def r2k_space_cartesian(
         arr,
         axes=None):
     """
@@ -93,7 +93,9 @@ def r2k_space(
 
 # ======================================================================
 def grappa(
-        arr):
+        arr,
+        sens,
+        coil_index=-1):
     """
     EXPERIMENTAL!
 
@@ -109,7 +111,9 @@ def grappa(
 
 # ======================================================================
 def sense(
-        arr):
+        arr,
+        sens,
+        coil_index=-1):
     """
     EXPERIMENTAL!
 
@@ -152,4 +156,9 @@ def compressed_sensing(
     Returns:
         arr (np.ndarray): The estimated coil sensitivity.
     """
+    raise NotImplementedError
+
+
+# ======================================================================
+def g_noise():
     raise NotImplementedError
