@@ -2,8 +2,7 @@
 PyMRT - Python Magnetic Resonance Tools
 =======================================
 
-**PyMRT** - Python Magnetic Resonance Tools:
-data analysis for quantitative MRI
+**PyMRT** - Python Magnetic Resonance Tools
 
 .. code::
 
@@ -16,8 +15,19 @@ data analysis for quantitative MRI
 
 Overview
 --------
-This software provides a support Python library and auxiliary console based
-tools to perform common tasks for the analysis of quantitative MRI data.
+This software provides a support Python library and auxiliary console-based
+tools to perform common tasks for Magnetic Resonance Imaging (MRI).
+The aim is to be the Swiss Army knife of MRI.
+
+At present, the following features are best supported:
+
+- generic tools for image analysis from an MRI perspective
+- data analysis for quantitative MRI experiments
+
+On top of this, additional effort is currently being put in the following
+areas:
+
+- image reconstruction and related features (e.g. coil combination, etc.)
 
 It is relatively easy to extend and users are encouraged to tweak with it.
 
@@ -55,6 +65,7 @@ License
 -------
 This work is licensed through the terms and conditions of the
 `GPLv3+ <http://www.gnu.org/licenses/gpl-3.0.html>`_
+
 The use of this software for scientific purpose leading to a publication
 should be acknowledged through citation of the following reference:
 
@@ -63,10 +74,10 @@ should be acknowledged through citation of the following reference:
 
 Acknowledgements
 ----------------
-This software originated as part of my Ph.D. work at the
+This software originated as part of the Ph.D. work of Riccardo Metere at the
 `Max Planck Institute for Human Cognitive and Brain Sciences
 <http://www.cbs.mpg.de>`_ and the `University of Leipzig
-<http://www.uni-leipzig.de>`_.
+<http://www.uni-leipzig.de>`_, and has been constantly expanded from there.
 
 For a complete list of authors please see ``AUTHORS.rst``.
 
