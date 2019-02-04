@@ -95,6 +95,7 @@ def r2k_space_cartesian(
 def grappa(
         arr,
         sens,
+        kernel=None,
         coil_index=-1):
     """
     EXPERIMENTAL!
@@ -160,5 +161,5 @@ def compressed_sensing(
 
 
 # ======================================================================
-def g_noise():
+def g_factor_multi_replica():
     raise NotImplementedError
