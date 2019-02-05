@@ -189,6 +189,133 @@ def _ax_sizes_pt(ax):
 
 
 # ======================================================================
+def _reorient(
+        arr,
+        transposes=None,
+        rot90s=None,
+        flips=None):
+    """
+    Transform the input data according to the preferred orientation.
+
+    The transformations are performed in order of appearance.
+
+    Args:
+        arr (np.ndarray): The input array.
+        transposes (Iterable[int, int]): List of transposition axes.
+        rot90s (Iterable[int, (int, int)]|None): List of rotation parameters.
+            The first element of the iterable (int) indicates the number of
+            90 degree rotations, while the second element of the iterable
+            (int, int) indicates the axes corresponding to the plane of
+            rotation (the direction is from the first to the second axis).
+        flips (Iterable[int]|None): List of flipping axes.
+
+    Returns:
+        arr (np.ndarray): The transformed array.
+    """
+    if transposes:
+        for axes in transposes:
+            arr = np.transpose(arr, axes)
+    if rot90s:
+        for k, axes in rot90s:
+            arr = np.rot90(arr, k, axes)
+    if flips:
+        for axis in flips:
+            arr = np.flip(arr, axis)
+    return arr
+
+
+# ======================================================================
+def _reorient_2d(
+        arr,
+        orientation=None,
+        flip_ud=False,
+        flip_lr=False):
+    """
+    Transform the input data according to the preferred orientation.
+
+    This is specialized for 2D inputs.
+
+    Args:
+        arr (np.ndarray): The input array.
+        orientation (str): The orientation.
+            Accepted values are:
+             - 'transpose': transpose the input
+             - 'landscape': first axis gets smaller then the second
+             - 'portrait': first axis gets larger then the second
+             - 'rot90': rotate the input by 90 degrees.
+        flip_ud (bool): Flip in the first dim (up/down or vertically).
+        flip_lr (bool): Flip in the second dim (left/right or horizontally).
+
+    Returns:
+        arr (np.ndarray): The transformed array.
+    """
+    if ((orientation == 'transpose') or
+            (orientation == 'landscape' and arr.shape[0] > arr.shape[1]) or
+            (orientation == 'portrait' and arr.shape[0] < arr.shape[1])):
+        arr = np.transpose(arr)
+    if orientation == 'rot90':
+        arr = np.rot90(arr)
+    if flip_ud:
+        arr = np.flipud(arr)
+    if flip_lr:
+        arr = np.fliplr(arr)
+    return arr
+
+
+# ======================================================================
+def _manage_resolution_info(
+        size_info,
+        resolution,
+        shape,
+        text_color,
+        ax):
+    """
+    Create a ruler and indications for resolution info.
+
+    Assumes that the resolution is in `px / mm`.
+
+    Note that this modifies the `ax` object.
+
+    Args:
+        size_info:
+        resolution (Iterable[int|float]):
+        shape (Iterable[int]):
+        text_color:
+        ax:
+
+    Returns:
+        None.
+    """
+    if size_info is not None and resolution is not None:
+        if size_info >= 0.0:
+            # print resolution information
+            if resolution[0] == resolution[1] == resolution[2]:
+                x = resolution[0]
+                res_str = '{} {} iso.'.format(str(x), 'mm')
+            else:
+                res_str = 'x'.join([str(x) for x in resolution[0:3]]) \
+                          + ' ' + 'mm'
+            ax.text(
+                0.975, 0.975, res_str, rotation=0, color=text_color,
+                horizontalalignment='right', verticalalignment='top',
+                transform=ax.transAxes)
+        if size_info != 0.0:
+            res = resolution[1]
+            size_info_size = round(abs(size_info) * (shape[1] * res), -1)
+            size_info_str = '{} {}'.format(size_info_size, 'mm')
+            size_info_px = size_info_size / res
+            ax.text(
+                0.025, 0.050, size_info_str, rotation=0, color=text_color,
+                horizontalalignment='left', verticalalignment='bottom',
+                transform=ax.transAxes)
+            ax.plot(
+                (shape[1] * 0.025,
+                 shape[1] * 0.025 + size_info_px),
+                (shape[0] * 0.965, shape[0] * 0.965),
+                color=text_color, linewidth=2.5)
+
+
+# ======================================================================
 def _manage_colorbar(
         cbar_kws,
         cbar_txt,
@@ -196,6 +323,8 @@ def _manage_colorbar(
         pax):
     """
     Manage the input for displaying a Matplotlib colorbar.
+
+    Note that this modifies the `ax` (and `pax`) objects.
 
     Args:
         cbar_kws (dict|tuple): The keyword arguments to pass to `colorbar()`
@@ -232,6 +361,8 @@ def _manage_ticks_limit(
     """
     Manage the input for displaying the Matplotlib ticks in the axis.
 
+    Note that this modifies the `ax` object.
+
     Args:
         ticks_limit (int): The parameter determining the ticks behavior.
             This affects both x- and y- axis.
@@ -259,6 +390,8 @@ def _more_texts(more_texts, ax):
     """
     Manage the input for adding more texts.
 
+    Note that this modifies the `ax` object.
+
     Args:
         more_texts (Iterable): List of keyword arguments for `mpl.axes.text()`.
             See `pymrt.plot._more_texts()` for more info.
@@ -277,6 +410,8 @@ def _more_texts(more_texts, ax):
 def _more_elements(more_elements, ax):
     """
     Manage the input for adding more elements.
+
+    Note that this modifies the `ax` object.
 
     Args:
         more_elements (Iterable[Iterable]): List of extra methods/parameters.
@@ -826,16 +961,7 @@ def sample2d(
             'Mismatching dimensions ({dim}) and axis ({num_axes}): '
             '{dim} - {num_axes} != {data_dim}'.format(
                 dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
-    if ((orientation == 'transpose') or
-            (orientation == 'landscape' and data.shape[0] > data.shape[1]) or
-            (orientation == 'portrait' and data.shape[0] < data.shape[1])):
-        data = data.transpose()
-    if orientation == 'rot90':
-        data = np.rot90(data)
-    if flip_ud:
-        data = data[::-1, :]
-    if flip_lr:
-        data = data[:, ::-1]
+    data = _reorient_2d(data, orientation, flip_ud, flip_lr)
 
     # prepare plot
     if title:
@@ -858,33 +984,7 @@ def sample2d(
     _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
 
     # print resolution information and draw a ruler
-    if size_info is not None and resolution is not None:
-        if size_info >= 0.0:
-            # print resolution information
-            if resolution[0] == resolution[1] == resolution[2]:
-                x = resolution[0]
-                res_str = '{} {} iso.'.format(str(x), 'mm')
-            else:
-                res_str = 'x'.join([str(x) for x in resolution[0:3]]) \
-                          + ' ' + 'mm'
-            ax.text(
-                0.975, 0.975, res_str, rotation=0, color=text_color,
-                horizontalalignment='right', verticalalignment='top',
-                transform=ax.transAxes)
-        if size_info != 0.0:
-            res = resolution[1]
-            size_info_size = round(abs(size_info) * (data.shape[1] * res), -1)
-            size_info_str = '{} {}'.format(size_info_size, 'mm')
-            size_info_px = size_info_size / res
-            ax.text(
-                0.025, 0.050, size_info_str, rotation=0, color=text_color,
-                horizontalalignment='left', verticalalignment='bottom',
-                transform=ax.transAxes)
-            ax.plot(
-                (data.shape[1] * 0.025,
-                 data.shape[1] * 0.025 + size_info_px),
-                (data.shape[0] * 0.965, data.shape[0] * 0.965),
-                color=text_color, linewidth=2.5)
+    _manage_resolution_info()
 
     _more_texts(more_texts, ax)
     _more_elements(more_elements, ax)
@@ -969,27 +1069,21 @@ def sample3d_view2d(
     views = []
     for view_axis, view_index in zip(view_axes, view_indexes):
         views.append(fc.num.ndim_slice(data, view_axis, view_index))
-    if ((orientation == 'transpose') or
-            (orientation == 'landscape'
-             and views[0].shape[0] > views[0].shape[1]) or
-            (orientation == 'portrait'
-             and views[0].shape[0] < views[0].shape[1])):
-        views[0] = views[0].transpose()
-    if orientation == 'rot90':
-        views[0] = np.rot90(views[0])
+
+    views[0] = _reorient_2d(views[0], orientation, False, False)
 
     # perform flipping
     for i, (v, f_ud, f_lr, r90, tr) in \
             enumerate(zip(views, flip_ud, flip_lr, rot90, transpose)):
         if f_ud:
-            views[i] = views[i][::-1, :]
+            views[i] = np.flipud(views[i])
         if f_lr:
-            views[i] = views[i][:, ::-1]
+            views[i] = np.fliplr(views[i])
         if r90:
             views[i] = np.rot90(views[i])
         if tr:
-            views[i] = views[i].transpose()
-    # print([v.shape for v in views])  # DEBUG
+            views[i] = np.transpose(views[i])
+        # print([v.shape for v in views])  # DEBUG
 
     if mode == ('std', 'standard'):
         data_shape = list(data.shape)
@@ -1006,7 +1100,7 @@ def sample3d_view2d(
         for i, v in enumerate(views):
             if v.shape[0] != views[0].shape[0] and \
                     v.shape[1] != views[0].shape[1]:
-                views[i] = v.transpose()
+                views[i] = np.transpose(v)
 
         x0s, y0s = [0, views[0].shape[0], 0], [0, 0, views[0].shape[1]]
         if other_size != views[2].shape[1] and other_size != views[1].shape[0]:
@@ -1193,17 +1287,7 @@ def sample2d_multi(
                 'Mismatching dimensions ({dim}) and axis ({num_axes}): '
                 '{dim} - {num_axes} != {data_dim}'.format(
                     dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
-        if ((orientation == 'transpose') or
-                (orientation == 'landscape' and data.shape[0] > data.shape[
-                    1]) or
-                (orientation == 'portrait' and data.shape[0] < data.shape[1])):
-            data = data.transpose()
-        if orientation == 'rot90':
-            data = np.rot90(data)
-        if flip_ud:
-            data = data[::-1, :]
-        if flip_lr:
-            data = data[:, ::-1]
+        data = _reorient_2d(data, orientation, flip_ud, flip_lr)
 
         if array_interval is None:
             array_interval = fc.num.minmax(arr)
@@ -2025,6 +2109,7 @@ def subplots(
         for n in range(num_row * num_col)]
     axs = np.array(axs).reshape((num_row, num_col))
 
+    skip_offset = 0
     for i, row_label in enumerate(row_labels):
         for j, col_label in enumerate(col_labels):
             if not swap_filling:
@@ -2041,11 +2126,13 @@ def subplots(
                         roman = numeral.int2roman(n_plot + 1, only_ascii=True)
                         roman_uppercase = roman.upper()
                         roman_lowercase = roman.lower()
-                        letter = numeral.int2letter(n_plot)
+                        letter = numeral.int2letter(n_plot - skip_offset)
                         letter_uppercase = letter.upper()
                         letter_lowercase = letter.lower()
                         plot_kwargs['title'] = \
                             subplot_title_fmt.format(**locals())
+                    else:
+                        skip_offset += 1
                 plot_func(*plot_args, **plot_kwargs)
             else:
                 axs[i, j].clear()
