@@ -386,9 +386,11 @@ def simple(
     if legends is None:
         legends = fc.util.auto_repeat(None, len(y_datas), check=True)
     if styles is None:
-        legends = fc.util.auto_repeat({}, len(y_datas), check=True)
+        styles = fc.util.auto_repeat(None, len(y_datas), check=True)
     for x_data, y_data, legend, style \
             in zip(x_datas, y_datas, legends, styles):
+        if style is None:
+            style = {}
         pax = ax.plot(x_data, y_data, label=legend, **dict(style))
     # setup title and labels
     if title:
