@@ -411,7 +411,7 @@ def simple(
 
 # ======================================================================
 def empty(
-        title=None,
+        title='',
         more_texts=None,
         more_elements=None,
         ax=None,
@@ -442,6 +442,7 @@ def empty(
     fig, ax = _ensure_fig_ax(ax)
 
     if title:
+        print(title)
         ax.set_title(title)
 
     ax.axis('off')
@@ -2034,14 +2035,15 @@ def subplots(
                 plot_kwargs['ax'] = axs[i, j]
                 if subplot_title_fmt:
                     t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
-                    roman = numeral.int2roman(n_plot + 1, only_ascii=True)
-                    roman_uppercase = roman.upper()
-                    roman_lowercase = roman.lower()
-                    letter = numeral.int2letter(n_plot)
-                    letter_uppercase = letter.upper()
-                    letter_lowercase = letter.lower()
-                    plot_kwargs['title'] = \
-                        subplot_title_fmt.format(**locals())
+                    if t is not None:
+                        roman = numeral.int2roman(n_plot + 1, only_ascii=True)
+                        roman_uppercase = roman.upper()
+                        roman_lowercase = roman.lower()
+                        letter = numeral.int2letter(n_plot)
+                        letter_uppercase = letter.upper()
+                        letter_lowercase = letter.lower()
+                        plot_kwargs['title'] = \
+                            subplot_title_fmt.format(**locals())
                 plot_func(*plot_args, **plot_kwargs)
             else:
                 axs[i, j].clear()
