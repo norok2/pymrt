@@ -302,8 +302,7 @@ def trajectory_2d(
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kwargs = dict(
-            fps=n_frames / duration / MSEC_IN_SEC, writer='mencoder',
-            codec='libx264', save_count=n_frames)
+            fps=n_frames / duration / MSEC_IN_SEC, save_count=n_frames)
         if save_kws is None:
             save_kws = {}
         save_kwargs.update(save_kws)
