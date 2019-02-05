@@ -77,12 +77,16 @@ MSEC_IN_SEC = 1000
 def sample2d(
         arr,
         axis=None,
-        step=1,
+        start=None,
+        stop=None,
+        step=None,
         duration=10000,
         title=None,
         array_interval=None,
         ticks_limit=None,
         orientation=None,
+        flip_ud=False,
+        flip_lr=False,
         cmap=None,
         cbar_kws=None,
         cbar_txt=None,
@@ -90,6 +94,7 @@ def sample2d(
         resolution=None,
         size_info=None,
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -129,88 +134,58 @@ def sample2d(
     """
     if arr.ndim != 3:
         raise IndexError('3D array required')
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
-    else:
-        fig = plt.gcf()
-    if axis is None:
-        axis = np.argmin(arr.shape)
-    sample = fc.num.ndim_slice(arr, axis, 0)
-    if title:
-        ax.set_title(title)
-    if array_interval is None:
-        array_interval = fc.num.minmax(arr)
-    if not cmap:
-        if not fc.util.is_same_sign(array_interval):
-            cmap = mpl.cm.get_cmap('RdBu_r')
-        else:
-            cmap = mpl.cm.get_cmap('gray_r')
-    if not text_color:
-        if not fc.util.is_same_sign(array_interval):
-            text_color = 'k'
-        else:
-            text_color = 'k'
-    ax.set_aspect('equal')
-    if (orientation == 'portrait' and sample.shape[0] < sample.shape[1]) or \
-            (orientation == 'landscape' and sample.shape[0] > sample.shape[1]):
-        sample = sample.transpose()
-    mrt.plot._manage_ticks_limit(ticks_limit, ax)
 
-    # print resolution information and draw a ruler
-    if size_info is not None and resolution is not None:
-        if size_info >= 0.0:
-            # print resolution information
-            if resolution[0] == resolution[1] == resolution[2]:
-                res_str = '{} {} iso.'.format(resolution[0], 'mm')
-            else:
-                res_str = 'x'.join(
-                    [str(x) for x in resolution[0:3]]) + ' ' + 'mm'
-            ax.text(
-                0.975, 0.975, res_str, rotation=0, color=text_color,
-                horizontalalignment='right', verticalalignment='top',
-                transform=ax.transAxes)
-        if size_info != 0.0:
-            res = resolution[1]
-            size_info_size = round(abs(size_info) * (sample.shape[1] * res),
-                                   -1)
-            size_info_str = '{} {}'.format(size_info_size, 'mm')
-            size_info_px = size_info_size / res
-            ax.text(
-                0.025, 0.050, size_info_str, rotation=0, color=text_color,
-                horizontalalignment='left', verticalalignment='bottom',
-                transform=ax.transAxes)
-            ax.plot(
-                (sample.shape[1] * 0.025,
-                 sample.shape[1] * 0.025 + size_info_px),
-                (sample.shape[0] * 0.965, sample.shape[0] * 0.965),
-                color=text_color, linewidth=2.5)
+    fig, ax = mrt.plot._ensure_fig_ax(ax)
 
     n_frames = arr.shape[axis]
+
+    if start is None:
+        start = 0
+    if stop is None:
+        stop = n_frames
+    if step is None:
+        step = 1
+
+    # prepare data
+    sample = fc.num.ndim_slice(arr, axis, start)
+
+    if title:
+        ax.set_title(title)
+
+    if array_interval is None:
+        array_interval = fc.num.minmax(arr)
+
+    if not text_color:
+        text_color = 'k'
+
+    ax.set_aspect('equal')
+
+    mrt.plot._manage_ticks_limit(ticks_limit, ax)
+
     plots = []
-    data = []
-    for i in range(0, n_frames, step):
-        sample = fc.num.ndim_slice(arr, axis, i)
+    datas = []
+    for i in range(start, stop, step):
+        data = mrt.plot._reorient_2d(
+            fc.num.ndim_slice(arr, axis, i), orientation, flip_ud, flip_lr)
         pax = ax.imshow(
-            sample, cmap=cmap,
+            data, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
         # include additional text
         if more_texts is not None:
             for text_kws in more_texts:
                 ax.text(**dict(text_kws))
-        data.append(sample)
+        datas.append(data)
         if len(plots) <= 0:
-            if cbar_kws is not None:
-                cbar = ax.figure.colorbar(pax, ax=ax, **dict(cbar_kws))
-                if cbar_txt is not None:
-                    only_extremes = \
-                        'ticks' in cbar_kws and len(cbar_kws['ticks']) == 2
-                    if only_extremes:
-                        cbar.ax.text(
-                            2.0, 0.5, cbar_txt, fontsize='small', rotation=90)
-                    else:
-                        cbar.set_label(cbar_txt)
+            mrt.plot._manage_colorbar(cbar_kws, cbar_txt, ax, pax)
         plots.append([pax])
+
+        # print resolution information and draw a ruler
+        mrt.plot._manage_resolution_info(
+            size_info, resolution, data.shape, text_color, ax)
+
+        mrt.plot._more_texts(more_texts, ax)
+        mrt.plot._more_elements(more_elements, ax)
+
     mov = mpl.animation.ArtistAnimation(fig, plots, blit=False)
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
         fig.tight_layout()
@@ -221,7 +196,7 @@ def sample2d(
         mov.save(save_filepath, **dict(save_kws))
         msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
-    return data, fig, mov
+    return datas, fig, mov
 
 
 # ======================================================================
@@ -234,6 +209,7 @@ def trajectory_2d(
         ticks_limit=None,
         title=None,
         more_texts=None,
+        more_elements=None,
         ax=None,
         save_filepath=None,
         save_kws=None,
@@ -294,6 +270,8 @@ def trajectory_2d(
         # points.set_offsets(np.c_[x_data, y_data])
         return line,  # points
 
+    mrt.plot._more_texts(more_texts, ax)
+    mrt.plot._more_elements(more_elements, ax)
     mov = mpl.animation.FuncAnimation(
         fig, run, data_gen, init_func=init, save_count=n_frames,
         blit=False, repeat=False, repeat_delay=None,
