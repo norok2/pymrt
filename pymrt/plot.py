@@ -984,7 +984,7 @@ def sample2d(
     _manage_colorbar(cbar_kws, cbar_txt, ax, pax)
 
     # print resolution information and draw a ruler
-    _manage_resolution_info()
+    _manage_resolution_info(size_info, resolution, data.shape, text_color, ax)
 
     _more_texts(more_texts, ax)
     _more_elements(more_elements, ax)
