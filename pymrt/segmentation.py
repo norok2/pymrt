@@ -184,7 +184,7 @@ def threshold_otsu(
           62–66. doi:10.1109/TSMC.1979.4310076
     """
     # todo: extend to multiple classes
-    return fc.util.otsu_threshold(arr, bins=bins)
+    return fc.num.otsu_threshold(arr, bins=bins)
 
 
 # ======================================================================
