@@ -464,13 +464,12 @@ def unwrap_laplacian(
     kk2 = fftshift(fc.num.laplace_kernel(arr.shape, factors=arr.shape))
     arr = fftn(cos_arr * ifftn(kk2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk2 * fftn(cos_arr)))
-    kk2[kk2 != 0] = 1.0 / kk2[kk2 != 0]
+    fc.num.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr *= kk2
     del cos_arr, sin_arr, kk2
     arr = np.real(ifftn(arr))
 
-    arr = arr[mask]
-    return arr
+    return arr[mask]
 
 
 # ======================================================================
@@ -575,7 +574,7 @@ def unwrap_gradient(
     for kk, grad in zip(kks, grads):
         u_arr += -1j * kk * fftn(np.real(-1j * grad / arr))
         kk2 += kk ** 2
-    kk2[kk2 != 0] = 1.0 / kk2[kk2 != 0]
+    fc.num.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr = np.real(ifftn(kk2 * u_arr)) / (2 * np.pi)
     return arr[mask]
 

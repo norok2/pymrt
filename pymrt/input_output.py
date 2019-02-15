@@ -1049,12 +1049,9 @@ def calc_stats(
         utils.calc_stats
     """
     arr = load(arr_filepath)
-    if mask_filepath:
-        obj_mask = nib.load(mask_filepath)
-        mask = obj_mask.get_data().astype(bool)
-    else:
-        mask = slice(None)
-    return fc.num.calc_stats(arr[mask], *args, **kwargs)
+    mask = load(mask_filepath).astype(bool) if mask_filepath else None
+    return fc.num.calc_stats(
+        arr[mask] if mask is None else arr, *args, **kwargs)
 
 
 # ======================================================================
@@ -1207,12 +1204,9 @@ def plot_histogram1d(
     """
     obj = nib.load(in_filepath)
     arr = obj.get_data().astype(np.double)
-    if mask_filepath:
-        obj_mask = nib.load(mask_filepath)
-        mask = obj_mask.get_data().astype(bool)
-    else:
-        mask = slice(None)
-    result = mrt.plot.histogram1d(arr[mask], *args, **kwargs)
+    mask = load(mask_filepath).astype(bool) if mask_filepath else None
+    result = mrt.plot.histogram1d(
+        arr[mask] if mask is not None else arr, *args, **kwargs)
     return result
 
 
@@ -1239,16 +1233,12 @@ def plot_histogram1d_list(
     See Also:
         plot
     """
-    if mask_filepath:
-        obj_mask = nib.load(mask_filepath)
-        mask = obj_mask.get_data().astype(bool)
-    else:
-        mask = slice(None)
+    mask = load(mask_filepath).astype(bool) if mask_filepath else None
     arr_list = []
     for in_filepath in in_filepaths:
         obj = nib.load(in_filepath)
         arr = obj.get_data()
-        arr_list.append(arr[mask])
+        arr_list.append(arr[mask] if mask is not None else arr)
     result = mrt.plot.histogram1d_list(arr_list, *args, **kwargs)
     return result
 

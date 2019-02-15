@@ -69,9 +69,9 @@ def _read_twix(
         count = 1
         mask = 0
     else:
-        mask = slice(None)
+        mask = None
     data = fc.util.read_stream(file_stream, dtype, '<', count, offset)
-    return data[mask]
+    return data[mask] if mask is not None else data
 
 
 # ======================================================================

@@ -356,11 +356,8 @@ def referencing(
 # ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     arr = np.abs(arr)
-    log_arr = np.zeros_like(arr)
-    # calculate logarithm only of strictly positive values
-    mask = tuple(slice(None) for d in arr.shape) \
-        if zero_cutoff is None else np.abs(arr) > zero_cutoff
-    log_arr[mask] = (np.log(arr[mask] * np.exp(exp_factor)))
+    log_arr = fc.num.apply_at(
+        arr, lambda x: np.log(x) / np.exp(exp_factor), arr > zero_cutoff)
     return log_arr
 
 

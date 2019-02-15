@@ -266,8 +266,7 @@ def db0_to_chi(
 
     # threshold the zeros of the dipole kernel
     if threshold:
-        mask = np.abs(dk) < threshold
-        dk[mask] = threshold
+        dk[np.abs(dk) < threshold] = threshold
 
     # divide the magnetic field variation by the dipole kernel
     chi_k_arr = np.fft.fftn(db0_arr) / dk
@@ -582,8 +581,7 @@ def qsm_field2source_l2_closed_form(
 
     # threshold the zeros of the dipole kernel
     if threshold:
-        mask = np.abs(dk) < threshold
-        dk[mask] = threshold
+        dk[np.abs(dk) < threshold] = threshold
 
     # compute the gradient operators along all dims
     exp_2_k = sum(
