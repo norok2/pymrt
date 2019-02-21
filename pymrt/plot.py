@@ -2111,44 +2111,6 @@ def subplots(
 
     skip_offset = 0
     for i, row_label in enumerate(row_labels):
-        for j, col_label in enumerate(col_labels):
-            if not swap_filling:
-                n_plot = i * num_col + j
-            else:
-                n_plot = j * num_row + i
-
-            if n_plot < num_plots:
-                plot_func, plot_args, plot_kwargs = plots[n_plot]
-                plot_kwargs['ax'] = axs[i, j]
-                if subplot_title_fmt:
-                    t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
-                    if t is not None:
-                        roman = numeral.int2roman(n_plot + 1, only_ascii=True)
-                        roman_uppercase = roman.upper()
-                        roman_lowercase = roman.lower()
-                        letter = numeral.int2letter(n_plot - skip_offset)
-                        letter_uppercase = letter.upper()
-                        letter_lowercase = letter.lower()
-                        plot_kwargs['title'] = \
-                            subplot_title_fmt.format(**locals())
-                    else:
-                        skip_offset += 1
-                plot_func(*plot_args, **plot_kwargs)
-            else:
-                axs[i, j].clear()
-                axs[i, j].set_axis_off()
-
-            if col_label:
-                fig.text(
-                    fc.num.scale(
-                        (j * 2 + 1) / (num_col * 2),
-                        out_interval=(
-                            label_pads[0], 1.0 - legend_pad)),
-                    1.0 - label_pads[1] / 2,
-                    col_label, rotation=0,
-                    fontweight='bold', fontsize='large',
-                    horizontalalignment='center', verticalalignment='top')
-
         if row_label:
             fig.text(
                 label_pads[0] / 2,
@@ -2158,6 +2120,43 @@ def subplots(
                 row_label, rotation=90,
                 fontweight='bold', fontsize='large',
                 horizontalalignment='left', verticalalignment='center')
+
+    for j, col_label in enumerate(col_labels):
+        if col_label:
+            fig.text(
+                fc.num.scale(
+                    (j * 2 + 1) / (num_col * 2),
+                    out_interval=(
+                        label_pads[0], 1.0 - legend_pad)),
+                1.0 - label_pads[1] / 2,
+                col_label, rotation=0,
+                fontweight='bold', fontsize='large',
+                horizontalalignment='center', verticalalignment='top')
+
+    for n_plot in range(num_row * num_col):
+        i, j = np.unravel_index(
+            n_plot, (num_row, num_col), 'F' if swap_filling else 'C')
+
+        if n_plot < num_plots:
+            plot_func, plot_args, plot_kwargs = plots[n_plot]
+            plot_kwargs['ax'] = axs[i, j]
+            if subplot_title_fmt:
+                t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
+                if t is not None:
+                    roman = numeral.int2roman(n_plot + 1, only_ascii=True)
+                    roman_uppercase = roman.upper()
+                    roman_lowercase = roman.lower()
+                    letter = numeral.int2letter(n_plot - skip_offset)
+                    letter_uppercase = letter.upper()
+                    letter_lowercase = letter.lower()
+                    plot_kwargs['title'] = \
+                        subplot_title_fmt.format(**locals())
+                else:
+                    skip_offset += 1
+            plot_func(*plot_args, **plot_kwargs)
+        else:
+            axs[i, j].clear()
+            axs[i, j].set_axis_off()
 
     if legend_kws is not None:
         if 'handles' in legend_kws and 'labels' not in legend_kws:
