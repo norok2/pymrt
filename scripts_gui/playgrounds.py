@@ -35,40 +35,38 @@ from pymrt import msg, dbg
 from pymrt import elapsed, report
 
 # ======================================================================
-from numpy import sin, cos, tan, sinc, sign, heaviside
+from numpy import pi, e, log, log10, log2, \
+    sin, cos, tan, sinc, sign, heaviside
 
 # ======================================================================
 TITLE_BASE = __doc__.strip().split('\n')[0][:-1]
+PREFIX = 'playground_'
 TITLE = {}
 PARAMS = {}
 
 # ======================================================================
-# : Fourier 1D
+# :: Fourier 1D
 TITLE['fourier_1d'] = 'Fourier Transform in 1D'
 PARAMS['fourier_1d'] = collections.OrderedDict(
-    [('re_f_x', dict(
-        label='Re[f(x)]', default='a*sin(b*x+c)+d',
-        values=())),
-     ('im_f_x', dict(
-         label='Im[f(x)]', default='0',
-         values=())), ]
+    [('re_f_x', dict(label='Re[f(x)]', default='a*sin(b*x+c)+d', values=())),
+     ('im_f_x', dict(label='Im[f(x)]', default='0', values=())), ]
     + [('const_{}'.format(letter), dict(
-        label=letter, default=0.0, start=-100, stop=100, step=0.01))
+        label=letter, default=1.0, start=-5, stop=5, step=0.01))
        for letter in string.ascii_lowercase[:20]]
     + [('x_start', dict(
-        label='x_start', default=-10, start=-100, stop=100, step=1)),
+        label='x_start', default=-10, start=-20, stop=20, step=1)),
        ('x_stop', dict(
-           label='x_stop', default=10, start=-100, stop=100, step=1)),
+           label='x_stop', default=10, start=-20, stop=20, step=1)),
        ('x_num', dict(
-           label='x_num / #', default=256, start=16, stop=1024, step=16)), ])
+           label='x_num / #', default=256, start=16, stop=4096, step=16)), ])
 
 
 # ======================================================================
-def plot_fourier_1d(
+def playground_fourier_1d(
         fig,
         params=None,
         title=TITLE_BASE):
-    axs = fig.subplots(2, 4, squeeze=False)
+    axs = fig.subplots(2, 4, squeeze=False)  # , sharex='row', sharey='row')
     x = np.linspace(params['x_start'], params['x_stop'], params['x_num'])
 
     for k, v in params.items():
@@ -76,12 +74,12 @@ def plot_fourier_1d(
             locals()[k[len('const_'):]] = v
     try:
         re_y = eval(params['re_f_x'])
-    except SyntaxError:
+    except (SyntaxError, NameError, TypeError):
         re_y = 0
 
     try:
         im_y = eval(params['im_f_x'])
-    except SyntaxError:
+    except (SyntaxError, NameError, TypeError):
         im_y = 0
 
     y = re_y + 1j * im_y
@@ -102,11 +100,13 @@ def plot_fourier_1d(
 
     axs[0, 2].get_shared_x_axes().join(axs[0, 0], axs[0, 2])
     axs[0, 2].set_xticklabels([])
+    axs[0, 2].autoscale()
     axs[0, 2].set_title(r'$|{\operatorname{f}}(x)|$')
     axs[0, 2].plot(x, np.abs(y))
 
     axs[0, 3].get_shared_x_axes().join(axs[0, 0], axs[0, 3])
     axs[0, 3].set_xticklabels([])
+    axs[0, 3].autoscale()
     axs[0, 3].set_title(r'$\operatorname{\varphi}[{\operatorname{f}}(x)]$')
     axs[0, 3].plot(x, np.angle(y))
 
@@ -123,14 +123,112 @@ def plot_fourier_1d(
 
     axs[1, 2].get_shared_x_axes().join(axs[1, 0], axs[1, 2])
     axs[1, 2].set_xticklabels([])
+    axs[1, 2].autoscale()
     axs[1, 2].set_title(r'$|\hat{\operatorname{f}}(\xi)|$')
     axs[1, 2].plot(x, np.abs(ft_y))
 
     axs[1, 3].get_shared_x_axes().join(axs[1, 0], axs[1, 3])
     axs[1, 3].set_xticklabels([])
+    axs[1, 3].autoscale()
     axs[1, 3].set_title(
         r'$\operatorname{\varphi}[\hat{\operatorname{f}}(\xi)]$')
     axs[1, 3].plot(x, np.angle(ft_y))
+
+
+# ======================================================================
+# : Fourier 1D
+TITLE['fourier_2d'] = 'Fourier Transform in 2D'
+PARAMS['fourier_2d'] = collections.OrderedDict(
+    [('re_f_x', dict(label='Re[f(x)]', default='a*sin(b*x+c)+d', values=())),
+     ('im_f_x', dict(label='Im[f(x)]', default='0', values=())), ]
+    + [('const_{}'.format(letter), dict(
+        label=letter, default=1.0, start=-5, stop=5, step=0.01))
+       for letter in string.ascii_lowercase[:20]]
+    + [('x_start', dict(
+        label='x_start', default=-10, start=-20, stop=20, step=1)),
+       ('x_stop', dict(
+           label='x_stop', default=10, start=-20, stop=20, step=1)),
+       ('x_num', dict(
+           label='x_num / #', default=256, start=16, stop=4096, step=16)), ])
+
+
+# ======================================================================
+def playground_fourier_2d(
+        fig,
+        params=None,
+        title=TITLE_BASE):
+    axs = fig.subplots(2, 4, squeeze=False)  # , sharex='row', sharey='row')
+    x = np.linspace(params['x_start'], params['x_stop'], params['x_num'])
+
+    for k, v in params.items():
+        if k.startswith('const_'):
+            locals()[k[len('const_'):]] = v
+    try:
+        re_y = eval(params['re_f_x'])
+    except (SyntaxError, NameError, TypeError):
+        re_y = 0
+
+    try:
+        im_y = eval(params['im_f_x'])
+    except (SyntaxError, NameError, TypeError):
+        im_y = 0
+
+    y = re_y + 1j * im_y
+    ft_y = np.fft.fftshift(np.fft.fftn(y))
+
+    # axs[0, 0].set_axis_off()
+
+    axs[0, 0].set_title(r'$\operatorname{Re}[{\operatorname{f}}(x)]$')
+    axs[0, 0].plot(x, np.real(y))
+
+    axs[0, 1].get_shared_x_axes().join(axs[0, 0], axs[0, 1])
+    axs[0, 1].set_xticklabels([])
+    axs[0, 1].get_shared_y_axes().join(axs[0, 0], axs[0, 1])
+    axs[0, 1].set_yticklabels([])
+    axs[0, 1].autoscale()
+    axs[0, 1].set_title(r'$\operatorname{Im}[{\operatorname{f}}(x)]$')
+    axs[0, 1].plot(x, np.imag(y))
+
+    axs[0, 2].get_shared_x_axes().join(axs[0, 0], axs[0, 2])
+    axs[0, 2].set_xticklabels([])
+    axs[0, 2].autoscale()
+    axs[0, 2].set_title(r'$|{\operatorname{f}}(x)|$')
+    axs[0, 2].plot(x, np.abs(y))
+
+    axs[0, 3].get_shared_x_axes().join(axs[0, 0], axs[0, 3])
+    axs[0, 3].set_xticklabels([])
+    axs[0, 3].autoscale()
+    axs[0, 3].set_title(r'$\operatorname{\varphi}[{\operatorname{f}}(x)]$')
+    axs[0, 3].plot(x, np.angle(y))
+
+    axs[1, 0].set_title(r'$\operatorname{Re}[\hat{\operatorname{f}}(\xi)]$')
+    axs[1, 0].plot(x, np.real(ft_y))
+
+    axs[1, 1].get_shared_x_axes().join(axs[1, 0], axs[1, 1])
+    axs[1, 1].set_xticklabels([])
+    axs[1, 1].get_shared_y_axes().join(axs[1, 0], axs[1, 1])
+    axs[1, 1].set_yticklabels([])
+    axs[1, 1].autoscale()
+    axs[1, 1].set_title(r'$\operatorname{Im}[\hat{\operatorname{f}}(\xi)]$')
+    axs[1, 1].plot(x, np.imag(ft_y))
+
+    axs[1, 2].get_shared_x_axes().join(axs[1, 0], axs[1, 2])
+    axs[1, 2].set_xticklabels([])
+    axs[1, 2].autoscale()
+    axs[1, 2].set_title(r'$|\hat{\operatorname{f}}(\xi)|$')
+    axs[1, 2].plot(x, np.abs(ft_y))
+
+    axs[1, 3].get_shared_x_axes().join(axs[1, 0], axs[1, 3])
+    axs[1, 3].set_xticklabels([])
+    axs[1, 3].autoscale()
+    axs[1, 3].set_title(
+        r'$\operatorname{\varphi}[\hat{\operatorname{f}}(\xi)]$')
+    axs[1, 3].plot(x, np.angle(ft_y))
+
+
+# ======================================================================
+AVAILABLES = [
+    k[len(PREFIX):] for k in globals().keys() if k.startswith(PREFIX)]
 
 
 # ======================================================================
@@ -162,8 +260,9 @@ def handle_arg():
         help='override verbosity settings to suppress output [%(default)s]')
     # :: Add additional arguments
     arg_parser.add_argument(
-        'name', metavar='NAME', default='fourier_1d',
-        help='use sequence params instead of acquisition params [%(default)s]')
+        '-n', '--name', metavar='NAME',
+        default=None, choices=AVAILABLES,
+        help='playground selection (from: %(choices)s)  [%(default)s]')
     return arg_parser
 
 
@@ -180,13 +279,19 @@ def main():
         arg_parser.print_help()
         msg('\nARGS: ' + str(vars(args)), args.verbose, VERB_LVL['debug'])
 
-    numex.interactive_tk_mpl.plotting(
-        globals()['plot_' + args.name],
-        PARAMS[args.name], title=TITLE_BASE + ' - ' + TITLE[args.name],
-        about=__doc__)
-
-    elapsed(__file__[len(PATH['base']) + 1:])
-    msg(report())
+    if not args.name:
+        msg('Choose your playground:')
+        msg('Available playgrounds: {AVAILABLES}'.format_map(globals()))
+        args.name = input(': ')
+    if args.name in AVAILABLES:
+        numex.interactive_tk_mpl.plotting(
+            globals()[PREFIX + args.name],
+            PARAMS[args.name], title=TITLE_BASE + ' - ' + TITLE[args.name],
+            about=__doc__)
+        elapsed(__file__[len(PATH['base']) + 1:])
+        msg(report())
+    else:
+        msg('Plot `{args.name}` not valid.'.format_map(locals()))
 
 
 # ======================================================================
