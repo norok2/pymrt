@@ -161,5 +161,29 @@ def compressed_sensing(
 
 
 # ======================================================================
-def g_factor_multi_replica():
+def g_factor_multi_replica(
+        data,
+        reco,
+        reco_args=None,
+        reco_kwargs=None,
+        noise_level=0.01,
+        num=100):
+    """
+    Estimate geometric noise amplification (g-factor) using multi-replica.
+
+    This a monte carlo method, effectively consisting of computing the
+    standard deviation of multiple reconstructions using data with controlled
+    noise properties.
+
+    Args:
+        data:
+        reco:
+        reco_args:
+        reco_kwargs:
+        noise_level:
+        num:
+
+    Returns:
+        arr (np.ndarray): The estimated g-factor map.
+    """
     raise NotImplementedError
