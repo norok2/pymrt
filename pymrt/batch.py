@@ -784,10 +784,8 @@ def voxel_curve_fit(
     p_arr = np.zeros((num_voxels, len(fit_params)))
     # preprocessing
     if pre_func is not None:
-        if pre_args is None:
-            pre_args = []
-        if pre_kwargs is None:
-            pre_kwargs = {}
+        pre_args = tuple(pre_args) if pre_args else ()
+        pre_kwargs = dict(pre_kwargs) if pre_kwargs else {}
         y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
 
     if method == 'curve_fit':
@@ -817,10 +815,8 @@ def voxel_curve_fit(
     p_arr = p_arr.reshape(list(shape[:support_axis]) + [len(fit_params)])
     # post process
     if post_func is not None:
-        if post_args is None:
-            post_args = []
-        if post_kwargs is None:
-            post_kwargs = {}
+        post_args = tuple(post_args) if post_args else ()
+        post_kwargs = dict(post_kwargs) if post_kwargs else {}
         p_arr = post_func(p_arr, *post_args, **post_kwargs)
     return p_arr
 

@@ -459,8 +459,7 @@ def _save_plot(
         None.
     """
     if save_filepath and fc.util.check_redo(None, [save_filepath], force):
-        tight_layout_kws = dict(tight_layout_kws) \
-            if tight_layout_kws is not None else {}
+        tight_layout_kws = dict(tight_layout_kws) if tight_layout_kws else {}
         fig.tight_layout(**tight_layout_kws)
         save_kws = dict(save_kws) if save_kws is not None else {}
         fig.savefig(save_filepath, **save_kws)

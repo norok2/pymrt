@@ -1060,10 +1060,8 @@ def registering(
         n_proc = multiprocessing.cpu_count() + 1
         pool = multiprocessing.Pool(processes=n_proc)
         proc_result_list = []
-    if not register_args:
-        register_args = []
-    if not register_kwargs:
-        register_kwargs = {}
+    register_args = tuple(register_args) if register_args else ()
+    register_kwargs = dict(register_kwargs) if register_kwargs else {}
     # perform registration
     out_filepath_list = []
     for in_filepath in in_filepath_list:
