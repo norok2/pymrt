@@ -284,7 +284,12 @@ def sum_of_squares(
           Mueller, O.M., 1990. The NMR phased array. Magn Reson Med 16,
           192–225. doi:10.1002/mrm.1910160203
     """
-    return np.sum(np.abs(arr), axis=coil_axis), arr / np.abs(arr)
+    # combined = np.sqrt(np.abs(np.sum(arr * arr.conj(), axis=coil_axis)))
+    coil_axis = coil_axis % arr.ndim
+    broadcast_shape = [
+        d if i != coil_axis else 1 for i, d in enumerate(arr.shape)]
+    combined = np.sum(np.abs(arr), axis=coil_axis)
+    return combined, np.abs(arr) / combined.reshape(broadcast_shape)
 
 
 # ======================================================================
