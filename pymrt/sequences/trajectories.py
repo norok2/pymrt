@@ -539,7 +539,7 @@ def sampling_mask(
         factors=1,
         fit=True):
     """
-    Generate a sampling mask of given size from a trajectory.
+    Generate a sampling mask of given shape from a trajectory.
 
     Args:
         traj (np.ndarray): The coordinates of the trajectory.
