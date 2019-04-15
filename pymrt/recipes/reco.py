@@ -34,9 +34,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-
-# import pymrt.utils
-# import pymrt.computation as pmc
+import pymrt.correction
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
@@ -172,7 +170,7 @@ def noise(
         reco_func,
         reco_args=None,
         reco_kwargs=None,
-        noise_level=0.1,
+        noise_level=1,
         num=64,
         verbose=D_VERB_LVL):
     """
@@ -197,17 +195,25 @@ def noise(
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
         reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
-        noise_level (int|float): The noise level.
+        noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
-            The st.dev is computed as the peak-to-peak value multiplied by
-            `noise_level` (the peak-to-peak value is the maximum of the
-            peak-to-peak value for real and imaginary data separately).
+            If int or float, the value is the st.dev of the Gaussian noise.
+            If str and the value is a percentage, the st.dev is computed as
+            the peak-to-peak value multiplied by `noise_level` percentage
+            (the peak-to-peak value is the maximum of the peak-to-peak value
+            for real and imaginary data separately).
+            If None, the noise level is estimated using
+             `pymrt.correction.estimate_noise_sigma()`.
         num (int): The number of repetitions.
         verbose (int): Set level of verbosity.
 
     Returns:
-        noise_arr (np.ndarray): The st.dev. of noised reconstructions.
+        result (tuple): The tuple
+            contains:
+            - noise_arr (np.ndarray): The st.dev. of noised reconstructions.
+            - reco_arr (np.ndarray): The reco from data without extra noise.
+
     """
     reco_args = tuple(reco_args) if reco_args else ()
     reco_kwargs = dict(reco_kwargs) if reco_kwargs else {}
@@ -216,8 +222,17 @@ def noise(
     reco_arr = reco_func(raw_arr, *reco_args, **reco_kwargs)
 
     # compute desired noise std
-    cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
-    noise_std_val = cx_ptp * noise_level
+    if noise_level is None:
+        noise_std_val = mrt.correction.estimate_noise_sigma(raw_arr)
+    elif isinstance(noise_level, (int, float)):
+        noise_std_val = noise_level
+    else:
+        noise_std_val = fc.util.to_percent(noise_level)
+        if noise_std_val:
+            cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
+            noise_std_val = cx_ptp * noise_level
+        else:
+            noise_std_val = 1
     msg('Noise St.Dev.: {} (Level: {:.0%})'.format(noise_std_val, noise_level),
         verbose, VERB_LVL['debug'])
 
@@ -231,7 +246,7 @@ def noise(
         mean_noised_arr, mvar_noised_arr = fc.util.next_mean_mvar(
             np.real(noised_arr), mean_noised_arr, mvar_noised_arr, i)
     noise_arr = np.sqrt(mvar_noised_arr / num)
-    return noise_arr
+    return noise_arr, reco_arr
 
 
 # ======================================================================
@@ -273,10 +288,11 @@ def gen_pseudo_multi_replica(
         reco_func,
         reco_args=None,
         reco_kwargs=None,
+        optim_func=None,
         optim_args=None,
         optim_kwargs=None,
-        noise_level=0.05,
-        num=128,
+        noise_level=1,
+        num=64,
         verbose=D_VERB_LVL):
     """
     Estimate the SNR and g-factor using the generalized pseudo-multi-replica.
@@ -303,15 +319,20 @@ def gen_pseudo_multi_replica(
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
         reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
-        acceleration_factor (int|float|None): The acceleration factor.
-            This is the ratio between the number of data samples in the
-            fully sampled case and the number of sampled raw data points.
-        noise_level (int|float): The noise level.
+        optim_args (Iterable|None): Positional arguments for `reco_func`.
+            This are used to generate the optimal reconstruction.
+        optim_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
+            This are used to generate the optimal reconstruction.
+        noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
-            The st.dev is computed as the peak-to-peak value multiplied by
-            `noise_level` (the peak-to-peak value is the maximum of the
-            peak-to-peak value for real and imaginary data separately).
+            If int or float, the value is the st.dev of the Gaussian noise.
+            If str and the value is a percentage, the st.dev is computed as
+            the peak-to-peak value multiplied by `noise_level` percentage
+            (the peak-to-peak value is the maximum of the peak-to-peak value
+            for real and imaginary data separately).
+            If None, the noise level is estimated using
+             `pymrt.correction.estimate_noise_sigma()`.
         num (int): The number of repetitions.
         verbose (int): Set level of verbosity.
 
@@ -323,6 +344,8 @@ def gen_pseudo_multi_replica(
     """
     reco_args = tuple(reco_args) if reco_args else ()
     reco_kwargs = dict(reco_kwargs) if reco_kwargs else {}
+    if not optim_func:
+        optim_func = reco_func
     optim_args = tuple(optim_args) if optim_args else ()
     optim_kwargs = dict(optim_kwargs) if optim_kwargs else {}
 
@@ -335,8 +358,17 @@ def gen_pseudo_multi_replica(
     mvar_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
 
     # compute desired noise std
-    cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
-    noise_std_val = cx_ptp * noise_level
+    if noise_level is None:
+        noise_std_val = mrt.correction.estimate_noise_sigma(raw_arr)
+    elif isinstance(noise_level, (int, float)):
+        noise_std_val = noise_level
+    else:
+        noise_std_val = fc.util.to_percent(noise_level)
+        if noise_std_val:
+            cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
+            noise_std_val = cx_ptp * noise_level
+        else:
+            noise_std_val = 1
     msg('Noise St.Dev.: {} (Level: {:.0%})'.format(noise_std_val, noise_level),
         verbose, VERB_LVL['debug'])
 
@@ -350,7 +382,7 @@ def gen_pseudo_multi_replica(
             raw_arr + noise_arr, *reco_args, **reco_kwargs)
         # new uncorrelated noise
         noise_arr = np.random.normal(0, noise_std_val, reco_arr.shape)
-        noised_optim_arr = reco_func(noise_arr, *optim_args, **optim_kwargs)
+        noised_optim_arr = optim_func(noise_arr, *optim_args, **optim_kwargs)
 
         mean_noised_reco_arr, mvar_noised_reco_arr = fc.util.next_mean_mvar(
             np.real(noised_reco_arr),
@@ -374,8 +406,8 @@ def pseudo_multi_replica(
         reco_func,
         reco_args=None,
         reco_kwargs=None,
-        noise_level=0.05,
-        num=128,
+        noise_level=1,
+        num=64,
         verbose=D_VERB_LVL):
     """
     Estimate SNR and g-factor with the multi-replica method.
@@ -392,7 +424,7 @@ def pseudo_multi_replica(
     g_factor = sd_noised_img
 
     Args:
-        arr (np.ndarray): The input raw data.
+        raw_arr (np.ndarray): The input raw data.
             This does not need to be fully sampled, but it must have the
             correct size for fully sampled data.
             The values that will be masked can be zero-ed.
@@ -403,12 +435,16 @@ def pseudo_multi_replica(
              - the mask/undersampling scheme as second argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
         reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
-        noise_level (int|float): The noise level.
+        noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
-            The st.dev is computed as the peak-to-peak value multiplied by
-            `noise_level` (the peak-to-peak value is the maximum of the
-            peak-to-peak value for real and imaginary data separately).
+            If int or float, the value is the st.dev of the Gaussian noise.
+            If str and the value is a percentage, the st.dev is computed as
+            the peak-to-peak value multiplied by `noise_level` percentage
+            (the peak-to-peak value is the maximum of the peak-to-peak value
+            for real and imaginary data separately).
+            If None, the noise level is estimated using
+             `pymrt.correction.estimate_noise_sigma()`.
         num (int): The number of repetitions.
         verbose (int): Set level of verbosity.
 
@@ -438,8 +474,17 @@ def pseudo_multi_replica(
     mvar_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
 
     # compute desired noise std
-    cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
-    noise_std_val = cx_ptp * noise_level
+    if noise_level is None:
+        noise_std_val = mrt.correction.estimate_noise_sigma(raw_arr)
+    elif isinstance(noise_level, (int, float)):
+        noise_std_val = noise_level
+    else:
+        noise_std_val = fc.util.to_percent(noise_level)
+        if noise_std_val:
+            cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
+            noise_std_val = cx_ptp * noise_level
+        else:
+            noise_std_val = 1
     msg('Noise St.Dev.: {} (Level: {:.0%})'.format(noise_std_val, noise_level),
         verbose, VERB_LVL['debug'])
 
