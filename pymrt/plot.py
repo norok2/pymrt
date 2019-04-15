@@ -578,7 +578,6 @@ def empty(
     fig, ax = _ensure_fig_ax(ax)
 
     if title:
-        print(title)
         ax.set_title(title)
 
     ax.axis('off')
