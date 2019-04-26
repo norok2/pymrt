@@ -98,7 +98,8 @@ def r2k_space_cartesian(
 # ======================================================================
 def grappa(
         arr,
-        sens,
+        acceleration,
+        autocalib,
         kernel=None,
         coil_index=-1):
     """
@@ -111,7 +112,84 @@ def grappa(
     Returns:
         arr (np.ndarray): The output array.
     """
+    autocalib_mask = slice(None)
+    acceleration_mask = slice(None)
+    acq_arr = arr[acceleration_mask]
+    calib_arr = arr[autocalib_mask]
     raise NotImplementedError
+
+    def kernel_target(sizes, factors):
+        slicing = tuple(
+            fc.util.complement_slice(tuple(range(d)),
+                                     slice(None, None, r)) if r > 1 else d // 2
+            for i, (d, r) in enumerate(
+                itertools.zip_longest(sizes, factors, fillvalue=0)))
+        return slicing
+
+    kernel_size = (3, 5)
+    kernel_size = tuple(max(a + 1, k) if a > 1 else k for a, k in
+                        zip(acceleration_factors, kernel_size))
+    if verbose: print(f'Kernel: {kernel_size}')
+
+    calib_arr = extract_autocalib(phantom_coils_k_arr, n_autocalib, False)
+
+    calib_padded_arr = fc.num.nd_windowing(calib_arr, kernel_size)
+    if verbose: print(calib_padded_arr.shape)
+
+    # define target and calibration matrices
+    target_slicing = (slice(None),) * calib_arr.ndim + kernel_target(
+        kernel_size, acceleration_factors)
+    calib_mat_slicing = (slice(None),) * calib_arr.ndim + acceleration_sampled(
+        kernel_size, acceleration_factors)
+    if verbose: print(f'Target slicing: {target_slicing}')
+    if verbose: print(f'Calib Mat slicing: {calib_mat_slicing}')
+    num_targets = 2
+    num_calibs = 2 * kernel_size[1]
+    target_arr = calib_padded_arr[target_slicing].reshape(-1,
+                                                          n_coils *
+                                                          num_targets)  # FIXME
+    calib_mat_arr = calib_padded_arr[calib_mat_slicing].reshape(-1,
+                                                                n_coils *
+                                                                num_calibs)
+    # FIXME
+    if verbose: print(target_arr.shape)
+    if verbose: print(calib_mat_arr.shape)
+
+    # compute calibration weights
+    weights_arr, _, _, _ = np.linalg.lstsq(calib_mat_arr, target_arr,
+                                           rcond=None)
+    if verbose: print('Weights: ', weights_arr.shape)
+
+    # use weights to compute missing k-space values
+    source_padded_arr = fc.num.nd_windowing(phantom_coils_undersampled_k_arr,
+                                            kernel_size)
+    if verbose: print(f'Source Padded: {source_padded_arr.shape}')
+    source_mat_slicing = (
+                         slice(None),) * calib_arr.ndim + acceleration_sampled(
+        kernel_size, acceleration_factors)
+    if verbose: print(f'Source Mat slicing: {calib_mat_slicing}')
+    source_mat_arr = source_padded_arr[source_mat_slicing].reshape(-1,
+                                                                   n_coils *
+                                                                   num_calibs)
+    if verbose: print(f'Source: {source_mat_arr.shape}')
+    unknown_arr = np.dot(source_mat_arr, weights_arr)
+    if verbose: print(f'Unknown: {unknown_arr.shape}')
+
+    # fill in GRAPPA reconstructed missing points
+    unsampled = acceleration_unsampled(phantom_coils_acq_k_arr.shape,
+                                       acceleration_factors)
+    if verbose: print('Unsampled: ', unsampled)
+    phantom_coils_grappa_k_arr = phantom_coils_acq_k_arr.copy()
+    if verbose: print(phantom_coils_grappa_k_arr[unsampled].shape)
+    if verbose: print(unknown_arr.shape)
+    phantom_coils_grappa_k_arr[unsampled] = unknown_arr.reshape(
+        shape[0] - kernel_size[0] + 1, shape[1] - kernel_size[1] + 1, n_coils)[
+                                            ::2, :, :]
+
+    phantom_coils_grappa_arr = fc.num.idftn(phantom_coils_grappa_k_arr,
+                                            ft_axes)
+    phantom_grappa_arr, grappa_coil_sens_arr = \
+        mrt.recipes.coils.sum_of_squares(phantom_coils_grappa_arr, -1)
 
 
 # ======================================================================
@@ -152,6 +230,23 @@ def espirit(
 def compressed_sensing(
         arr):
     """
+    EXPERIMENTAL!
+
+    Args:
+        arr (np.ndarray): The input array.
+            Data can be either in k-space or in image space.
+
+    Returns:
+        arr (np.ndarray): The estimated coil sensitivity.
+    """
+    raise NotImplementedError
+
+
+# ======================================================================
+def pics(
+        arr):
+    """
+    Parallel Imaging and Compressed Sensing
     EXPERIMENTAL!
 
     Args:
