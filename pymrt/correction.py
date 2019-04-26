@@ -170,7 +170,7 @@ def denoise(
     elif method == 'tv_chambolle':
         filter_func = denoise_tv_chambolle
     else:
-        text = 'Unknown method `{}` in `denoise.standard()`.'.format(method)
+        text = 'Unknown method `{}`'.format(method)
         raise ValueError(text)
 
     if np.any(np.iscomplex(arr)):
