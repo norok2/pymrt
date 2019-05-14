@@ -73,7 +73,7 @@ def set_values(
 
     Args:
         rendered (np.ndarray[bool]): The rendered object.
-        fill (Iterable[bool|int|float]): Values to use.
+        fill (Iterable[Number|np.dtype]): Values to use.
             The first value is used for the rendered object.
             The second value is used for everything else.
         dtype (np.dtype): Desired output data-type.
@@ -1869,7 +1869,7 @@ def ellipsoid_specs(
 
     Args:
         n_dim (int): The number of dimensions.
-        intensity (int|float|complex): The intensity of the object.
+        intensity (Number): The intensity of the object.
         semisizes (float|Iterable[float]): The semiaxes sizes in rel. units.
         shift (float|Iterable[float]): The shift in rel. units.
             This is relative to the smallest cuboid inscribed in `shape`.
@@ -1914,7 +1914,7 @@ def superellipsoid_specs(
 
     Args:
         n_dim (int): The number of dimensions.
-        intensity (int|float|complex): The intensity of the object.
+        intensity (Number): The intensity of the object.
         semisizes (float|Iterable[float]): The semiaxes sizes in rel. units.
         indexes (float|Iterable[float]): The exponent of the summed terms.
             If 2, generates ellipsoids.
@@ -1963,7 +1963,7 @@ def cuboid_specs(
 
     Args:
         n_dim (int): The number of dimensions.
-        intensity (int|float|complex): The intensity of the object.
+        intensity (Number): The intensity of the object.
         semisizes (float|Iterable[float]): The cuboid semisides in rel. units.
         shift (float|Iterable[float]): The shift in rel. units.
             This is relative to the smallest cuboid inscribed in `shape`.
@@ -2009,7 +2009,7 @@ def prism_specs(
 
     Args:
         n_dim (int): The number of dimensions.
-        intensity (int|float|complex): The intensity of the object.
+        intensity (Number): The intensity of the object.
         semisizes (float|Iterable[float]): The semiaxes sizes in rel. units.
         indexes (float|Iterable[float]): The exponent of the summed terms.
             If 2, generates ellipsoids.
@@ -2059,7 +2059,7 @@ def gradient_specs(
 
     Args:
         n_dim (int): The number of dimensions.
-        intensity (int|float|complex): The intensity of the object.
+        intensity (Number): The intensity of the object.
         gen_ranges:
         shift (float|Iterable[float]): The shift in rel. units.
             This is relative to the smallest cuboid inscribed in `shape`.
@@ -2106,7 +2106,7 @@ def multi_render(
             These are of the form:
             (intensity, [name, *args], shift, angles, position)
             where:
-             - intensity (int|float|complex): The intensity of the object.
+             - intensity (Number): The intensity of the object.
              - geom_spec (tuple): The tuple describing the object.
                 The first element is the name as str, all the remaining
                 elements are passed to the generating function.

@@ -165,7 +165,7 @@ def masking(
         in_filepath (str): Input file path.
         mask_filepath (str): Mask file path.
         out_filepath (str): Output file path.
-        mask_val: (int|float|complex): Value of masked out voxels.
+        mask_val: (Number): Value of masked out voxels.
 
     Returns:
         None.
@@ -795,7 +795,7 @@ def multi_reframe(
         in_filepaths (Iterable[str]): List of input file paths.
         out_filepath (Iterable[str]): The output file path.
         new_shape (Iterable[int]): The new base shape of the arrays.
-        background (int|float|complex): The background value for the frame.
+        background (Number): The background value for the frame.
         dtype (data-type): Desired output data-type.
             If None, its guessed from dtype of arrs.
             See `np.ndarray()` for more.
