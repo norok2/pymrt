@@ -139,10 +139,14 @@ def compress_svd(
           Array compression for MRI with large coil arrays. Magn. Reson. Med.
           57, 1131–1139. doi:10.1002/mrm.21237
     """
-    coil_axis = coil_axis % arr.ndim
     shape = arr.shape
     num_coils = shape[coil_axis]
-    arr = np.swapaxes(arr, coil_axis, -1)
+
+    coil_axis = coil_axis % arr.ndim
+    last_axis = -1 % arr.ndim
+    if coil_axis != last_axis:
+        arr = np.swapaxes(arr, coil_axis, last_axis)
+
     base_shape = arr.shape[:-1]
 
     arr = arr.reshape((-1, num_coils))
@@ -162,14 +166,15 @@ def compress_svd(
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
-    k_svd = fc.util.auto_num_components(
+    k_svd = fc.num.auto_num_components(
         k_svd, np.abs(eigvals[eig_sort]) / np.max(np.abs(eigvals)),
         verbose=verbose)
 
     arr = np.dot(arr, right_eigvects[:, eig_sort][:, :k_svd])
 
     arr = arr.reshape(base_shape + (k_svd,))
-    arr = np.swapaxes(arr, -1, coil_axis)
+    if coil_axis != last_axis:
+        arr = np.swapaxes(arr, last_axis, coil_axis)
     return arr
 
 
@@ -339,10 +344,14 @@ def adaptive(
           Meeting & Exhibition of the International Society for Magnetic
           Resonance in Medicine, ISMRM, Salt Lake City, Utah, USA.
     """
-    coil_axis = coil_axis % arr.ndim
     shape = arr.shape
     num_coils = shape[coil_axis]
-    arr = np.swapaxes(arr, coil_axis, -1)
+
+    coil_axis = coil_axis % arr.ndim
+    last_axis = -1 % arr.ndim
+    if coil_axis != last_axis:
+        arr = np.swapaxes(arr, coil_axis, last_axis)
+
     base_shape = arr.shape[:-1]
 
     # calculate the coil covariance
@@ -382,7 +391,8 @@ def adaptive(
             if np.abs(last_power_i - power_i) < threshold:
                 break
         sens[ii] = sensitivity_i
-    sens = np.swapaxes(sens, -1, coil_axis)
+    if coil_axis != last_axis:
+        sens = np.swapaxes(sens, last_axis, coil_axis)
 
     combined = combine_sens(arr, sens, coil_axis=coil_axis)
     return combined, sens
@@ -505,7 +515,9 @@ def adaptive_iter(
           in Medicine, ISMRM, Milan, Italy.
     """
     coil_axis = coil_axis % arr.ndim
-    arr = np.swapaxes(arr, coil_axis, -1)
+    last_axis = -1 % arr.ndim
+    if coil_axis != last_axis:
+        arr = np.swapaxes(arr, coil_axis, last_axis)
 
     msg('arr.shape={}'.format(arr.shape), verbose, VERB_LVL['debug'])
     msg('threshold={}'.format(threshold), verbose, VERB_LVL['debug'])
@@ -550,7 +562,8 @@ def adaptive_iter(
                 if delta < threshold or last_delta < delta:
                     break
 
-    sens = np.swapaxes(sens, -1, coil_axis)
+    if coil_axis != last_axis:
+        sens = np.swapaxes(sens, last_axis, coil_axis)
     return combined, sens
 
 
