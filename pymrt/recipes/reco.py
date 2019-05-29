@@ -99,6 +99,17 @@ def r2k_space_cartesian(
 def acceleration_slices(
         shape,
         factors):
+    """
+    Compute the slicing for acceleration.
+
+    Args:
+        shape (Iterable[int]): The input shape.
+        factors (Iterable[int|None]: The acceleration factors.
+            If
+
+    Returns:
+
+    """
     return tuple(
         slice(None, None, factor) if factor is not None and factor > 1 else
         slice(None)
@@ -125,25 +136,45 @@ def grappa_1d(
         acceleration=2,
         autocalib=16,
         kernel_span=1,
-        acc_index=0,
+        acc_axis=0,
         coil_axis=-1):
     """
-    EXPERIMENTAL!
+    Perform GRAPPA-like interpolation with 1D-accelerated cartesian k-data.
 
     Args:
         arr (np.ndarray): The input array.
-            Data can be either in k-space or in image space.
+            Data is in k-space and missing k-space lines are zero-filled.
+        acceleration (int): The acceleration factors (along 1 dimension).
+        autocalib (int): The number of central k-space lines acquired.
+        kernel_span (int): The half-size of the kernel.
+            The kernel window size in the non-accelerated dimension is given
+            by: `kernel_size = kernel_span * 2 + 1`.
+            Kernel span must be non-negative.
+            The kernel window size in the accelerated dimension is equal to
+            the `acceleration + 1`.
+        acc_axis (int): The accelerated dimension.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
 
     Returns:
         arr (np.ndarray): The output array.
+
+    See Also:
+        - Griswold, Mark A., Peter M. Jakob, Robin M. Heidemann,
+          Mathias Nittka, Vladimir Jellus, Jianmin Wang, Berthold Kiefer,
+          and Axel Haase. “Generalized Autocalibrating Partially Parallel
+          Acquisitions (GRAPPA).” Magnetic Resonance in Medicine 47, no. 6
+          (June 1, 2002): 1202–10. https://doi.org/10.1002/mrm.10171.
     """
+    # : ensure coil axis is the last
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
 
+    # : prepare parameters
     acceleration_factors = tuple(
-        acceleration if i == acc_index else 1 if i != coil_axis else None
+        acceleration if i == acc_axis else 1 if i != coil_axis else None
         for i in range(arr.ndim))
     acceleration_slicing = acceleration_slices(
         arr.shape, acceleration_factors)
@@ -183,6 +214,7 @@ def grappa_1d(
         calib_mat_arr, target_arr, rcond=None)
 
     # : use weights to compute missing k-space values
+    # todo: avoid computing useless lines instead of selecting missing lines
     source_padded_arr = fc.num.rolling_window_nd(
         arr, kernel_window, 1, out_mode='same')
     source_mat_arr = source_padded_arr[calib_mat_slicing] \
