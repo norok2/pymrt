@@ -59,12 +59,8 @@ def mp2rage_rho(
     This also supports SA2RAGE and NO2RAGE.
 
     Args:
-        rho_arr (float|np.ndarray): MP2RAGE rho signal array.
-            Its interpretation depends on `use_ratio`.
-            If `use_ratio` is False, the pseudo-ratio s1*s2/(s1^2+s2^2) is
-            used and the values must be in the (-0.5, 0.5) range.
-            If `use_ratio` is True, the ratio s1/s2 is used and the values are
-            not bound.    
+        rho_arr (float|np.ndarray): MP2RAGE rho signal array in one units.
+            Its interpretation depends on the `mode` parameter.
         eta_fa_arr (int|float|np.array): Flip angle efficiency in one units.
             This is equivalent to the normalized B1T field.
             If np.ndarray, it must have the same shape as `rho_arr`.
