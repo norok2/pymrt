@@ -45,8 +45,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -242,7 +240,7 @@ def gen_matrix(
     text = ''
     for i, (x, dx) in enumerate(zip(x_arr.ravel(), dx_arr.ravel())):
         cell = ' {} \pm {} '.format(
-            *fc.util.format_value_error(x, dx, prec))
+            *fc.base.format_value_error(x, dx, prec))
         ending = c_sep if i % x_arr.shape[1] < x_arr.shape[1] - 1 else r_sep
         text += cell + ending
     columns = 'c' * x_arr.shape[1]

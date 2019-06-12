@@ -49,11 +49,11 @@ import pymrt.utils
 # import pymrt.input_output
 # import pymrt.compute as pmc
 import pymrt.correlation as pml
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # from pymrt.sequences import mp2rage
 # import dcmpi.lib.common as dcmlib
 
-from pymrt import INFO
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg
 from pymrt import elapsed, report

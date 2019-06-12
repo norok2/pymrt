@@ -20,11 +20,9 @@ import shutil  # High-level file operations
 
 # :: External Imports
 # import numpy as np  # NumPy (multidimensional numerical arrays library)
-import flyingcircus as fc
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 import PIL as pil  # Python Imaging Library
 
-import flyingcircus.util
-# import flyingcircus.num
 import PIL.Image, PIL.ImageChops
 
 # :: Local Imports
@@ -132,7 +130,7 @@ def to_image(
 
     # export intermediate HTML output
     if html_filepath is True or method.startswith('webkit-'):
-        html_filepath = fc.util.change_ext(save_filepath, 'htm')
+        html_filepath = fc.base.change_ext(save_filepath, 'htm')
     if html_filepath:
         with open(html_filepath, 'wb+') as file_obj:
             file_obj.write(html_code.encode('ascii', 'xmlcharrefreplace'))

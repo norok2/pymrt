@@ -33,9 +33,7 @@ import argparse  # Parser for command-line options, arguments and subcommands
 import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 
 
-import flyingcircus as fc
-import flyingcircus.util
-# import flyingcircus.num
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: Local Imports
 import pymrt as mrt
@@ -53,12 +51,12 @@ METHODS = ('sorting-path', 'laplacian', 'merge-optim')
 
 
 # ======================================================================
-def _unwrap(arr, method, fix_interval, fix_offset, **kws):
+def _unwrap(arr, method, fix_interval, fix_offset, **_kws):
     if fix_interval:
         arr = phs.fix_interval(arr)
     if fix_offset:
         arr = phs.fix_offset(arr)
-    return method(arr, **kws)
+    return method(arr, **_kws)
 
 
 # ======================================================================
@@ -74,7 +72,7 @@ def unwrap(
     msg('Input:  {}'.format(in_filepath))
     msg('Output: {}'.format(out_filepath))
     msg('Method: {}'.format(method))
-    if fc.util.check_redo([in_filepath], [out_filepath], force):
+    if fc.base.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
             method = phs.unwrap_sorting_path
         elif method == 'laplacian':

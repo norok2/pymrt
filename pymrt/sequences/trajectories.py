@@ -28,8 +28,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: External Imports Submodules
 import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -91,13 +89,13 @@ def reframe(
     try:
         [len(x) for x in bounds]
     except (IndexError, TypeError):
-        bounds = fc.util.auto_repeat(bounds, n_dims, True, True)
+        bounds = fc.base.auto_repeat(bounds, n_dims, True, True)
     if any(len(x) != 2 for x in bounds):
         text = 'Invalid `bounds` format.'
         raise ValueError(text)
     traj = traj.astype(float)
     for i in range(n_dims):
-        traj[i] = fc.num.scale(traj[i], bounds[i])
+        traj[i] = fc.extra.scale(traj[i], bounds[i])
     return traj
 
 
@@ -140,7 +138,7 @@ def zoom(
         AssertionError
     """
     n_dims = traj.shape[0]
-    factors = fc.util.auto_repeat(factors, n_dims, False, True)
+    factors = fc.base.auto_repeat(factors, n_dims, False, True)
     factors = np.array(factors).reshape(-1, 1)
     traj = traj * factors
     return traj
@@ -498,9 +496,9 @@ def density(
         n_valid_points = n_points
     else:
         n_valid_points = np.sum(mask)
-    bounds = tuple(fc.num.minmax(traj[i, mask]) for i in range(n_dims))
+    bounds = tuple(fc.extra.minmax(traj[i, mask]) for i in range(n_dims))
     bound_sizes = tuple(np.ptp(interval) for interval in bounds)
-    return n_valid_points / fc.util.prod(bound_sizes)
+    return n_valid_points / fc.base.prod(bound_sizes)
 
 
 # ======================================================================
@@ -586,7 +584,7 @@ def sampling_mask(
          [0 0 0 0 0 0 0 0 1]]
     """
     n_dim = len(shape)
-    factors = fc.util.auto_repeat(factors, n_dim, False, True)
+    factors = fc.base.auto_repeat(factors, n_dim, False, True)
     shape = tuple(int(size * factor) for size, factor in zip(shape, factors))
     if fit:
         traj = reframe(traj, tuple((0, size - 1) for size in shape))

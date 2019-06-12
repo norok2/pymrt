@@ -67,8 +67,6 @@ import scipy.interpolate  # SciPy: Interpolation
 # import scipy.linalg  # SciPy: Linear Algebra
 import scipy.stats  # SciPy: Statistical functions
 import scipy.misc  # SciPy: Miscellaneous routines
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 from numpy import pi, sin, cos, exp, sqrt, sinc
 # from sympy import pi, sin, cos, exp, sqrt, sinc
@@ -79,7 +77,7 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 import pymrt as mrt
 import pymrt.utils
 
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # import pymrt.plot as pmp
 # import pymrt.segmentation
 
@@ -157,7 +155,7 @@ def _prepare_superlorentz(
 
 
 _SUPERLORENTZ = _prepare_superlorentz()
-fc.util.elapsed('Superlorentz Approx.')
+fc.base.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -402,7 +400,7 @@ def _shape_from_file(
         y (complex): The pulse shape.
     """
     tmp_dirpaths = [
-        fc.util.realpath(dirpath),
+        fc.base.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
     ]
     for tmp_dirpath in tmp_dirpaths:
@@ -410,7 +408,7 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + fc.util.add_extsep(mrt.utils.EXT['tab']))
+        dirpath, filename + fc.base.add_extsep(mrt.utils.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
@@ -516,7 +514,7 @@ def _propagator_sum_order1(
     l_op_sum = sum(l_ops)
     # pseudo-first-order correction
     comms = [
-        fc.util.commutator(l_ops[i], l_ops[i + 1]) / 2.0
+        fc.extra.commutator(l_ops[i], l_ops[i + 1]) / 2.0
         for i in range(len(l_ops[:-1]))]
     comm_sum = sum(comms)
     return sp.linalg.expm(-(l_op_sum + comm_sum))
@@ -599,7 +597,7 @@ def _propagator_poly(
         # polyfit requires to change matrix orientation using transpose
         p_arr = np.polyfit(x_arr, y_arr.transpose(), fit_order)
         # transpose the results back
-        p_arr = p_arr.transpose()
+        p_arr = np.transpose(p_arr)
         # revert to original shape
         p_arr = p_arr.reshape(list(shape[:support_axis]) + [fit_order + 1])
         # :: approximate all propagators and calculate final result
@@ -609,7 +607,7 @@ def _propagator_poly(
             for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -660,7 +658,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc._w1_arr))
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -707,7 +705,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -745,7 +743,7 @@ def _propagator_interp(
                     (pulse_exc._w1_arr.real, pulse_exc._w1_arr.imag),
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -789,7 +787,7 @@ def _propagator_linear(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -833,7 +831,7 @@ def _propagator_linear(
                      np.abs(pulse_exc._w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
     return p_op
 
 
@@ -869,7 +867,7 @@ def _propagator_reduced(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return fc.num.mdot(*p_ops[::-1])
+    return fc.extra.mdot(*p_ops[::-1])
 
 
 # ======================================================================
@@ -1143,7 +1141,7 @@ class Pulse(SequenceEvent):
         Returns:
             freq (float): The carrier frequency in Hz.
         """
-        return fc.util.afreq2freq(self.w_c)
+        return fc.extra.afreq2freq(self.w_c)
 
     # -----------------------------------
     @classmethod
@@ -1280,7 +1278,7 @@ class Pulse(SequenceEvent):
         Returns:
             None.
         """
-        self.w_c = fc.num.freq2afreq(new_f_c)
+        self.w_c = fc.extra.freq2afreq(new_f_c)
         return self
 
     # -----------------------------------
@@ -1297,15 +1295,15 @@ class Pulse(SequenceEvent):
         Returns:
             None.
         """
-        self.w_c = self.w_c + fc.num.freq2afreq(delta_f_c)
+        self.w_c = self.w_c + fc.extra.freq2afreq(delta_f_c)
         return self
 
     # -----------------------------------
     def propagator(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Compute the Bloch-McConnell propagator: expm(-L * Dt).
 
@@ -1314,24 +1312,24 @@ class Pulse(SequenceEvent):
 
         Args:
             spin_model (SpinModel): The physical model for the spin pools.
-            *args (Iterable): Positional arguments passed to 'p_op_func()'.
-            **kwargs (dict): Keyword arguments passed to 'p_op_func()'.
+            *_args: Positional arguments for 'p_op_func()'.
+            **_kws: Keyword arguments for 'p_op_func()'.
 
         Returns:
             p_op (np.ndarray): The propagator P.
         """
-        if not kwargs:
-            kwargs = self.propagator_kwargs
+        if not _kws:
+            _kws = self.propagator_kwargs
         if self.propagator_mode == 'exact':
             p_ops = [
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self._w1_arr]
-            p_op = fc.num.mdot(*p_ops[::-1])
+            p_op = fc.extra.mdot(*p_ops[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
-                p_op = p_op_func(self, spin_model, *args, **kwargs)
+                p_op = p_op_func(self, spin_model, *_args, **_kws)
             except NameError:
                 text = '{}: unknown approximation'.format(self.propagator_mode)
                 warnings.warn(text)
@@ -1339,7 +1337,7 @@ class Pulse(SequenceEvent):
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self._w1_arr]
-                p_op = fc.num.mdot(*p_ops[::-1])
+                p_op = fc.extra.mdot(*p_ops[::-1])
         return p_op
 
     # -----------------------------------
@@ -1454,9 +1452,9 @@ class PulseExc(Pulse):
     # -----------------------------------
     def __init__(
             self,
-            *args,
-            **kwargs):
-        Pulse.__init__(self, *args, **kwargs)
+            *_args,
+            **_kws):
+        Pulse.__init__(self, *_args, **_kws)
 
 
 # ======================================================================
@@ -1468,9 +1466,9 @@ class MagnetizationPreparation(Pulse):
     # -----------------------------------
     def __init__(
             self,
-            *args,
-            **kwargs):
-        Pulse.__init__(self, *args, **kwargs)
+            *_args,
+            **_kws):
+        Pulse.__init__(self, *_args, **_kws)
 
 
 # ======================================================================
@@ -1565,43 +1563,41 @@ class PulseSequence(object):
     def propagators(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Compute the propagator of the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to
-            'pulse_propagator()'.
-            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+            *_args: Positional arguments for 'pulse_propagator()'.
+            **_kws: Keyword arguments for 'pulse_propagator()'.
 
         Returns:
             y(ndarray[float]): The propagator.
         """
         return [
-            pulse.propagator(spin_model, *args, **kwargs)
+            pulse.propagator(spin_model, *_args, **_kws)
             for pulse in self.pulses]
 
     # -----------------------------------
     def propagator(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Compute the propagator of the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to
-            'pulse_propagator()'.
-            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+            *_args: Positional arguments for 'propagators()'.
+            **_kws: Keyword arguments for'propagators()'.
 
         Returns:
             y(ndarray[float]): The propagator.
         """
-        return self._propagator(self.propagators(spin_model, *args, **kwargs))
+        return self._propagator(self.propagators(spin_model, *_args, **_kws))
 
     # -----------------------------------
     @staticmethod
@@ -1612,15 +1608,13 @@ class PulseSequence(object):
         Compute the propagator of the pulse sequence.
 
         Args:
-            spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to
-            'pulse_propagator()'.
-            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+            p_ops (Sequence[np.ndarray]): The propagator operator.
+            num (int): The number of times the propagator is repeated.
 
         Returns:
             y(ndarray[float]): The propagator.
         """
-        p_op = fc.num.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(*p_ops[::-1])
         if num > 1:
             p_op = sp.linalg.fractional_matrix_power(p_op, num)
         return p_op
@@ -1629,19 +1623,21 @@ class PulseSequence(object):
     def signal(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Compute the signal from the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
+            *_args: Positional arguments for `propagator()`
+            *_kws: Keyword arguments for `propagator()`
 
         Returns:
             y (ndarray[float]): The signal.
 
         """
-        p_op = self.propagator(spin_model, *args, **kwargs)
+        p_op = self.propagator(spin_model, *_args, **_kws)
         return np.array(self._signal(spin_model, p_op))
 
     # -----------------------------------
@@ -1660,7 +1656,7 @@ class PulseSequence(object):
 
         """
         return (
-                np.abs(fc.num.mdot(
+                np.abs(fc.extra.mdot(
                     spin_model.detector(), p_op,
                     spin_model.equilibrium_magnetization())) *
                 spin_model.s0)
@@ -1710,8 +1706,8 @@ class SteadyState(PulseSequence):
             te=None,
             tr=None,
             n_r=1,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
 
         Args:
@@ -1719,13 +1715,13 @@ class SteadyState(PulseSequence):
             num_repetitions (:
             mt_pulse_index (int|None): Index of the MT pulse in the kernel.
                 If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
+            *_args:
+            **_kws:
 
         Returns:
 
         """
-        PulseSequence.__init__(self, *args, **kwargs)
+        PulseSequence.__init__(self, *_args, **_kws)
         idx = self.get_unique_pulses(('PulseExc', 'ReadOut'))
         if hasattr(self, '_idx'):
             self._idx.update(idx)
@@ -1787,27 +1783,26 @@ class SteadyState(PulseSequence):
     def propagator(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Compute the propagator of the pulse sequence.
 
         Args:
             spin_model (SpinModel): The model for the spin system.
-            *args (Iterable): Positional arguments passed to
-            'pulse_propagator()'.
-            **kwargs (dict): Keyword arguments passed to 'pulse_propagator()'.
+            *_args: Positional arguments for 'propagators()'.
+            **_kws: Keyword arguments for 'propagators()'.
 
         Returns:
             y(ndarray[float]): The propagator.
         """
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+        base_p_ops = self.propagators(spin_model, *_args, **_kws)
         pre_t, post_t = self._pre_post_delays(
             self.te, self._t_ro, self._t_pexc)
         p_ops = (
-                Delay(pre_t).propagator(spin_model, *args, **kwargs) +
+                Delay(pre_t).propagator(spin_model, *_args, **_kws) +
                 self._p_ops_reorder(base_p_ops, self._idx['ReadOut']) +
-                Delay(post_t).propagator(spin_model, *args, **kwargs))
+                Delay(post_t).propagator(spin_model, *_args, **_kws))
         return self._propagator(p_ops, self.n_r)
 
     # -----------------------------------
@@ -1829,8 +1824,8 @@ class MultiGradEchoSteadyState(SteadyState):
     def __init__(
             self,
             tes,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
 
         Args:
@@ -1838,17 +1833,17 @@ class MultiGradEchoSteadyState(SteadyState):
             num_repetitions (:
             mt_pulse_index (int|None): Index of the MT pulse in the kernel.
                 If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
+            *_args:
+            **_kws:
 
         Returns:
 
         """
-        SteadyState.__init__(self, None, *args, **kwargs)
+        SteadyState.__init__(self, None, *_args, **_kws)
         # handle echo times
         if tes is None:
             tes = self.te
-        self.tes = fc.util.auto_repeat(tes, 1, False, False)
+        self.tes = fc.base.auto_repeat(tes, 1, False, False)
         # ensure compatible echo_times and repetition_time
         if any([t < 0
                 for te in self.tes
@@ -1863,10 +1858,10 @@ class MultiGradEchoSteadyState(SteadyState):
     def signal(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         te_p_ops = [
-            [Delay(duration).propagator(spin_model, *args, **kwargs)
+            [Delay(duration).propagator(spin_model, *_args, **_kws)
              for duration in
              self._pre_post_delays(te, self._t_ro, self._t_pexc)]
             for te in self.tes]

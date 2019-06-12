@@ -10,7 +10,7 @@ from __future__ import (
     absolute_import, division, print_function, unicode_literals, )
 
 # todo: get rid of obsolete code
-# todo: use kwargs instead of opts
+# todo: use kws instead of opts
 # todo: get rid of tty colorify
 
 # ======================================================================
@@ -28,8 +28,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -296,7 +294,7 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    fc.util.execute(str(' '.join(cmd)))
+    fc.base.execute(str(' '.join(cmd)))
     # import temp output
     arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
@@ -335,8 +333,8 @@ def calc_afi(
     """
     y_arr = np.stack(images, -1).astype(float)
 
-    s_arr = fc.num.polar2complex(y_arr[..., 0],
-                                 fix_phase_interval(y_arr[..., 1]))
+    s_arr = fc.extra.polar2complex(y_arr[..., 0],
+                                   fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
     nominal_fa = params[fa_label]
@@ -406,8 +404,8 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    if not fc.num.is_in_range(arr, (-np.pi, np.pi)):
-        arr = fc.num.scale(arr.astype(float), (-np.pi, np.pi))
+    if not fc.extra.is_in_range(arr, (-np.pi, np.pi)):
+        arr = fc.extra.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -487,13 +485,13 @@ def rho_mp2rage(
     inv2m_arr = inv2m_arr.astype(float)
     inv1p_arr = fix_phase_interval(inv1p_arr)
     inv2p_arr = fix_phase_interval(inv2p_arr)
-    inv1_arr = fc.num.polar2complex(inv1m_arr, inv1p_arr)
-    inv2_arr = fc.num.polar2complex(inv2m_arr, inv2p_arr)
+    inv1_arr = fc.extra.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = fc.extra.polar2complex(inv2m_arr, inv2p_arr)
     rho_arr = np.real(inv1_arr.conj() * inv2_arr /
                       (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
-        values_interval = fc.num.valid_interval(values_interval)
-        rho_arr = fc.num.scale(rho_arr, values_interval, (-0.5, 0.5))
+        values_interval = fc.extra.valid_interval(values_interval)
+        rho_arr = fc.extra.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
 
 
@@ -543,7 +541,7 @@ def rho_to_t1_mp2rage(
         rho = mp2rage.rho(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
-        bijective_slice = fc.num.bijective_part(rho)
+        bijective_slice = fc.extra.bijective_part(rho)
         t1 = t1[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:
@@ -555,8 +553,8 @@ def rho_to_t1_mp2rage(
                 'MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
-        if not fc.num.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
-            rho_arr = fc.num.scale(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL)
+        if not fc.extra.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
+            rho_arr = fc.extra.scale(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL)
 
         t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr
@@ -795,7 +793,7 @@ def voxel_curve_fit(
             for y_i_arr in np.split(y_arr, support_size, support_axis)]
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         for i, (par_opt, par_cov) in \
-                enumerate(pool.imap(fc.util.curve_fit, iter_param_list)):
+                enumerate(pool.imap(fc.base.curve_fit, iter_param_list)):
             p_arr[i] = par_opt
 
     elif method == 'poly':
@@ -880,18 +878,18 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = fc.util.merge_dicts(D_OPTS, opts)
+    opts = fc.base.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = fc.util.listdir(
+        data_filepath_list = fc.base.listdir(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
-                fc.util.change_ext(fc.util.os.path.basename(data_filepath),
+                fc.base.change_ext(fc.base.os.path.basename(data_filepath),
                                    '',
                                    mrt.utils.EXT['niz']))
             if opts['use_meta']:
@@ -905,7 +903,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      fc.util.add_extsep(opts['meta_ext']))
+                                      fc.base.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -959,7 +957,7 @@ def sources_generic(
 
         if verbose >= VERB_LVL['debug']:
             for sources, params in zip(sources_list, params_list):
-                print(fc.util.tty_colorify('DEBUG', 'r'))
+                print(fc.base.tty_colorify('DEBUG', 'r'))
                 print(sources, params)
     elif verbose >= VERB_LVL['medium']:
         print("WW: no data directory '{}'. Skipping.".format(data_dirpath))
@@ -1011,7 +1009,7 @@ def compute_generic(
     """
     # TODO: implement affine_func, affine_args, affine_kwargs?
     # get the num, name and seq from first source file
-    opts = fc.util.merge_dicts(D_OPTS, opts)
+    opts = fc.base.merge_dicts(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -1027,7 +1025,7 @@ def compute_generic(
         targets.append(os.path.join(out_dirpath, mrt.naming.to_filename(info)))
 
     # perform the calculation
-    if fc.util.check_redo(sources, targets, force):
+    if fc.base.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -1163,9 +1161,9 @@ def compute(
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kwargs)
-            fc.util.elapsed('Time: ')
+            fc.base.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                fc.util.report(only_last=True)
+                fc.base.report(only_last=True)
     else:
         recursive = True
 
@@ -1188,4 +1186,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-fc.util.elapsed('pymrt.computation')
+fc.base.elapsed('pymrt.computation')

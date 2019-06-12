@@ -244,10 +244,10 @@ def check_approx_propagator(
             names = mode_params.keys()
             for values in itertools.product(*[mode_params[i] for i in names]):
                 kwargs_items.append(dict(zip(names, values)))
-            for kwargs in kwargs_items:
+            for kws in kwargs_items:
                 pulse = Pulse.shaped(
                     40.0e-3, flip_angle, 4000, shape, shape_kwargs, w_c,
-                    mode, kwargs)
+                    mode, kws)
                 begin_time = datetime.datetime.now()
                 p_op = pulse.propagator(spin_model)
                 elapsed = datetime.timedelta(
@@ -255,7 +255,7 @@ def check_approx_propagator(
                 rel_error = np.sum(np.abs(exact_p_ops[shape] - p_op)) / \
                             np.sum(np.abs(exact_p_ops[shape]))
                 print('{:>8s}, {:>8s}, {:>48s},\t{:.3e}, {}'.format(
-                    shape, mode, str(kwargs), rel_error, elapsed))
+                    shape, mode, str(kws), rel_error, elapsed))
 
 
 # ======================================================================

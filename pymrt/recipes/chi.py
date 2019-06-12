@@ -11,31 +11,23 @@ from __future__ import (
 
 # ======================================================================
 # :: Python Standard Library Imports
-import os  # Miscellaneous operating system interfaces
 # import itertools  # Functions creating iterators for efficient looping
-import warnings  # Warning control
-import collections  # Container datatypes
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 
 # :: External Imports Submodules
 import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
 
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
-from pymrt import msg, dbg
 
-import pymrt.utils
-import pymrt.geometry
 import pymrt.segmentation
 
 from pymrt.recipes import db0, phs, generic
@@ -43,9 +35,9 @@ from pymrt.recipes import db0, phs, generic
 from pymrt.constants import CHI_V
 
 from pymrt import PATH
-from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import D_VERB_LVL
 from pymrt import elapsed, report
-from pymrt import msg, dbg
+from pymrt import msg
 
 
 # ======================================================================
@@ -118,7 +110,7 @@ def dipole_kernel(
 
     # generate the dipole kernel
     assert (len(shape) == 3)
-    kk = np.array(fc.num.grid_coord(shape, origin))
+    kk = np.array(fc.extra.grid_coord(shape, origin))
     if b0_direction is None:
         theta, phi = [np.deg2rad(angle) for angle in (theta, phi)]
         b0_direction = [
@@ -272,7 +264,7 @@ def db0_to_chi(
     chi_k_arr = np.fft.fftn(db0_arr) / dk
 
     # remove singularity of susceptibility
-    chi_k_arr = fc.num.subst(chi_k_arr)
+    chi_k_arr = fc.extra.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -321,10 +313,10 @@ def qsm_remove_background_milf(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    db0_arr, mask = fc.num.padding(db0_arr, pad_width)
-    mask_arr, mask = fc.num.padding(mask_arr, pad_width)
+    db0_arr, mask = fc.extra.padding(db0_arr, pad_width)
+    mask_arr, mask = fc.extra.padding(mask_arr, pad_width)
 
-    kernel_k = np.fft.fftshift(fc.num.laplace_kernel(db0_arr.shape))
+    kernel_k = np.fft.fftshift(fc.extra.laplace_kernel(db0_arr.shape))
 
     kernel_mask = np.abs(kernel_k) > threshold
     kernel_k_inv = kernel_mask.astype(complex)
@@ -377,7 +369,7 @@ def qsm_remove_background_sharp(
             If float, it is interpreted as relative to the maximum size.
         rel_radius (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of `radius` using `shape`.
-            Uses `flyingcircus.num.coord()` internally, see its `is_relative`
+            Uses `flyingcircus.extra.coord()` internally, see its `is_relative`
             parameter for more details.
 
     Returns:
@@ -394,15 +386,15 @@ def qsm_remove_background_sharp(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    db0_arr, mask = fc.num.padding(db0_arr, pad_width)
-    mask_arr, mask = fc.num.padding(mask_arr, pad_width)
+    db0_arr, mask = fc.extra.padding(db0_arr, pad_width)
+    mask_arr, mask = fc.extra.padding(mask_arr, pad_width)
 
-    radius = fc.num.coord(db0_arr.shape, radius, rel_radius, use_int=False)
+    radius = fc.extra.coord(db0_arr.shape, radius, rel_radius, use_int=False)
 
     # # generate the spherical kernel
-    sphere = mrt.geometry.sphere(db0_arr.shape, radius).astype(complex)
+    sphere = raster_geometry.sphere(db0_arr.shape, radius).astype(complex)
     sphere /= np.sum(sphere)
-    dirac_delta = mrt.geometry.nd_dirac_delta(db0_arr.shape, 0.5, 1.0)
+    dirac_delta = raster_geometry.nd_dirac_delta(db0_arr.shape, 0.5, 1.0)
     kernel_k = np.fft.fftn(np.fft.ifftshift(dirac_delta - sphere))
 
     kernel_mask = np.abs(kernel_k) > threshold
@@ -510,7 +502,7 @@ def qsm_field2source_tkd(
     chi_k_arr = dk_inv * np.fft.fftn(db0i_arr)
 
     # remove singularity of susceptibility
-    chi_k_arr = fc.num.subst(chi_k_arr)
+    chi_k_arr = fc.extra.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -585,7 +577,7 @@ def qsm_field2source_l2_closed_form(
 
     # compute the gradient operators along all dims
     exp_2_k = sum(
-        fc.num.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
+        fc.extra.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
     exp_2_k = np.fft.fftshift(exp_2_k)
 
     # perform the inverse Fourier transform
@@ -682,7 +674,7 @@ def qsm_field2source_l2_iter(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = fc.num.exp_gradient_kernels(
+    exp_ks = fc.extra.exp_gradient_kernels(
         db0i_arr.shape, None, db0i_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
@@ -875,7 +867,7 @@ def qsm_total_field_inversion(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = fc.num.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
+    exp_ks = fc.extra.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
         if threshold:
@@ -1025,7 +1017,7 @@ def qsm_preprocess(
     Returns:
 
     """
-    echo_times = np.array(fc.util.auto_repeat(echo_times, 1))
+    echo_times = np.array(fc.base.auto_repeat(echo_times, 1))
     if len(echo_times) > 1:
         dphs_arr = phs.phs_to_dphs(
             phs_arr, tis=echo_times, tis_mask=echo_times_mask)
@@ -1073,7 +1065,7 @@ def wip():
     msk_arr = mrt.input_output.load(msk_filepath).astype(bool)
 
     uphs_filepath = os.path.join(base_path, 'bai_uphs.nii.gz')
-    if fc.util.check_redo(phs_filepath, uphs_filepath, force):
+    if fc.base.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
         uphs_arr = phs.unwrap(phs_arr)
@@ -1082,7 +1074,7 @@ def wip():
         uphs_arr = mrt.input_output.load(uphs_filepath)
 
     dphs_filepath = os.path.join(base_path, 'bai_dphs.nii.gz')
-    if fc.util.check_redo(phs_filepath, dphs_filepath, force):
+    if fc.base.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
         dphs_arr = phs.phs_to_dphs(phs_arr, 20.0)
@@ -1091,7 +1083,7 @@ def wip():
         dphs_arr = mrt.input_output.load(dphs_filepath)
 
     db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
-    if fc.util.check_redo(dphs_filepath, db0_filepath, force):
+    if fc.base.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
 
         db0_arr = db0.dphs_to_db0(dphs_arr, b0=2.89362)
@@ -1124,7 +1116,7 @@ def wip():
     #     sharp_arr = mrt.input_output.load(sharp_filepath)
 
     chi_filepath = os.path.join(base_path, 'bai_chi_ptfi_minres_i0128.nii.gz')
-    if fc.util.check_redo(db0_filepath, chi_filepath, force):
+    if fc.base.check_redo(db0_filepath, chi_filepath, force):
         from pymrt.recipes import db0
 
         mask = mag_arr > 0.5

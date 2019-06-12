@@ -20,8 +20,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -31,4 +29,4 @@ import pymrt as mrt
 # from pymrt import elapsed, report
 # from pymrt import msg, dbg
 import pymrt.utils
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.

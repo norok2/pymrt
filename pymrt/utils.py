@@ -24,7 +24,7 @@ from pymrt import INFO, PATH
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
 from pymrt import msg, dbg
-from flyingcircus.util import EXT
+from flyingcircus.base import EXT
 
 # ======================================================================
 # :: Custom defined constants

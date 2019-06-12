@@ -20,10 +20,8 @@ import pyparsing as pp  # A Python Parsing Module
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
 
 # :: Local Imports
-
 from pymrt import INFO, PATH
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report
@@ -70,7 +68,7 @@ def _read_twix(
         mask = 0
     else:
         mask = None
-    data = fc.util.read_stream(file_stream, dtype, '<', count, offset)
+    data = fc.base.read_stream(file_stream, dtype, '<', count, offset)
     return data[mask] if mask is not None else data
 
 
@@ -103,9 +101,9 @@ def _read_protocol(text):
                     val = prot[key]
                 else:
                     val = []
-                val.append((indexes, fc.util.auto_convert(value, '""', '""')))
+                val.append((indexes, fc.base.auto_convert(value, '""', '""')))
             else:
-                val = fc.util.auto_convert(value, '""', '""')
+                val = fc.base.auto_convert(value, '""', '""')
             if key:
                 prot[key] = val
     return prot
@@ -174,7 +172,7 @@ def _guess_version(file_stream):
 def _guess_header_type(text):
     if text.startswith('<XProtocol'):
         header_type = 'x_prot'
-    elif fc.util.has_decorator(text, *PROT['prot_decor']):
+    elif fc.base.has_decorator(text, *PROT['prot_decor']):
         header_type = 'prot'
     else:
         header_type = None
@@ -187,7 +185,7 @@ def _parse_vb_header(
         num_x_prot):
     raw_header = {}
     for i in range(num_x_prot):
-        key = fc.util.read_cstr(file_stream)
+        key = fc.base.read_cstr(file_stream)
         size = _read_twix(file_stream, 'int')
         val = file_stream.read(size).decode('ascii')
         raw_header[key] = str(val.strip(' \n\t\0'))

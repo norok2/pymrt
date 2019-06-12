@@ -12,37 +12,35 @@ from __future__ import (
 # ======================================================================
 # :: Python Standard Library Imports
 import itertools  # Functions creating iterators for efficient looping
-import collections  # Container datatypes
 import warnings  # Warning control
-import multiprocessing  # Process-based parallelism
 
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 
 # import scipy.integrate  # SciPy: Integration and ODEs
 # import scipy.optimize  # SciPy: Optimization and root finding
 # import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.special  # SciPy: Special functions
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
-from skimage.restoration import (
-    denoise_bilateral, denoise_nl_means, denoise_wavelet,
-    denoise_tv_bregman, denoise_tv_chambolle)
+try:
+    from skimage.restoration import (
+        denoise_bilateral, denoise_nl_means, denoise_wavelet,
+        denoise_tv_bregman, denoise_tv_chambolle)
+except ImportError:
+    denoise_bilateral = denoise_nl_means = denoise_wavelet \
+        = denoise_tv_bregman = denoise_tv_chambolle = None
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.geometry
 import pymrt.segmentation
 
-from pymrt import INFO, PATH
+
 # from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
-from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -98,13 +96,13 @@ def denoise(
              - 'maximum': `scipy.ndimage.maximum_filter()`
              - 'rank': `scipy.ndimage.rank_filter()`
              - 'percentile': `scipy.ndimage.percentile_filter()`
+             - 'dwt': `pymrt.correction.dwt_filter()`
              - 'nl_means': `skimage.restoration.denoise_nl_means()`
              - 'wavelet': `skimage.restoration.denoise_wavelet()`
              - 'tv_bregman': `skimage.restoration.denoise_tv_bregman()`
              - 'tv_chambolle': `skimage.restoration.denoise_tv_chambolle()`
              - 'bilateral': `skimage.restoration.denoise_bilateral()`
                (only works with 2D images)
-             - 'dwt': `dwt_filter()`
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
@@ -172,9 +170,13 @@ def denoise(
     else:
         text = 'Unknown method `{}`'.format(method)
         raise ValueError(text)
+    if not callable(filter_func):
+        warnings.warn(
+            'Method `{}` available only after installing `scikit.image`'\
+                .format(method))
 
     if np.any(np.iscomplex(arr)):
-        arr = fc.num.filter_cx(arr, filter_func, (), method_kws, cx_mode)
+        arr = fc.extra.filter_cx(arr, filter_func, (), method_kws, cx_mode)
     else:
         arr = filter_func(np.real(arr), **method_kws)
     return arr
@@ -189,8 +191,8 @@ def denoise_multi(arrs):
 def sn_split_signals(
         arr,
         method='otsu',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Separate N signal components according to threshold(s).
 
@@ -208,9 +210,9 @@ def sn_split_signals(
              - 'median': use the median value of the signal.
              - 'otsu': use the Otsu threshold.
             If callable, the signature must be:
-            f(np.ndarray, *args, **kwargs) -> Iterable[float]
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+            f(np.ndarray, *_args, **_kws) -> Iterable[float]
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -234,14 +236,13 @@ def sn_split_signals(
         elif method == 'median':
             thresholds = mrt.segmentation.threshold_percentile(arr, 0.5)
         else:
-            thresholds = mrt.segmentation.auto_thresholds(
-                arr, method, dict(kwargs))
+            thresholds = mrt.segmentation.auto_thresholds(arr, method, _kws)
     elif callable(method):
-        thresholds = method(arr, *args, **kwargs)
+        thresholds = method(arr, *_args, **_kws)
     else:
         thresholds = tuple(method)
 
-    thresholds = fc.util.auto_repeat(thresholds, 1)
+    thresholds = fc.base.auto_repeat(thresholds, 1)
 
     masks = []
     full_mask = np.ones(arr.shape, dtype=bool)
@@ -327,7 +328,7 @@ def sn_split_calib_region(
         arr,
         s_region=None,
         n_region=None,
-        region_shape=mrt.geometry.nd_cuboid,
+        region_shape=raster_geometry.nd_cuboid,
         region_shape_kws=None):
     """
     Separate signal from noise a calibration region.
@@ -369,11 +370,11 @@ def sn_split_calib_region(
         raise NotImplementedError
     if not n_region:
         raise NotImplementedError
-    s_semisizes, s_position = mrt.geometry.extrema_to_semisizes_position(
+    s_semisizes, s_position = raster_geometry.extrema_to_semisizes_position(
         *s_region, num=arr.ndim)
     signal_arr = arr[
         region_shape(arr.shape, s_semisizes, s_position)]
-    n_semisizes, n_position = mrt.geometry.extrema_to_semisizes_position(
+    n_semisizes, n_position = raster_geometry.extrema_to_semisizes_position(
         *n_region, num=arr.ndim)
     noise_arr = arr[
         region_shape(arr.shape, n_semisizes, n_position)]
@@ -429,7 +430,7 @@ def sn_split_otsu(
              - signal_arr: The signal array.
              - noise_arr: The noise array.
     """
-    corrections = fc.util.auto_repeat(corrections, 2, check=True)
+    corrections = fc.base.auto_repeat(corrections, 2, check=True)
     otsu = mrt.segmentation.threshold_otsu(arr)
     signal_mask = arr > otsu * corrections[0]
     noise_mask = arr <= otsu * corrections[1]
@@ -467,7 +468,7 @@ def sn_split_relative(
     See Also:
         segmentation.threshold_relative(),
     """
-    thresholds = fc.util.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.base.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_relative(arr, thresholds)
     signal_mask = arr > signal_threshold
@@ -506,7 +507,7 @@ def sn_split_percentile(
     See Also:
         segmentation.threshold_percentile()
     """
-    thresholds = fc.util.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.base.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_percentile(arr, thresholds)
     signal_mask = arr > signal_threshold
@@ -660,8 +661,8 @@ def sn_split_denoise(
 def sn_split(
         arr,
         method='auto',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Separate signal from noise.
 
@@ -687,12 +688,12 @@ def sn_split(
              - 'denoise': use `pymrt.correction.sn_split_denoise()`.
                 Useful when no noise calibration region is present.
             If callable, the signature must be:
-            f(np.ndarray, *args, **kwargs) -> (np.ndarray, np.ndarray)
+            f(np.ndarray, *_args, **_kws) -> (np.ndarray, np.ndarray)
             where the input array is `arr` and the two returned arrays are:
              - the signal array
              - the noise array
-        *args: Positional arguments passed to `pymrt.correction.method()`.
-        **kwargs: Keyword arguments passed to `pymrt.correction.method()`.
+        *_args: Positional arguments for `pymrt.correction.method()`.
+        **_kws: Keyword arguments for `pymrt.correction.method()`.
 
     Returns:
         result (tuple[np.ndarray]): The tuple
@@ -732,7 +733,7 @@ def sn_split(
     else:
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
-    return method(arr, *args, **kwargs)
+    return method(arr, *_args, **_kws)
 
 
 # ======================================================================
@@ -785,8 +786,8 @@ def estimate_noise_sigma_dwt(
 def estimate_noise_sigma_sn_split(
         arr,
         method='auto',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Estimate of the noise standard deviation from signal/noise separation.
 
@@ -794,13 +795,13 @@ def estimate_noise_sigma_sn_split(
         arr (np.ndarray): The input array.
         method (str): The signal/noise estimation method.
             This is passed to `sn_split()`
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         sigma (float): The estimate of the noise standard deviation.
     """
-    signal_arr, noise_arr = sn_split(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = sn_split(arr, method, *_args, **_kws)
     sigma = np.std(noise_arr)
     return sigma
 
@@ -810,8 +811,8 @@ def estimate_noise_sigma(
         arr,
         dwt_kws=None,
         method='otsu',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Optimal estimate of the noise standard deviation.
 
@@ -824,13 +825,13 @@ def estimate_noise_sigma(
             This is passed to `estimate_noise_sigma_dwt()`.
         method (str): The signal/noise estimation method.
             This is passed to `sn_split()`
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         sigma (float): The estimate of the noise standard deviation.
     """
-    signal_arr, noise_arr = sn_split(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = sn_split(arr, method, *_args, **_kws)
     if dwt_kws is None:
         dwt_kws = {}
     sigma = estimate_noise_sigma_dwt(noise_arr, **dwt_kws)

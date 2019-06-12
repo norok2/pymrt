@@ -22,8 +22,6 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -48,8 +46,8 @@ class MultiMtSteadyState(SteadyState):
     def __init__(
             self,
             preps,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
         Magnetization Transfer Steady State signals from multiple experiments.
 
@@ -64,10 +62,10 @@ class MultiMtSteadyState(SteadyState):
 
         Args:
             preps ():
-            *args ():
-            **kwargs ():
+            *_args ():
+            **_kws ():
         """
-        SteadyState.__init__(self, *args, **kwargs)
+        SteadyState.__init__(self, *_args, **_kws)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, '_idx'):
             self._idx.update(idx)
@@ -89,18 +87,18 @@ class MultiMtSteadyState(SteadyState):
     def signal(
             self,
             spin_model,
-            *args,
-            **kwargs):
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+            *_args,
+            **_kws):
+        base_p_ops = self.propagators(spin_model, *_args, **_kws)
         te_p_ops = [
-            Delay(t_d).propagator(spin_model, *args, **kwargs)
+            Delay(t_d).propagator(spin_model, *_args, **_kws)
             for t_d in
             self._pre_post_delays(self.te, self._t_ro, self._t_pexc)]
         mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
         mt_p_ops = [
             mt_pulse.set_carrier_freq(f_c + df).set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
+                spin_model, *_args, **_kws)
             for df, fa in self.preps]
         central_p_ops_list = [
             self._p_ops_reorder(
@@ -126,8 +124,8 @@ class MultiMtSteadyState2(SteadyState):
             self,
             freqs,
             mfas,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
 
         Args:
@@ -135,13 +133,13 @@ class MultiMtSteadyState2(SteadyState):
             num_repetitions (:
             mt_pulse_index (int|None): Index of the MT pulse in the kernel.
                 If None, use the pulse with zero carrier frequency.
-            *args:
-            **kwargs:
+            *_args:
+            **_kws:
 
         Returns:
 
         """
-        SteadyState.__init__(self, *args, **kwargs)
+        SteadyState.__init__(self, *_args, **_kws)
         idx = self.get_unique_pulses(('MagnetizationPreparation',))
         if hasattr(self, '_idx'):
             self._idx.update(idx)
@@ -154,18 +152,18 @@ class MultiMtSteadyState2(SteadyState):
     def signal(
             self,
             spin_model,
-            *args,
-            **kwargs):
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
+            *_args,
+            **_kws):
+        base_p_ops = self.propagators(spin_model, *_args, **_kws)
         te_p_ops = [
-            Delay(t_d).propagator(spin_model, *args, **kwargs)
+            Delay(t_d).propagator(spin_model, *_args, **_kws)
             for t_d in
             self._pre_post_delays(self.te, self._t_ro, self._t_pexc)]
         mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
         mt_p_ops = [
             mt_pulse.set_carrier_freq(f_c + f).set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
+                spin_model, *_args, **_kws)
             for f in self.freqs for fa in self.fas]
         central_p_ops_list = [
             self._p_ops_reorder(
@@ -194,18 +192,18 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
             tes=None,
             tr=None,
             fa=None,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
 
         Args:
             preps ():
             tes ():
             tr ():
-            *args ():
-            **kwargs ():
+            *_args ():
+            **_kws ():
         """
-        MultiGradEchoSteadyState.__init__(self, None, None, *args, **kwargs)
+        MultiGradEchoSteadyState.__init__(self, None, None, *_args, **_kws)
         # fix preps
         if fa is None:
             fa = self.pulses[self._idx['PulseExc']].flip_angle
@@ -222,7 +220,7 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
                 if param is not None and prep[i] is None:
                     prep[i] = param
                 if is_seq:
-                    prep[i] = fc.util.auto_repeat(prep[i], 1, False, False)
+                    prep[i] = fc.base.auto_repeat(prep[i], 1, False, False)
             assert (all([prep_val is not None for prep_val in prep]))
             self.preps.append(prep)
 
@@ -284,25 +282,25 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
     def signal(
             self,
             spin_model,
-            *args,
-            **kwargs):
+            *_args,
+            **_kws):
         """
 
         Args:
             spin_model ():
-            *args ():
-            **kwargs ():
+            *_args ():
+            **_kws ():
 
         Returns:
 
         """
-        base_p_ops = self.propagators(spin_model, *args, **kwargs)
-        unique_pre_post_delays = set(fc.util.flatten([
+        base_p_ops = self.propagators(spin_model, *_args, **_kws)
+        unique_pre_post_delays = set(fc.base.flatten([
             self._pre_post_delays(
                 te, self._get_t_ro(self.duration, tr), self._t_pexc)
             for df, mfa, fa, tr, tes in self.preps for te in tes]))
         unique_pre_post_p_ops = {
-            t_d: Delay(t_d).propagator(spin_model, *args, **kwargs)
+            t_d: Delay(t_d).propagator(spin_model, *_args, **_kws)
             for t_d in unique_pre_post_delays}
         mt_pulse = self.pulses[self._idx['MagnetizationPreparation']]
         f_c = mt_pulse.carrier_freq
@@ -311,13 +309,13 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
             (df, mfa):
                 mt_pulse.set_carrier_freq(f_c + df).set_flip_angle(
                     mfa).propagator(
-                    spin_model, *args, **kwargs)
+                    spin_model, *_args, **_kws)
             for df, mfa in unique_mt}
         pexc_pulse = self.pulses[self._idx['PulseExc']]
         unique_pexc = set([fa for df, mfa, fa, tr, tes in self.preps])
         unique_pexc_p_ops = {
             fa: pexc_pulse.set_flip_angle(fa).propagator(
-                spin_model, *args, **kwargs)
+                spin_model, *_args, **_kws)
             for fa in unique_pexc}
         s_arr = np.array([
             self._signal(

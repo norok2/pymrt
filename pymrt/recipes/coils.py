@@ -34,8 +34,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 import scipy.ndimage  # SciPy: ND-image Manipulation
 # import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.linalg  # Scipy: Linear Algebra
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -166,7 +164,7 @@ def compress_svd(
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
-    k_svd = fc.num.auto_num_components(
+    k_svd = fc.extra.auto_num_components(
         k_svd, np.abs(eigvals[eig_sort]) / np.max(np.abs(eigvals)),
         verbose=verbose)
 
@@ -363,7 +361,7 @@ def adaptive(
     if filtering:
         for i in range(num_coils):
             for j in range(num_coils):
-                coil_cov[..., i, j] = fc.num.filter_cx(
+                coil_cov[..., i, j] = fc.extra.filter_cx(
                     coil_cov[..., i, j], filtering, (), filtering_kws)
 
     # calculate the principal eigenvector of the coil covariance
@@ -537,7 +535,7 @@ def adaptive_iter(
             last_combined = combined.copy() if threshold > 0 else combined
             sens = arr * combined[..., None].conj()
             if filtering:
-                sens = fc.num.filter_cx(sens, filtering, (), filtering_kws)
+                sens = fc.extra.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
                 np.sqrt(np.sum(sens * sens.conj(), -1))
                 + epsilon)[..., None]

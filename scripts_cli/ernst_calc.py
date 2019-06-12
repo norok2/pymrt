@@ -33,7 +33,7 @@ import pymrt as mrt
 # import pymrt.utils
 import pymrt.sequences.flash
 # import pymrt.input_output
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg

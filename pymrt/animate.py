@@ -56,8 +56,6 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -147,13 +145,13 @@ def sample2d(
         step = 1
 
     # prepare data
-    sample = fc.num.ndim_slice(arr, axis, start)
+    sample = fc.extra.ndim_slice(arr, axis, start)
 
     if title:
         ax.set_title(title)
 
     if array_interval is None:
-        array_interval = fc.num.minmax(arr)
+        array_interval = fc.extra.minmax(arr)
 
     if not text_color:
         text_color = 'k'
@@ -166,7 +164,7 @@ def sample2d(
     datas = []
     for i in range(start, stop, step):
         data = mrt.plot._reorient_2d(
-            fc.num.ndim_slice(arr, axis, i), orientation, flip_ud, flip_lr)
+            fc.extra.ndim_slice(arr, axis, i), orientation, flip_ud, flip_lr)
         pax = ax.imshow(
             data, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
@@ -187,12 +185,12 @@ def sample2d(
         mrt.plot._more_elements(more_elements, ax)
 
     mov = mpl.animation.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.base.check_redo(None, [save_filepath], force):
         fig.tight_layout()
-        save_kwargs = {'fps': n_frames / step / duration / MSEC_IN_SEC}
+        save_kws = {'fps': n_frames / step / duration / MSEC_IN_SEC}
         if save_kws is None:
             save_kws = {}
-        save_kwargs.update(save_kws)
+        save_kws.update(save_kws)
         mov.save(save_filepath, **dict(save_kws))
         msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         plt.close(fig)
@@ -227,7 +225,7 @@ def trajectory_2d(
         ax.set_title(title)
     if support_intervals is None:
         support_intervals = (
-            fc.num.minmax(trajectory[0]), fc.num.minmax(trajectory[1]))
+            fc.extra.minmax(trajectory[0]), fc.extra.minmax(trajectory[1]))
 
     n_frames = int(n_points * (1 + last_frame_duration / duration))
     data = trajectory
@@ -277,13 +275,13 @@ def trajectory_2d(
         blit=False, repeat=False, repeat_delay=None,
         interval=duration / n_frames)
 
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.base.check_redo(None, [save_filepath], force):
         fig.tight_layout()
-        save_kwargs = dict(
+        save_kws = dict(
             fps=n_frames / duration / MSEC_IN_SEC, save_count=n_frames)
         if save_kws is None:
             save_kws = {}
-        save_kwargs.update(save_kws)
+        save_kws.update(save_kws)
         mov.save(save_filepath, **dict(save_kws))
         msg('Anim: {}'.format(save_filepath, verbose, VERB_LVL['medium']))
         # plt.close(fig)

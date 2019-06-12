@@ -40,6 +40,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -147,14 +148,14 @@ def main():
     begin_time = datetime.datetime.now()
 
     if not args.output:
-        root, base, ext = fc.util.split_path(args.input)
-        args.output = fc.util.join_path(root, 'mask__' + base, ext)
+        root, base, ext = fc.base.split_path(args.input)
+        args.output = fc.base.join_path(root, 'mask__' + base, ext)
 
-    kws = fc.util.set_func_kws(
+    kws = fc.base.set_func_kws(
         mrt.segmentation.auto_mask, vars(args))
 
     kws['threshold_kws'] = json.loads(args.threshold_opts)
-    kws['threshold'] = fc.util.auto_convert(kws['threshold'])
+    kws['threshold'] = fc.base.auto_convert(kws['threshold'])
 
     data, meta = mrt.input_output.load(args.input, meta=True)
     data = mrt.segmentation.auto_mask(data, **kws).astype(args.dtype)

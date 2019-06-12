@@ -23,14 +23,13 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
 
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
 import pymrt.naming
 import pymrt.input_output
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 from pymrt.extras import jcampdx
 from pymrt.recipes import coils
 
@@ -42,7 +41,7 @@ from pymrt import msg, dbg
 
 # ======================================================================
 def _get_shape(base_shape, *extras):
-    extras = tuple(fc.util.auto_repeat(extras, 1))
+    extras = tuple(fc.base.auto_repeat(extras, 1))
     return tuple(base_shape) + (extras if np.prod(extras) > 1 else ())
 
 
@@ -94,14 +93,14 @@ def _load_bin(
         user_filter=False,
         cx_interleaved=True,
         dry=False):
-    byte_size = struct.calcsize(fc.util.DTYPE_STR[dtype])
-    with fc.util.zopen(filepath, 'rb') as file_obj:
+    byte_size = struct.calcsize(fc.base.DTYPE_STR[dtype])
+    with fc.base.zopen(filepath, 'rb') as file_obj:
         file_size = file_obj.seek(0, 2)
         file_obj.seek(0)
         if not dry:
             if user_filter:
                 raise NotImplementedError
-            arr = np.array(fc.util.read_stream(
+            arr = np.array(fc.base.read_stream(
                 file_obj, dtype, mode, file_size // byte_size))
             if cx_interleaved:
                 arr = arr[0::2] + 1j * arr[1::2]
@@ -112,12 +111,12 @@ def _load_bin(
 
 # ======================================================================
 def _to_patterns(name, exts):
-    return [fc.util.change_ext('*/' + name, ext) for ext in exts]
+    return [fc.base.change_ext('*/' + name, ext) for ext in exts]
 
 
 # ======================================================================
 def _get_single(dirpath, name, exts):
-    filepaths = fc.util.flistdir(_to_patterns(name, exts), dirpath)
+    filepaths = fc.base.flistdir(_to_patterns(name, exts), dirpath)
     if len(filepaths) == 1:
         filepath = filepaths[0]
     elif len(filepaths) > 1:
@@ -133,7 +132,7 @@ def _get_single(dirpath, name, exts):
 def _get_scan_num_sample_id(comments):
     lines = comments.split('$$ ')
     lines = [line for line in lines if line.strip().endswith('/acqp')]
-    source_filepath = fc.util.multi_split_path(lines[0])
+    source_filepath = fc.base.multi_split_path(lines[0])
     scan_num = source_filepath[-3]
     sample_id = source_filepath[-4]
     scan_num = '{s}{num:03d}'.format(
@@ -145,7 +144,7 @@ def _get_scan_num_sample_id(comments):
 def _get_reco_num(comments):
     lines = comments.split('$$ ')
     lines = [line for line in lines if line.strip().endswith('/reco')]
-    source_filepath = fc.util.multi_split_path(lines[0])
+    source_filepath = fc.base.multi_split_path(lines[0])
     reco_num = source_filepath[-3]
     reco_num = '{s}{num:02d}'.format(
         s=mrt.naming.NEW_RECO_ID[0], num=int(reco_num))
@@ -166,7 +165,7 @@ def _reco_from_fid(
     if is_cartesian:
         load_info = _get_load_bin_info_fid(acqp, method)
         dtype_size = struct.calcsize(
-            load_info['mode'] + fc.util.DTYPE_STR[load_info['dtype']])
+            load_info['mode'] + fc.base.DTYPE_STR[load_info['dtype']])
         block_size = acqp['GO_block_size']
         if block_size == 'continuous':
             block_size = 1
@@ -218,10 +217,10 @@ def _reco_from_fid(
 
             msg('fid_size={}'.format(arr.size), verbose, VERB_LVL['debug'])
             fid_shape = (
-                fc.util.num_align(base_shape[0], block_size // num_coils),
+                fc.base.num_align(base_shape[0], block_size // num_coils),
                 num_coils,
                 num_images,
-                fc.util.num_align(base_shape[1], pe_factor, 'lower'),
+                fc.base.num_align(base_shape[1], pe_factor, 'lower'),
                 acq_shape[2] if len(acq_shape) == 3 else 1,
                 num_avg,
                 num_rep,
@@ -304,7 +303,7 @@ def _reco_from_fid(
         # except ValueError:
         except NotImplementedError as e:
             msg('Failed at: {}'.format(e))
-            fid_shape = fc.util.factorize_k(arr.size, 3)
+            fid_shape = fc.base.factorize_k(arr.size, 3)
             warning = ('Could not determine correct shape for FID. '
                        'Using `{}`'.format(fid_shape))
             warnings.warn(warning)
@@ -391,7 +390,7 @@ def batch_extract(
     elif isinstance(allowed_ext, str):
         allowed_ext = (allowed_ext,)
     fid_filepaths = sorted(
-        fc.util.flistdir(_to_patterns(fid_name, allowed_ext), dirpath))
+        fc.base.flistdir(_to_patterns(fid_name, allowed_ext), dirpath))
 
     for fid_filepath in sorted(fid_filepaths):
         msg('FID: {}'.format(fid_filepath),
@@ -407,17 +406,17 @@ def batch_extract(
             fid_dirpath, method_name, allowed_ext)
 
         dseq_filepaths = sorted(
-            fc.util.flistdir(
+            fc.base.flistdir(
                 _to_patterns(dseq_name, allowed_ext), fid_dirpath))
         reco_filepaths = sorted(
-            fc.util.flistdir(
+            fc.base.flistdir(
                 _to_patterns(reco_name, allowed_ext), fid_dirpath))
 
         acqp_s, acqp, acqp_c = jcampdx.read(acqp_filepath)
         method_s, method, method_c = jcampdx.read(method_filepath)
         scan_num, sample_id = _get_scan_num_sample_id(acqp_c)
-        scan_name = fc.util.safe_filename(acqp['ACQ_scan_name'])
-        acq_method = fc.util.safe_filename(acqp['ACQ_method'])
+        scan_name = fc.base.safe_filename(acqp['ACQ_scan_name'])
+        acq_method = fc.base.safe_filename(acqp['ACQ_method'])
         reco_flag = mrt.naming.NEW_RECO_ID
 
         if custom_reco:
@@ -425,12 +424,12 @@ def batch_extract(
 
             if custom_reco == 'cx':
                 reco_flag = mrt.naming.ITYPES['cx']
-                cx_filepath = fc.util.change_ext(
+                cx_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(cx_filepath)):
                     os.makedirs(os.path.dirname(cx_filepath))
 
-                if fc.util.check_redo(
+                if fc.base.check_redo(
                         [fid_filepath, acqp_filepath, method_filepath],
                         [cx_filepath], force):
                     arr = _load_bin(fid_filepath, **load_info)
@@ -441,18 +440,18 @@ def batch_extract(
 
             elif custom_reco == 'mag_phs':
                 reco_flag = mrt.naming.ITYPES['mag']
-                mag_filepath = fc.util.change_ext(
+                mag_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(mag_filepath)):
                     os.makedirs(os.path.dirname(mag_filepath))
 
                 reco_flag = mrt.naming.ITYPES['phs']
-                phs_filepath = fc.util.change_ext(
+                phs_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(phs_filepath)):
                     os.makedirs(os.path.dirname(phs_filepath))
 
-                if fc.util.check_redo(
+                if fc.base.check_redo(
                         [fid_filepath, acqp_filepath, method_filepath],
                         [mag_filepath, phs_filepath], force):
                     reco_flag = mrt.naming.ITYPES['mag']
@@ -468,18 +467,18 @@ def batch_extract(
 
             elif custom_reco == 're_im':
                 reco_flag = mrt.naming.ITYPES['re']
-                re_filepath = fc.util.change_ext(
+                re_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(re_filepath)):
                     os.makedirs(os.path.dirname(re_filepath))
 
                 reco_flag = mrt.naming.ITYPES['im']
-                im_filepath = fc.util.change_ext(
+                im_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(im_filepath)):
                     os.makedirs(os.path.dirname(im_filepath))
 
-                if fc.util.check_redo(
+                if fc.base.check_redo(
                         [fid_filepath, acqp_filepath, method_filepath],
                         [re_filepath, im_filepath], force):
                     arr = _load_bin(fid_filepath, **load_info)
@@ -499,14 +498,14 @@ def batch_extract(
                 reco_s, reco, reco_c = jcampdx.read(reco_filepath)
                 reco_flag = _get_reco_num(reco_c)
 
-                cx_filepath = fc.util.change_ext(
+                cx_filepath = fc.base.change_ext(
                     out_filepath.format(**locals()), mrt.utils.EXT['niz'])
                 if not os.path.isdir(os.path.dirname(cx_filepath)):
                     os.makedirs(os.path.dirname(cx_filepath))
 
                 load_info = _get_load_bin_info_reco(reco, method)
 
-                if fc.util.check_redo(
+                if fc.base.check_redo(
                         [dseq_filepath, reco_filepath], [cx_filepath], force):
                     arr = _load_bin(dseq_filepath, **load_info)
                     arr = _reco_from_bin(arr, reco, method, verbose=verbose)

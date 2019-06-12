@@ -28,8 +28,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: External Imports Submodules
 import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -301,13 +299,14 @@ def calc_trapezoidal(
     """
     Perform gradient computations based on trapezoidal shape.
 
-    The duration refer to the full trapezium, including the rise up and down.
+    The duration refers to the full trapezium, including the rise up and down.
 
     Args:
         duration (int|float|np.ndarray|None): Gradient duration in s.
         amplitude (int|float|np.ndarray|None): Gradient amplitude in T/m.
         slew_rate (int|float|np.ndarray|None): Gradient slew rate in T/m/s.
         moment (int|float|np.ndarray|None): Gradient moment in T/m*s.
+        plateau (int|float|np.ndarray|None): Gradient plateau in s.
 
     Returns:
         result (tuple): The tuple
@@ -316,10 +315,10 @@ def calc_trapezoidal(
              - amplitude (int|float|np.ndarray): Gradient amplitude in T/m.
              - slew_rate (int|float|np.ndarray): Gradient slew rate in T/m/s.
              - moment (int|float|np.ndarray): Gradient moment in T/m*s.
-             - frequency (int|float|np.ndarray): Gradient frequency in Hz.
+             - plateau (int|float|np.ndarray|None): Gradient plateau in s.
 
     Examples:
-        >>> [round(x, 6) for x in calc_sinusoidal(5.0, 10.0, None, None)]
+        >>> [round(x, 6) for x in calc_trapezoidal(5.0, 10.0, 4.0)]
         [5.0, 10.0, 12.566371, 15.915494, 0.2]
 
         >>> results = [
@@ -332,16 +331,15 @@ def calc_trapezoidal(
         >>> np.all([np.isclose(result, results[0]) for result in results])
         True
 
-    #todo: fix issues with duty
+    #todo: fix issues with plateau/duty
     """
+    d, a, s, m, p = duration, amplitude, slew_rate, moment, plateau
 
-    d, a, s, m = duration, amplitude, slew_rate, moment
-
-    if d is not None and a is not None and s is not None and m is None:
+    if all(x is not None for x in (d, a, s, p)):
         min_rise_time = amplitude / slew_rate
         plateau = duration - 2 * min_rise_time
 
-    return duration, amplitude, slew_rate, moment, duty
+    return duration, amplitude, slew_rate, moment, plateau
 
 
 # ======================================================================
@@ -460,16 +458,16 @@ def calc_trapz(
     if not duty:
         duty = 0.0
     has_plateau = True if duty > 0.0 else False
-    min_rise_time = fc.util.num_align(grad / slew_rate, raster)
+    min_rise_time = fc.base.num_align(grad / slew_rate, raster)
 
-    if fc.util.num_align(duration * (1.0 - duty), raster) <= 2 * min_rise_time:
+    if fc.base.num_align(duration * (1.0 - duty), raster) <= 2 * min_rise_time:
         max_grad = grad
-        rise_time = fc.util.num_align(
+        rise_time = fc.base.num_align(
             duration * (1.0 - duty) / 2, raster, 'closest')
         if not rise_time:
             rise_time = raster
         duration = (
-                fc.util.num_align(duration - 2 * rise_time, raster)
+                fc.base.num_align(duration - 2 * rise_time, raster)
                 + 2 * rise_time)
         grad = min(rise_time * slew_rate, max_grad)
         msg(
@@ -484,7 +482,7 @@ def calc_trapz(
         moment = 2 * slew_rate * rise_time ** 2
         raster_duration = 2 * rise_time
     else:
-        plateau = fc.util.num_align(
+        plateau = fc.base.num_align(
             duration - 2 * rise_time, raster, 'closest')
         if plateau < 0.0:
             plateau = 0.0

@@ -65,7 +65,7 @@ def k2r_space_cartesian(
     """
     if axes is None:
         axes = tuple(range(min(arr.ndim, 3)))
-    return fc.num.ft
+    return fc.extra.ft
 
 
 # ======================================================================
@@ -191,7 +191,7 @@ def grappa_1d(
     n_targets = acceleration - 1
 
     # : define target and calibration matrices
-    calib_padded_arr = fc.num.nd_windowing(calib_arr, kernel_window)
+    calib_padded_arr = fc.extra.nd_windowing(calib_arr, kernel_window)
     target_slicing = \
         tuple(slice(None) for _ in calib_arr.shape) \
         + tuple((slice(None) if factor is None else
@@ -215,7 +215,7 @@ def grappa_1d(
 
     # : use weights to compute missing k-space values
     # todo: avoid computing useless lines instead of selecting missing lines
-    source_padded_arr = fc.num.rolling_window_nd(
+    source_padded_arr = fc.extra.rolling_window_nd(
         arr, kernel_window, 1, out_mode='same')
     source_mat_arr = source_padded_arr[calib_mat_slicing] \
         .reshape(-1, calib_arr.shape[-1] * kernel_calib_size)
@@ -318,7 +318,7 @@ def noise(
         raw_arr,
         reco_func,
         reco_args=None,
-        reco_kwargs=None,
+        reco_kws=None,
         noise_level=1,
         num=64,
         verbose=D_VERB_LVL):
@@ -336,14 +336,14 @@ def noise(
     snr = reco_arr / noise_arr
 
     with:
-    reco_arr = reco_func(raw_arr, *reco_args, **reco_kwargs)
+    reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     Args:
         raw_arr (np.ndarray): The input raw data as acquired (k-space).
         reco_func (callable): The reconstruction function.
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
@@ -365,10 +365,10 @@ def noise(
 
     """
     reco_args = tuple(reco_args) if reco_args else ()
-    reco_kwargs = dict(reco_kwargs) if reco_kwargs else {}
+    reco_kws = dict(reco_kws) if reco_kws else {}
 
     # noise-less reco
-    reco_arr = reco_func(raw_arr, *reco_args, **reco_kwargs)
+    reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     # compute desired noise std
     if noise_level is None:
@@ -376,7 +376,7 @@ def noise(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.util.to_percent(noise_level)
+        noise_std_val = fc.base.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_level
@@ -391,8 +391,8 @@ def noise(
         msg('Replica #{}'.format(i), verbose, VERB_LVL['debug'])
         noise_raw_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_arr = reco_func(
-            raw_arr + noise_raw_arr, *reco_args, **reco_kwargs)
-        mean_noised_arr, mvar_noised_arr = fc.util.next_mean_mvar(
+            raw_arr + noise_raw_arr, *reco_args, **reco_kws)
+        mean_noised_arr, mvar_noised_arr = fc.base.next_mean_mvar(
             np.real(noised_arr), mean_noised_arr, mvar_noised_arr, i)
     noise_arr = np.sqrt(mvar_noised_arr / num)
     return noise_arr, reco_arr
@@ -436,10 +436,10 @@ def gen_pseudo_multi_replica(
         raw_arr,
         reco_func,
         reco_args=None,
-        reco_kwargs=None,
+        reco_kws=None,
         optim_func=None,
         optim_args=None,
-        optim_kwargs=None,
+        optim_kws=None,
         noise_level=1,
         num=64,
         verbose=D_VERB_LVL):
@@ -467,10 +467,10 @@ def gen_pseudo_multi_replica(
         reco_func (callable): The reconstruction function.
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
         optim_args (Iterable|None): Positional arguments for `reco_func`.
             This are used to generate the optimal reconstruction.
-        optim_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
+        optim_kws (tuple|dict|None): Keyword arguments for `reco_func`.
             This are used to generate the optimal reconstruction.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
@@ -492,14 +492,14 @@ def gen_pseudo_multi_replica(
             - g_factor_arr (np.ndarray): The estimated g-factor map.
     """
     reco_args = tuple(reco_args) if reco_args else ()
-    reco_kwargs = dict(reco_kwargs) if reco_kwargs else {}
+    reco_kws = dict(reco_kws) if reco_kws else {}
     if not optim_func:
         optim_func = reco_func
     optim_args = tuple(optim_args) if optim_args else ()
-    optim_kwargs = dict(optim_kwargs) if optim_kwargs else {}
+    optim_kws = dict(optim_kws) if optim_kws else {}
 
     # "noiseless" reco
-    reco_arr = reco_func(raw_arr, *reco_args, **reco_kwargs)
+    reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     mean_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
     mvar_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
@@ -512,7 +512,7 @@ def gen_pseudo_multi_replica(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.util.to_percent(noise_level)
+        noise_std_val = fc.base.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_level
@@ -528,15 +528,15 @@ def gen_pseudo_multi_replica(
         msg('Replica #{}'.format(i), verbose, VERB_LVL['debug'])
         noise_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_reco_arr = reco_func(
-            raw_arr + noise_arr, *reco_args, **reco_kwargs)
+            raw_arr + noise_arr, *reco_args, **reco_kws)
         # new uncorrelated noise
         noise_arr = np.random.normal(0, noise_std_val, reco_arr.shape)
-        noised_optim_arr = optim_func(noise_arr, *optim_args, **optim_kwargs)
+        noised_optim_arr = optim_func(noise_arr, *optim_args, **optim_kws)
 
-        mean_noised_reco_arr, mvar_noised_reco_arr = fc.util.next_mean_mvar(
+        mean_noised_reco_arr, mvar_noised_reco_arr = fc.base.next_mean_mvar(
             np.real(noised_reco_arr),
             mean_noised_reco_arr, mvar_noised_reco_arr, i)
-        mean_noised_optim_arr, mvar_noised_optim_arr = fc.util.next_mean_mvar(
+        mean_noised_optim_arr, mvar_noised_optim_arr = fc.base.next_mean_mvar(
             np.real(noised_optim_arr),
             mean_noised_optim_arr, mvar_noised_optim_arr, i)
 
@@ -554,7 +554,7 @@ def pseudo_multi_replica(
         mask,
         reco_func,
         reco_args=None,
-        reco_kwargs=None,
+        reco_kws=None,
         noise_level=1,
         num=64,
         verbose=D_VERB_LVL):
@@ -583,7 +583,7 @@ def pseudo_multi_replica(
              - the raw data array as first argument;
              - the mask/undersampling scheme as second argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kwargs (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
@@ -612,10 +612,10 @@ def pseudo_multi_replica(
           https://doi.org/10.1002/mrm.21728.
     """
     reco_args = tuple(reco_args) if reco_args else ()
-    reco_kwargs = dict(reco_kwargs) if reco_kwargs else {}
+    reco_kws = dict(reco_kws) if reco_kws else {}
 
     # noise-less reco
-    reco_arr = reco_func(raw_arr, *reco_args, **reco_kwargs)
+    reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     mean_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
     mvar_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
@@ -628,7 +628,7 @@ def pseudo_multi_replica(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.util.to_percent(noise_level)
+        noise_std_val = fc.base.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_level
@@ -644,16 +644,16 @@ def pseudo_multi_replica(
         msg('Replica #{}'.format(i), verbose, VERB_LVL['debug'])
         noise_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_reco_arr = reco_func(
-            raw_arr + noise_arr, mask, *reco_args, **reco_kwargs)
+            raw_arr + noise_arr, mask, *reco_args, **reco_kws)
         # new uncorrelated noise
         noise_arr = np.random.normal(0, noise_std_val, reco_arr.shape)
         noised_optim_arr = reco_func(
-            noise_arr, None, *reco_args, **reco_kwargs)
+            noise_arr, None, *reco_args, **reco_kws)
 
-        mean_noised_reco_arr, mvar_noised_reco_arr = fc.util.next_mean_mvar(
+        mean_noised_reco_arr, mvar_noised_reco_arr = fc.base.next_mean_mvar(
             np.real(noised_reco_arr),
             mean_noised_reco_arr, mvar_noised_reco_arr, i)
-        mean_noised_optim_arr, mvar_noised_optim_arr = fc.util.next_mean_mvar(
+        mean_noised_optim_arr, mvar_noised_optim_arr = fc.base.next_mean_mvar(
             np.real(noised_optim_arr),
             mean_noised_optim_arr, mvar_noised_optim_arr, i)
 

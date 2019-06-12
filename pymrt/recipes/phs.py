@@ -26,8 +26,6 @@ import scipy.sparse  # SciPy: Sparse Matrices
 # import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 import skimage.restoration
 
 # :: Local Imports
@@ -43,7 +41,7 @@ from pymrt import HAS_JIT, jit
 
 from pymrt.recipes import generic
 from pymrt.recipes.generic import fix_phase_interval as fix_interval
-from flyingcircus.num import wrap_cyclic as wrap
+from flyingcircus.extra import wrap_cyclic as wrap
 
 
 # ======================================================================
@@ -163,7 +161,7 @@ def phs_to_dphs(
         else:
             warnings.warn('Invalid units `{units}`'.format(**locals()))
             units = 1
-    tis = np.array(fc.util.auto_repeat(tis, 1)) * units
+    tis = np.array(fc.base.auto_repeat(tis, 1)) * units
 
     if unwrapping is not None:
         phs_arr = unwrap(phs_arr, unwrapping, unwrapping_kws)
@@ -237,7 +235,7 @@ def dphs_to_phs(
     """
     shape = dphs_arr.shape
     tis = np.array(
-        fc.util.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
+        fc.base.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
     dphs_arr = dphs_arr.reshape(shape + (1,))
     return dphs_arr * tis + phs0_arr
 
@@ -447,7 +445,7 @@ def unwrap_laplacian(
           no. 14 (July 15, 2003): 1194–96.
           https://doi.org/10.1364/OL.28.001194.
     """
-    arr, mask = fc.num.padding(arr, pad_width)
+    arr, mask = fc.extra.padding(arr, pad_width)
 
     # from pymrt.base import laplacian, inv_laplacian
     # from numpy import real, sin, cos
@@ -461,10 +459,10 @@ def unwrap_laplacian(
             if denoising_kws is not None else {}
         cos_arr = denoising(cos_arr, **denoising_kws)
         sin_arr = denoising(sin_arr, **denoising_kws)
-    kk2 = fftshift(fc.num.laplace_kernel(arr.shape, factors=arr.shape))
+    kk2 = fftshift(fc.extra.laplace_kernel(arr.shape, factors=arr.shape))
     arr = fftn(cos_arr * ifftn(kk2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk2 * fftn(cos_arr)))
-    fc.num.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
+    fc.extra.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr *= kk2
     del cos_arr, sin_arr, kk2
     arr = np.real(ifftn(arr))
@@ -557,16 +555,16 @@ def unwrap_gradient(
           Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
           (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
     """
-    arr, mask = fc.num.padding(arr, pad_width)
+    arr, mask = fc.extra.padding(arr, pad_width)
 
     arr = np.exp(1j * arr)
     if callable(denoising):
         denoising_kws = dict(denoising_kws) \
             if denoising_kws is not None else {}
-        arr = fc.num.filter_cx(arr, denoising, (), denoising_kws)
+        arr = fc.extra.filter_cx(arr, denoising, (), denoising_kws)
     kks = [
         fftshift(kk)
-        for kk in fc.num.gradient_kernels(arr.shape, factors=arr.shape)]
+        for kk in fc.extra.gradient_kernels(arr.shape, factors=arr.shape)]
     grads = np.gradient(arr)
 
     u_arr = np.zeros(arr.shape, dtype=complex)
@@ -574,7 +572,7 @@ def unwrap_gradient(
     for kk, grad in zip(kks, grads):
         u_arr += -1j * kk * fftn(np.real(-1j * grad / arr))
         kk2 += kk ** 2
-    fc.num.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
+    fc.extra.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr = np.real(ifftn(kk2 * u_arr)) / (2 * np.pi)
     return arr[mask]
 
@@ -667,7 +665,7 @@ def unwrap_sorting_path(
     reliab_kws = dict(reliab_kws) if reliab_kws is not None else {}
     reliab_arr = reliab(arr, step, **reliab_kws)
     edges_arr, orig_idx_arr, dest_idx_arr = \
-        fc.num.compute_edge_weights(reliab_arr)
+        fc.extra.compute_edge_weights(reliab_arr)
     del reliab_arr
     sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
     orig_idx_arr = orig_idx_arr.ravel()
@@ -729,7 +727,7 @@ def unwrap_sorting_path_(
     shape = arr.shape
     reliab_arr = reliab_diff2(arr, step)
     edges_arr, orig_idx_arr, dest_idx_arr = \
-        fc.num.compute_edge_weights(reliab_arr)
+        fc.extra.compute_edge_weights(reliab_arr)
     sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
     orig_idx_arr = orig_idx_arr.ravel()
     dest_idx_arr = dest_idx_arr.ravel()
@@ -802,7 +800,7 @@ def unwrap_region_merging(
           Algorithm.” Magnetic Resonance in Medicine 49, no. 1
           (January 1, 2003): 193–97. https://doi.org/10.1002/mrm.10354.
     """
-    arr = fc.num.apply_mask(arr, mask)
+    arr = fc.extra.apply_mask(arr, mask)
     if not threshold:
         threshold = step / 2
     arr_min, arr_max = arr.min(), arr.max()
@@ -815,8 +813,8 @@ def unwrap_region_merging(
         s_mask = (arr >= split_min) if i == 0 else (arr > split_min)
         s_mask *= (arr <= split_max)
         label_arr, num_label = sp.ndimage.label(
-            fc.num.apply_mask(s_mask, mask))
-        offset = fc.num.apply_mask(label_arr > 0, mask) * (num_labels)
+            fc.extra.apply_mask(s_mask, mask))
+        offset = fc.extra.apply_mask(label_arr > 0, mask) * (num_labels)
         labels_arr = labels_arr + offset + label_arr
         num_labels += num_label
     u_arr = arr.copy()
@@ -953,10 +951,10 @@ def unwrap_1d_iter(
         denoising_kws = dict(denoising_kws) \
             if denoising_kws is not None else {}
         u_arr = np.angle(
-            fc.num.filter_cx(np.exp(1j * u_arr), denoising, (), denoising_kws))
+            fc.extra.filter_cx(np.exp(1j * u_arr), denoising, (), denoising_kws))
     if axes is None:
         axes = tuple(range(arr.ndim))
-    axes = fc.util.auto_repeat(axes, 1)
+    axes = fc.base.auto_repeat(axes, 1)
     for i in axes:
         u_arr = np.unwrap(u_arr, axis=i)
     u_arr = fix_congruence(

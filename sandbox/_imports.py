@@ -359,7 +359,7 @@ from __future__ import(
 # import pymrt as mrt
 # import pymrt.utils
 # import pymrt.naming
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # import pymrt.plot
 # import pymrt.registration
 # import pymrt.segmentation

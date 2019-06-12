@@ -50,9 +50,6 @@ from sympy import pi, exp, sin, cos
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
-# :: External Imports Submodules
 # import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
@@ -240,7 +237,7 @@ def _bijective_part(arr, mask_val=np.nan):
         arr (np.ndarray): The larger bijective portion of arr.
             Non-bijective parts are masked.
     """
-    bijective_part = fc.num.bijective_part(arr)
+    bijective_part = fc.extra.bijective_part(arr)
     if bijective_part.start:
         arr[:bijective_part.start] = mask_val
     if bijective_part.stop:
@@ -374,9 +371,9 @@ def calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k=0.5, check=True):
         (0.0, 0.0, 2000.0)
     """
     n_ti = len(ti)
-    tr_gre = np.array(fc.util.auto_repeat(tr_gre, n_ti, check=True))
-    n_gre = np.array(fc.util.auto_repeat(n_gre, n_ti, check=True))
-    center_k = np.array(fc.util.auto_repeat(center_k, n_ti, check=True))
+    tr_gre = np.array(fc.base.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(fc.base.auto_repeat(n_gre, n_ti, check=True))
+    center_k = np.array(fc.base.auto_repeat(center_k, n_ti, check=True))
     tr_block = tr_gre * n_gre
     before_t = tr_block * center_k
     after_t = tr_block * (1 - center_k)
@@ -446,9 +443,9 @@ def calc_td_to_ti(
     """
     raise NotImplementedError
     n_ti = len(ti)
-    tr_gre = np.array(fc.util.auto_repeat(tr_gre, n_ti, check=True))
-    n_gre = np.array(fc.util.auto_repeat(n_gre, n_ti, check=True))
-    k_gre = np.array(fc.util.auto_repeat(k_gre, n_ti, check=True))
+    tr_gre = np.array(fc.base.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(fc.base.auto_repeat(n_gre, n_ti, check=True))
+    k_gre = np.array(fc.base.auto_repeat(k_gre, n_ti, check=True))
     tr_block = tr_gre * n_gre
     before_t = tr_block * k_gre
     after_t = tr_block * (1 - k_gre)
@@ -557,18 +554,18 @@ def acq_to_seq_params(
     warnings.warn(text)
 
     if not n_dim:
-        n_dim = fc.util.combine_iter_len(
+        n_dim = fc.base.combine_iter_len(
             (matrix_sizes, grappa_factors, grappa_refs, part_fourier_factors))
     # check compatibility of given parameters
-    matrix_sizes = fc.util.auto_repeat(
+    matrix_sizes = fc.base.auto_repeat(
         matrix_sizes, n_dim, check=True)
-    grappa_factors = fc.util.auto_repeat(
+    grappa_factors = fc.base.auto_repeat(
         grappa_factors, n_dim, check=True)
-    grappa_refs = fc.util.auto_repeat(
+    grappa_refs = fc.base.auto_repeat(
         grappa_refs, n_dim, check=True)
-    part_fourier_factors = fc.util.auto_repeat(
+    part_fourier_factors = fc.base.auto_repeat(
         part_fourier_factors, n_dim, check=True)
-    k_lines_fix = fc.util.auto_repeat(
+    k_lines_fix = fc.base.auto_repeat(
         k_lines_fix, n_dim, check=True)
 
     if n_dim == 3:

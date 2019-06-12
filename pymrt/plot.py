@@ -56,8 +56,6 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # :: Local Imports
@@ -458,7 +456,7 @@ def _save_plot(
     Returns:
         None.
     """
-    if save_filepath and fc.util.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.base.check_redo(None, [save_filepath], force):
         tight_layout_kws = dict(tight_layout_kws) if tight_layout_kws else {}
         fig.tight_layout(**tight_layout_kws)
         save_kws = dict(save_kws) if save_kws is not None else {}
@@ -516,11 +514,11 @@ def simple(
     """
     fig, ax = _ensure_fig_ax(ax)
     if isinstance(x_datas, np.ndarray):
-        x_datas = fc.util.auto_repeat(x_datas, len(y_datas), True, True)
+        x_datas = fc.base.auto_repeat(x_datas, len(y_datas), True, True)
     if legends is None:
-        legends = fc.util.auto_repeat(None, len(y_datas), check=True)
+        legends = fc.base.auto_repeat(None, len(y_datas), check=True)
     if styles is None:
-        styles = fc.util.auto_repeat(None, len(y_datas), check=True)
+        styles = fc.base.auto_repeat(None, len(y_datas), check=True)
     for x_data, y_data, legend, style \
             in zip(x_datas, y_datas, legends, styles):
         if style is None:
@@ -662,7 +660,7 @@ def multi(
     # : prepare for plotting
     num = len(y_arrs)
     if isinstance(x_arrs, np.ndarray):
-        x_arrs = fc.util.auto_repeat(x_arrs, num, force=True, check=True)
+        x_arrs = fc.base.auto_repeat(x_arrs, num, force=True, check=True)
     elif x_arrs is None:
         x_arrs = tuple(np.arange(len(y_arr)) for y_arr in y_arrs)
 
@@ -941,9 +939,9 @@ def sample2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = fc.util.auto_repeat(axis, 1)
+        axis = fc.base.auto_repeat(axis, 1)
     if index is not None:
-        index = fc.util.auto_repeat(index, 1)
+        index = fc.base.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -951,7 +949,7 @@ def sample2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = fc.num.ndim_slice(arr, axis, index)
+        data = fc.extra.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -965,8 +963,8 @@ def sample2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = fc.num.minmax(arr)
-    same_sign = fc.util.is_same_sign(array_interval)
+        array_interval = fc.extra.minmax(arr)
+    same_sign = fc.base.is_same_sign(array_interval)
     if not cmap:
         cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
     if not text_color:
@@ -1032,9 +1030,9 @@ def sample3d_view2d(
     if axis is None:
         axis = np.argsort(arr.shape)[:-data_dim]
     else:
-        axis = fc.util.auto_repeat(axis, 1)
+        axis = fc.base.auto_repeat(axis, 1)
     if index is not None:
-        index = fc.util.auto_repeat(index, 1)
+        index = fc.base.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -1042,7 +1040,7 @@ def sample3d_view2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = fc.num.ndim_slice(arr, axis, index)
+        data = fc.extra.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -1058,7 +1056,7 @@ def sample3d_view2d(
     if view_axes is None:
         view_axes = np.argsort(data.shape)
     if view_indexes is None:
-        view_indexes = fc.util.auto_repeat(None, data_dim)
+        view_indexes = fc.base.auto_repeat(None, data_dim)
     if len(view_axes) != data_dim:
         raise IndexError('Incorrect number of view axes.')
     if len(view_indexes) != data_dim:
@@ -1066,7 +1064,7 @@ def sample3d_view2d(
 
     views = []
     for view_axis, view_index in zip(view_axes, view_indexes):
-        views.append(fc.num.ndim_slice(data, view_axis, view_index))
+        views.append(fc.extra.ndim_slice(data, view_axis, view_index))
 
     views[0] = _reorient_2d(views[0], orientation, False, False)
 
@@ -1131,8 +1129,8 @@ def sample3d_view2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = fc.num.minmax(arr)
-    same_sign = fc.util.is_same_sign(array_interval)
+        array_interval = fc.extra.minmax(arr)
+    same_sign = fc.base.is_same_sign(array_interval)
     if not cmap:
         cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
     if not text_color:
@@ -1249,18 +1247,18 @@ def sample2d_multi(
 
     assert all([arr.shape == arrs[0].shape for arr in arrs])
     num_arrs = len(arrs)
-    alphas = fc.util.auto_repeat(alphas, num_arrs, False, True)
-    cmaps = fc.util.auto_repeat(cmaps, num_arrs, False, True)
-    array_intervals = fc.util.auto_repeat(
+    alphas = fc.base.auto_repeat(alphas, num_arrs, False, True)
+    cmaps = fc.base.auto_repeat(cmaps, num_arrs, False, True)
+    array_intervals = fc.base.auto_repeat(
         array_intervals, num_arrs, False, True)
 
     # prepare data
     if axis is None:
         axis = np.argsort(arrs[0].shape)[:-data_dim]
     else:
-        axis = fc.util.auto_repeat(axis, 1)
+        axis = fc.base.auto_repeat(axis, 1)
     if index is not None:
-        index = fc.util.auto_repeat(index, 1)
+        index = fc.base.auto_repeat(index, 1)
         if len(index) != len(axis):
             raise IndexError(
                 'Mismatching number of axis ({num_axis}) and index '
@@ -1277,7 +1275,7 @@ def sample2d_multi(
     for arr, alpha, cmap, array_interval in \
             zip(arrs, alphas, cmaps, array_intervals):
         if arr.ndim - len(axis) == data_dim:
-            data = fc.num.ndim_slice(arr, axis, index)
+            data = fc.extra.ndim_slice(arr, axis, index)
         elif arr.ndim == data_dim:
             data = arr
         else:
@@ -1288,8 +1286,8 @@ def sample2d_multi(
         data = _reorient_2d(data, orientation, flip_ud, flip_lr)
 
         if array_interval is None:
-            array_interval = fc.num.minmax(arr)
-        same_sign = fc.util.is_same_sign(array_interval)
+            array_interval = fc.extra.minmax(arr)
+        same_sign = fc.base.is_same_sign(array_interval)
         if not cmap:
             cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
         if not text_color:
@@ -1403,7 +1401,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([fc.num.scale(val, array_interval)
+    hist_interval = tuple([fc.extra.scale(val, array_interval)
                            for val in hist_interval])
 
     # create histogram
@@ -1420,7 +1418,7 @@ def histogram1d(
         scale = 'custom'
     # plot figure
     fig, ax = _ensure_fig_ax(ax)
-    pax = ax.plot(fc.util.midval(bin_edges), hist, **dict(style))
+    pax = ax.plot(fc.base.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
         ax.set_title(title.format(**locals()))
@@ -1528,7 +1526,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([fc.num.scale(val, array_interval)
+    hist_interval = tuple([fc.extra.scale(val, array_interval)
                            for val in hist_interval])
 
     # prepare style list
@@ -1565,7 +1563,7 @@ def histogram1d_list(
             legend = '_nolegend_'
         # plot figure
         pax = ax.plot(
-            fc.util.midval(bin_edges), hist,
+            fc.base.midval(bin_edges), hist,
             label=legend,
             **next(style_cycler))
         data.append((hist, bin_edges))
@@ -1726,7 +1724,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[fc.num.scale(val, array_interval[i])
+    hist_interval = tuple([[fc.extra.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
@@ -1783,10 +1781,10 @@ def histogram2d(
         mask *= (arr1 < array_interval[0][1]).astype(bool)
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
-        stats_dict = fc.num.calc_stats(
+        stats_dict = fc.extra.calc_stats(
             arr1[mask] - arr2[mask], **dict(stats_kws))
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
-            *fc.util.format_value_error(
+            *fc.base.format_value_error(
                 stats_dict['avg'], stats_dict['std'], 3))
         ax.text(
             1 / 2, 31 / 32, stats_text,
@@ -1930,10 +1928,10 @@ def heatmap(
         tick_top=False,
         y_axis_invert=False,
         ax=None,
-        **kwargs):
+        **_kws):
     fig, ax = _ensure_fig_ax(ax)
 
-    ax = sns.heatmap(data, ax=ax, **kwargs)
+    ax = sns.heatmap(data, ax=ax, **_kws)
 
     if x_ticks is not None:
         ax.set_xticks(x_ticks)
@@ -2004,7 +2002,7 @@ def subplots(
         tight_layout_kws ():
         save_filepath ():
         savefig_args ():
-        savefig_kwargs ():
+        savefig_kws ():
         force (): 
         verbose (): 
 
@@ -2023,7 +2021,7 @@ def subplots(
                 num_col = np.ceil((num_plots * aspect_ratio) ** 0.5)
             elif isinstance(aspect_ratio, str):
                 if 'exact' in aspect_ratio:
-                    num_col, num_row = fc.util.optimal_shape(num_plots)
+                    num_col, num_row = fc.base.optimal_shape(num_plots)
                     if 'portrait' in aspect_ratio:
                         num_row, num_col = num_col, num_row
                 if aspect_ratio == 'portrait':
@@ -2047,18 +2045,18 @@ def subplots(
         num_col = len(cols)
     assert (num_row * num_col >= num_plots)
 
-    pads = list(fc.util.auto_repeat(pads, 2, False, True))
-    label_pads = list(fc.util.auto_repeat(label_pads, 2, False, True))
-    borders = list(fc.util.auto_repeat(borders, 4, False, True))
+    pads = list(fc.base.auto_repeat(pads, 2, False, True))
+    label_pads = list(fc.base.auto_repeat(label_pads, 2, False, True))
+    borders = list(fc.base.auto_repeat(borders, 4, False, True))
     size_factors = list(
-        fc.util.auto_repeat(size_factors, 2, False, True))
+        fc.base.auto_repeat(size_factors, 2, False, True))
 
     # fix row/col labels
     if row_labels is None:
-        row_labels = fc.util.auto_repeat(None, num_row)
+        row_labels = fc.base.auto_repeat(None, num_row)
         label_pads[0] = 0.0
     if col_labels is None:
-        col_labels = fc.util.auto_repeat(None, num_col)
+        col_labels = fc.base.auto_repeat(None, num_col)
         label_pads[1] = 0.0
     assert (num_row == len(row_labels))
     assert (num_col == len(col_labels))
@@ -2112,7 +2110,7 @@ def subplots(
         if row_label:
             fig.text(
                 label_pads[0] / 2,
-                fc.num.scale(
+                fc.extra.scale(
                     1.0 - (i * 2 + 1) / (num_row * 2),
                     out_interval=(0, 1.0 - label_pads[1])),
                 row_label, rotation=90,
@@ -2122,7 +2120,7 @@ def subplots(
     for j, col_label in enumerate(col_labels):
         if col_label:
             fig.text(
-                fc.num.scale(
+                fc.extra.scale(
                     (j * 2 + 1) / (num_col * 2),
                     out_interval=(
                         label_pads[0], 1.0 - legend_pad)),
@@ -2136,10 +2134,10 @@ def subplots(
             n_plot, (num_row, num_col), 'F' if swap_filling else 'C')
 
         if n_plot < num_plots:
-            plot_func, plot_args, plot_kwargs = plots[n_plot]
-            plot_kwargs['ax'] = axs[i, j]
+            plot_func, plot_args, plot_kws = plots[n_plot]
+            plot_kws['ax'] = axs[i, j]
             if subplot_title_fmt:
-                t = plot_kwargs['title'] if 'title' in plot_kwargs else ''
+                t = plot_kws['title'] if 'title' in plot_kws else ''
                 if t is not None:
                     roman = numeral.int2roman(n_plot + 1, only_ascii=True)
                     roman_uppercase = roman.upper()
@@ -2147,11 +2145,11 @@ def subplots(
                     letter = numeral.int2letter(n_plot - skip_offset)
                     letter_uppercase = letter.upper()
                     letter_lowercase = letter.lower()
-                    plot_kwargs['title'] = \
+                    plot_kws['title'] = \
                         subplot_title_fmt.format(**locals())
                 else:
                     skip_offset += 1
-            plot_func(*plot_args, **plot_kwargs)
+            plot_func(*plot_args, **plot_kws)
         else:
             axs[i, j].clear()
             axs[i, j].set_axis_off()

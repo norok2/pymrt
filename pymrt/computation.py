@@ -13,7 +13,7 @@ from __future__ import (
     absolute_import, division, print_function, unicode_literals)
 
 # todo: clarify difference between computation and batch (get rid of both?)
-# todo: use kwargs instead of opts
+# todo: use kws instead of opts
 # todo: get rid of tty colorify
 
 # ======================================================================
@@ -53,14 +53,14 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.stats  # SciPy: Statistical functions
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
 
+import pymrt.utils
 import pymrt.naming
 import pymrt.input_output
+from pymrt.recipes.generic import voxel_curve_fit
 
 # from dcmpi.lib.common import ID
 
@@ -144,7 +144,7 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    fc.util.execute(str(' '.join(cmd)))
+    fc.base.execute(str(' '.join(cmd)))
     # import temp output
     arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
@@ -377,19 +377,19 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = fc.util.merge_dicts(D_OPTS, opts)
+    opts = fc.base.merge_dicts(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = fc.util.listdir(
+        data_filepath_list = fc.base.listdir(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
-                fc.util.change_ext(fc.util.os.path.basename(data_filepath), '',
-                               mrt.utils.EXT['niz']))
+                fc.base.change_ext(fc.base.os.path.basename(data_filepath), '',
+                                   mrt.utils.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None
@@ -401,7 +401,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      fc.util.add_extsep(opts['meta_ext']))
+                                      fc.base.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -455,7 +455,7 @@ def sources_generic(
 
         if verbose >= VERB_LVL['debug']:
             for sources, params in zip(sources_list, params_list):
-                print(fc.util.tty_colorify('DEBUG', 'r'))
+                print('DEBUG')
                 print(sources, params)
     elif verbose >= VERB_LVL['medium']:
         print("WW: no data directory '{}'. Skipping.".format(data_dirpath))
@@ -485,11 +485,11 @@ def compute_generic(
                 - dtype (str): data type to be used for the target images.
                 - compute_func (str): function used for the computation.
 
-                  compute_func(images, params, compute_args, compute_kwargs)
+                  compute_func(images, params, compute_args, compute_kws)
                   -> img_list, img_type_list
                 - compute_args (list): additional positional parameters for
                   compute_func
-                - compute_kwargs (dict): additional keyword parameters for
+                - compute_kws (dict): additional keyword parameters for
                   compute_func
                 - affine_func (str): name of the function for affine
                   computation: affine_func(affines, affine_args...) -> affine
@@ -505,9 +505,9 @@ def compute_generic(
         pymrt.computation.compute,
         pymrt.computation.D_OPTS
     """
-    # TODO: implement affine_func, affine_args, affine_kwargs?
+    # TODO: implement affine_func, affine_args, affine_kws?
     # get the num, name and seq from first source file
-    opts = fc.util.merge_dicts(D_OPTS, opts)
+    opts = fc.base.merge_dicts(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -523,7 +523,7 @@ def compute_generic(
         targets.append(os.path.join(out_dirpath, mrt.naming.to_filename(info)))
 
     # perform the calculation
-    if fc.util.check_redo(sources, targets, force):
+    if fc.base.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -549,11 +549,11 @@ def compute_generic(
             compute_func = eval(opts['compute_func'])
             if 'compute_args' not in opts:
                 opts['compute_args'] = []
-            if 'compute_kwargs' not in opts:
-                opts['compute_kwargs'] = {}
+            if 'compute_kws' not in opts:
+                opts['compute_kws'] = {}
             img_list, aff_list, img_type_list, params_list = compute_func(
                 images, affines, params,
-                *opts['compute_args'], **opts['compute_kwargs'])
+                *opts['compute_args'], **opts['compute_kws'])
         else:
             img_list, aff_list, img_type_list = zip(
                 *[(img, aff, img_type) for img, aff, img_type
@@ -580,10 +580,10 @@ def compute_generic(
 def compute(
         sources_func,
         sources_args,
-        sources_kwargs,
+        sources_kws,
         compute_func,
         compute_args,
-        compute_kwargs,
+        compute_kws,
         in_dirpath,
         out_dirpath,
         recursive=False,
@@ -605,7 +605,7 @@ def compute(
             sources_func(data_path, meta_path, sources_args...) ->
             ((string, dict) list) list.
         sources_args (list): Positional parameters passed to get_sources_func.
-        sources_kwargs (dict): Keyword parameters passed to get_sources_func.
+        sources_kws (dict): Keyword parameters passed to get_sources_func.
         compute_func (func): Calculation to perform on each list of filepaths.
             Function expected signature:
             compute_func(source_list, out_dirpath, compute_args...) ->
@@ -641,7 +641,7 @@ def compute(
 
     # extract input files from directory
     sources_list, params_list = sources_func(
-        data_dirpath, meta_dirpath, *sources_args, **sources_kwargs)
+        data_dirpath, meta_dirpath, *sources_args, **sources_kws)
     if sources_list and params_list:
         if not out_dirpath:
             out_dirpath = in_dirpath
@@ -657,10 +657,10 @@ def compute(
         for sources, params in zip(sources_list, params_list):
             compute_func(
                 sources, out_dirpath, params,
-                *compute_args, **compute_kwargs)
-            fc.util.elapsed('Time: ')
+                *compute_args, **compute_kws)
+            fc.base.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                fc.util.report(only_last=True)
+                fc.base.report(only_last=True)
     else:
         recursive = True
 
@@ -673,8 +673,8 @@ def compute(
             new_in_dirpath = os.path.join(in_dirpath, subdir)
             new_out_dirpath = os.path.join(out_dirpath, subdir)
             compute(
-                sources_func, sources_args, sources_kwargs,
-                compute_func, compute_args, compute_kwargs,
+                sources_func, sources_args, sources_kws,
+                compute_func, compute_args, compute_kws,
                 new_in_dirpath, new_out_dirpath, recursive,
                 meta_subpath, data_subpath, verbose)
 
@@ -683,4 +683,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-fc.util.elapsed('pymrt.computation')
+fc.base.elapsed('pymrt.computation')

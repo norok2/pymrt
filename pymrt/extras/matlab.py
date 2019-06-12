@@ -26,7 +26,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 import scipy.io  # SciPy: Input and output
-import flyingcircus.util  # FlyingCircus: generic basic utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -161,7 +160,7 @@ def auto_convert(
         if os.path.isfile(in_filepath):
             msg('Loading: {}'.format(in_filepath), verbose, D_VERB_LVL)
             for name, arr in read(in_filepath, verbose=verbose).items():
-                dirpath, base, ext = fc.util.split_path(in_filepath)
+                dirpath, base, ext = fc.base.split_path(in_filepath)
                 basepath = os.path.join(dirpath, base)
                 out_filepath = out_template.format(**locals())
                 do_save = True
@@ -175,7 +174,7 @@ def auto_convert(
                             text = 'Unknown value `{}` for `on_exist`. ' \
                                    'Default to `unique`.'
                             warnings.warn(text)
-                        out_filepath = fc.util.next_filepath(out_filepath)
+                        out_filepath = fc.base.next_filepath(out_filepath)
 
                 if do_save:
                     msg('Saving: {}'.format(out_filepath), verbose, D_VERB_LVL)

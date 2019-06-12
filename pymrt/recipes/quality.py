@@ -209,8 +209,8 @@ def psnr_multi_acq(
 def snr(
         arr,
         method='auto',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Calculate the Signal-to-Noise Ratio (SNR).
 
@@ -226,8 +226,8 @@ def snr(
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
             See `pymrt.correction.sn_split()` for more details.
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (float): The Signal-to-Noise Ratio (SNR).
@@ -255,7 +255,7 @@ def snr(
         20.0
     """
     signal_arr, noise_arr = mrt.correction.sn_split(
-        arr, method, *args, **kwargs)
+        arr, method, *_args, **_kws)
     return _snr(signal_arr, noise_arr)
 
 
@@ -263,8 +263,8 @@ def snr(
 def psnr(
         arr,
         method='auto',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Calculate the peak Signal-to-Noise Ratio (pSNR).
 
@@ -280,8 +280,8 @@ def psnr(
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
             See `pymrt.correction.sn_split()` for more details.
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (float): The peak Signal-to-Noise Ratio (pSNR).
@@ -309,7 +309,7 @@ def psnr(
         18.0
     """
     signal_arr, noise_arr = mrt.correction.sn_split(
-        arr, method, *args, **kwargs)
+        arr, method, *_args, **_kws)
     return _psnr(signal_arr, noise_arr)
 
 
@@ -340,8 +340,8 @@ def contrasts(arrs):
 def combine_contrasts(
         contrast_values,
         method=np.mean,
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Calculate the contrast by combining the pair-wise contrast values.
 
@@ -349,22 +349,22 @@ def combine_contrasts(
         contrast_values (Iterable[float]): The pair-wise contrast values.
         method (callable): The pair-wise contrasts combination method.
             The signature must be:
-            f(Iterable, *args, **kwargs) -> float
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+            f(Iterable, *_args, **_kws) -> float
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (float): The contrast.
     """
-    return method(contrast_values, *args, **kwargs)
+    return method(contrast_values, *_args, **_kws)
 
 
 # ======================================================================
 def contrast(
         arrs,
         method=np.mean,
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Calculate the contrast by combining the pair-wise contrast values.
 
@@ -372,14 +372,14 @@ def contrast(
         arrs (Iterable[np.ndarray]): The input arrays
         method (callable): The pair-wise contrasts combination method.
             The signature must be:
-            f(Iterable, *args, **kwargs) -> float
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+            f(Iterable, *_args, **_kws) -> float
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (float): The contrast.
     """
-    return method(contrasts(arrs), *args, **kwargs)
+    return method(contrasts(arrs), *_args, **_kws)
 
 
 # ======================================================================
@@ -410,8 +410,8 @@ def cnr(
             See `pymrt.correction.sn_split_signals()` for more details.
         sn_method (str|callable): The signal/noise estimation method.
             See `pymrt.correction.sn_split()` for more details.
-        ss_kws: Keyword arguments passed to `ss_method()`.
-        sn_kws: Keyword arguments passed to `sn_method()`.
+        ss_kws: Keyword arguments for `ss_method()`.
+        sn_kws: Keyword arguments for `sn_method()`.
 
     Returns:
         result (float): The Contrast-to-Noise Ratio (CNR).
@@ -439,8 +439,8 @@ def cnr(
 def pcnr(
         arr,
         method='otsu',
-        *args,
-        **kwargs):
+        *_args,
+        **_kws):
     """
     Calculate the peak Contrast-to-Noise Ratio (pCNR).
 
@@ -455,8 +455,8 @@ def pcnr(
         arr (np.ndarray): The input array.
         method (str|callable): The signal/noise estimation method.
             See `pymrt.correction.sn_split()` for more details.
-        *args: Positional arguments passed to `method()`.
-        **kwargs: Keyword arguments passed to `method()`.
+        *_args: Positional arguments for `method()`.
+        **_kws: Keyword arguments for `method()`.
 
     Returns:
         result (float): The peak Signal-to-Noise Ratio (pSNR).
@@ -483,7 +483,7 @@ def pcnr(
         >>> round(val)
         4.0
     """
-    signal_arr, noise_arr = correction.sn_split(arr, method, *args, **kwargs)
+    signal_arr, noise_arr = correction.sn_split(arr, method, *_args, **_kws)
     return _pcnr(signal_arr, noise_arr)
 
 

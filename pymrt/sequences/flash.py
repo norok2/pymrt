@@ -46,8 +46,6 @@ import sympy as sym  # SymPy (symbolic CAS library)
 import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: External Imports Submodules
 # import scipy.optimize  # SciPy: Optimization Algorithms
@@ -501,11 +499,11 @@ def evolution_flash(
 def steady_state(
         evolution_func,
         *evolution_args,
-        **evolution_kwargs):
+        **evolution_kws):
     steady_state_magnetization_minus = magnetization('ss')
     final_magnetization, first_excitation = evolution_func(
         steady_state_magnetization_minus,
-        *evolution_args, **evolution_kwargs)
+        *evolution_args, **evolution_kws)
     eqn_steady_state = sym.Eq(
         steady_state_magnetization_minus, final_magnetization)
     steady_state_solution = sym.solve(

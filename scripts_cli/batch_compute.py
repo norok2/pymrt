@@ -42,6 +42,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -57,7 +58,7 @@ import pymrt.utils
 # import pymrt.input_output
 import pymrt.computation as pmc
 # import pymrt.correlate
-# import pymrt.geometry
+# import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # from pymrt.sequences import mp2rage
 # import dcmpi.common as dcmlib
 
@@ -190,7 +191,7 @@ def main():
     else:
         print('WW: Method not specified.')
 
-    fc.util.elapsed('compute')
+    fc.base.elapsed('compute')
     msg(report(), args.verbose, VERB_LVL['medium'])
 
 

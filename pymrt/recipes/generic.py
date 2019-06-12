@@ -29,8 +29,6 @@ import scipy.optimize  # SciPy: Optimization and root finding
 import scipy.stats  # SciPy: Statistical functions
 import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -202,7 +200,7 @@ def cx_div(
         values_interval (Any): The output values interval.
             The standard values are linearly converted to this range.
             If None, the natural [-0.5, 0.5] interval will be used.
-            See `flyingcircus.num.valid_interval()` for details on the
+            See `flyingcircus.extra.valid_interval()` for details on the
             accepted input.
 
     Returns:
@@ -211,8 +209,8 @@ def cx_div(
     result = arr1 * arr2 / (
             np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
-        values_interval = fc.num.valid_interval(values_interval)
-        result = fc.num.scale(result, values_interval, (-0.5, 0.5))
+        values_interval = fc.extra.valid_interval(values_interval)
+        result = fc.extra.scale(result, values_interval, (-0.5, 0.5))
     return result
 
 
@@ -239,8 +237,8 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    if not fc.num.is_in_range(arr, (-np.pi, np.pi)):
-        arr = fc.num.scale(arr.astype(float), (-np.pi, np.pi))
+    if not fc.extra.is_in_range(arr, (-np.pi, np.pi)):
+        arr = fc.extra.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -271,7 +269,7 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     if phs_arr is not None:
         if fix_phase:
             phs_arr = fix_phase_interval(phs_arr)
-        cx_arr = fc.num.polar2complex(
+        cx_arr = fc.extra.polar2complex(
             mag_arr.astype(float), phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)
@@ -330,7 +328,7 @@ def referencing(
     if ext_refs is not None:
         assert (len(masks) == len(ext_refs))
         num_refs = len(ext_refs)
-        combines = fc.util.auto_repeat(combines, num_refs, True, True)
+        combines = fc.base.auto_repeat(combines, num_refs, True, True)
         are_mask_arr = [
             isinstance(mask, np.array) and (
                     np.issubdtype(mask.dtype,
@@ -356,7 +354,7 @@ def referencing(
 # ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     arr = np.abs(arr)
-    log_arr = fc.num.apply_at(
+    log_arr = fc.extra.apply_at(
         arr, lambda x: np.log(x) / np.exp(exp_factor), arr > zero_cutoff)
     return log_arr
 
@@ -1068,8 +1066,8 @@ def mag_phase_2_combine(
     mag2_arr = mag2_arr.astype(float)
     phs1_arr = fix_phase_interval(phs1_arr)
     phs2_arr = fix_phase_interval(phs2_arr)
-    inv1_arr = fc.num.polar2complex(mag1_arr, phs1_arr)
-    inv2_arr = fc.num.polar2complex(mag2_arr, phs2_arr)
+    inv1_arr = fc.extra.polar2complex(mag1_arr, phs1_arr)
+    inv2_arr = fc.extra.polar2complex(mag2_arr, phs2_arr)
     return cx_2_combine(inv1_arr, inv2_arr, regularization, func)
 
 
@@ -1113,10 +1111,10 @@ def voxel_curve_fit(
         fit_params=None,
         pre_func=None,
         pre_args=None,
-        pre_kwargs=None,
+        pre_kws=None,
         post_func=None,
         post_args=None,
-        post_kwargs=None,
+        post_kws=None,
         method=None,
         method_kws=None):
     """
@@ -1139,10 +1137,10 @@ def voxel_curve_fit(
             parameters to fit is specified, initial value(s) set to one.
         pre_func (func):
         pre_args (list):
-        pre_kwargs (dict):
+        pre_kws (dict):
         post_func (func):
         post_args (list):
-        post_kwargs (dict):
+        post_kws (dict):
         method (str): Method to use for the curve fitting procedure.
         method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
 
@@ -1177,9 +1175,9 @@ def voxel_curve_fit(
     if pre_func is not None:
         if pre_args is None:
             pre_args = []
-        if pre_kwargs is None:
-            pre_kwargs = {}
-        y_arr = pre_func(y_arr, *pre_args, **pre_kwargs)
+        if pre_kws is None:
+            pre_kws = {}
+        y_arr = pre_func(y_arr, *pre_args, **pre_kws)
 
     if not method:
         if fit_func:
@@ -1264,9 +1262,9 @@ def voxel_curve_fit(
     if post_func is not None:
         if post_args is None:
             post_args = []
-        if post_kwargs is None:
-            post_kwargs = {}
-        p_arr = post_func(p_arr, *post_args, **post_kwargs)
+        if post_kws is None:
+            post_kws = {}
+        p_arr = post_func(p_arr, *post_args, **post_kws)
 
     return p_arr
 

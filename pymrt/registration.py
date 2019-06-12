@@ -48,8 +48,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
-import flyingcircus.util
-import flyingcircus.num
+
 
 # :: Internal Imports
 import pymrt as mrt
@@ -107,7 +106,7 @@ def params_to_affine(
         shift = params[:n_dim]
         params = params[n_dim:]
     if 'rotation' in transform or transform in ['rigid']:
-        linear = fc.num.angles2linear(params)
+        linear = fc.extra.angles2rotation(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
@@ -142,7 +141,7 @@ def set_init_parameters(
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
             shift = \
-                fc.num.weighted_center(moving) - fc.num.weighted_center(fixed)
+                fc.extra.weighted_center(moving) - fc.extra.weighted_center(fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
         else:  # 'none' or not known
@@ -152,7 +151,7 @@ def set_init_parameters(
     # :: set up other parameters, according to transform
     if 'rotation' in transform or transform in ['rigid']:
         # todo: use inertia for rotation angles?
-        num_angles = fc.num.num_angles_from_dim(moving.ndim)
+        num_angles = fc.extra.num_angles_from_dim(moving.ndim)
         if init_guess_other == 'random':
             angles = np.random.rand(num_angles) * np.pi / 2.0
         else:  # 'none' or not known
@@ -171,8 +170,8 @@ def set_init_parameters(
     elif transform == 'affine':
         if init_guess_other == 'weights':
             # todo: improve to find real rotation
-            rot_moving = fc.num.rotation_axes(moving)
-            rot_fixed = fc.num.rotation_axes(fixed)
+            rot_moving = fc.extra.rotation_axes(moving)
+            rot_fixed = fc.extra.rotation_axes(fixed)
             linear = np.dot(rot_fixed.transpose(), rot_moving)
         elif init_guess_other == 'random':
             linear = np.random.rand(moving.ndim, moving.ndim)
@@ -214,18 +213,18 @@ def _discrete_generator(transform, n_dim):
                 yield linear, shift
     elif transform == 'pi/2_rotation':
         shift = np.zeros((n_dim,))
-        num_angles = fc.num.num_angles_from_dim(n_dim)
+        num_angles = fc.extra.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
-            linear = fc.num.angles2linear(angles)
+            linear = fc.extra.angles2rotation(angles)
             yield linear, shift
     elif transform == 'pi/2_rotation+':
         shift = np.zeros((n_dim,))
-        num_angles = fc.num.num_angles_from_dim(n_dim)
+        num_angles = fc.extra.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             for diagonal in itertools.product([-1, 1], repeat=n_dim):
                 linear = np.dot(
                     np.diag(diagonal).astype(np.float),
-                    fc.num.angles2linear(angles))
+                    fc.extra.angles2rotation(angles))
                 yield linear, shift
     else:
         shift = np.zeros(n_dim)
@@ -253,7 +252,7 @@ def minimize_discrete(
                 interp_order=interp_order))
     if cost_func is None:
         cost_func = \
-            fc.util.set_func_kws(_min_func_affine, {})['cost_func']
+            fc.base.set_func_kws(_min_func_affine, {})['cost_func']
     for linear, shift in _discrete_generator(transform, moving.ndim):
         params = affine_to_params(linear, shift, moving.ndim, 'affine')
         cost = _min_func_affine(
@@ -346,7 +345,7 @@ def affine_registration(
             method = 'BFGS'
         if cost_func is None:
             kwargs__min_func_affine = \
-                fc.util.set_func_kws(_min_func_affine, {})
+                fc.base.set_func_kws(_min_func_affine, {})
             cost_func = kwargs__min_func_affine['cost_func']
         args__min_func_affine = (
             moving.ravel(), fixed.ravel(), moving.shape,
@@ -399,7 +398,7 @@ def external_registration(
     # generate
     if tool.startswith('FSL'):
         cmd = mrt.config.EXT_CMD['fsl/5.0/flirt']
-        fc.util.execute(cmd)
+        fc.base.execute(cmd)
     else:
         affine = np.eye(array.ndim + 1)  # affine matrix has an extra dimension
     return affine

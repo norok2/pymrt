@@ -45,8 +45,6 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # import scipy.integrate  # SciPy: Integrations facilities
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 # import scipy.ndimage  # SciPy: ND-image Manipulation
-import flyingcircus.util  # FlyingCircus: generic basic utilities
-import flyingcircus.num  # FlyingCircus: generic numerical utilities
 
 # :: Local Imports
 import pymrt as mrt
@@ -218,7 +216,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            fc.util.is_number(item)
+                            fc.base.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:

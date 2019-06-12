@@ -37,6 +37,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
+import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -49,7 +50,6 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 import pymrt as mrt
 # import pymrt.utils
 # import pymrt.naming
-import pymrt.geometry
 # import pymrt.plot as pmp
 # import pymrt.registration
 # import pymrt.segmentation
@@ -62,7 +62,7 @@ import pymrt.input_output
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+from pymrt import msg
 
 # ======================================================================
 # :: Custom defined constants
@@ -119,15 +119,15 @@ def gen_phantom(
     position = position
     # :: create the mask
     if phantom == 'cuboid':
-        mask = mrt.geometry.cuboid(shape, position, lengths)
+        mask = raster_geometry.cuboid(shape, position, lengths)
     elif phantom == 'ellipsoid':
-        mask = mrt.geometry.ellipsoid(shape, position, lengths)
+        mask = raster_geometry.ellipsoid(shape, position, lengths)
     elif phantom == 'rhomboid':
-        mask = mrt.geometry.rhomboid(shape, position, lengths)
+        mask = raster_geometry.rhomboid(shape, position, lengths)
     elif phantom == 'cylinder':
-        mask = mrt.geometry.cylinder(shape, position, lengths[0], lengths[1])
+        mask = raster_geometry.cylinder(shape, position, lengths[0], lengths[1])
     # create an image from the mask
-    img_append = mrt.geometry.set_values(mask, fill)
+    img_append = raster_geometry.set_values(mask, fill)
     if append == APPEND_MODE['sum']:
         img += img_append
     elif append == APPEND_MODE['prod']:
@@ -161,13 +161,13 @@ def handle_arg():
     # number of dimensions of the image
     d_dim = 3
     # size of the resulting image
-    d_sizes = tuple([mrt.geometry.D_SHAPE] * d_dim)
+    d_sizes = tuple([raster_geometry.D_SHAPE] * d_dim)
     # phantom to create
     d_phantom = PHANTOMS[0]
     # proportional position of the center relative to the middle
     d_position = (0.0, 0.0, 0.0)
     # lengths of the resulting object
-    d_lengths = tuple([mrt.geometry.D_LENGTH_1] * d_dim)
+    d_lengths = tuple([raster_geometry.D_LENGTH_1] * d_dim)
     # lengths of the resulting object
     d_angles = tuple([0.0] * d_dim)
     # intensity values (internal, external)
