@@ -24,7 +24,7 @@ from flyingcircus import HAS_JIT, jit
 
 # ======================================================================
 # :: Version
-from ._version import __version__
+from pymrt._version import __version__
 
 # ======================================================================
 # :: Project Details
@@ -68,7 +68,7 @@ print(MY_GREETINGS)
 PATH = pkg_paths(__file__, INFO['name'], INFO['author'], INFO['version'])
 
 # ======================================================================
-elapsed(__file__[len(os.path.dirname(PATH['base'])) + 1:])
+elapsed(os.path.basename(__file__))
 
 # ======================================================================
 if __name__ == '__main__':
