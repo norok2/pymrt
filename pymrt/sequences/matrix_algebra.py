@@ -449,7 +449,7 @@ def dynamics_operator(
             [w_c, 0.0, w1x],
             [w1y, -w1x, 0.0]])
         # same as above
-        # bloch_core = fc.num.to_self_adjoint_matrix(
+        # bloch_core = fc.extra.to_self_adjoint_matrix(
         #     [-w_c, -w1y, w1x], skew=True)
         if lineshape:
             r_rf = _sat_rate_lineshape(

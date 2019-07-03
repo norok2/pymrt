@@ -134,7 +134,7 @@ def extract_nii(dirpath, extradir, force, verbose):
     """
     Extract single volumens from calculated NIfTI-1 images.
 
-    TODO: integrate with fc.util.check_redo()
+    TODO: integrate with fc.base.check_redo()
     """
     mag_filepath = os.path.join(dirpath, 'pdata/1/bildabs.nii.gz')
     phs_filepath = os.path.join(dirpath, 'pdata/1/bildphs.nii.gz')

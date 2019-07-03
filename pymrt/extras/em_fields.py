@@ -142,12 +142,12 @@ class InfiniteWire(object):
                 parameters, but `shape` must be iterable.
             rel_position (bool|callable): Use positions as relative values.
                 Determine the interpretation of `position` using `shape`.
-                Uses `fc.num.grid_coord()` internally, see its `is_relative`
+                Uses `fc.extra.grid_coord()` internally, see its `is_relative`
                 parameter for more details.
             rel_sizes (bool|callable): Use sizes as relative values.
                 Determine the interpretation of sizes using `shape`.
                 This is actually not used for infinite wires.
-                Uses `fc.num.coord()` internally, see its `is_relative`
+                Uses `fc.extra.coord()` internally, see its `is_relative`
                 parameter for more details.
             zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -277,11 +277,11 @@ class CircularLoop(object):
                 parameters, but `shape` must be iterable.
             rel_position (bool|callable): Use positions as relative values.
                 Determine the interpretation of `center` using `shape`.
-                Uses `fc.num.grid_coord()` internally, see its `is_relative`
+                Uses `fc.extra.grid_coord()` internally, see its `is_relative`
                 parameter for more details.
             rel_sizes (bool|callable): Use sizes as relative values.
                 Determine the interpretation of `radius` using `shape`.
-                Uses `fc.num.coord()` internally, see its `is_relative`
+                Uses `fc.extra.coord()` internally, see its `is_relative`
                 parameter for more details.
             zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -440,11 +440,11 @@ def b_fields(
             but `shape` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of position attributes using `shape`.
-            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            Uses `fc.extra.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of size attributes using `shape`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `fc.extra.coord()` internally, see its `is_relative`
             parameter for more details.
         zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -483,11 +483,11 @@ def sum_b_fields(
             but `shape` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of position attributes using `shape`.
-            Uses `fc.num.grid_coord()` internally, see its `is_relative`
+            Uses `fc.extra.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of size attributes using `shape`.
-            Uses `fc.num.coord()` internally, see its `is_relative`
+            Uses `fc.extra.coord()` internally, see its `is_relative`
             parameter for more details.
         zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -897,8 +897,8 @@ def sphere_with_circular_loops(
             as axes of rotation.
             If float, the value is repeated for all axes.
             Otherwise, it must have size 3 (for more info on the number of
-            angles in 3 dimensions, see `fc.num.square_size_to_num_tria()`).
-            The rotation is computed using `fc.num.angles2linear(angles)`.
+            angles in 3 dimensions, see `fc.extra.square_size_to_num_tria()`).
+            The rotation is computed using `fc.extra.angles2linear(angles)`.
             See that for more info.
         diameter (int|float): The diameter of the sphere.
         n_loops (int|None): The total number of loops.

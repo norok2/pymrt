@@ -91,7 +91,7 @@ def compress_svde(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `fc.util.optimal_num_components()` for more details.
+            See `fc.base.optimal_num_components()` for more details.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
         verbose (int): Set level of verbosity.
@@ -121,7 +121,7 @@ def compress_svd(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `fc.util.optimal_num_components()` for more details.
+            See `fc.base.optimal_num_components()` for more details.
         orthonormal: Uses the orthonormal approximation.
             Uses the pseudo-inverse, instead of the hermitian conjugate,
             to form the signal compression matrix.

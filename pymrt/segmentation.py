@@ -158,8 +158,8 @@ def threshold_otsu(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `fc.num.auto_bin()` with `method` set to `bins` if str,
-            and using the default `fc.num.auto_bin()` method if set to
+            using `fc.extra.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fc.extra.auto_bin()` method if set to
             None.
 
     Returns:
@@ -198,8 +198,8 @@ def threshold_otsu2(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `fc.num.auto_bin()` with `method` set to `bins` if str,
-            and using the default `fc.num.auto_bin()` method if set to
+            using `fc.extra.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fc.extra.auto_bin()` method if set to
             None.
 
     Returns:
@@ -224,14 +224,14 @@ def threshold_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -268,14 +268,14 @@ def threshold_inv_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -312,14 +312,14 @@ def threshold_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
@@ -357,14 +357,14 @@ def threshold_inv_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.num.auto_bins()`.
-            If None, the default method in `fc.num.auto_bins()` is used.
+            If str, this is determined using `fc.extra.auto_bins()`.
+            If None, the default method in `fc.extra.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.

@@ -541,7 +541,7 @@ def unwrap_gradient(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
-            separately, using `fc.num.filter_cx()`.
+            separately, using `fc.extra.filter_cx()`.
         denoising_kws (dict|Iterable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
             If Iterable, must be convertible to a dictionary.
@@ -929,7 +929,7 @@ def unwrap_1d_iter(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
-            separately, using `fc.num.filter_cx()` and then
+            separately, using `fc.extra.filter_cx()` and then
             converted back to a phase with `np.angle()` before applying the
             unwrapping.
         denoising_kws (dict|Iterable|None): Keyword arguments.

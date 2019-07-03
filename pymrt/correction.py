@@ -108,7 +108,7 @@ def denoise(
             See the respective documentation for details.
         cx_mode (str): Complex calculation mode.
             If `arr` is not complex, this parameter is ignored.
-            See `mode` parameter of `fc.num.filter_cx()` for more info.
+            See `mode` parameter of `fc.extra.filter_cx()` for more info.
 
     Raises:
         ValueError: If `method` is unknown.

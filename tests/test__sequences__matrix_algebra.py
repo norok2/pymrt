@@ -567,7 +567,7 @@ def check_fit_spin_model(
     # fitted = mt_signal(x_data, *p0).reshape(measured.shape)
 
     if plot_data:
-        X, Y = np.meshgrid(flip_angles, fc.util.sgnlog(freqs, 10.0))
+        X, Y = np.meshgrid(flip_angles, fc.base.sgnlog(freqs, 10.0))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel('Pulse Amplitude (flip angle) / deg')
@@ -588,16 +588,16 @@ def check_fit_spin_model(
 if __name__ == '__main__':
     msg(__doc__.strip())
     # check_dynamics_operator_symbolic()
-    # fc.util.elapsed('check_symbolic')
+    # fc.base.elapsed('check_symbolic')
 
     # check_dynamics_operator()
-    # fc.util.elapsed'check_dynamics_operator')
+    # fc.base.elapsed'check_dynamics_operator')
 
     # check_mt_sequence()
-    # fc.util.elapsed'check_mt_sequence')
+    # fc.base.elapsed'check_mt_sequence')
 
     # check_approx_propagator()
-    # fc.util.elapsed'check_approx_propagator')
+    # fc.base.elapsed'check_approx_propagator')
 
     # check_z_spectrum(
     #     SpinModel(100.0, (0.5, 0.3, 0.1, 0.1), (GAMMA['1H'] * B0,) * 4,
@@ -614,7 +614,7 @@ if __name__ == '__main__':
     # print(x3[0].ravel() / x1[0].ravel())
 
     # check_fit_spin_model()
-    # fc.util.elapsed('check_fit_spin_model')
+    # fc.base.elapsed('check_fit_spin_model')
 
     msg(report())
     # profile.run('check_z_spectrum()', sort=1)

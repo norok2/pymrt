@@ -876,7 +876,7 @@ def resample(
         new_shape (tuple[int|None]): New dimensions of the array.
         aspect (callable|Iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
-            This is passed to `fc.num.shape2zoom()`.
+            This is passed to `fc.extra.shape2zoom()`.
         window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.

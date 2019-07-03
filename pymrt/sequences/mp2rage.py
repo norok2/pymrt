@@ -541,7 +541,7 @@ def acq_to_seq_params(
         size_ = (size * part_fourier / grappa)
         refs_ = (refs * (grappa - 1) / grappa)
         n_ = int(size_ + refs_)
-        # n_ = fc.util.num_align(n_, 2, 'lower')
+        # n_ = fc.base.num_align(n_, 2, 'lower')
         k_ = size * k / grappa * (2 * part_fourier - 1) / n_
         # print(n_, k_, size, k, part_fourier, grappa, refs)  # DEBUG
         return n_, k_
