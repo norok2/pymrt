@@ -64,7 +64,7 @@ def mp2rage_rho(
             If np.ndarray, it must have the same shape as `rho_arr`.
             If int or float, the flip angle efficiency is assumed to be
             constant over `rho_arr`.
-        t1_values_range (tuple[float]): The T1 range.
+        t1_values_range (tuple[float]): The T1 range in ms.
             The format is (min, max) where min < max.
             Values should be positive.
         t1_num (int): The number of samples for T1.
