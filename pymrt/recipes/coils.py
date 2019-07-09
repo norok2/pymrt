@@ -40,8 +40,9 @@ import pymrt as mrt
 import pymrt.utils
 import pymrt.segmentation
 
+from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 
@@ -537,8 +538,8 @@ def adaptive_iter(
             if filtering:
                 sens = fc.extra.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
-                np.sqrt(np.sum(sens * sens.conj(), -1))
-                + epsilon)[..., None]
+                    np.sqrt(np.sum(sens * sens.conj(), -1))
+                    + epsilon)[..., None]
             combined = np.sum(sens.conj() * arr, -1)
             # include the additional phase
             weights = np.sum(sens * combined[..., None], other_axes)
@@ -553,8 +554,8 @@ def adaptive_iter(
             if threshold > 0:
                 last_delta = delta
                 delta = (
-                    np.linalg.norm(combined - last_combined) /
-                    np.linalg.norm(combined))
+                        np.linalg.norm(combined - last_combined) /
+                        np.linalg.norm(combined))
                 msg('delta={}'.format(delta), verbose, VERB_LVL['debug'],
                     end=', ' if i + 1 < max_iter else '.\n', flush=True)
                 if delta < threshold or last_delta < delta:
@@ -955,8 +956,8 @@ def sensitivity(
         method = eval(method)
     if not callable(method):
         text = (
-            'Unknown method `{}` in `recipes.coils.sensitivity(). ' +
-            'Using fallback `{}`.'.format(method, methods[0]))
+                'Unknown method `{}` in `recipes.coils.sensitivity(). ' +
+                'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
         method = eval(methods[0])
 
@@ -1068,8 +1069,8 @@ def combine(
         method = eval(method)
     if not callable(method):
         text = (
-            'Unknown method `{}` in `recipes.coils.combine(). ' +
-            'Using fallback `{}`.'.format(method, methods[0]))
+                'Unknown method `{}` in `recipes.coils.combine(). ' +
+                'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
         method = eval(methods[0])
         has_sens = True
@@ -1152,5 +1153,13 @@ def quality(
     """
     sum_arr = np.sum(np.abs(coils_arr), axis=coil_axis)
     abs_arr = np.abs(combined_arr)
-    return factor * (
-        abs_arr / sum_arr)  # * (np.max(sum_arr) / np.max(abs_arr))
+    return factor * (abs_arr / sum_arr)
+    # * (np.max(sum_arr) / np.max(abs_arr))
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

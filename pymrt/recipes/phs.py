@@ -35,7 +35,7 @@ import pymrt.correction
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 from pymrt import HAS_JIT, jit
 
@@ -951,7 +951,8 @@ def unwrap_1d_iter(
         denoising_kws = dict(denoising_kws) \
             if denoising_kws is not None else {}
         u_arr = np.angle(
-            fc.extra.filter_cx(np.exp(1j * u_arr), denoising, (), denoising_kws))
+            fc.extra.filter_cx(np.exp(1j * u_arr), denoising, (),
+                               denoising_kws))
     if axes is None:
         axes = tuple(range(arr.ndim))
     axes = fc.base.auto_repeat(axes, 1)
@@ -1012,8 +1013,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

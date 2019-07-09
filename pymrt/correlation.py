@@ -53,8 +53,10 @@ import pymrt.registration
 import pymrt.segmentation
 import pymrt.input_output
 
-from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 from pymrt.config import EXT_CMD
 
 # ======================================================================
@@ -1525,5 +1527,8 @@ def check_correlation(
 
 
 # ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    msg(__doc__.strip())
+    run_doctests(__doc__)

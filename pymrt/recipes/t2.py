@@ -26,12 +26,11 @@ import scipy.optimize  # SciPy: Optimization and root finding
 
 # :: Local Imports
 import pymrt as mrt
-# import pymrt.utils
 import pymrt.correction
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 from pymrt.recipes import generic
@@ -167,14 +166,9 @@ def _test(use_cache=True):
     msg(report())
 
 
-# _test()
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest
-
-    msg(__doc__.strip())
-    doctest.testmod()
-
-else:
-    elapsed()
+    run_doctests(__doc__)

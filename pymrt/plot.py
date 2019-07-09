@@ -64,7 +64,7 @@ import pymrt.utils
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 # ======================================================================
@@ -2174,3 +2174,11 @@ def subplots(
         pad=1.0, h_pad=pads[0], w_pad=pads[1])
     _save_plot(save_filepath, save_kws, tight_layout_kws, fig, force, verbose)
     return fig
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

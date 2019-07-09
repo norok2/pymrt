@@ -49,7 +49,6 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
-
 # :: Internal Imports
 import pymrt as mrt
 import pymrt.config
@@ -57,7 +56,7 @@ import pymrt.config
 # :: Local Imports
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 
@@ -141,7 +140,8 @@ def set_init_parameters(
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
             shift = \
-                fc.extra.weighted_center(moving) - fc.extra.weighted_center(fixed)
+                fc.extra.weighted_center(moving) - fc.extra.weighted_center(
+                    fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
         else:  # 'none' or not known
@@ -409,8 +409,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

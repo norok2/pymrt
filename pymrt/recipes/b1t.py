@@ -29,10 +29,10 @@ import pymrt.correction
 
 from pymrt.sequences import mp2rage
 
-
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-# from pymrt import elapsed, report
-# from pymrt import msg, dbg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -292,17 +292,17 @@ def double_flash(
             if approx == 'short_tr' and t1_arr is not None:
                 eta_fa_arr = (arr1 / arr2)
                 eta_fa_arr = (
-                    (1 - n_tr * eta_fa_arr) /
-                    (n_tr * (eta_fa_arr - 1) * (tr / t1_arr) +
-                     1 - n_tr * eta_fa_arr))
+                        (1 - n_tr * eta_fa_arr) /
+                        (n_tr * (eta_fa_arr - 1) * (tr / t1_arr) +
+                         1 - n_tr * eta_fa_arr))
             elif t1_arr is not None:
                 eta_fa_arr = (
-                    (arr2 * np.exp(tr2 / t1_arr) -
-                     arr1 * np.exp(tr1 / t1_arr) +
-                     (arr1 - arr2) * np.exp((tr1 + tr2) / t1_arr)) /
-                    (arr2 - arr1 +
-                     arr1 * np.exp(tr2 / t1_arr) -
-                     arr2 * np.exp(tr1 / t1_arr)))
+                        (arr2 * np.exp(tr2 / t1_arr) -
+                         arr1 * np.exp(tr1 / t1_arr) +
+                         (arr1 - arr2) * np.exp((tr1 + tr2) / t1_arr)) /
+                        (arr2 - arr1 +
+                         arr1 * np.exp(tr2 / t1_arr) -
+                         arr2 * np.exp(tr1 / t1_arr)))
 
         if eta_fa_arr is None:
             text = 'Unsupported parameter combination. ' \
@@ -430,3 +430,11 @@ def mp2rage_rho(
         eta_fa_arr = eta_fa_arr.reshape(rho_arr.shape)
 
     return eta_fa_arr
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

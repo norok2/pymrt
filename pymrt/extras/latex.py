@@ -49,10 +49,9 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-
 from pymrt import INFO, PATH
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 
@@ -245,11 +244,11 @@ def gen_matrix(
         text += cell + ending
     columns = 'c' * x_arr.shape[1]
     text = (
-        prefix +
-        r'\begin{{{}}}{{{}}}'.format(container, columns) +
-        text +
-        r'\end{{{}}}'.format(container) +
-        suffix)
+            prefix +
+            r'\begin{{{}}}{{{}}}'.format(container, columns) +
+            text +
+            r'\end{{{}}}'.format(container) +
+            suffix)
     return text
 
 
@@ -258,8 +257,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

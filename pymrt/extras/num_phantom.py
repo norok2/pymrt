@@ -39,10 +39,10 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
 
 # :: Local Imports
-
-from pymrt import PATH
-from pymrt import elapsed, report
-from pymrt import msg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 from raster_geometry import (
     ellipsoid_specs, superellipsoid_specs, cuboid_specs, prism_specs,
@@ -374,8 +374,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

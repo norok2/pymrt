@@ -23,9 +23,10 @@ import pymrt as mrt
 # import pymrt.utils
 # import pymrt.computation as pmc
 
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-# from pymrt import elapsed, report
-# from pymrt import msg, dbg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
@@ -146,3 +147,11 @@ def fit_phase(
         db0_arr (np.ndarray): The relative field array in ppb
     """
     return dphs_to_db0(phs.phs_to_dphs(phs_arr, tis, tis_mask), b0)
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

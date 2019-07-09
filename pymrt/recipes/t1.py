@@ -23,16 +23,15 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: External Imports Submodules
 import scipy.interpolate  # Scipy: Interpolation
 
-
 # :: Local Imports
 import pymrt as mrt
-# import pymrt.utils
 import pymrt.correction
 
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-# from pymrt import elapsed, report
-# from pymrt import msg, dbg
-import pymrt.utils
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
+
 from pymrt.recipes.generic import (
     fix_phase_interval, rate_to_time, time_to_rate,
     mag_phase_2_combine, cx_2_combine)
@@ -99,8 +98,10 @@ def mp2rage_rho(
            bias-field corrected sequence for improved segmentation and
            T1-mapping at high field. NeuroImage 49, 1271–1281.
            doi:10.1016/j.neuroimage.2009.10.002
-        2) Metere, R., Kober, T., Möller, H.E., Schäfer, A., 2017. Simultaneous 
-           Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility with 
+        2) Metere, R., Kober, T., Möller, H.E., Schäfer, A.,
+        2017. Simultaneous
+           Quantitative MRI Mapping of T1, T2* and Magnetic Susceptibility
+           with
            Multi-Echo MP2RAGE. PLOS ONE 12, e0169265.
            doi:10.1371/journal.pone.0169265
         3) Eggenschwiler, F., Kober, T., Magill, A.W., Gruetter, R.,
@@ -219,7 +220,8 @@ def double_flash(
         fa2 (int|float): The second nominal flip angle in deg.
         tr1 (int|float): The first repetition time in time units.
         tr2 (int|float): The second repetition time in time units.
-        eta_fa_arr (int|float|np.ndarray): The flip angle efficiency in one units.
+        eta_fa_arr (int|float|np.ndarray): The flip angle efficiency in one
+        units.
             If int or float, it is assumed constant throught the inputs.
             If np.ndarray, its shape must match the shape of both `arr1` and
             `arr2`.
@@ -262,10 +264,10 @@ def double_flash(
         if approx == 'short_tr':
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * n_tr * (
-                    (np.sin(fa1) * np.cos(fa2) * arr2 -
-                     np.cos(fa1) * np.sin(fa2) * arr1) /
-                    ((np.sin(fa1) * np.cos(fa2) - np.sin(fa1)) * arr2 +
-                     (1 - np.cos(fa1)) * np.sin(fa2) * n_tr * arr1))
+                        (np.sin(fa1) * np.cos(fa2) * arr2 -
+                         np.cos(fa1) * np.sin(fa2) * arr1) /
+                        ((np.sin(fa1) * np.cos(fa2) - np.sin(fa1)) * arr2 +
+                         (1 - np.cos(fa1)) * np.sin(fa2) * n_tr * arr1))
         else:
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr / np.log(
@@ -278,9 +280,9 @@ def double_flash(
         if approx == 'short_tr' and same_fa:
             with np.errstate(divide='ignore', invalid='ignore'):
                 t1_arr = tr * n_tr * (
-                    np.cos(fa) * (arr2 - arr1) /
-                    ((np.cos(fa) - 1) * arr2 +
-                     (1 - np.cos(fa)) * n_tr * arr1))
+                        np.cos(fa) * (arr2 - arr1) /
+                        ((np.cos(fa) - 1) * arr2 +
+                         (1 - np.cos(fa)) * n_tr * arr1))
         else:
             warnings.warn(
                 'Unsupported parameter combination. '
@@ -354,3 +356,11 @@ def multi_flash(
     if inverted:
         t1_arr = time_to_rate(t1_arr, 'ms', 'Hz')
     return t1_arr
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

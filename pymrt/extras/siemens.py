@@ -23,8 +23,8 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: Local Imports
 from pymrt import INFO, PATH
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 # ======================================================================
@@ -140,10 +140,10 @@ def _read_x_protocol(text):
 
     key_value = pp.Group(tag + exp)
     exp <<= (
-        key_value |
-        number |
-        cstr |
-        pp.Group(lbra + pp.ZeroOrMore(exp) + rbra)
+            key_value |
+            number |
+            cstr |
+            pp.Group(lbra + pp.ZeroOrMore(exp) + rbra)
     )
 
     # print(x_prot)
@@ -160,7 +160,7 @@ def _read_x_protocol(text):
 def _guess_version(file_stream):
     file_magic = _read_twix(file_stream, 'uint', 2, 0)
     if (file_magic[0] < 1e4 and
-                file_magic[1] <= LIMITS['vd']['max_num_scans']):
+            file_magic[1] <= LIMITS['vd']['max_num_scans']):
         guessed = 'vd?'
     else:
         guessed = 'vb?'
@@ -266,7 +266,7 @@ def read(
 
 
 # ======================================================================
-def test():
+def _test():
     filepath = '/media/Data/tmp/' + \
                'meas_MID389_gre_qmri_0_6mm_FA30_MTOff_LowRes_FID36111.dat'
     # twix = read_output(filepath)
@@ -276,15 +276,9 @@ def test():
         _read_x_protocol(t)
 
 
-# test()
-
 # ======================================================================
 elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

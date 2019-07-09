@@ -49,10 +49,9 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: Local Imports
 import pymrt as mrt
 import pymrt.utils
-
 from pymrt import INFO, PATH
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed, report
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
 
 # ======================================================================
@@ -124,7 +123,7 @@ def read_input(
                 label = tokens[0]
                 value = ' '.join(tokens[1:])
                 if section == HDR_INPUT['num']['section'] and \
-                                label == HDR_INPUT['num']['label']:
+                        label == HDR_INPUT['num']['label']:
                     content['data'] = np.zeros((int(value), 2))
             except ValueError:
                 pass
@@ -284,16 +283,9 @@ def _to_be_checked():
     print()
 
 
-# _to_be_checked()
-
-
 # ======================================================================
 elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

@@ -61,10 +61,10 @@ import pymrt as mrt
 
 # :: Local Imports
 from sympy import pi, exp, sin, cos, tan
-# from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
-from pymrt import PATH
 from pymrt.config import CFG
 
 
@@ -116,7 +116,8 @@ def signal(
             Units must be the same as `te`.
         eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
             This is proportional to the coil transmit field :math:`B_1^+`.
-        eta_m0 (int|float|np.ndarray): The spin density efficiency in one units.
+        eta_m0 (int|float|np.ndarray): The spin density efficiency in one
+        units.
             This is proportional to the coil receive field :math:`B_1^-`.
 
     Returns:
@@ -576,10 +577,7 @@ def ernst_calc(
 
 
 # ======================================================================
-if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
-
+def print_steady_state():
     ss = steady_state(evolution_flash)
     signal = sym.sqrt(sym.trigsimp(ss[1][0] * ss[1][0] + ss[1][1] * ss[1][1]))
     print('\nSteady-State before excitation:')
@@ -588,3 +586,11 @@ if __name__ == '__main__':
     print(ss[1])
     print('\nSignal expression:')
     print(signal)
+
+
+# ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
+if __name__ == '__main__':
+    run_doctests(__doc__)

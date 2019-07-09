@@ -56,9 +56,9 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 import pymrt as mrt
 import pymrt.utils
 from pymrt import INFO, PATH
-# from pymrt import VERB_LVL, D_VERB_LVL
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
 from pymrt import msg, dbg
-from pymrt import elapsed, report
 from pymrt.config import CFG
 
 # ======================================================================
@@ -601,8 +601,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
+    run_doctests(__doc__)

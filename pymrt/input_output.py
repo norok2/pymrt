@@ -64,9 +64,10 @@ import pymrt.plot
 import pymrt.segmentation
 import pymrt.animate
 
-# from pymrt import INFO
-# from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -1289,6 +1290,8 @@ def plot_histogram2d(
 
 
 # ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
+    run_doctests(__doc__)

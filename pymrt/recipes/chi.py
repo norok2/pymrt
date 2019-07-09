@@ -25,19 +25,15 @@ import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 
 # :: Local Imports
 import pymrt as mrt
-
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-
 import pymrt.segmentation
 
 from pymrt.recipes import db0, phs, generic
-
 from pymrt.constants import CHI_V
 
-from pymrt import PATH
-from pymrt import D_VERB_LVL
-from pymrt import elapsed, report
-from pymrt import msg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 
 # ======================================================================
@@ -1049,6 +1045,7 @@ def wip():
     import datetime
     import pymrt.input_output
 
+
     begin_time = datetime.datetime.now()
 
     force = False
@@ -1068,6 +1065,7 @@ def wip():
     if fc.base.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
+
         uphs_arr = phs.unwrap(phs_arr)
         mrt.input_output.save(uphs_filepath, uphs_arr)
     else:
@@ -1077,6 +1075,7 @@ def wip():
     if fc.base.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
+
         dphs_arr = phs.phs_to_dphs(phs_arr, 20.0)
         mrt.input_output.save(dphs_filepath, uphs_arr)
     else:
@@ -1085,6 +1084,7 @@ def wip():
     db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
     if fc.base.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
+
 
         db0_arr = db0.dphs_to_db0(dphs_arr, b0=2.89362)
         mrt.input_output.save(db0_filepath, db0_arr)
@@ -1118,6 +1118,7 @@ def wip():
     chi_filepath = os.path.join(base_path, 'bai_chi_ptfi_minres_i0128.nii.gz')
     if fc.base.check_redo(db0_filepath, chi_filepath, force):
         from pymrt.recipes import db0
+
 
         mask = mag_arr > 0.5
         w_arr = mag_arr ** 2
@@ -1153,9 +1154,4 @@ elapsed(__file__[len(PATH['base']) + 1:])
 
 # ======================================================================
 if __name__ == '__main__':
-    import doctest  # Test interactive Python examples
-
-    msg(__doc__.strip())
-    doctest.testmod()
-    msg(report())
-    wip()
+    run_doctests(__doc__)

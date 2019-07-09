@@ -25,7 +25,10 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 import pymrt as mrt
 import pymrt.utils
 
-from pymrt import msg
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 # todo: consider moving to flyingcircus
 D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS
@@ -236,7 +239,7 @@ def info_to_filepath(
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
     filename = fc.base.change_ext(info_to_str(info, sep, kv_sep), file_ext,
-                                    '')
+                                  '')
     return os.path.join(
         dirpath, + fc.base.add_extsep(file_ext))
 
@@ -695,6 +698,8 @@ def filename2label(
 
 
 # ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    msg(__doc__.strip())
-    doctest.testmod()
+    run_doctests(__doc__)

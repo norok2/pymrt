@@ -18,12 +18,12 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.segmentation
-import pymrt.utils
-from pymrt import correction
-# from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import elapsed
-from pymrt import msg
+import pymrt.correction
+
+from pymrt import INFO, PATH
+from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
+from pymrt import elapsed, report, run_doctests
+from pymrt import msg, dbg
 
 
 # import scipy.integrate  # SciPy: Integration and ODEs
@@ -157,9 +157,9 @@ def snr_multi_acq(
         153.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = correction.sn_split_test_retest(*arrs)
+        signal_arr, noise_arr = mrt.correction.sn_split_test_retest(*arrs)
     else:
-        signal_arr, noise_arr = correction.sn_split_multi_acq(
+        signal_arr, noise_arr = mrt.correction.sn_split_multi_acq(
             arrs, remove_bias=remove_bias)
     return _snr(signal_arr, noise_arr)
 
@@ -198,9 +198,9 @@ def psnr_multi_acq(
         255.0
     """
     if len(arrs) == 2:
-        signal_arr, noise_arr = correction.sn_split_test_retest(*arrs)
+        signal_arr, noise_arr = mrt.correction.sn_split_test_retest(*arrs)
     else:
-        signal_arr, noise_arr = correction.sn_split_multi_acq(
+        signal_arr, noise_arr = mrt.correction.sn_split_multi_acq(
             arrs, remove_bias=remove_bias)
     return _psnr(signal_arr, noise_arr)
 
@@ -430,8 +430,9 @@ def cnr(
         >>> round(val * 100)
         45.0
     """
-    signal_arr, noise_arr = correction.sn_split(arr, sn_method, **sn_kws)
-    signal_arrs = correction.sn_split_signals(signal_arr, ss_method, **ss_kws)
+    signal_arr, noise_arr = mrt.correction.sn_split(arr, sn_method, **sn_kws)
+    signal_arrs = mrt.correction.sn_split_signals(signal_arr, ss_method,
+                                                  **ss_kws)
     return _cnr(contrast(signal_arrs), noise_arr)
 
 
@@ -483,7 +484,8 @@ def pcnr(
         >>> round(val)
         4.0
     """
-    signal_arr, noise_arr = correction.sn_split(arr, method, *_args, **_kws)
+    signal_arr, noise_arr = mrt.correction.sn_split(arr, method, *_args,
+                                                    **_kws)
     return _pcnr(signal_arr, noise_arr)
 
 
@@ -572,11 +574,8 @@ def quick_check(arr):
 
 
 # ======================================================================
+elapsed(__file__[len(PATH['base']) + 1:])
+
+# ======================================================================
 if __name__ == '__main__':
-    import doctest
-
-    msg(__doc__.strip())
-    doctest.testmod()
-
-else:
-    elapsed()
+    run_doctests(__doc__)
