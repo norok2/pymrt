@@ -167,6 +167,7 @@ setup(
     extras_require={
         'blessed': 'blessed',
         'weasyprint': 'weasyprint',
+        'skimage': 'scikit.image',
     },
 
     package_data={

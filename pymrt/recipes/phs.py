@@ -26,7 +26,12 @@ import scipy.sparse  # SciPy: Sparse Matrices
 # import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 from numpy.fft import fftshift, ifftshift
 from scipy.fftpack import fftn, ifftn
-import skimage.restoration
+
+try:
+    import skimage.restoration
+except ImportError:
+    class skimage(object):
+        restoration = None
 
 # :: Local Imports
 import pymrt as mrt
@@ -863,6 +868,10 @@ def unwrap_sorting_path_2d_3d(
     This is a wrapper around the function `skimage.restoration.unwrap_phase()`
     which can only handle 2D and 3D data.
     If higher dimensionality input, loop through extra dimensions.
+    If `scikit.image` (which provides `skimage`) cannot be found,
+    uses `unwrap_sorting_path()` to 2D / 3D data, according to the
+    `unwrap_axes` parameter, but the `wrap_around` and `seed` parameters are
+    ignored.
 
     Args:
         arr (np.ndarray): The wrapped phase array.
@@ -897,8 +906,11 @@ def unwrap_sorting_path_2d_3d(
         loop_gen = (slice(None),) * arr.ndim
     arr = arr.copy()
     for indexes in itertools.product(*loop_gen):
-        arr[indexes] = skimage.restoration.unwrap_phase(
-            arr[indexes], wrap_around, seed)
+        if skimage.restoration:
+            arr[indexes] = skimage.restoration.unwrap_phase(
+                arr[indexes], wrap_around, seed)
+        else:
+            arr[indexes] = unwrap_sorting_path(arr[indexes])
     return arr
 
 
