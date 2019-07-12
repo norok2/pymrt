@@ -74,7 +74,8 @@ def phs_to_dphs_multi(
         tis,
         tis_mask=None,
         poly_deg=1,
-        full=False):
+        full=False,
+        time_units='s'):
     """
     Calculate the polynomial components of the phase variation from phase data.
 
@@ -91,10 +92,28 @@ def phs_to_dphs_multi(
         full (bool): Calculate additional information on the fit performance.
             If True, more information is given.
             If False, only the optimized parameters are returned.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
-        results (dict):
+        results (OrderedDict): The multiple components of the polynomial fit.
+            The following terms are present:
+             - `s0` (np.ndarray): The constant term.
+             - `dphs_{i}` (np.ndarray): The monomial term(s); `i` is between
+               1 and `poly_deg` (both included).
     """
+    units_factor = 1
+    if isinstance(time_units, str) and 's' in time_units:
+        prefix, _ = time_units.split('s', 1)
+        units_factor = fc.base.prefix_to_factor(prefix)
+    elif isinstance(time_units, (int, float)):
+        units_factor = time_units
+    else:
+        warnings.warn(
+            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+
+    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
     y_arr = np.array(phs_arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
@@ -114,7 +133,7 @@ def phs_to_dphs_multi(
         for i, x in enumerate(p_arrs[::-1]))
 
     if full:
-        warnings.warn('E: Not implemented yet!')
+        raise NotImplementedError
 
     return results
 
@@ -126,7 +145,7 @@ def phs_to_dphs(
         tis_mask=None,
         unwrapping='laplacian',
         unwrapping_kws=None,
-        units='ms'):
+        time_units='ms'):
     """
     Calculate the phase variation from phase data.
 
@@ -152,21 +171,24 @@ def phs_to_dphs(
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
         unwrapping_kws (dict|tuple|None): Additional keyword arguments.
             These are passed to `pymrt.recipes.phs.unwrap()`.
-        units (str|float|int): Units of measurement of Ti.
-            If str, the following will be accepted: 'ms'.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
             If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    # todo: fix documentation
-    if isinstance(units, str):
-        if units == 'ms':
-            units = 1e-3
-        else:
-            warnings.warn('Invalid units `{units}`'.format(**locals()))
-            units = 1
-    tis = np.array(fc.base.auto_repeat(tis, 1)) * units
+    units_factor = 1
+    if isinstance(time_units, str) and 's' in time_units:
+        prefix, _ = time_units.split('s', 1)
+        units_factor = fc.base.prefix_to_factor(prefix)
+    elif isinstance(time_units, (int, float)):
+        units_factor = time_units
+    else:
+        warnings.warn(
+            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+
+    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
 
     if unwrapping is not None:
         phs_arr = unwrap(phs_arr, unwrapping, unwrapping_kws)
@@ -176,7 +198,8 @@ def phs_to_dphs(
     else:
         dphs_arr = \
             phs_to_dphs_multi(
-                phs_arr, tis, tis_mask, poly_deg=1)['dphs_1'][..., 0]
+                phs_arr, tis, tis_mask, poly_deg=1, time_units='s') \
+                ['dphs_1'][..., 0]
 
     return dphs_arr
 
@@ -186,44 +209,59 @@ def cx2_to_dphs(
         arr1,
         arr2,
         d_ti,
-        unwrap='laplacian',
+        unwrap_method='laplacian_c',
         unwrap_kws=None,
-        units='ms'):
+        time_units='ms'):
     """
     Calculate the phase variation from two complex data.
 
     Args:
-        phs_arr (np.ndarray): The input array in arb. units.
-            The sampling time Ti varies in the last dimension.
+        arr1 (np.ndarray): The phase array for sampling time 1 in arb. units.
             Arbitrary units are accepted, will be automatically converted to
             radians under the assumption that data is wrapped.
             Do not provide unwrapped data.
-        d_ti (Iterable|int|float): The sampling times Ti in time units.
-            The number of points must match the last shape size of arr.
-        tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
-            If None, all will be used.
-        units (str|float|int): Units of measurement of Ti.
-            If str, the following will be accepted: 'ms'
+            Shape must match that of `arr2`.
+        arr2 (np.ndarray): The phase array for sampling time 2 in arb. units.
+            Arbitrary units are accepted, will be automatically converted to
+            radians under the assumption that data is wrapped.
+            Do not provide unwrapped data.
+            Shape must match that of `arr1`.
+        d_ti (int|float): The sampling time differenct in time units.
+        unwrap_method (str|None): The unwrap method.
+            See `pymrt.recipes.phs.unwrap()` for details.
+        unwrap_kws (dict|tuple|None): Keyword arguments for `unwrap()`.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
             If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         dphs_arr (np.ndarray): The phase variation in rad/s.
     """
-    # todo: fix documentation
+    units_factor = 1
+    if isinstance(time_units, str) and 's' in time_units:
+        prefix, _ = time_units.split('s', 1)
+        units_factor = fc.base.prefix_to_factor(prefix)
+    elif isinstance(time_units, (int, float)):
+        units_factor = time_units
+    else:
+        warnings.warn(
+            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+
     dphs_arr = arr1 * arr2.conj()
     dphs_arr = np.arctan2(np.imag(dphs_arr), np.real(dphs_arr))
 
     if unwrap is not None:
-        dphs_arr = unwrap(dphs_arr, unwrap, unwrap_kws)
+        dphs_arr = unwrap(dphs_arr, unwrap_method, unwrap_kws)
 
-    return dphs_arr / d_ti
+    return dphs_arr / (d_ti * units_factor)
 
 
 # ======================================================================
 def dphs_to_phs(
         dphs_arr,
         tis,
-        phs0_arr=0):
+        phs0_arr=0,
+        time_units='ms'):
     """
     Calculate the phase variation from phase data.
 
@@ -234,13 +272,26 @@ def dphs_to_phs(
             The number of points will match the last shape size of `phs_arr`.
         phs0_arr (np.ndarray|int|float): The initial phase offset.
             If int or float, a constant offset is used.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         phs_arr (np.ndarray): The phase array in rad.
     """
+    units_factor = 1
+    if isinstance(time_units, str) and 's' in time_units:
+        prefix, _ = time_units.split('s', 1)
+        units_factor = fc.base.prefix_to_factor(prefix)
+    elif isinstance(time_units, (int, float)):
+        units_factor = time_units
+    else:
+        warnings.warn(
+            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+
     shape = dphs_arr.shape
-    tis = np.array(
-        fc.base.auto_repeat(tis, 1)).reshape((1,) * len(shape) + (-1,))
+    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
+    tis = tis.reshape((1,) * len(shape) + (-1,))
     dphs_arr = dphs_arr.reshape(shape + (1,))
     return dphs_arr * tis + phs0_arr
 

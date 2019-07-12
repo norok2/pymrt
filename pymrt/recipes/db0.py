@@ -34,14 +34,12 @@ from pymrt.recipes import phs
 from pymrt.recipes.phs import phs_to_dphs, dphs_to_phs
 
 
-# todo: simple conversion of B0 to freq
-
 # ======================================================================
 def phs_to_db0(
         phs_arr,
         b0,
         tis,
-        units='ms'):
+        time_units='ms'):
     """
     Convert single echo phase to magnetic field variation.
 
@@ -52,12 +50,15 @@ def phs_to_db0(
         b0 (float): Main Magnetic Field B0 Strength in T.
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         db0_arr (np.ndarray): The relative field array in ppb
     """
     return dphs_to_db0(
-        phs_to_dphs(phs_arr, tis, tis_mask=None, units=units), b0=b0)
+        phs_to_dphs(phs_arr, tis, tis_mask=None, time_units=time_units), b0=b0)
 
 
 # ======================================================================
@@ -65,7 +66,8 @@ def db0_to_phs(
         db0_arr,
         b0,
         tis,
-        phs0_arr=0):
+        phs0_arr=0,
+        time_units='ms'):
     """
     Convert magnetic field variation to single echo phase.
 
@@ -76,12 +78,17 @@ def db0_to_phs(
         b0 (float): Main Magnetic Field B0 Strength in T
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
+        phs0_arr (np.ndarray|int|float): The initial phase offset.
+            If int or float, a constant offset is used.
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         phs_arr (np.ndarray): The input unwrapped phase array in rad.
     """
 
-    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis=tis, phs0_arr=phs0_arr)
+    return dphs_to_phs(db0_to_dphs(db0_arr, b0=b0), tis, phs0_arr, time_units)
 
 
 # ======================================================================
@@ -127,7 +134,8 @@ def fit_phase(
         phs_arr,
         b0,
         tis,
-        tis_mask=None):
+        tis_mask=None,
+        time_units='ms'):
     """
     Calculate magnetic field variation from phase evolution.
 
@@ -137,16 +145,20 @@ def fit_phase(
     Args:
         phs_arr (np.ndarray): The input array in arb. units.
             The sampling time Ti varies in the last dimension.
+        b0 (float): Main Magnetic Field B0 Strength in T.
         tis (Iterable): The sampling times Ti in time units.
             The number of points must match the last shape size of arr.
         tis_mask (Iterable[bool]|None): Determine the sampling times Ti to use.
             If None, all will be used.
-        b0 (float): Main Magnetic Field B0 Strength in T
+        time_units (str|float|int): Units of measurement of Ti.
+            If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
+            If int or float, the conversion factor will be multiplied to `ti`.
 
     Returns:
         db0_arr (np.ndarray): The relative field array in ppb
     """
-    return dphs_to_db0(phs.phs_to_dphs(phs_arr, tis, tis_mask), b0)
+    return dphs_to_db0(phs.phs_to_dphs(
+        phs_arr, tis, tis_mask, time_units=time_units), b0)
 
 
 # ======================================================================
