@@ -706,6 +706,7 @@ def fit_leasq(
              - eta_fa_arr (np.ndarray): The flip angle efficiency in one units.
                This is proportional to the coil transmit field :math:`B_1^+`.
     """
+    # todo: convert to return value to an OrderedDict
     assert (len(arrs) == len(fas) == len(trs))
     fas = [np.deg2rad(fa) for fa in fas]
     arrs = [prepare(arr) if prepare else arr.astype(float) for arr in arrs]
@@ -743,7 +744,7 @@ def fit_leasq(
     #     tuple((name, p_arr) for name, p_arr in zip(names, p_arrs)))
 
     if full:
-        warnings.warn('E: Not implemented yet!')
+        raise NotImplementedError
 
     # return results
     return t1_arr, xi_arr, eta_fa_arr

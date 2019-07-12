@@ -459,7 +459,7 @@ def fit_exp_loglin(
         for i, x in enumerate(p_arrs[::-1]))
 
     if full:
-        warnings.warn('E: Not implemented yet!')
+        raise NotImplementedError
 
     return results
 
@@ -542,7 +542,7 @@ def fit_exp_curve_fit(
     results = collections.OrderedDict((('tau', p_arrs[0]), ('s0', p_arrs[1])))
 
     if full:
-        warnings.warn('E: Not implemented yet!')
+        raise NotImplementedError
 
     return results
 
@@ -962,7 +962,7 @@ def fit_exp(
     methods = ('loglin', 'curve_fit', 'diff', 'quad', 'arlo', 'quadr')
 
     if method == 'auto':
-        warnings.warn('Not Implemented Yet!')
+        raise NotImplementedError
 
     if method in methods:
         method = eval(method)
