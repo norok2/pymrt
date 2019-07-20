@@ -217,10 +217,10 @@ def _reco_from_fid(
 
             msg('fid_size={}'.format(arr.size), verbose, VERB_LVL['debug'])
             fid_shape = (
-                fc.base.num_align(base_shape[0], block_size // num_coils),
+                fc.base.align(base_shape[0], block_size // num_coils),
                 num_coils,
                 num_images,
-                fc.base.num_align(base_shape[1], pe_factor, 'lower'),
+                fc.base.align(base_shape[1], pe_factor, 'lower'),
                 acq_shape[2] if len(acq_shape) == 3 else 1,
                 num_avg,
                 num_rep,
