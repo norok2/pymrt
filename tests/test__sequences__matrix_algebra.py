@@ -18,7 +18,7 @@ import pymrt as mrt
 import pymrt.utils
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 from pymrt import elapsed, report
 
 from pymrt.sequences.matrix_algebra import (

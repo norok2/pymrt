@@ -41,7 +41,7 @@ import pymrt.correction
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 from pymrt import HAS_JIT, jit
 
 from pymrt.recipes import generic
@@ -110,8 +110,7 @@ def phs_to_dphs_multi(
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
-        warnings.warn(
-            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+        warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
     tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
     y_arr = np.array(phs_arr).astype(float)
@@ -185,8 +184,7 @@ def phs_to_dphs(
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
-        warnings.warn(
-            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+        warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
     tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
 
@@ -244,8 +242,7 @@ def cx2_to_dphs(
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
-        warnings.warn(
-            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+        warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
     dphs_arr = arr1 * arr2.conj()
     dphs_arr = np.arctan2(np.imag(dphs_arr), np.real(dphs_arr))
@@ -286,8 +283,7 @@ def dphs_to_phs(
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
-        warnings.warn(
-            'Invalid units `{time_units}`. Ignored.'.format(**locals()))
+        warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
     shape = dphs_arr.shape
     tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor

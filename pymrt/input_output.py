@@ -67,7 +67,7 @@ import pymrt.animate
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 
 # ======================================================================
@@ -597,7 +597,7 @@ def simple_filter_1_x(
     path, base, ext = fc.base.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
-            out_basepath, out_filename_template.format(**locals()))
+            out_basepath, fmtm(out_filename_template))
         out_dirpath = os.path.dirname(out_filepath)
         if not os.path.isdir(out_dirpath):
             os.makedirs(out_dirpath)

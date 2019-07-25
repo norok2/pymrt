@@ -66,7 +66,7 @@ from pymrt.recipes.generic import voxel_curve_fit
 
 # from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 # ======================================================================
 META_EXT = 'info'  # ID['info']

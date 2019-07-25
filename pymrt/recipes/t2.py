@@ -31,7 +31,7 @@ import pymrt.correction
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 from pymrt.recipes import generic
 from pymrt.recipes import quality

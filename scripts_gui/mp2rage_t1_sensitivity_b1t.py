@@ -48,7 +48,7 @@ from pymrt.sequences import mp2rage
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
@@ -357,10 +357,9 @@ def handle_arg():
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'],
-            next(line for line in __doc__.splitlines() if line),
-            INFO['copyright'], INFO['author'], INFO['notice']),
+        version=fmt(
+            '%(prog)s - ver. {version}\n{}\n{copyright} {author}\n{notice}',
+            next(line for line in __doc__.splitlines() if line), **INFO),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',

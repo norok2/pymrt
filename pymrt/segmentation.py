@@ -58,7 +58,7 @@ import pymrt as mrt
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 from pymrt.config import CFG
 
@@ -619,9 +619,8 @@ def threshold_to_mask(
     if comparison in comparisons:
         mask = eval('arr {c} threshold'.format(c=comparison))
     else:
-        raise ValueError(
-            'valid comparisons are: {comparisons}'
-            ' (given: {comparison})'.format(**locals()))
+        raise ValueError(fmtm(
+            'valid comparisons are: {comparisons} (given: {comparison})'))
     return mask
 
 

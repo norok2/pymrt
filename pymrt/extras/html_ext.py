@@ -30,7 +30,7 @@ import PIL.Image, PIL.ImageChops
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 # ======================================================================
 # :: additional globals
@@ -72,8 +72,7 @@ templates = {
 def _trim(filepath):
     """Trim borders from image contained in filepath."""
     # : equivalent to:
-    # os.system(
-    #     'mogrify "{filepath}" -trim "{filepath}"'.format(**locals()))
+    # os.system(fmtm('mogrify "{filepath}" -trim "{filepath}"'))
     im = pil.Image.open(filepath)
     bg = pil.Image.new(im.mode, im.size, im.getpixel((0, 0)))
     diff = pil.ImageChops.difference(im, bg)
@@ -142,9 +141,9 @@ def to_image(
             webkit_cmd = 'wkhtmltoimage'
         elif img_type.lower() == 'pdf':
             webkit_cmd = 'wkhtmltopdf'
-        os.system(
+        os.system(fmtm(
             '{webkit_cmd} --encoding UTF-8 --zoom {zoom} --width {width} '
-            ' "{html_filepath}" "{save_filepath}"'.format(**locals()))
+            ' "{html_filepath}" "{save_filepath}"'))
     elif method == 'weasyprint':
         html_obj = weasyprint.HTML(string=html_code)
         if img_type.lower() == 'png':

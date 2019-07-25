@@ -28,7 +28,7 @@ import pymrt.utils
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 # todo: consider moving to flyingcircus
 D_NUM_DIGITS = 3  # synced with: dcmpi.common.D_NUM_DIGITS

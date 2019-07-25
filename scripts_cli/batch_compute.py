@@ -64,7 +64,7 @@ import pymrt.computation as pmc
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 from pymrt import elapsed, report
 
 
@@ -81,16 +81,14 @@ def handle_arg():
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {}\n{}'.format(
-            INFO['version'], INFO['author'], INFO['license']),
+        epilog=fmtm('v.{version} - {author}\n{license}', INFO),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'],
-            next(line for line in __doc__.splitlines() if line),
-            INFO['copyright'], INFO['author'], INFO['notice']),
+        version=fmt(
+            '%(prog)s - ver. {version}\n{}\n{copyright} {author}\n{notice}',
+            next(line for line in __doc__.splitlines() if line), **INFO),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',

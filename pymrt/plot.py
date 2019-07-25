@@ -65,7 +65,7 @@ import pymrt.utils
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 # ======================================================================
 # :: MatPlotLib-related constants
@@ -526,11 +526,11 @@ def simple(
         pax = ax.plot(x_data, y_data, label=legend, **dict(style))
     # setup title and labels
     if title:
-        ax.set_title(title.format(**locals()))
+        ax.set_title(fmtm(title))
     if labels[0]:
-        ax.set_xlabel(labels[0].format(**locals()))
+        ax.set_xlabel(fmtm(labels[0]))
     if labels[1]:
-        ax.set_ylabel(labels[1].format(**locals()))
+        ax.set_ylabel(fmtm(labels[1]))
     if limits[0]:
         ax.set_xlim(limits[0])
     if limits[1]:
@@ -760,9 +760,9 @@ def multi(
     if title:
         # y=1.08 if twin_ax is not None and shared_axis='y' else None
         if twin_ax is None:
-            ax.set_title(title.format(**locals()))
+            ax.set_title(fmtm(title))
         else:
-            twin_ax.set_title(title.format(**locals()))
+            twin_ax.set_title(fmtm(title))
 
     _more_texts(more_texts, ax)
     _more_elements(more_elements, ax)
@@ -1421,11 +1421,11 @@ def histogram1d(
     pax = ax.plot(fc.base.midval(bin_edges), hist, **dict(style))
     # setup title and labels
     if title:
-        ax.set_title(title.format(**locals()))
+        ax.set_title(fmtm(title))
     if labels[0]:
-        ax.set_xlabel(labels[0].format(**locals()))
+        ax.set_xlabel(fmtm(labels[0]))
     if labels[1]:
-        ax.set_ylabel(labels[1].format(**locals()))
+        ax.set_ylabel(fmtm(labels[1]))
     _more_texts(more_texts, ax)
     _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return (hist, bin_edges), fig
@@ -1573,11 +1573,11 @@ def histogram1d_list(
     _manage_ticks_limit(ticks_limit, ax)
     # setup title and labels
     if title:
-        ax.set_title(title.format(**locals()))
+        ax.set_title(fmtm(title))
     if labels[0]:
-        ax.set_xlabel(labels[0].format(**locals()))
+        ax.set_xlabel(fmtm(labels[0]))
     if labels[1]:
-        ax.set_ylabel(labels[1].format(**locals()))
+        ax.set_ylabel(fmtm(labels[1]))
     _more_texts(more_texts, ax)
     _save_plot(save_filepath, save_kws, None, fig, force, verbose)
     return data, fig
@@ -1792,11 +1792,11 @@ def histogram2d(
             transform=ax.transAxes)
     # setup title and labels
     if title:
-        ax.set_title(title.format(**locals()))
+        ax.set_title(fmtm(title))
     if labels[0]:
-        ax.set_xlabel(labels[0].format(**locals()))
+        ax.set_xlabel(fmtm(labels[0]))
     if labels[1]:
-        ax.set_ylabel(labels[1].format(**locals()))
+        ax.set_ylabel(fmtm(labels[1]))
 
     _manage_ticks_limit(ticks_limit, ax)
     _more_texts(more_texts, ax)
@@ -2145,8 +2145,7 @@ def subplots(
                     letter = numeral.int2letter(n_plot - skip_offset)
                     letter_uppercase = letter.upper()
                     letter_lowercase = letter.lower()
-                    plot_kws['title'] = \
-                        subplot_title_fmt.format(**locals())
+                    plot_kws['title'] = fmtm(subplot_title_fmt)
                 else:
                     skip_offset += 1
             plot_func(*plot_args, **plot_kws)

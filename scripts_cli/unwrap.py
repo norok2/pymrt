@@ -42,7 +42,7 @@ import pymrt.input_output
 
 from pymrt import INFO
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 from pymrt.config import EXT_CMD
 from pymrt.recipes import phs
 
@@ -69,16 +69,16 @@ def unwrap(
         options=None,
         force=False,
         verbose=D_VERB_LVL):
-    msg('Input:  {}'.format(in_filepath))
-    msg('Output: {}'.format(out_filepath))
-    msg('Method: {}'.format(method))
+    msg(fmtm('Input:  {in_filepath}'))
+    msg(fmtm('Output: {out_filepath}'))
+    msg(fmtm('Method: {method}'))
     if fc.base.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
             method = phs.unwrap_sorting_path
         elif method == 'laplacian':
             method = phs.unwrap_laplacian
         else:
-            msg('WW: method `{}` not supported.'.format(method))
+            msg(fmtm('W: method `{method}` not supported.'))
 
         if options is not None:
             options = json.loads(options)
@@ -98,16 +98,14 @@ def handle_arg():
     # :: Create Argument Parser
     arg_parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog='v.{} - {}\n{}'.format(
-            INFO['version'], INFO['author'], INFO['license']),
+        epilog=fmtm('v.{version} - {author}\n{license}', INFO),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     # :: Add POSIX standard arguments
     arg_parser.add_argument(
         '--ver', '--version',
-        version='%(prog)s - ver. {}\n{}\n{} {}\n{}'.format(
-            INFO['version'],
-            next(line for line in __doc__.splitlines() if line),
-            INFO['copyright'], INFO['author'], INFO['notice']),
+        version=fmt(
+            '%(prog)s - ver. {version}\n{}\n{copyright} {author}\n{notice}',
+            next(line for line in __doc__.splitlines() if line), **INFO),
         action='version')
     arg_parser.add_argument(
         '-v', '--verbose',
@@ -170,8 +168,8 @@ def main():
     unwrap(**kws)
 
     end_time = datetime.datetime.now()
-    if args.verbose > VERB_LVL['low']:
-        print('ExecTime: {}'.format(end_time - begin_time))
+    exec_time = datetime.datetime.now() - begin_time
+    msg('ExecTime: {}'.format(exec_time), args.verbose, VERB_LVL['debug'])
 
 
 # ======================================================================

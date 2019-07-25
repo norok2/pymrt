@@ -35,7 +35,7 @@ import pymrt.input_output
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 
 # ======================================================================
@@ -163,7 +163,7 @@ def auto_convert(
             for name, arr in read(in_filepath, verbose=verbose).items():
                 dirpath, base, ext = fc.base.split_path(in_filepath)
                 basepath = os.path.join(dirpath, base)
-                out_filepath = out_template.format(**locals())
+                out_filepath = fmtm(out_template)
                 do_save = True
                 if os.path.exists(out_filepath):
                     if on_exist == 'skip':

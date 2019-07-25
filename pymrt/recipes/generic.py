@@ -38,7 +38,7 @@ import pymrt.segmentation
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
-from pymrt import msg, dbg
+from pymrt import msg, dbg, fmt, fmtm
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
@@ -439,9 +439,9 @@ def fit_exp_loglin(
     try:
         method_kws = dict(eval(variant))
     except Exception as e:  # avoid crashing for invalid variant
-        text = (
-                'While evaluating `variant`: {variant},' +
-                'the following exception occurred: {e}.').format(**locals())
+        text = fmtm(
+            'While evaluating `variant`: {variant},' +
+            'the following exception occurred: {e}.')
         warnings.warn(text)
         method_kws = {}
 
@@ -1251,9 +1251,8 @@ def voxel_curve_fit(
         try:
             p_arr = fit_func(y_arr, x_arr, fit_params)
         except Exception as e:
-            warnings.warn(
-                'W: Exception `{e}` in ndarray_fit() method'
-                ' `method}`'.format(**locals()))
+            warnings.warn(fmtm(
+                'W: Exception `{e}` in ndarray_fit() method `method}`'))
 
     # revert to original shape
     p_arr = p_arr.reshape((shape[:axis]) + (num_params,))
