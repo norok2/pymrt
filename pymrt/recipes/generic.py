@@ -1237,7 +1237,7 @@ def voxel_curve_fit(
         pool = multiprocessing.Pool(num_proc)
         for i, res in enumerate(pool.imap(_curve_fit, iter_voxels, chunksize)):
             p_val, p_cov = res
-            if not any(np.isnan(p_val)):
+            if not np.isnan(np.sum(p_val)):
                 p_arr[i] = p_val
 
     elif method == 'poly':
