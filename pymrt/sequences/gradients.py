@@ -31,7 +31,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.constants
 import pymrt.plot
 

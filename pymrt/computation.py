@@ -57,7 +57,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 # :: Local Imports
 import pymrt as mrt
 
-import pymrt.utils
+import pymrt.util
 import pymrt.naming
 import pymrt.input_output
 from pymrt.recipes.generic import voxel_curve_fit
@@ -73,7 +73,7 @@ META_EXT = 'info'  # ID['info']
 
 D_OPTS = {
     # sources
-    'data_ext': mrt.utils.EXT['niz'],
+    'data_ext': mrt.util.EXT['niz'],
     'meta_ext': META_EXT,
     'multi_acq': False,
     'use_meta': True,
@@ -389,7 +389,7 @@ def sources_generic(
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
                 fc.base.change_ext(fc.base.os.path.basename(data_filepath), '',
-                                   mrt.utils.EXT['niz']))
+                                   mrt.util.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
                 info['seq'] = None

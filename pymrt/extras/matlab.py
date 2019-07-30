@@ -29,7 +29,7 @@ import scipy.io  # SciPy: Input and output
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.input_output
 
 from pymrt import INFO, PATH

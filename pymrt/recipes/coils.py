@@ -37,7 +37,7 @@ import scipy.linalg  # Scipy: Linear Algebra
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.segmentation
 
 from pymrt import INFO, PATH

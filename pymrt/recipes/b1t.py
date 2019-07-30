@@ -24,7 +24,7 @@ import scipy.interpolate  # Scipy: Interpolation
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.correction
 
 from pymrt.sequences import mp2rage

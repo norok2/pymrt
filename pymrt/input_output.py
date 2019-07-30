@@ -59,7 +59,7 @@ from nibabel.spatialimages import (
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.plot
 import pymrt.segmentation
 import pymrt.animate
@@ -706,7 +706,7 @@ def split(
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
         out_basename = fc.base.change_ext(
-            os.path.basename(in_filepath), '', mrt.utils.EXT['niz'])
+            os.path.basename(in_filepath), '', mrt.util.EXT['niz'])
     out_filepaths = []
 
     arr, meta = load(in_filepath, meta=True)
@@ -718,7 +718,7 @@ def split(
         out_filepath = os.path.join(
             out_dirpath,
             fc.base.change_ext(out_basename + '-' + i_str,
-                               mrt.utils.EXT['niz'], ''))
+                               mrt.util.EXT['niz'], ''))
         save(out_filepath, image, **meta)
         out_filepaths.append(out_filepath)
     return out_filepaths

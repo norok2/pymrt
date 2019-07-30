@@ -25,7 +25,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

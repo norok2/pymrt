@@ -60,7 +60,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

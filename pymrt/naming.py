@@ -23,7 +23,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
@@ -213,7 +213,7 @@ def info_to_str(
 # ======================================================================
 def filepath_to_info(
         filepath,
-        file_ext=mrt.utils.EXT['niz'],
+        file_ext=mrt.util.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=KEY_VAL_SEP):
     """
@@ -235,7 +235,7 @@ def filepath_to_info(
 def info_to_filepath(
         info,
         dirpath='.',
-        file_ext=mrt.utils.EXT['niz'],
+        file_ext=mrt.util.EXT['niz'],
         sep=TOKEN_SEP,
         kv_sep=TOKEN_SEP):
     filename = fc.base.change_ext(info_to_str(info, sep, kv_sep), file_ext,
@@ -407,7 +407,7 @@ def parse_filename(
 def to_filename(
         info,
         dirpath=None,
-        ext=mrt.utils.EXT['niz']):
+        ext=mrt.util.EXT['niz']):
     """
     Reconstruct file name/path with SIEMENS-like structure.
     Produced format is: [s<num>__]<series_name>[__<seq>][__<type>].nii.gz
@@ -656,7 +656,7 @@ def combine_filename(
     for name in filenames:
         filename += 2 * INFO_SEP + \
                     fc.base.change_ext(os.path.basename(name), '',
-                                       mrt.utils.EXT['niz'])
+                                       mrt.util.EXT['niz'])
     return filename
 
 

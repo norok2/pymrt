@@ -59,7 +59,7 @@ import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.plot
 
 from pymrt import INFO, PATH

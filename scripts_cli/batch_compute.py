@@ -53,7 +53,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python.*
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 # import pymrt.naming
 # import pymrt.input_output
 import pymrt.computation as pmc

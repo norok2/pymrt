@@ -47,7 +47,7 @@ import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 import pymrt.naming
 import pymrt.registration
 import pymrt.segmentation
@@ -162,13 +162,13 @@ def _get_ref_list(
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
             ref_filename = fc.base.change_ext(
-                os.path.basename(ref_src), mrt.utils.EXT['niz'], ref_ext)
+                os.path.basename(ref_src), mrt.util.EXT['niz'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepaths.append(ref_filepath)
     elif target_list:
         ref_filepaths = target_list
     else:
-        ref_filepaths = fc.base.listdir(dirpath, mrt.utils.EXT['niz'])
+        ref_filepaths = fc.base.listdir(dirpath, mrt.util.EXT['niz'])
     if not ref_filepaths:
         raise RuntimeError('No reference file(s) found')
     return ref_filepaths, ref_src_filepaths
@@ -329,7 +329,7 @@ def register_fsl(
         os.path.dirname(out_filepath),
         mrt.naming.combine_filename(affine_prefix,
                                     (ref_filepath, in_filepath)) +
-        fc.base.add_extsep(mrt.utils.EXT['text']))
+        fc.base.add_extsep(mrt.util.EXT['text']))
     _compute_affine_fsl(
         in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
         ref_mask_filepath, flirt_kws, flirt__kws,
@@ -678,7 +678,7 @@ def calc_correlation(
         # save results to csv
         filenames = [
             fc.base.change_ext(
-                os.path.basename(path), '', mrt.utils.EXT['niz'])
+                os.path.basename(path), '', mrt.util.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max([len(name) for name in filenames])
         label_list = ['avg', 'std', 'min', 'max', 'sum']
@@ -792,7 +792,7 @@ def combine_correlation(
             rows[j][i] = '{: <{size}s}'.format(col, size=max_cols[i])
     # :: write grouped correlation to new file
     out_filepath = os.path.join(
-        out_dirpath, out_filename + fc.base.add_extsep(mrt.utils.EXT['tab']))
+        out_dirpath, out_filename + fc.base.add_extsep(mrt.util.EXT['tab']))
     if fc.base.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile,
@@ -852,16 +852,16 @@ def plot_correlation(
     filename = mrt.naming.combine_filename(
         corr_prefix, (img1_filepath, img2_filepath))
     save_filepath = os.path.join(
-        out_dirpath, filename + fc.base.add_extsep(mrt.utils.EXT['plot']))
+        out_dirpath, filename + fc.base.add_extsep(mrt.util.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
     if fc.base.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltCor: {}'.format(os.path.basename(save_filepath)))
         img1_label = mrt.naming.filename2label(
-            img1_filepath, ext=mrt.utils.EXT['niz'], max_length=32)
+            img1_filepath, ext=mrt.util.EXT['niz'], max_length=32)
         img2_label = mrt.naming.filename2label(
-            img2_filepath, ext=mrt.utils.EXT['niz'], max_length=32)
+            img2_filepath, ext=mrt.util.EXT['niz'], max_length=32)
         title = 'Voxel-by-Voxel Correlation'
         if not val_type:
             val_type = 'Image'
@@ -921,8 +921,8 @@ def plot_histogram(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         fc.base.change_ext(os.path.basename(img_filepath),
-                           mrt.utils.EXT['plot'],
-                           mrt.utils.EXT['niz']))
+                           mrt.util.EXT['plot'],
+                           mrt.util.EXT['niz']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
@@ -986,8 +986,8 @@ def plot_sample(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
         fc.base.change_ext(os.path.basename(img_filepath),
-                           mrt.utils.EXT['plot'],
-                           mrt.utils.EXT['niz']))
+                           mrt.util.EXT['plot'],
+                           mrt.util.EXT['niz']))
     if fc.base.check_redo([img_filepath], [save_filepath], force):
         msg('PltFig: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
@@ -1204,12 +1204,12 @@ def prepare_comparison(
             out_dirpath,
             mrt.naming.combine_filename(diff_prefix,
                                         (ref_filepath, in_filepath)) +
-            fc.base.add_extsep(mrt.utils.EXT['niz']))
+            fc.base.add_extsep(mrt.util.EXT['niz']))
         corr_filepath = os.path.join(
             out_dirpath,
             mrt.naming.combine_filename(corr_prefix,
                                         (ref_filepath, in_filepath)) +
-            fc.base.add_extsep(mrt.utils.EXT['tab']))
+            fc.base.add_extsep(mrt.util.EXT['tab']))
         cmp_list.append(
             (in_filepath, ref_filepath, diff_filepath, corr_filepath))
     return cmp_list
@@ -1374,7 +1374,7 @@ def check_correlation(
     # :: populate a list of images to analyze
     targets, corrs = [], []
     if os.path.exists(dirpath):
-        filepath_list = fc.base.listdir(dirpath, mrt.utils.EXT['niz'])
+        filepath_list = fc.base.listdir(dirpath, mrt.util.EXT['niz'])
         sources = [fc.base.realpath(filepath) for filepath in filepath_list
                    if not val_name or
                    mrt.naming.parse_filename(filepath)['type'] == val_name]
@@ -1414,7 +1414,7 @@ def check_correlation(
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
                     mask_filepath = fc.base.change_ext(
-                        MASK_FILENAME, mrt.utils.EXT['niz'])
+                        MASK_FILENAME, mrt.util.EXT['niz'])
                 # add current directory if it was not specified
                 if not os.path.isfile(mask_filepath):
                     mask_filepath = os.path.join(dirpath, mask_filepath)

@@ -96,7 +96,7 @@ def _test(use_cache=True):
     tau_arr = np.linspace(2, 1000, 4000)
     a_arr = np.linspace(500, 4000, 4000)
 
-    import pymrt.utils
+    import pymrt.util
     import os
 
 

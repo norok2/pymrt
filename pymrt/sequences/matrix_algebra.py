@@ -75,7 +75,7 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 
 # :: Local Imports
 import pymrt as mrt
-import pymrt.utils
+import pymrt.util
 
 # import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # import pymrt.plot as pmp
@@ -408,7 +408,7 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + fc.base.add_extsep(mrt.utils.EXT['tab']))
+        dirpath, filename + fc.base.add_extsep(mrt.util.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
