@@ -147,7 +147,7 @@ def main():
 
     if not args.output:
         root, base, ext = fc.base.split_path(args.input)
-        args.output = fc.base.join_path(root, 'mask__' + base, ext)
+        args.output = fc.base.join_path([root, 'mask__' + base, ext])
 
     kws = fc.base.set_func_kws(
         mrt.segmentation.auto_mask, vars(args))

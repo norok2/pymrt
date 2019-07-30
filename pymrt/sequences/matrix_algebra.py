@@ -607,7 +607,7 @@ def _propagator_poly(
             for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -658,7 +658,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc._w1_arr))
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     return p_op
 
 
@@ -705,7 +705,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -743,7 +743,7 @@ def _propagator_interp(
                     (pulse_exc._w1_arr.real, pulse_exc._w1_arr.imag),
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     return p_op
 
 
@@ -787,7 +787,7 @@ def _propagator_linear(
                     _w1_arr, w1_approx, p_op_approx[i, j, :])
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -831,7 +831,7 @@ def _propagator_linear(
                      np.abs(pulse_exc._w1_arr.imag))
                 p_op_arr[:, i, j] = weighted
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
     return p_op
 
 
@@ -867,7 +867,7 @@ def _propagator_reduced(
             -dt_reduced *
             dynamics_operator(spin_model, pulse_exc.w_c, w1))
         for w1 in w1_reduced_arr]
-    return fc.extra.mdot(*p_ops[::-1])
+    return fc.extra.mdot(p_ops[::-1])
 
 
 # ======================================================================
@@ -1325,7 +1325,7 @@ class Pulse(SequenceEvent):
                 sp.linalg.expm(
                     -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                 for w1 in self._w1_arr]
-            p_op = fc.extra.mdot(*p_ops[::-1])
+            p_op = fc.extra.mdot(p_ops[::-1])
         else:
             try:
                 p_op_func = eval('_propagator_' + self.propagator_mode)
@@ -1337,7 +1337,7 @@ class Pulse(SequenceEvent):
                     sp.linalg.expm(
                         -self.dt * dynamics_operator(spin_model, self.w_c, w1))
                     for w1 in self._w1_arr]
-                p_op = fc.extra.mdot(*p_ops[::-1])
+                p_op = fc.extra.mdot(p_ops[::-1])
         return p_op
 
     # -----------------------------------
@@ -1614,7 +1614,7 @@ class PulseSequence(object):
         Returns:
             y(ndarray[float]): The propagator.
         """
-        p_op = fc.extra.mdot(*p_ops[::-1])
+        p_op = fc.extra.mdot(p_ops[::-1])
         if num > 1:
             p_op = sp.linalg.fractional_matrix_power(p_op, num)
         return p_op
@@ -1656,7 +1656,7 @@ class PulseSequence(object):
 
         """
         return (
-                np.abs(fc.extra.mdot(
+                np.abs(fc.extra.mdot_(
                     spin_model.detector(), p_op,
                     spin_model.equilibrium_magnetization())) *
                 spin_model.s0)
