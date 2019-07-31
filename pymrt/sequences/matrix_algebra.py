@@ -815,7 +815,8 @@ def _propagator_linear(
             l_op = dynamics_operator(spin_model, pulse_exc.w_c, w1_im)
             p_op_re_approx[:, :, i] = sp.linalg.expm(-pulse_exc.dt * l_op)
         # perform interpolation
-        p_op_arr = np.zeros((pulse_exc.num_steps,) + spin_model._operator_shape)
+        p_op_arr = np.zeros(
+            (pulse_exc.num_steps,) + spin_model._operator_shape)
         for i in range(spin_model._operator_dim):
             for j in range(spin_model._operator_dim):
                 p_op_arr_re = np.interp(
@@ -1667,7 +1668,7 @@ class PulseSequence(object):
         p_ops[idx] = new_p_op
         return p_ops
 
-# -----------------------------------
+    # -----------------------------------
     @staticmethod
     def _p_ops_substs(p_ops, substs):
         for idx, new_p_op in substs:
@@ -1741,9 +1742,8 @@ class SteadyState(PulseSequence):
             te = self._t_pexc / 2.0
         self.te = te
         # ensure compatible echo_times and repetition_time
-        if any([t < 0
-                for t in self._pre_post_delays(
-                self.te, self._t_ro, self._t_pexc)]):
+        if any(t < 0 for t in self \
+                ._pre_post_delays(self.te, self._t_ro, self._t_pexc)):
             text = (
                 'Incompatible options '
                 '`echo_time={}` and `repetition_time={}`'.format(
@@ -1845,9 +1845,9 @@ class MultiGradEchoSteadyState(SteadyState):
             tes = self.te
         self.tes = fc.base.auto_repeat(tes, 1, False, False)
         # ensure compatible echo_times and repetition_time
-        if any([t < 0
-                for te in self.tes
-                for t in self._pre_post_delays(te, self._t_ro, self._t_pexc)]):
+        if any(t < 0
+               for te in self.tes
+               for t in self._pre_post_delays(te, self._t_ro, self._t_pexc)):
             text = (
                 'Incompatible options '
                 '`echo_time={}` and `repetition_time={}`'.format(

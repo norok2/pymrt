@@ -221,7 +221,7 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
                     prep[i] = param
                 if is_seq:
                     prep[i] = fc.base.auto_repeat(prep[i], 1, False, False)
-            assert (all([prep_val is not None for prep_val in prep]))
+            assert (all(prep_val is not None for prep_val in prep))
             self.preps.append(prep)
 
         idx = self.get_unique_pulses(('MagnetizationPreparation',))

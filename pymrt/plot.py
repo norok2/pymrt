@@ -535,7 +535,7 @@ def simple(
         ax.set_xlim(limits[0])
     if limits[1]:
         ax.set_ylim(limits[1])
-    if any([legend for legend in legends]):
+    if any(legend for legend in legends):
         ax.legend(**(legend_kws if legend_kws is not None else {}))
     _more_texts(more_texts, ax)
     _more_elements(more_elements, ax)
@@ -1245,7 +1245,7 @@ def sample2d_multi(
 
     fig, ax = _ensure_fig_ax(ax)
 
-    assert all([arr.shape == arrs[0].shape for arr in arrs])
+    assert all(arr.shape == arrs[0].shape for arr in arrs)
     num_arrs = len(arrs)
     alphas = fc.base.auto_repeat(alphas, num_arrs, False, True)
     cmaps = fc.base.auto_repeat(cmaps, num_arrs, False, True)

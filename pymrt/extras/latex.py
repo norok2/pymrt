@@ -167,7 +167,7 @@ def make(
     """
     output_str = ''
 
-    if any([len(row) != len(label) for row in rows for label in labels]):
+    if any(len(row) != len(label) for row in rows for label in labels):
         raise IndexError('Number of columns in labels and data must match.')
 
     # preamble comment

@@ -339,9 +339,9 @@ def referencing(
                 [upper > lower >= 0 and lower < upper <= max_i
                  for (lower, upper), max_i in zip(mask, arr.shape)])
             for mask in masks]
-        if all([is_mask_arr or is_mask_borders or mask is None
+        if all(is_mask_arr or is_mask_borders or mask is None
                 for is_mask_arr, is_mask_borders, mask in zip(
-                are_mask_arr, are_mask_borders, masks)]):
+                are_mask_arr, are_mask_borders, masks)):
             int_refs = [
                 combine(arr[mask]) for combine, mask in zip(combines, masks)]
             res_arr = ref_operation(arr, int_refs, ext_refs)

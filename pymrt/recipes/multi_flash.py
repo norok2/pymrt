@@ -580,7 +580,7 @@ def vfa(
     tau_arr = np.stack([2 * np.tan(fa * eta_fa_arr / 2) for fa in fas], index)
 
     tr = np.mean(trs)
-    same_tr = all([np.isclose(x, tr) for x in trs])
+    same_tr = all(np.isclose(x, tr) for x in trs)
 
     with np.errstate(divide='ignore', invalid='ignore'):
         if same_tr:

@@ -142,7 +142,7 @@ def extract_nii(dirpath, extradir, force, verbose):
     params_filepath = os.path.join(dirpath, 'acqp')
     filepath_list = \
         [mag_filepath, phs_filepath, method_filepath, params_filepath]
-    if all([os.path.exists(filepath) for filepath in filepath_list]):
+    if all(os.path.exists(filepath) for filepath in filepath_list):
         if verbose > VERB_LVL['none']:
             print('Target:\t{}'.format(dirpath))
         # ensure proper destination path
@@ -166,8 +166,8 @@ def extract_nii(dirpath, extradir, force, verbose):
             list(params_ldr_user_dict.items()))
         # generate scan number and protocol
         info_dict['protocol'] = params_ldr_dict['ACQ_scan_name']
-        if all([method_ldr in method_ldr_dict for method_ldr
-                in ['MTyesno', 'MT_superlist_freq', 'MT_superlist_power']]) \
+        if all(method_ldr in method_ldr_dict for method_ldr
+                in ['MTyesno', 'MT_superlist_freq', 'MT_superlist_power']) \
                 and method_ldr_dict['MTyesno'] == 'Yes':
             # MT-specific code
             old_mag_filepath_list = mrt.input_output.split(mag_filepath)
