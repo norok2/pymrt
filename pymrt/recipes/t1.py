@@ -46,7 +46,7 @@ def mp2rage_rho(
         t1_values_range=(100, 5000),
         t1_num=512,
         eta_fa_values_range=(0.001, 2.0),
-        eta_fa_num=512,
+        eta_fa_num=64,
         mode='pseudo-ratio',
         inverted=False,
         **params_kws):
@@ -147,7 +147,12 @@ def mp2rage_rho(
             eta_fa_values_range[0], eta_fa_values_range[1],
             eta_fa_num).reshape(1, -1)
         rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, mode=mode, **seq_kws)
-        # todo: remove non bijective branches?
+        # remove non bijective branches
+        for i in range(eta_fa_num):
+            bijective_slice = fc.extra.bijective_part(rho[:, i])
+            non_bijective_slice = tuple(fc.base.complement(
+                range(t1_num), bijective_slice))
+            rho[non_bijective_slice, i] = -1
         # use griddata for interpolation
         t1_arr = sp.interpolate.griddata(
             (rho.ravel(), (np.zeros_like(rho) + eta_fa).ravel()),
