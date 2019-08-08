@@ -1049,8 +1049,10 @@ def sample3d_view2d(
             '{dim} - {num_axes} != {data_dim}'.format(
                 dim=arr.ndim, num_axes=len(axis), data_dim=data_dim))
     if view_flip:
-        data = data[
-            [slice(None, None, -1) if f else slice(None) for f in view_flip]]
+        slicing = tuple(
+            slice(None, None, -1) if f else slice(None)
+            for f in view_flip)
+        data = data[slicing]
 
     # prepare view
     if view_axes is None:
