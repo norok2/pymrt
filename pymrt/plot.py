@@ -2083,8 +2083,8 @@ def subplots(
     legend_pad = 0
     if legend_kws is not None:
         legend_pad = legend_kws.pop('pad') if 'pad' in legend_kws else 0
-        legend_row = legend_kws.pop('row') if 'row' in legend_kws else None
-        legend_col = legend_kws.pop('col') if 'col' in legend_kws else None
+        legend_row = legend_kws.pop('row') if 'row' in legend_kws else 0
+        legend_col = legend_kws.pop('col') if 'col' in legend_kws else 0
         if legend_row is not None and legend_col is not None:
             legend_pad = 0
 
@@ -2159,10 +2159,14 @@ def subplots(
         if 'handles' in legend_kws and 'labels' not in legend_kws:
             legend_kws['labels'] = tuple(
                 h.get_label() for h in legend_kws['handles'])
-        if legend_row is not None and legend_col is not None:
-            axs[legend_row, legend_col].legend(**dict(legend_kws))
+        if fc.base.is_deep(legend_row) and fc.base.is_deep(legend_col):
+            for r, c in zip(legend_row, legend_col):
+                axs[r, c].legend(**dict(legend_kws))
             legend_pad = 0
         else:
+            if 'handles' not in legend_kws and 'labels' not in legend_kws:
+                legend_kws['handles'], legend_kws['labels'] = \
+                    axs[legend_row, legend_col].get_legend_handles_labels()
             fig.legend(**dict(legend_kws))
 
     _more_texts(more_texts, fig)
