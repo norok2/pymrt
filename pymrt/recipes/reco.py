@@ -344,7 +344,7 @@ def noise(
         reco_func (callable): The reconstruction function.
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (Mappable|None): Keyword arguments for `reco_func`.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.
@@ -468,10 +468,10 @@ def gen_pseudo_multi_replica(
         reco_func (callable): The reconstruction function.
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (Mappable|None): Keyword arguments for `reco_func`.
         optim_args (Iterable|None): Positional arguments for `reco_func`.
             This are used to generate the optimal reconstruction.
-        optim_kws (tuple|dict|None): Keyword arguments for `reco_func`.
+        optim_kws (Mappable|None): Keyword arguments for `reco_func`.
             This are used to generate the optimal reconstruction.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
@@ -584,7 +584,7 @@ def pseudo_multi_replica(
              - the raw data array as first argument;
              - the mask/undersampling scheme as second argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
-        reco_kws (tuple|dict|None): Keyword arguments for `reco_func`.
+        reco_kws (Mappable|None): Keyword arguments for `reco_func`.
         noise_level (int|float|str|None): The noise level.
             This is used to determine the st.dev of the Gaussian noise
             being added at each iteration.

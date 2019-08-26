@@ -637,7 +637,7 @@ def qsm_field2source_l2_iter(
             the main magnetic field B0 (i.e. the principal axis of the dipole
             kernel) and the z-axis. If theta is 0, the projection simplifies to
             the identity.
-        linsolve_iter_kws (dict|tuple|None): Additional keyword arguments.
+        linsolve_iter_kws (Mappable|None): Additional keyword arguments.
             These are passed to `pymrt.recipes.generic.linsolve_iter()`.
         verbose (int): Set level of verbosity.
 
@@ -832,7 +832,7 @@ def qsm_total_field_inversion(
             the main magnetic field B0 (i.e. the principal axis of the dipole
             kernel) and the z-axis. If theta is 0, the projection simplifies to
             the identity.
-        linsolve_iter_kws (dict|tuple|None): Additional keyword arguments.
+        linsolve_iter_kws (Mappable|None): Additional keyword arguments.
             These are passed to `pymrt.recipes.generic.linsolve_iter()`.
         verbose (int): Set level of verbosity.
 

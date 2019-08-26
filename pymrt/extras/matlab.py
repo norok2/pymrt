@@ -143,7 +143,7 @@ def auto_convert(
              - `ext`: The input file extension (with leading separator).
              - `basepath`: The input filepath without extension.
              - `name`: The name of the variable as stored in the MATLAB file.
-        save_kws (dict|None): Keyword parameters for `input_output.save()`.
+        save_kws (Mappable|None): Keyword parameters for `input_output.save()`.
         on_exist (str): Determine what to do if output exists.
             Accepted values are:
              - 'unique': Generate a new unique filepath.

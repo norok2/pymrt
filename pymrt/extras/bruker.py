@@ -363,7 +363,7 @@ def batch_extract(
              - 'mag_phs': saves magnitude and phase.
              - 're_im': saves real and imaginary parts.
              - 'cx': saves the complex data.
-        custom_reco_kws (dict|None):
+        custom_reco_kws (Mappable|None):
         fid_name ():
         dseq_name ():
         acqp_name ():

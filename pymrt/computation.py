@@ -489,7 +489,7 @@ def compute_generic(
                   -> img_list, img_type_list
                 - compute_args (list): additional positional parameters for
                   compute_func
-                - compute_kws (dict): additional keyword parameters for
+                - compute_kws (Mappable|None): additional keyword parameters for
                   compute_func
                 - affine_func (str): name of the function for affine
                   computation: affine_func(affines, affine_args...) -> affine
@@ -605,7 +605,7 @@ def compute(
             sources_func(data_path, meta_path, sources_args...) ->
             ((string, dict) list) list.
         sources_args (list): Positional parameters passed to get_sources_func.
-        sources_kws (dict): Keyword parameters passed to get_sources_func.
+        sources_kws (Mappable|None): Keyword parameters passed to get_sources_func.
         compute_func (func): Calculation to perform on each list of filepaths.
             Function expected signature:
             compute_func(source_list, out_dirpath, compute_args...) ->

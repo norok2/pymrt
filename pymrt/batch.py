@@ -523,7 +523,7 @@ def rho_to_t1_mp2rage(
         eff_num (int): The base number of sampling points for the RF 
         efficiency.
             This affects the precision of the RF efficiency correction.
-        **acq_params_kws (dict): The acquisition parameters.
+        **acq_params_kws (Mappable|None): The acquisition parameters.
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
     Returns:
@@ -601,7 +601,7 @@ def t1_mp2rage(
         eff_num (int): The base number of sampling points for the RF 
         efficiency.
             This affects the precision of the RF efficiency correction.
-        **acq_param_kws (dict): The acquisition parameters.
+        **acq_param_kws (Mappable|None): The acquisition parameters.
             This should match the signature of:  `mp2rage.acq_to_seq_params`.
 
     Returns:

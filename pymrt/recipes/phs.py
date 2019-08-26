@@ -168,7 +168,7 @@ def phs_to_dphs(
                use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'laplacian': use `pymrt.recipes.phs.unwrap_laplacian()`.
              - 'sorting_path': use `pymrt.recipes.phs.unwrap_sorting_path()`.
-        unwrapping_kws (dict|tuple|None): Additional keyword arguments.
+        unwrapping_kws (Mappable|None): Additional keyword arguments.
             These are passed to `pymrt.recipes.phs.unwrap()`.
         time_units (str|float|int): Units of measurement of Ti.
             If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
@@ -227,7 +227,7 @@ def cx2_to_dphs(
         d_ti (int|float): The sampling time differenct in time units.
         unwrap_method (str|None): The unwrap method.
             See `pymrt.recipes.phs.unwrap()` for details.
-        unwrap_kws (dict|tuple|None): Keyword arguments for `unwrap()`.
+        unwrap_kws (Mappable|None): Keyword arguments for `unwrap()`.
         time_units (str|float|int): Units of measurement of Ti.
             If str, any valid SI time unit (e.g. `ms`, `ns`) will be accepted.
             If int or float, the conversion factor will be multiplied to `ti`.
@@ -483,7 +483,7 @@ def unwrap_laplacian(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to `np.cos(arr)` and `np.sin(arr)` separately.
-        denoising_kws (dict|Iterable|None): Keyword arguments.
+        denoising_kws (Mappable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
             If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
@@ -544,7 +544,7 @@ def unwrap_laplacian_c(
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         denoising (callable|None): The denoising function.
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
-        denoising_kws (dict|Iterable|None): Keyword arguments.
+        denoising_kws (Mappable|None): Keyword arguments.
             See `pymrt.recipes.phs.unwrap_laplacian()` for more info.
         congruences (int): The number of congruence values to test.
             See `pymrt.recipes.phs.congruence_correction()` for more info.
@@ -594,7 +594,7 @@ def unwrap_gradient(
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
             separately, using `fc.extra.filter_cx()`.
-        denoising_kws (dict|Iterable|None): Keyword arguments.
+        denoising_kws (Mappable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
             If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
@@ -651,7 +651,7 @@ def unwrap_gradient_c(
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
         denoising (callable|None): The denoising function.
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
-        denoising_kws (dict|Iterable|None): Keyword arguments.
+        denoising_kws (Mappable|None): Keyword arguments.
             See `pymrt.recipes.phs.unwrap_gradient()` for more info.
         congruences (int): The number of congruence values to test.
             See `pymrt.recipes.phs.congruence_correction()` for more info.
@@ -698,7 +698,7 @@ def unwrap_sorting_path(
         step (float): The size of the wrap discontinuity.
             For phase data this is 2π.
         reliab (callable): The function for computing reliability.
-        reliab_kws (dict|Iterable|None): Keyword arguments.
+        reliab_kws (Mappable|None): Keyword arguments.
             These are passed to the function specified in `reliab`.
             If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
@@ -991,7 +991,7 @@ def unwrap_1d_iter(
             separately, using `fc.extra.filter_cx()` and then
             converted back to a phase with `np.angle()` before applying the
             unwrapping.
-        denoising_kws (dict|Iterable|None): Keyword arguments.
+        denoising_kws (Mappable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
             If Iterable, must be convertible to a dictionary.
             If None, no keyword arguments will be passed.
@@ -1045,7 +1045,7 @@ def unwrap(
              - 'region_merging': use `pymrt.recipes.phs.unwrap_gradient()`.
 
              - '1d_iter': use `pymrt.recipes.phs.unwrap_1d_iter()`.
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
 
     Returns:
         arr (np.ndarray): The unwrapped phase array.

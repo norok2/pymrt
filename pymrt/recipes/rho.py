@@ -63,7 +63,7 @@ def fit_multiecho_mono(
             If None, all will be used.
         method (str): Determine the fitting method to use.
             See `recipes.generic.fit_exp()` for more info.
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
         b1r_arr (np.ndarray): The receive profile in arb. units.
             Assumes that units of time is ms and units of rates is Hz.
         ref_mask (tuple[int]|np.ndarray|None): The reference mask.

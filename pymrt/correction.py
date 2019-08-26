@@ -105,7 +105,7 @@ def denoise(
              - 'tv_chambolle': `skimage.restoration.denoise_tv_chambolle()`
              - 'bilateral': `skimage.restoration.denoise_bilateral()`
                (only works with 2D images)
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         cx_mode (str): Complex calculation mode.
@@ -581,10 +581,10 @@ def sn_split_thresholds(
             parameter set
             to `noise_threshold`.
             If None, `noise_threshold` is set to `signal_threshold`.
-        signal_kws (dict|None): Keyword parameters.
+        signal_kws (Mappable|None): Keyword parameters.
             If `signal_threshold` is str, the parameters are passed to
             `pymrt.segmentation.auto_thresholds()` for `signal_threshold`.
-        noise_kws (dict|None): Keyword parameters.
+        noise_kws (Mappable|None): Keyword parameters.
             If `noisel_threshold` is str, the parameters are passed to
             `pymrt.segmentation.auto_thresholds()` for `noise_threshold`.
         signal_index (int|None): Select a specific threshold.
@@ -643,7 +643,7 @@ def sn_split_denoise(
         arr (np.ndarray): The input array.
         method (str): Denoising method.
             This is passed to `denoise()`
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
 
@@ -823,7 +823,7 @@ def estimate_noise_sigma(
 
     Args:
         arr (np.ndarray): The input array.
-        dwt_kws (dict|None): Keyword parameters for noise sigma DWT.
+        dwt_kws (Mappable|None): Keyword parameters for noise sigma DWT.
             This is passed to `estimate_noise_sigma_dwt()`.
         method (str): The signal/noise estimation method.
             This is passed to `sn_split()`
@@ -862,7 +862,7 @@ def fix_bias_rician(
              - 'best': `estimate_noise_sigma()`
              - 'separated': `estimate_noise_sigma_sn_split()`
              - 'region': `sigma_noise_region()`
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             These are passed to the corresponding function.
             See the respective documentation for details.
         positive (bool): Force result to be positive.

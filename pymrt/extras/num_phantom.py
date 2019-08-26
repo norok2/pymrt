@@ -331,9 +331,9 @@ def random_geom_shapes(
             where:
              - func (callable): The function to generate the geometric shape.
              - args (tuple|None): Positional arguments of `func`.
-             - kws (dict|tuple|None): Keyword arguments of `func`.
+             - kws (Mappable|None): Keyword arguments of `func`.
                 If tuple, must be castable to dict.
-        kws (dict|tuple): Common keyword arguments.
+        kws (Mappable): Common keyword arguments.
             They must exist for any callable specified in `geom_shapes_specs`.
             The keyword arguments passed in `geom_shapes_specs` may override
             those specified here.

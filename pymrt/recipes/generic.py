@@ -946,7 +946,7 @@ def fit_exp(
              - 'quadr': closed-form solution using the quadrature properties
                of the exponential and optimal noise regression,
                very fast and very robust (extends both 'quad' and 'arlo').
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
 
     Returns:
         results (dict): The calculated information.
@@ -1137,12 +1137,12 @@ def voxel_curve_fit(
             parameters to fit is specified, initial value(s) set to one.
         pre_func (func):
         pre_args (list):
-        pre_kws (dict):
+        pre_kws (Mappable|None):
         post_func (func):
         post_args (list):
-        post_kws (dict):
+        post_kws (Mappable|None):
         method (str): Method to use for the curve fitting procedure.
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
 
     Returns:
         p_arr (np.ndarray) :
@@ -1335,7 +1335,7 @@ def linsolve_iter(
                computing :math:`Ax` and :math:`A^Hb`.
              - 'minres': use `scipy.sparse.linalg.minres()`.
                Requires an endomorphism (square matrix).
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
         verbose (int): Set level of verbosity.
 
     Returns:

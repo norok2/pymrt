@@ -325,7 +325,7 @@ def _manage_colorbar(
     Note that this modifies the `ax` (and `pax`) objects.
 
     Args:
-        cbar_kws (dict|tuple): The keyword arguments to pass to `colorbar()`
+        cbar_kws (Mappable|None): Keyword arguments for `colorbar()`.
             See `mpl.figure.colorbar()` for more.
         cbar_txt (str): The text to use as label for the colorbar.
         ax (mpl.axes): A Matplotlib axes.
@@ -417,7 +417,7 @@ def _more_elements(more_elements, ax):
             - element_func (str): Name of the method of `mpl.axes`.
               `ax.element_func` must be callable.
             - element_args (Iterable): Positional arguments.
-            - element_kws (dict|tuple): Keyword arguments.
+            - element_kws (Mappable|None): Keyword arguments.
             See `pymrt.plot._more_elements()` for more info.
         ax (mpl.axes): A Matplotlib axes.
 
@@ -445,9 +445,9 @@ def _save_plot(
         save_filepath (str|None): The file path where the plot is saved to.
             If None, no output is saved.
             If filepath exists a new plot is saved only if `force == True`.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             Frequently used parameters are: `dpi` and `format`.
-        tight_layout_kws (dict|tuple): Keyword arguments for `tight_layout()`.
+        tight_layout_kws (Mappable|None): Keyword arguments for `tight_layout()`.
             Uses the method of `mpl.figure`.
         fig (mpl.Figure): A Matplotlib figure.
         force (bool): Force new processing.
@@ -491,7 +491,7 @@ def simple(
         limits:
         styles:
         legends:
-        legend_kws (dict|tuple): Keyword arguments for `mpl.axes.legend()`.
+        legend_kws (Mappable|None): Keyword arguments for `mpl.axes.legend()`.
         title (str|None): The plot title.
             If None, no title is set.
         more_texts (Iterable|None): List of arguments for `mpl.axes.text()`.
@@ -501,7 +501,7 @@ def simple(
         ax (mpl.axes): A Matplotlib axes.
         save_filepath (str|None): The file path where the plot is saved to.
             See `pymrt.plot._save_plot()` for more info.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             See `pymrt.plot._save_plot()` for more info.
         force (bool): Force new processing.
         verbose (int): Set level of verbosity.
@@ -565,7 +565,7 @@ def empty(
         ax (mpl.axes): A Matplotlib axes.
         save_filepath (str|None): The file path where the plot is saved to.
             See `pymrt.plot._save_plot()` for more info.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             See `pymrt.plot._save_plot()` for more info.
         force (bool): Force new processing.
         verbose (int): Set level of verbosity.
@@ -642,7 +642,7 @@ def multi(
         ax (mpl.axes): A Matplotlib axes.
         save_filepath (str|None): The file path where the plot is saved to.
             See `pymrt.plot._save_plot()` for more info.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             See `pymrt.plot._save_plot()` for more info.
         force (bool): Force new processing.
         verbose (int): Set level of verbosity.
@@ -804,7 +804,7 @@ def legend(
         ax (mpl.axes): A Matplotlib axes.
         save_filepath (str|None): The file path where the plot is saved to.
             See `pymrt.plot._save_plot()` for more info.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             See `pymrt.plot._save_plot()` for more info.
         force (bool): Force new processing.
         verbose (int): Set level of verbosity.
@@ -922,7 +922,7 @@ def sample2d(
         ax (mpl.axes): A Matplotlib axes.
         save_filepath (str|None): The file path where the plot is saved to.
             See `pymrt.plot._save_plot()` for more info.
-        save_kws (dict|tuple): Keyword arguments for `mpl.figure.savefig()`.
+        save_kws (Mappable|None): Keyword arguments for `mpl.figure.savefig()`.
             See `pymrt.plot._save_plot()` for more info.
         force (bool): Force new processing.
         verbose (int): Set level of verbosity.

@@ -192,10 +192,10 @@ def _compute_affine_fsl(
         ref_filepath (str): Path to reference image.
         aff_filepath (str): Path to file where to store registration matrix.
         msk_filepath (str): Path to mask image.
-        flirt_kws (dict|None): Keyword arguments for `flirt`.
+        flirt_kws (Mappable|None): Keyword arguments for `flirt`.
             Keyword arguments from this dictionary are passed directly to
             FSL's `flirt`.
-        flirt__kws (dict|None): Keyword arguments for `flirt` (filtered).
+        flirt__kws (Mappable|None): Keyword arguments for `flirt` (filtered).
             Keywords arguments from this dictionary should contain only
             strings containing Python code as values, which will be passed to
             Python's `eval` function.
@@ -298,10 +298,10 @@ def register_fsl(
         out_filepath (str): Path to output file.
         ref_mask_filepath (str|None): Path to mask for the reference file.
         affine_prefix (str): Prefix to be used when generating affine filename.
-        flirt_kws (dict|None): Keyword arguments for `flirt`.
+        flirt_kws (Mappable|None): Keyword arguments for `flirt`.
             Keyword arguments from this dictionary are passed directly to
             FSL's `flirt`.
-        flirt__kws (dict|None): Keyword arguments for `flirt` (filtered)
+        flirt__kws (Mappable|None): Keyword arguments for `flirt` (filtered)
             Keywords arguments from this dictionary should contain only
             strings containing Python code as values, which will be passed to
             Python's `eval` function.
@@ -1027,7 +1027,7 @@ def registering(
         out_dirpath (str): Path to directory where to store results
         register_func (func): Function to be used for registration
         register_args (list): Positional parameters passed to register_func
-        register_kws (dict): Keyword parameters passed to register_func
+        register_kws (Mappable|None): Keyword parameters passed to register_func
         log_filename (str): Path to file where to log registration steps
         use_mp (bool): Use multiprocessing for faster computation
         force (bool): Force calculation of output

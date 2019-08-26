@@ -67,7 +67,7 @@ def fit_multiecho_mono(
             If None, all will be used.
         method (str): Determine the fitting method to use.
             See `recipes.generic.fit_exp()` for more info.
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
         invert_tau (bool): Invert tau results to convert times to rates.
             Assumes that units of time is ms and units of rates is Hz.
         prepare (callable|None): Input array preparation.

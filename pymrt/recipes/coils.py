@@ -194,7 +194,7 @@ def compress(
             Accepted values are:
              - 'compress_svd': use `pymrt.recipes.coils.compress_svd()`.
             If None, no coil compression is performed.
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `verbose` are passed.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
@@ -315,7 +315,7 @@ def adaptive(
             Typically, a low-pass filter is used, under the assumption that
             the coil sensitivity is smooth compared to the sources.
             If None, no separation is performed.
-        filtering_kws (dict|None): Keyword arguments to pass to `filtering`.
+        filtering_kws (Mappable|None): Keyword arguments to pass to `filtering`.
         max_iter (int): Maximum iterations in power algorithm.
             This is the maximum number of iterations used for determining the
             principal component (eigenvalue/vector) using the power algorithm.
@@ -480,7 +480,7 @@ def adaptive_iter(
             Typically, a low-pass filter is used, under the assumption that
             the coil sensitivity is smooth compared to the sources.
             If None, no separation is performed.
-        filtering_kws (dict|None): Keyword arguments to pass to `filtering`.
+        filtering_kws (Mappable|None): Keyword arguments to pass to `filtering`.
         max_iter (int): Maximum number of iterations.
             If `threshold` > 0, the algorithm may stop earlier.
         threshold (float): Threshold for next iteration.
@@ -926,7 +926,7 @@ def sensitivity(
              - 'block_adaptive';
              - 'adaptive_iter';
              - 'block_adaptive_iter';
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis` and `split_axis` are passed to `method`.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
@@ -1026,11 +1026,11 @@ def combine(
             Accepted values requiring both `ref` and `multi_axis` are:
              Not implemented yet.
 
-        method_kws (dict|tuple|None): Keyword arguments to pass to `method`.
+        method_kws (Mappable|None): Keyword arguments to pass to `method`.
             If None, only `coil_axis`, `split_axis`, `verbose` are passed.
         compression (callable|str|None): The compression method.
             This is passed as `method` to `compress`.
-        compression_kws (dict|None): Keyword arguments to pass to
+        compression_kws (Mappable|None): Keyword arguments to pass to
         `compression`.
             This is passed as `method_kwd` to `compress`.
         coil_axis (int): The coil dimension.

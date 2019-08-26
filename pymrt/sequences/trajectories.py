@@ -256,7 +256,7 @@ def zig_zag_blipped_2d(
         modulation (callable): The modulation of the trains.
             Must have the following signature:
             func(np.ndarray, **modulation_kws) -> np.ndarray
-        modulation_kws (dict|tuple|None): Keyword arguments for `modulation`.
+        modulation_kws (Mappable|None): Keyword arguments for `modulation`.
             If tuple, must produce a valid dict upon casting.
 
     Returns:

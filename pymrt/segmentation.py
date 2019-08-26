@@ -779,7 +779,7 @@ def auto_mask(
         threshold (int|float|str): Value/method for the threshold.
             If str, the threshold is estimated using `auto_thresholds()` with
             its `mode` parameter set to `threshold`.
-        threshold_kws (dict|None): Keyword parameters for `thresholding()`.
+        threshold_kws (Mappable|None): Keyword parameters for `thresholding()`.
         comparison (str): A string representing the numeric relationship
             Accepted values are: ['==', '!=', '>', '<', '>=', '<=']
         smoothing (float): Sigma to be used for Gaussian smoothing.
