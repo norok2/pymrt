@@ -387,15 +387,15 @@ def noise(
         verbose, VERB_LVL['debug'])
 
     mean_noised_arr = np.zeros_like(reco_arr, dtype=float)
-    mvar_noised_arr = np.zeros_like(reco_arr, dtype=float)
+    sosd_noised_arr = np.zeros_like(reco_arr, dtype=float)
     for i in range(num):
         msg('Replica #{}'.format(i), verbose, VERB_LVL['debug'])
         noise_raw_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_arr = reco_func(
             raw_arr + noise_raw_arr, *reco_args, **reco_kws)
-        mean_noised_arr, mvar_noised_arr = fc.base.next_mean_mvar(
-            np.real(noised_arr), mean_noised_arr, mvar_noised_arr, i)
-    noise_arr = np.sqrt(mvar_noised_arr / num)
+        mean_noised_arr, sosd_noised_arr = fc.base.next_mean_sosd(
+            np.real(noised_arr), mean_noised_arr, sosd_noised_arr, i)
+    noise_arr = fc.base.sosd2stdev(sosd_noised_arr, num)
     return noise_arr, reco_arr
 
 
