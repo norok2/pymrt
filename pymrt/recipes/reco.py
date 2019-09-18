@@ -380,16 +380,16 @@ def noise(
         noise_std_val = fc.base.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
-            noise_std_val = cx_ptp * noise_level
+            noise_std_val = cx_ptp * noise_std_val
         else:
             noise_std_val = 1
-    msg('Noise St.Dev.: {} (Level: {:.0%})'.format(noise_std_val, noise_level),
+    msg(fmtm('Noise St.Dev.: {noise_std_val} (Level: {noise_level})'),
         verbose, VERB_LVL['debug'])
 
     mean_noised_arr = np.zeros_like(reco_arr, dtype=float)
     sosd_noised_arr = np.zeros_like(reco_arr, dtype=float)
     for i in range(num):
-        msg('Replica #{}'.format(i), verbose, VERB_LVL['debug'])
+        msg(fmtm('Replica #{i}'), verbose, VERB_LVL['debug'])
         noise_raw_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_arr = reco_func(
             raw_arr + noise_raw_arr, *reco_args, **reco_kws)
