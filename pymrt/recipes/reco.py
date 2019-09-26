@@ -393,7 +393,7 @@ def noise(
         noise_raw_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_arr = reco_func(
             raw_arr + noise_raw_arr, *reco_args, **reco_kws)
-        mean_noised_arr, sosd_noised_arr = fc.base.next_mean_sosd(
+        mean_noised_arr, sosd_noised_arr = fc.base.next_mean_and_sosd(
             np.real(noised_arr), mean_noised_arr, sosd_noised_arr, i)
     noise_arr = fc.base.sosd2stdev(sosd_noised_arr, num)
     return noise_arr, reco_arr
