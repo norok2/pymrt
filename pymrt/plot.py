@@ -473,6 +473,7 @@ def simple(
         limits=(None, None),
         styles=None,
         legends=None,
+        aspect_ratio='auto',
         legend_kws=None,
         title=None,
         more_texts=None,
@@ -519,11 +520,12 @@ def simple(
         legends = fc.base.auto_repeat(None, len(y_datas), check=True)
     if styles is None:
         styles = fc.base.auto_repeat(None, len(y_datas), check=True)
-    for x_data, y_data, legend, style \
+    for x_data, y_data, legend_, style \
             in zip(x_datas, y_datas, legends, styles):
         if style is None:
             style = {}
-        pax = ax.plot(x_data, y_data, label=legend, **dict(style))
+        pax = ax.plot(x_data, y_data, label=legend_, **dict(style))
+    ax.set_aspect(aspect_ratio)
     # setup title and labels
     if title:
         ax.set_title(fmtm(title))
@@ -901,6 +903,8 @@ def sample2d(
         cmap=None,
         cbar_kws=None,
         cbar_txt=None,
+        x_label=None,
+        y_label=None,
         title=None,
         more_texts=None,
         more_elements=None,
@@ -960,6 +964,10 @@ def sample2d(
     data = _reorient_2d(data, orientation, flip_ud, flip_lr)
 
     # prepare plot
+    if x_label:
+        ax.set_xlabel(x_label)
+    if y_label:
+        ax.set_ylabel(y_label)
     if title:
         ax.set_title(title)
     if array_interval is None:
