@@ -469,6 +469,8 @@ def gen_pseudo_multi_replica(
             Must accept the raw data array as first argument.
         reco_args (Iterable|None): Positional arguments for `reco_func`.
         reco_kws (Mappable|None): Keyword arguments for `reco_func`.
+        optim_func (callable): The reconstruction function.
+            Must accept the raw data array as first argument.
         optim_args (Iterable|None): Positional arguments for `reco_func`.
             This are used to generate the optimal reconstruction.
         optim_kws (Mappable|None): Keyword arguments for `reco_func`.
@@ -491,7 +493,16 @@ def gen_pseudo_multi_replica(
             contains:
             - snr_arr (np.ndarray): The estimated SNR map.
             - g_factor_arr (np.ndarray): The estimated g-factor map.
+
+    References:
+        - Robson, Philip M., Aaron K. Grant, Ananth J. Madhuranthakam,
+          Riccardo Lattanzi, Daniel K. Sodickson, and Charles A. McKenzie.
+          “Comprehensive Quantification of Signal-to-Noise Ratio and g-Factor
+          for Image-Based and k-Space-Based Parallel Imaging Reconstructions.”
+          Magnetic Resonance in Medicine 60, no. 4 (2008): 895–907.
+          https://doi.org/10.1002/mrm.21728.
     """
+    #TODO: difference with `pseudo_multi_replica()`?
     reco_args = tuple(reco_args) if reco_args else ()
     reco_kws = dict(reco_kws) if reco_kws else {}
     if not optim_func:
@@ -503,9 +514,9 @@ def gen_pseudo_multi_replica(
     reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     mean_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
-    mvar_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
+    sosd_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
     mean_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
-    mvar_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
+    sosd_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
 
     # compute desired noise std
     if noise_level is None:
@@ -534,15 +545,17 @@ def gen_pseudo_multi_replica(
         noise_arr = np.random.normal(0, noise_std_val, reco_arr.shape)
         noised_optim_arr = optim_func(noise_arr, *optim_args, **optim_kws)
 
-        mean_noised_reco_arr, mvar_noised_reco_arr = fc.base.next_mean_mvar(
-            np.real(noised_reco_arr),
-            mean_noised_reco_arr, mvar_noised_reco_arr, i)
-        mean_noised_optim_arr, mvar_noised_optim_arr = fc.base.next_mean_mvar(
-            np.real(noised_optim_arr),
-            mean_noised_optim_arr, mvar_noised_optim_arr, i)
+        mean_noised_reco_arr, sosd_noised_reco_arr, _ = \
+            fc.base.next_mean_and_sosd(
+                np.real(noised_reco_arr),
+                mean_noised_reco_arr, sosd_noised_reco_arr, i)
+        mean_noised_optim_arr, sosd_noised_optim_arr, _ = \
+            fc.base.next_mean_and_sosd(
+                np.real(noised_optim_arr),
+                mean_noised_optim_arr, sosd_noised_optim_arr, i)
 
-    noise_reco_arr = np.sqrt(mvar_noised_reco_arr / (num - 1))
-    noise_optim_arr = np.sqrt(mvar_noised_optim_arr / (num - 1))
+    noise_reco_arr = fc.base.sosd2stdev(sosd_noised_reco_arr, num)
+    noise_optim_arr = fc.base.sosd2stdev(sosd_noised_optim_arr, num)
 
     snr_arr = np.abs(reco_arr) / noise_reco_arr
     g_factor_arr = g_factor(noise_optim_arr, noise_reco_arr, sampling_ratio)
@@ -569,6 +582,8 @@ def pseudo_multi_replica(
 
     This is then used to compute the signal-to-noise (SNR) map and the
     geometric noise amplification factor (g-factor).
+
+    Uses a specific `mask` to describe the undersampling pattern.
 
     SNR = img / sd_noise
     g_factor = sd_noised_img
@@ -619,9 +634,9 @@ def pseudo_multi_replica(
     reco_arr = reco_func(raw_arr, *reco_args, **reco_kws)
 
     mean_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
-    mvar_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
+    sosd_noised_reco_arr = np.zeros_like(reco_arr, dtype=float)
     mean_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
-    mvar_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
+    sosd_noised_optim_arr = np.zeros_like(reco_arr, dtype=float)
 
     # compute desired noise std
     if noise_level is None:
@@ -651,15 +666,17 @@ def pseudo_multi_replica(
         noised_optim_arr = reco_func(
             noise_arr, None, *reco_args, **reco_kws)
 
-        mean_noised_reco_arr, mvar_noised_reco_arr = fc.base.next_mean_mvar(
-            np.real(noised_reco_arr),
-            mean_noised_reco_arr, mvar_noised_reco_arr, i)
-        mean_noised_optim_arr, mvar_noised_optim_arr = fc.base.next_mean_mvar(
-            np.real(noised_optim_arr),
-            mean_noised_optim_arr, mvar_noised_optim_arr, i)
+        mean_noised_reco_arr, sosd_noised_reco_arr, _ = \
+            fc.base.next_mean_and_sosd(
+                np.real(noised_reco_arr),
+                mean_noised_reco_arr, sosd_noised_reco_arr, i)
+        mean_noised_optim_arr, sosd_noised_optim_arr, _ = \
+            fc.base.next_mean_and_sosd(
+                np.real(noised_optim_arr),
+                mean_noised_optim_arr, sosd_noised_optim_arr, i)
 
-    noise_reco_arr = np.sqrt(mvar_noised_reco_arr / (num - 1))
-    noise_optim_arr = np.sqrt(mvar_noised_optim_arr / (num - 1))
+    noise_reco_arr = fc.base.sosd2stdev(sosd_noised_reco_arr, num)
+    noise_optim_arr = fc.base.sosd2stdev(sosd_noised_optim_arr, num)
 
     snr_arr = np.abs(reco_arr) / noise_reco_arr
     g_factor_arr = g_factor(noise_optim_arr, noise_reco_arr, sampling_ratio)
