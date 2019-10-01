@@ -234,7 +234,8 @@ def zig_zag_blipped_2d(
         num_trains=None,
         num_blips=None,
         modulation=np.zeros_like,
-        modulation_kws=None):
+        modulation_kws=None,
+        centered=False):
     """
     Generate a zig-zag blipped trajectory.
 
@@ -258,6 +259,9 @@ def zig_zag_blipped_2d(
             func(np.ndarray, **modulation_kws) -> np.ndarray
         modulation_kws (Mappable|None): Keyword arguments for `modulation`.
             If tuple, must produce a valid dict upon casting.
+        centered (bool): Produce a centered trajectory.
+            If True, the center-of-mass of the unmodulated trajectory
+            should pass close to k=0.
 
     Returns:
         result (tuple): The tuple
@@ -338,13 +342,18 @@ def zig_zag_blipped_2d(
             y.extend((blip + y_offset).tolist())
             mask.extend(np.zeros_like(blip, dtype=bool).tolist())
         y_offset += blip_size
-    return np.array([x, y]), np.array(mask)
+    traj, mask = np.array([x, y]), np.array(mask)
+    if centered:
+        traj[0, :] = traj[0, :] - train_size // 2
+        traj[1, :] = traj[1, :] - num_trains // 2
+    return traj, mask
 
 
 # ======================================================================
 def zig_zag_linear_2d(
         train_size,
-        num_trains):
+        num_trains,
+        centered=False):
     """
     Generate a zig-zag linear trajectory.
 
@@ -360,6 +369,9 @@ def zig_zag_linear_2d(
             Its sign determines the direction of subsequent trains: if
             positive goes in the direction of positive y-axis, otherwise goes
             in the other direction.
+        centered (bool): Produce a centered trajectory.
+            If True, the center-of-mass of the trajectory
+            should pass close to k=0.
 
     Returns:
         result (tuple): The tuple
@@ -413,7 +425,11 @@ def zig_zag_linear_2d(
         x.extend(train[slicing].tolist())
     y = np.arange(0, n_points) * np.sign(num_trains)
     mask = np.ones(n_points, dtype=bool)
-    return np.stack([x, y]), mask
+    traj = np.array([x, y])
+    if centered:
+        traj[0, :] = traj[0, :] - train_size // 2
+        traj[1, :] = traj[1, :] - num_trains // 2
+    return traj, mask
 
 
 # ======================================================================
@@ -424,7 +440,8 @@ def zig_zag_blipped_sinusoidal_2d(
         num_blips=None,
         wavelength=None,
         amplitude=None,
-        phase=0.0):
+        phase=0.0,
+        centered=False):
     """
     Generate a zig-zag blipped trajectory with harmonic trains.
 
@@ -448,6 +465,9 @@ def zig_zag_blipped_sinusoidal_2d(
         wavelength (int|float|None):
         amplitude (int|float|None):
         phase (int|float): The phase of the sinusoidal modulation in rad.
+        centered (bool): Produce a centered trajectory.
+            See `pymrt.sequences.trajectories.zig_zag_blipped_2d()` for more
+            details.
 
     Returns:
         result (tuple): The tuple
@@ -470,7 +490,8 @@ def zig_zag_blipped_sinusoidal_2d(
         return amplitude * np.sin(2.0 * np.pi * x / wavelength + phase)
 
     return zig_zag_blipped_2d(
-        train_size, blip_size, num_trains, num_blips, modulation)
+        train_size, blip_size, num_trains, num_blips, modulation, None,
+        centered)
 
 
 # ======================================================================
