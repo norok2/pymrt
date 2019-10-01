@@ -537,7 +537,7 @@ def simple(
         ax.set_xlim(limits[0])
     if limits[1]:
         ax.set_ylim(limits[1])
-    if any(legend for legend in legends):
+    if any(legend_ for legend_ in legends):
         ax.legend(**(legend_kws if legend_kws is not None else {}))
     _more_texts(more_texts, ax)
     _more_elements(more_elements, ax)
