@@ -1113,15 +1113,15 @@ def sample3d_view2d(
             x0s[1], y0s[1], x0s[2], y0s[2] = x0s[2], y0s[2], x0s[1], y0s[1]
 
     elif mode in ('hor', 'horizontal'):
-        x_size = max([v.shape[0] for v in views])
-        y_size = sum([v.shape[1] for v in views])
+        x_size = max(v.shape[0] for v in views)
+        y_size = sum(v.shape[1] for v in views)
         view = np.zeros((x_size, y_size))
         x0s = [(x_size - v.shape[0]) // 2 for v in views]
         y0s = [0] + list(np.cumsum([v.shape[1] for v in views])[:-1])
 
     elif mode in ('ver', 'vertical'):
-        x_size = sum([v.shape[0] for v in views])
-        y_size = max([v.shape[1] for v in views])
+        x_size = sum(v.shape[0] for v in views)
+        y_size = max(v.shape[1] for v in views)
         view = np.zeros((x_size, y_size))
         x0s = [0] + list(np.cumsum([v.shape[0] for v in views])[:-1])
         y0s = [(y_size - v.shape[1]) // 2 for v in views]

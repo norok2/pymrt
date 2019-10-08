@@ -680,7 +680,7 @@ def calc_correlation(
             fc.base.change_ext(
                 os.path.basename(path), '', mrt.util.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
-        lbl_len = max([len(name) for name in filenames])
+        lbl_len = max(len(name) for name in filenames)
         label_list = ['avg', 'std', 'min', 'max', 'sum']
         val_filter = (lambda x: fc.base.compact_num_str(x, trunc)) \
             if trunc else (lambda x: x)

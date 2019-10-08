@@ -442,7 +442,7 @@ def reliab_diff2(
         wrap(arr[slices[j]] - arr[mid_slice], step, step / 2) -
         wrap(arr[mid_slice] - arr[slices[-j - 1]], step, step / 2)
         for j in range(mid_point)]
-    diff2_arr = np.sqrt(sum([x ** 2 for x in diffs]))
+    diff2_arr = np.sqrt(sum(x ** 2 for x in diffs))
     reliab_arr[mid_slice][diff2_arr != 0] = 1 / diff2_arr[diff2_arr != 0]
     reliab_arr[mid_slice][diff2_arr == 0] = np.inf
     reliab_arr[np.isnan(arr)] = np.nan

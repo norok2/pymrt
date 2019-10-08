@@ -580,7 +580,7 @@ def acq_to_seq_params(
         part_fourier_factors[pe1], grappa_factors[pe1], grappa_refs[pe1])
     if bandwidths:
         min_tr_gre = round(
-            sum([1 / bw * 2 * matrix_sizes[0] for bw in bandwidths]), 2)
+            sum(1 / bw * 2 * matrix_sizes[0] for bw in bandwidths), 2)
         assert (tr_gre >= min_tr_gre)
     td = calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, k_gre, check=True)
     seq_params = dict(

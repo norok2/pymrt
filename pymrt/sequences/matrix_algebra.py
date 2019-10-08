@@ -1552,8 +1552,9 @@ class PulseSequence(object):
     # -----------------------------------
     @staticmethod
     def _duration(pulses):
-        return sum([pulse.duration if hasattr(pulse, 'duration') else 0.0
-                    for pulse in pulses])
+        return sum(
+            pulse.duration if hasattr(pulse, 'duration') else 0.0
+            for pulse in pulses)
 
     # -----------------------------------
     @property
@@ -1754,8 +1755,9 @@ class SteadyState(PulseSequence):
     # -----------------------------------
     @staticmethod
     def _get_tr(pulses):
-        return sum([pulse.duration if hasattr(pulse, 'duration') else 0.0
-                    for pulse in pulses])
+        return sum(
+            pulse.duration if hasattr(pulse, 'duration') else 0.0
+            for pulse in pulses)
 
     # -----------------------------------
     @staticmethod
