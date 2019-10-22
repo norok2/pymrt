@@ -303,7 +303,7 @@ def _reco_from_fid(
         # except ValueError:
         except NotImplementedError as e:
             msg('Failed at: {}'.format(e))
-            fid_shape = fc.base.factorize_k(arr.size, 3)
+            fid_shape = fc.base.get_k_factors(arr.size, 3)
             warning = ('Could not determine correct shape for FID. '
                        'Using `{}`'.format(fid_shape))
             warnings.warn(warning)
