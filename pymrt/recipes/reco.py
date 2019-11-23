@@ -174,19 +174,17 @@ def grappa_1d(
         arr = np.swapaxes(arr, coil_axis, last_axis)
 
     # : prepare parameters
-    acceleration_factors = tuple(
+    acc_factors = tuple(
         acceleration if i == acc_axis else 1 if i != coil_axis else None
         for i in range(arr.ndim))
-    acceleration_slicing = acceleration_slices(
-        arr.shape, acceleration_factors)
-    autocalib_slicing = autocalib_slices(
-        arr.shape, autocalib, acceleration_factors)
-    acc_arr = arr[acceleration_slicing]
+    acc_slicing = acceleration_slices(arr.shape, acc_factors)
+    autocalib_slicing = autocalib_slices(arr.shape, autocalib, acc_factors)
+    acc_arr = arr[acc_slicing]
     calib_arr = arr[autocalib_slicing]
     kernel_size = kernel_span * 2 + 1
     kernel_window = tuple(
         1 if factor is None else kernel_size if factor == 1 else factor + 1
-        for factor in acceleration_factors)
+        for factor in acc_factors)
     kernel_calib_size = 2 * kernel_size
     # number of target points within a kernel window
     n_targets = acceleration - 1
@@ -199,14 +197,14 @@ def grappa_1d(
                  slice(kernel_size // 2,
                        kernel_size // 2 + 1) if factor == 1 else
                  slice(1, factor))
-                for factor in acceleration_factors)
+                for factor in acc_factors)
     target_arr = calib_padded_arr[target_slicing] \
         .reshape(-1, calib_arr.shape[-1] * n_targets)
     calib_mat_slicing = \
         tuple(slice(None) for _ in calib_arr.shape) \
         + tuple(
             (slice(None) if factor is None or factor == 1 else (0, factor))
-            for factor in acceleration_factors)
+            for factor in acc_factors)
     calib_mat_arr = calib_padded_arr[calib_mat_slicing] \
         .reshape(-1, calib_arr.shape[-1] * kernel_calib_size)
 
@@ -231,16 +229,16 @@ def grappa_1d(
             slice(None) if factor is None else
             slice(kernel_span, -kernel_span) if factor == 1 else
             slice(i + 1, None, factor)
-            for dim, factor in zip(arr.shape, acceleration_factors))
+            for dim, factor in zip(arr.shape, acc_factors))
         source_missing_slicing = tuple(
             slice(None) if factor is None else
             slice(kernel_span, -kernel_span) if factor == 1 else
             slice(n_targets, dim - factor + n_targets + 1, factor)
-            for dim, factor in zip(arr.shape, acceleration_factors))
+            for dim, factor in zip(arr.shape, acc_factors))
         result[target_missing_slicing] = \
             unknown_arr[..., i][source_missing_slicing]
     result[autocalib_slicing] = calib_arr
-    result[acceleration_slicing] = acc_arr
+    result[acc_slicing] = acc_arr
 
     if coil_axis != last_axis:
         result = np.swapaxes(result, last_axis, coil_axis)
