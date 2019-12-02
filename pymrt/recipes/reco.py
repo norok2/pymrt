@@ -137,15 +137,15 @@ def grappa_1d(
         acceleration=2,
         autocalib=16,
         kernel_span=1,
-        acc_axis=0,
+        acceleration_axis=0,
         coil_axis=-1):
     """
-    Perform GRAPPA-like interpolation with 1D-accelerated cartesian k-data.
+    Perform GRAPPA interpolation with 1D-accelerated cartesian k-data.
 
     Args:
         arr (np.ndarray): The input array.
             Data is in k-space and missing k-space lines are zero-filled.
-        acceleration (int): The acceleration factors (along 1 dimension).
+        acceleration (int): The acceleration factor (along 1 dimension).
         autocalib (int): The number of central k-space lines acquired.
         kernel_span (int): The half-size of the kernel.
             The kernel window size in the non-accelerated dimension is given
@@ -153,12 +153,12 @@ def grappa_1d(
             Kernel span must be non-negative.
             The kernel window size in the accelerated dimension is equal to
             the `acceleration + 1`.
-        acc_axis (int): The accelerated dimension.
+        acceleration_axis (int): The accelerated dimension.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
 
     Returns:
-        arr (np.ndarray): The output array.
+        arr (np.ndarray): The output array in k-space.
 
     See Also:
         - Griswold, Mark A., Peter M. Jakob, Robin M. Heidemann,
@@ -175,7 +175,8 @@ def grappa_1d(
 
     # : prepare parameters
     acc_factors = tuple(
-        acceleration if i == acc_axis else 1 if i != coil_axis else None
+        acceleration
+        if i == acceleration_axis else 1 if i != coil_axis else None
         for i in range(arr.ndim))
     acc_slicing = acceleration_slices(arr.shape, acc_factors)
     autocalib_slicing = autocalib_slices(arr.shape, autocalib, acc_factors)
@@ -239,6 +240,65 @@ def grappa_1d(
             unknown_arr[..., i][source_missing_slicing]
     result[autocalib_slicing] = calib_arr
     result[acc_slicing] = acc_arr
+
+    if coil_axis != last_axis:
+        result = np.swapaxes(result, last_axis, coil_axis)
+    return result
+
+
+# ======================================================================
+def msense_1d(
+        arr,
+        acceleration=2,
+        autocalib=16,
+        acceleration_axis=0,
+        coil_axis=-1):
+    """
+    Perform modified SENSE reconstruction with 1D-accelerated cartesian k-data.
+
+    The coil sensitivity is estimated from the autocalibration lines.
+
+    Args:
+        arr (np.ndarray): The input array.
+            Data is in k-space and missing k-space lines are zero-filled.
+        acceleration (int): The acceleration factor (along 1 dimension).
+        autocalib (int): The number of central k-space lines acquired.
+        acceleration_axis (int): The accelerated dimension.
+        coil_axis (int): The coil dimension.
+            The dimension of `arr` along which single coil elements are stored.
+
+    Returns:
+        arr (np.ndarray): The output array.
+
+    See Also:
+        - Pruessmann, Klaas P., Markus Weiger, Markus B. Scheidegger, and
+          Peter Boesiger. 1999. “SENSE: Sensitivity Encoding for Fast MRI.”
+          Magnetic Resonance in Medicine 42 (5): 952–62.
+          https://doi.org/10.1002/
+          (SICI)1522-2594(199911)42:5<952::AID-MRM16>3.0.CO;2-S.
+        - Griswold, Mark A., Felix Breuer, Martin Blaimer, Stephan
+          Kannengiesser, Robin M. Heidemann, Matthias Mueller, Mathias Nittka,
+          Vladimir Jellus, Berthold Kiefer, and Peter M. Jakob. 2006.
+          “Autocalibrated Coil Sensitivity Estimation for Parallel Imaging.”
+          NMR in Biomedicine 19 (3): 316–24. https://doi.org/10.1002/nbm.1048.
+    """
+    # : ensure coil axis is the last
+    coil_axis = coil_axis % arr.ndim
+    last_axis = -1 % arr.ndim
+    if coil_axis != last_axis:
+        arr = np.swapaxes(arr, coil_axis, last_axis)
+
+    # : prepare parameters
+    acc_factors = tuple(
+        acceleration
+        if i == acceleration_axis else 1 if i != coil_axis else None
+        for i in range(arr.ndim))
+    acc_slicing = acceleration_slices(arr.shape, acc_factors)
+    autocalib_slicing = autocalib_slices(arr.shape, autocalib, acc_factors)
+    acc_arr = arr[acc_slicing]
+    calib_arr = arr[autocalib_slicing]
+
+
 
     if coil_axis != last_axis:
         result = np.swapaxes(result, last_axis, coil_axis)
