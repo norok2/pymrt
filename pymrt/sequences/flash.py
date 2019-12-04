@@ -76,8 +76,7 @@ def signal(
         te,
         t2s,
         eta_fa=1,
-        eta_m0=1,
-        symbolic=True):
+        eta_m0=1):
     """
     The FLASH (a.k.a. GRE, TFL, SPGR) signal expression:
     
@@ -116,20 +115,74 @@ def signal(
             Units must be the same as `te`.
         eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
             This is proportional to the coil transmit field :math:`B_1^+`.
-        eta_m0 (int|float|np.ndarray): The spin density efficiency in one
-        units.
+        eta_m0 (int|float|np.ndarray): The detector efficiency in one units.
             This is proportional to the coil receive field :math:`B_1^-`.
-        symbolic (bool)
 
     Returns:
         s (float|np.ndarray): The signal expression.
     """
-    if symbolic:
-        sin, cos, exp = sym.sin, sym.cos, sym.exp
-    else:
-        sin, cos, exp = np.sin, np.cos, np.exp
-    return eta_m0 * m0 * sin(fa * eta_fa) * exp(-te / t2s) * \
-           (1.0 - exp(-tr / t1)) / (1.0 - cos(fa * eta_fa) * exp(-tr / t1))
+    return eta_m0 * m0 * np.sin(fa * eta_fa) * np.exp(-te / t2s) * \
+           (1.0 - np.exp(-tr / t1)) / \
+           (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1))
+
+
+# ======================================================================
+def sym_signal(
+        m0,
+        fa,
+        tr,
+        t1,
+        te,
+        t2s,
+        eta_fa=1,
+        eta_m0=1):
+    """
+    The FLASH (a.k.a. GRE, TFL, SPGR) signal expression:
+
+    s = m0 sin(fa) exp(-te/t2s) (1 - exp(-tr/t1)) / (1 - cos(fa) exp(-tr/t1))
+
+    .. math::
+        s = \\eta_{m_0} m_0 \\sin(\\eta_\\alpha \\alpha)
+        e^{-\\frac{T_E}{T_2^*}}
+        \\frac{1 - e^{-\\frac{T_R}{T_1}}}
+        {1 - \\cos(\\eta_\\alpha \\alpha) e^{-\\frac{T_R}{T_1}}}
+
+    where
+    :math:`m_0` is the spin density,
+    :math:`\\eta_{m_0}` is an the receive (spin density) efficiency
+    (proportional to the coil receive field :math:`B_1^-`),
+    :math:`\\alpha` is the flip angle of the RF excitation,
+    :math:`\\eta_\\alpha` is the transmit (flip angle) efficiency
+    (proportional to the coil transmit field :math:`B_1^+`),
+    :math:`T_E` is the echo time,
+    :math:`T_2^*` is the reduced transverse relaxation time,
+    :math:`T_R` is the repetition time, and
+    :math:`T_1` is the longitudinal relaxation time.
+
+    Args:
+        m0 (int|float|np.ndarray): The bulk magnetization M0 in arb. units.
+            This includes both spin density and all additional experimental
+            factors (coil contribution, electronics calibration, etc.).
+        fa (int|float|np.ndarray): The flip angle in rad.
+        tr (int|float|np.ndarray): The repetition time in time units.
+            Units must be the same as `t1`.
+        t1 (int|float|np.ndarray): The longitudinal relaxation in time units.
+            Units must be the same as `tr`.
+        te (int|float|np.ndarray): The echo time in time units.
+            Units must be the same as `t2s`.
+        t2s (int|float|np.ndarray): The transverse relaxation in time units.
+            Units must be the same as `te`.
+        eta_fa (int|float|np.ndarray): The flip angle efficiency in one units.
+            This is proportional to the coil transmit field :math:`B_1^+`.
+        eta_m0 (int|float|np.ndarray): The detector efficiency in one units.
+            This is proportional to the coil receive field :math:`B_1^-`.
+
+    Returns:
+        s (float|np.ndarray): The signal expression.
+    """
+    return eta_m0 * m0 * sym.sin(fa * eta_fa) * sym.exp(-te / t2s) * \
+           (1.0 - sym.exp(-tr / t1)) / \
+           (1.0 - sym.cos(fa * eta_fa) * sym.exp(-tr / t1))
 
 
 # ======================================================================
@@ -157,7 +210,7 @@ def _prepare_triple_flash_approx(use_cache=CFG['use_cache']):
         s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
             's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3', positive=True)
         n = sym.symbols('n')
-        eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
+        eq = sym.Eq(s, sym_signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
         eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
         eq_2 = eq.subs({s: s2, fa: fa2, tr: tr2})
         eq_3 = eq.subs({s: s3, fa: fa3, tr: tr3})
@@ -235,7 +288,7 @@ def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
         s1, s2, s3, tr1, tr2, tr3, fa1, fa2, fa3 = sym.symbols(
             's1, s2, s3, tr1 tr2 tr3 fa1 fa2 fa3')
         n = sym.symbols('n')
-        eq = sym.Eq(s, signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
+        eq = sym.Eq(s, sym_signal(m0, fa, tr, t1, te, t2s, eta_fa, eta_m0))
         eq_1 = eq.subs({s: s1, fa: fa1, tr: tr1})
         eq_2 = eq.subs({s: s2, fa: fa2, tr: tr2})
         eq_3 = eq.subs({s: s3, fa: fa3, tr: tr3})
