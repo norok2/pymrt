@@ -60,7 +60,6 @@ import pymrt as mrt
 # import pymrt.modules.plot as pmp
 
 # :: Local Imports
-from sympy import pi, exp, sin, cos, tan
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
@@ -77,7 +76,8 @@ def signal(
         te,
         t2s,
         eta_fa=1,
-        eta_m0=1):
+        eta_m0=1,
+        symbolic=True):
     """
     The FLASH (a.k.a. GRE, TFL, SPGR) signal expression:
     
@@ -119,10 +119,15 @@ def signal(
         eta_m0 (int|float|np.ndarray): The spin density efficiency in one
         units.
             This is proportional to the coil receive field :math:`B_1^-`.
+        symbolic (bool)
 
     Returns:
         s (float|np.ndarray): The signal expression.
     """
+    if symbolic:
+        sin, cos, exp = sym.sin, sym.cos, sym.exp
+    else:
+        sin, cos, exp = np.sin, np.cos, np.exp
     return eta_m0 * m0 * sin(fa * eta_fa) * exp(-te / t2s) * \
            (1.0 - exp(-tr / t1)) / (1.0 - cos(fa * eta_fa) * exp(-tr / t1))
 
@@ -169,10 +174,10 @@ def _prepare_triple_flash_approx(use_cache=CFG['use_cache']):
         eq_ar21_ = eq_r21.copy()
         for tr_ in tr1, tr2, tr3:
             eq_ar21_ = eq_ar21_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+                sym.exp(-tr_ / t1),
+                sym.exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
         for fa_ in fa1, fa2, fa3:
-            for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+            for fa_expr in (sym.sin(eta_fa * fa_), sym.cos(eta_fa * fa_)):
                 eq_ar21_ = eq_ar21_.subs(
                     fa_expr,
                     fa_expr.series(eta_fa * fa_, n=3).removeO())
@@ -180,10 +185,10 @@ def _prepare_triple_flash_approx(use_cache=CFG['use_cache']):
         eq_ar31_ = eq_r31.copy()
         for tr_ in tr1, tr2, tr3:
             eq_ar31_ = eq_ar31_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+                sym.exp(-tr_ / t1),
+                sym.exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
         for fa_ in fa1, fa2, fa3:
-            for fa_expr in (sin(eta_fa * fa_), cos(eta_fa * fa_)):
+            for fa_expr in (sym.sin(eta_fa * fa_), sym.cos(eta_fa * fa_)):
                 eq_ar31_ = eq_ar31_.subs(
                     fa_expr,
                     fa_expr.series(eta_fa * fa_, n=3).removeO())
@@ -251,21 +256,21 @@ def _prepare_triple_flash_special1(use_cache=CFG['use_cache']):
         eq_ar21_ = eq_r21.subs(double_fa_short_tr)
         for tr_ in (tr, n * tr):
             eq_ar21_ = eq_ar21_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+                sym.exp(-tr_ / t1),
+                sym.exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
         eq_ar21_ = sym.FU['TR5'](eq_ar21_.expand().trigsimp())
 
         eq_ar31_ = eq_r31.subs(double_fa_short_tr)
         for tr_ in (tr, n * tr):
             eq_ar31_ = eq_ar31_.subs(
-                exp(-tr_ / t1),
-                exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
+                sym.exp(-tr_ / t1),
+                sym.exp(-tr_ / t1).series(tr_ / t1, n=2).removeO())
         eq_ar31_ = sym.FU['TR5'](eq_ar31_.expand().trigsimp())
 
         print(eq_ar21_)
         print(eq_ar31_)
         double_fa_short_tr_result = sym.solve(
-            (eq_ar21_, eq_ar31_), (t1, cos(eta_fa * fa)))
+            (eq_ar21_, eq_ar31_), (t1, sym.cos(eta_fa * fa)))
         for j, exprs in enumerate(double_fa_short_tr_result):
             print('SOLUTION: ', j + 1)
             for name, expr in zip(('t1', 'cos(eta_fa * fa)'), exprs):
@@ -437,10 +442,10 @@ def rotation(
         axes=(0, 1),
         n_dim=3):
     rot_mat = sym.eye(n_dim)
-    rot_mat[axes[0], axes[0]] = cos(angle)
-    rot_mat[axes[1], axes[1]] = cos(angle)
-    rot_mat[axes[0], axes[1]] = -sin(angle)
-    rot_mat[axes[1], axes[0]] = sin(angle)
+    rot_mat[axes[0], axes[0]] = sym.cos(angle)
+    rot_mat[axes[1], axes[1]] = sym.cos(angle)
+    rot_mat[axes[0], axes[1]] = -sym.sin(angle)
+    rot_mat[axes[1], axes[0]] = sym.sin(angle)
     return rot_mat
 
 
@@ -463,11 +468,11 @@ def evolution(
         resonance_offset=0,
         equilibrium_magnetization=sym.Symbol('M_eq')):
     decay = rotation(resonance_offset, (0, 1))
-    decay[0:2, 0:2] *= exp(-duration * relaxation_transverse)
-    decay[-1, -1] *= exp(-duration * relaxation_longitudinal)
+    decay[0:2, 0:2] *= sym.exp(-duration * relaxation_transverse)
+    decay[-1, -1] *= sym.exp(-duration * relaxation_longitudinal)
     recovery = sym.Matrix(
         [0, 0, equilibrium_magnetization *
-         (1 - exp(-duration * relaxation_longitudinal))])
+         (1 - sym.exp(-duration * relaxation_longitudinal))])
     excitation = rotation(flip_angle, rotation_plane)
     final_magnetization = decay * excitation * initial_magnetization + recovery
     return final_magnetization, excitation
