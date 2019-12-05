@@ -104,7 +104,7 @@ def signal(
         m0 (int|float|np.ndarray): The bulk magnetization M0 in arb. units.
             This includes both spin density and all additional experimental
             factors (coil contribution, electronics calibration, etc.).
-        fa (int|float|np.ndarray): The flip angle in rad.
+        fa (int|float|np.ndarray): The flip angle in deg.
         tr (int|float|np.ndarray): The repetition time in time units.
             Units must be the same as `t1`.
         t1 (int|float|np.ndarray): The longitudinal relaxation in time units.
@@ -121,6 +121,7 @@ def signal(
     Returns:
         s (float|np.ndarray): The signal expression.
     """
+    fa = np.deg2rad(fa)
     return eta_m0 * m0 * np.sin(fa * eta_fa) * np.exp(-te / t2s) * \
            (1.0 - np.exp(-tr / t1)) / \
            (1.0 - np.cos(fa * eta_fa) * np.exp(-tr / t1))
