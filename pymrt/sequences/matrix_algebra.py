@@ -89,6 +89,8 @@ from pymrt.config import CFG
 
 from pymrt.constants import GAMMA, GAMMA_BAR
 
+_N_DIMS = 3
+
 
 # ======================================================================
 def superlorentz_integrand(x, t):
@@ -440,8 +442,8 @@ def dynamics_operator(
     l_op = np.zeros(spin_model._operator_shape).astype(spin_model._dtype)
     num_exact, num_approx = 0, 0
     for i, lineshape in enumerate(spin_model.approx):
-        # 3: cartesian dims; +1: hom. operator
-        base = 1 + num_exact * 3 + num_approx
+        # (1 + ) because hom. operator
+        base = 1 + num_exact * _N_DIMS + num_approx
         # w1x, w1y = re(w1), im(w1)  # for symbolic
         w1x, w1y = w1.real, w1.imag
         bloch_core = np.array([
@@ -458,7 +460,7 @@ def dynamics_operator(
             l_op[base, base] += bloch_core[-1, -1] + r_rf
             num_approx += 1
         else:
-            l_op[base:base + 3, base:base + 3] += bloch_core
+            l_op[base:base + _N_DIMS, base:base + _N_DIMS] += bloch_core
             num_exact += 1
     return spin_model._l_op + l_op
 
@@ -892,8 +894,7 @@ class SpinModel(object):
 
         Args:
             s0 (float): The signal magnitude scaling in arb. units.
-            mc (ndarray[float]): The magnetization concentration ratios in
-            one units.
+            mc (ndarray[float]): The concentration ratios in one units.
             w0 (ndarray[float]): The resonance angular frequencies in rad/s.
             r1 (ndarray[float]): The longitudinal relaxation rates in Hz.
             r2 (ndarray[float]): The transverse relaxation rates in Hz.
@@ -904,15 +905,16 @@ class SpinModel(object):
         """
         self.num_pools = len(mc)
         # exchange at equilibrium between each two pools
-        self.num_exchange = sp.misc.comb(self.num_pools, 2)
+        self.num_exchange = \
+            fc.base.comb(self.num_pools, 2) if self.num_pools > 1 else 0
         self.approx = approx \
             if approx is not None else [None] * self.num_pools
         self.num_approx = sum(
             [0 if item is None else 1 for item in self.approx])
         self._num_exact = self.num_pools - self.num_approx
-        self._operator_dim = 1 + 3 * self._num_exact + self.num_approx
+        self._operator_dim = 1 + _N_DIMS * self._num_exact + self.num_approx
         self._operator_shape = (self._operator_dim,) * 2
-        self._operator_base_dim = 1 + 3 * self.num_pools
+        self._operator_base_dim = 1 + _N_DIMS * self.num_pools
         self._operator_base_shape = (self._operator_base_dim,) * 2
         self._dtype = type(mc[0])
         # simple check on the number of parameters
@@ -951,12 +953,11 @@ class SpinModel(object):
         m_eq[0] = 0.5
         num_exact, num_approx = 0, 0
         for m0z, lineshape in zip(self.m0, self.approx):
-            # 3: cartesian dims; +1: hom. operator
             if lineshape:
-                pos = 1 + num_exact * 3 + num_approx
+                pos = 1 + num_exact * _N_DIMS + num_approx
                 num_approx += 1
             else:
-                pos = 1 + num_exact * 3 + num_approx + 2
+                pos = 1 + num_exact * _N_DIMS + num_approx + 2
                 num_exact += 1
             m_eq[pos] = m0z
         return m_eq
@@ -975,20 +976,19 @@ class SpinModel(object):
             phase (float): The phase in rad of the detector system.
 
         Returns:
-            det (np.ndarray): The detector vector.
+            result (np.ndarray): The detector vector.
         """
-        det = np.zeros(self._operator_dim).astype(complex)
+        result = np.zeros(self._operator_dim).astype(complex)
         num_exact, num_approx = 0, 0
         for lineshape in self.approx:
-            # 3: cartesian dims; +1: hom. operator
-            base = 1 + num_exact * 3 + num_approx
+            base = 1 + num_exact * _N_DIMS + num_approx
             if lineshape:
                 num_approx += 1
             else:
-                det[base: base + 2] = 1.0, 1.0j
+                result[base: base + 2] = 1.0, 1.0j
                 num_exact += 1
-        det *= exp(1j * phase)
-        return det
+        result *= exp(1j * phase)
+        return result
 
     # -----------------------------------
     def dynamics_operator(self):
@@ -1005,9 +1005,9 @@ class SpinModel(object):
         # L[0, 0] = -2.0
         to_remove = []
         for i, lineshape in enumerate(self.approx):
-            base = 1 + i * 3
+            base = 1 + i * _N_DIMS
             # Bloch operator core...
-            l_op[base:base + 3, base:base + 3] = np.array([
+            l_op[base:base + _N_DIMS, base:base + _N_DIMS] = np.array([
                 [self.r2[i], self.w0[i], 0.0],
                 [-self.w0[i], self.r2[i], 0.0],
                 [0.0, 0.0, self.r1[i]]])
@@ -1018,7 +1018,7 @@ class SpinModel(object):
                 to_remove.extend([base, base + 1])
         # include pool-pool interaction
         locator = np.diag([0.0, 0.0, 1.0]) \
-            if self._ignore_k_transverse else np.eye(3)
+            if self._ignore_k_transverse else np.eye(_N_DIMS)
         m0_op = np.repeat(self.m0.reshape((-1, 1)), self.num_pools, axis=1)
         l_k_op = self._k_op * m0_op - np.diag(np.dot(self._k_op, self.m0))
         l_op[1:, 1:] -= np.kron(l_k_op, locator)
@@ -1097,10 +1097,8 @@ class Pulse(SequenceEvent):
 
         Args:
             duration (float): The duration of the pulse in s.
-            w1_arr (ndarray[complex]): The array of the pulse excitation
-             angular frequency in rad/s.
-            w_c (float): The carrier angular frequency of the pulse excitation
-             in rad/s.
+            w1_arr (ndarray[complex]): The modulation of the pulse in rad/s.
+            w_c (float): The carrier angular frequency of the pulse in rad/s.
 
         Returns:
             None
@@ -1342,7 +1340,7 @@ class Pulse(SequenceEvent):
         return p_op
 
     # -----------------------------------
-    def __repr__(self):
+    def __str__(self):
         text = '{}: '.format(self.__class__.__name__)
         text += '{}={}|{}  '.format(
             'flip_angle', round(self.flip_angle, 1),
@@ -1361,7 +1359,7 @@ class Pulse(SequenceEvent):
 # ======================================================================
 class Spoiler(SequenceEvent):
     """
-    Spoiler for eliminating T2*.
+    Spoiler for eliminating the transverse magnetization.
     """
 
     # -----------------------------------
@@ -1374,11 +1372,14 @@ class Spoiler(SequenceEvent):
 
         Args:
             efficiency(float): The spoiler effiency.
+                Must be  in the [0.0, 1.0] range.
 
         Returns:
             None
         """
         SequenceEvent.__init__(self, duration)
+        if efficiency > 1.0 or efficiency < 0.0:
+            raise ValueError(fmtm('Invalid efficiency value: `{efficiency}`'))
         self.efficiency = efficiency
 
     # -----------------------------------
@@ -1400,14 +1401,22 @@ class Spoiler(SequenceEvent):
         p_op_diag = np.ones(spin_model._operator_dim)
         num_exact, num_approx = 0, 0
         for lineshape in spin_model.approx:
-            # 3: cartesian dims; +1: hom. operator
-            base = 1 + num_exact * 3 + num_approx
+            base = 1 + num_exact * _N_DIMS + num_approx
             if lineshape:
                 num_approx += 1
             else:
                 p_op_diag[base:base + 2] -= self.efficiency
                 num_exact += 1
         return np.diag(p_op_diag)
+
+    # -----------------------------------
+    def __str__(self):
+        text = '{}: '.format(self.__class__.__name__)
+        names = ['duration', 'efficiency']
+        for name in names:
+            if hasattr(self, name):
+                text += '{}={}  '.format(name, getattr(self, name))
+        return text
 
 
 # ======================================================================
@@ -1517,11 +1526,15 @@ class PulseSequence(object):
             w_c (float|None): Carrier angular frequency of the pulse in rad/s.
         """
         self.pulses = pulses
-        self._w_c = w_c
-        for pulse in pulses:
-            if hasattr(pulse, 'w_c') and pulse.w_c is None:
-                pulse.w_c = self._w_c
+        self.w_c = w_c
+        if w_c:
+            self.update_carrier_freq()
         self._idx = dict()
+
+    def update_carrier_freq(self):
+        for i, pulse in enumerate(self.pulses):
+            if hasattr(pulse, 'w_c') and pulse.w_c != self.w_c:
+                self.pulses[i].w_c = self.w_c
 
     # -----------------------------------
     def get_unique_pulses(
@@ -1534,7 +1547,7 @@ class PulseSequence(object):
             uniques (Iterable[str]): The class name of the unique pulse types.
 
         Returns:
-            idx[dict]: Indices of the unique pulse types.
+            idx (dict): Indices of the unique pulse types.
         """
         idx = dict()
         pulse_types = [pulse.__class__.__name__ for pulse in self.pulses]
@@ -1576,7 +1589,7 @@ class PulseSequence(object):
             **_kws: Keyword arguments for 'pulse_propagator()'.
 
         Returns:
-            y(ndarray[float]): The propagator.
+            p_ops (list(ndarray[float])): The propagators.
         """
         return [
             pulse.propagator(spin_model, *_args, **_kws)
@@ -1597,7 +1610,7 @@ class PulseSequence(object):
             **_kws: Keyword arguments for'propagators()'.
 
         Returns:
-            y(ndarray[float]): The propagator.
+            y (ndarray[float]): The propagator.
         """
         return self._propagator(self.propagators(spin_model, *_args, **_kws))
 
@@ -1614,7 +1627,7 @@ class PulseSequence(object):
             num (int): The number of times the propagator is repeated.
 
         Returns:
-            y(ndarray[float]): The propagator.
+            y (ndarray[float]): The propagator.
         """
         p_op = fc.extra.mdot(p_ops[::-1])
         if num > 1:
@@ -1639,12 +1652,15 @@ class PulseSequence(object):
             y (ndarray[float]): The signal.
 
         """
-        p_op = self.propagator(spin_model, *_args, **_kws)
-        return np.array(self._signal(spin_model, p_op))
+        return spin_model.s0 * np.array(np.abs(np.dot(
+            spin_model.detector(),
+            self.magnetization(
+                spin_model,
+                self.propagator(spin_model, *_args, **_kws)))))
 
     # -----------------------------------
     @staticmethod
-    def _signal(
+    def magnetization(
             spin_model,
             p_op):
         """
@@ -1652,16 +1668,13 @@ class PulseSequence(object):
 
         Args:
             spin_model (SpinModel): The model for the spin system.
+            p_op (np.ndarray[complex]):
 
         Returns:
             y (ndarray[float]): The signal.
 
         """
-        return (
-                np.abs(fc.extra.mdot_(
-                    spin_model.detector(), p_op,
-                    spin_model.equilibrium_magnetization())) *
-                spin_model.s0)
+        return np.dot(p_op, spin_model.equilibrium_magnetization())
 
     # -----------------------------------
     @staticmethod
@@ -1796,24 +1809,24 @@ class SteadyState(PulseSequence):
             **_kws: Keyword arguments for 'propagators()'.
 
         Returns:
-            y(ndarray[float]): The propagator.
+            p_op (ndarray[float]): The propagator.
         """
         base_p_ops = self.propagators(spin_model, *_args, **_kws)
         pre_t, post_t = self._pre_post_delays(
             self.te, self._t_ro, self._t_pexc)
         p_ops = (
-                Delay(pre_t).propagator(spin_model, *_args, **_kws) +
+                [Delay(pre_t).propagator(spin_model, *_args, **_kws)] +
                 self._p_ops_reorder(base_p_ops, self._idx['ReadOut']) +
-                Delay(post_t).propagator(spin_model, *_args, **_kws))
+                [Delay(post_t).propagator(spin_model, *_args, **_kws)])
         return self._propagator(p_ops, self.n_r)
 
     # -----------------------------------
     def __str__(self):
-        text = '{}'.format(self.__class__.__name__)
+        text = '{}: '.format(self.__class__.__name__)
         for attr in ('tr', 'n_r', 'te', 'tes'):
             if hasattr(self, attr):
-                text += '{}={}'.format(attr, getattr(self, attr))
-        text += ':\n'
+                text += '{}={}  '.format(attr, getattr(self, attr))
+        text += '\n'
         if hasattr(self, 'pulses'):
             for pulse in self.pulses:
                 text += '  {}\n'.format(pulse)
