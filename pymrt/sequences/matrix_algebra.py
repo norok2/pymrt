@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pymrt.sequences.bloch_sim_ma: solver of the Bloch-McConnell equations.
+pymrt.sequences.matrix_algebra: numerical solver for Bloch-McConnell equations
 
 Computes the signal by solving the Bloch-McConnell equations for multiple
 spin systems with exchange, using the matrix algebra approach.

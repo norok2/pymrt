@@ -138,9 +138,9 @@ def compress_svd(
           Array compression for MRI with large coil arrays. Magn. Reson. Med.
           57, 1131–1139. doi:10.1002/mrm.21237
     """
+    assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
@@ -343,9 +343,9 @@ def adaptive(
           Meeting & Exhibition of the International Society for Magnetic
           Resonance in Medicine, ISMRM, Salt Lake City, Utah, USA.
     """
+    assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
@@ -513,6 +513,7 @@ def adaptive_iter(
           & Exhibition of the International Society for Magnetic Resonance
           in Medicine, ISMRM, Milan, Italy.
     """
+    assert(-arr.ndim <= coil_axis < arr.ndim)
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
@@ -1076,9 +1077,12 @@ def combine(
         has_sens = True
 
     if split_axis is not None:
+        assert(-arr.ndim <= coil_axis < arr.ndim)
+        assert(-arr.ndim <= split_axis < arr.ndim)
+        coil_axis %= arr.ndim
         shape = arr.shape
         combined = np.zeros(
-            tuple(d for i, d in enumerate(shape) if i != coil_axis % arr.ndim),
+            tuple(d for i, d in enumerate(shape) if i != coil_axis),
             dtype=complex)
         split_axis = split_axis % arr.ndim
         combined = np.swapaxes(combined, split_axis, 0)

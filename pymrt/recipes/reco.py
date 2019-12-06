@@ -168,6 +168,7 @@ def grappa_1d(
           (June 1, 2002): 1202–10. https://doi.org/10.1002/mrm.10171.
     """
     # : ensure coil axis is the last
+    assert(-arr.ndim <= coil_axis < arr.ndim)
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
@@ -283,6 +284,7 @@ def msense_1d(
           NMR in Biomedicine 19 (3): 316–24. https://doi.org/10.1002/nbm.1048.
     """
     # : ensure coil axis is the last
+    assert(-arr.ndim <= coil_axis < arr.ndim)
     coil_axis = coil_axis % arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
