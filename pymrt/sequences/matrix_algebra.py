@@ -1652,11 +1652,29 @@ class PulseSequence(object):
             y (ndarray[float]): The signal.
 
         """
-        return spin_model.s0 * np.array(np.abs(np.dot(
+        return spin_model.s0 * np.array(self._signal(
+            spin_model, self.propagator(spin_model, *_args, **_kws)))
+
+    # -----------------------------------
+    @staticmethod
+    def _signal(
+            spin_model,
+            p_op):
+        """
+        Compute the signal from the pulse sequence.
+
+        Args:
+            spin_model (SpinModel): The model for the spin system.
+            p_op (np.ndarray[complex]):
+
+        Returns:
+            y (ndarray[float]): The signal.
+
+        """
+        return np.abs(fc.extra.mdot((
             spin_model.detector(),
-            self.magnetization(
-                spin_model,
-                self.propagator(spin_model, *_args, **_kws)))))
+            p_op,
+            spin_model.equilibrium_magnetization())))
 
     # -----------------------------------
     @staticmethod
