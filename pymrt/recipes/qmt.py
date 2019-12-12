@@ -180,7 +180,7 @@ class MultiMtSteadyState2(SteadyState):
                     self.n_r))
             for central_p_ops in central_p_ops_list]).reshape(
             (len(self.freqs), len(self.fas)))
-        return s_arr
+        return spin_model.s0 * s_arr
 
 
 # ======================================================================
@@ -333,7 +333,7 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
                     [unique_pre_post_p_ops[self._t_post(te, tr)]],
                     self.n_r))
             for df, mfa, fa, tr, tes in self.preps for te in tes])
-        return s_arr
+        return spin_model.s0 * s_arr
 
 
 # ======================================================================
