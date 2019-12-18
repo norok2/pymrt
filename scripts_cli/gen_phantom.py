@@ -47,7 +47,7 @@ import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 # import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 # import pymrt.utils
 # import pymrt.naming
 # import pymrt.plot as pmp

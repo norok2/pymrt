@@ -30,7 +30,7 @@ import random  # Generate pseudo-random numbers
 # import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax

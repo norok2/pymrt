@@ -16,13 +16,13 @@ import re  # Regular expression operations
 import doctest  # Test interactive Python examples
 
 # :: External Imports
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 
 from pymrt import INFO, PATH

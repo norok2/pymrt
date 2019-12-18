@@ -40,7 +40,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -50,7 +50,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Internal Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.config
 
 # :: Local Imports

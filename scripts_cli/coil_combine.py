@@ -29,10 +29,10 @@ from __future__ import (
 # :: Python Standard Library Imports
 import datetime  # Basic date and time types
 import argparse  # Parser for command-line options, arguments and subcommands
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.input_output
 

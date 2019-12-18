@@ -20,13 +20,13 @@ import shutil  # High-level file operations
 
 # :: External Imports
 # import numpy as np  # NumPy (multidimensional numerical arrays library)
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 import PIL as pil  # Python Imaging Library
 
 import PIL.Image, PIL.ImageChops
 
 # :: Local Imports
-# import pymrt as mrt
+# import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests

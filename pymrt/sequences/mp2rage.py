@@ -47,13 +47,13 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 # import scipy as sp  # SciPy (signal and image processing library)
 import sympy as sym  # SymPy (symbolic CAS library)
 from sympy import pi, exp, sin, cos
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 # import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

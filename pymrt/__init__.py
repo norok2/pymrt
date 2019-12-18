@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PyMRT - Python Magnetic Resonance Tools: data analysis for quantitative MRI.
+PyMRT - Python Magnetic Resonance Tools: the multi-tool of MRI.
 """
 
 # Copyright (c) Riccardo Metere <rick@metere.it>
@@ -17,7 +17,7 @@ import os  # Miscellaneous operating system interfaces
 
 # ======================================================================
 # :: External Imports
-# import flyingcircus as fc  # Everything you always wanted to have in Python.*
+# import flyingcircus as fc  # Everything you always wanted to have in Python*
 from flyingcircus import msg, dbg, fmt, fmtm, elapsed, report, pkg_paths, run_doctests
 from flyingcircus import VERB_LVL, VERB_LVL_NAMES, D_VERB_LVL
 from flyingcircus import HAS_JIT, jit

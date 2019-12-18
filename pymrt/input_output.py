@@ -44,7 +44,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -58,7 +58,7 @@ from nibabel.spatialimages import (
     HeaderDataError, HeaderTypeError, ImageDataError, )
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.plot
 import pymrt.segmentation

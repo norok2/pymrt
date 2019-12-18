@@ -53,7 +53,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 # import numba  # Numba Just-In-Time compiler for Python / NumPy
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -74,7 +74,7 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 # from numba import jit
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 
 # import raster_geometry  # Create/manipulate N-dim raster geometric shapes.

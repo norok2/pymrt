@@ -18,7 +18,7 @@ import warnings  # Warning control
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 
 # import scipy.integrate  # SciPy: Integration and ODEs
@@ -36,7 +36,7 @@ except ImportError:
         = denoise_tv_bregman = denoise_tv_chambolle = None
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.segmentation
 
 from pymrt import INFO, PATH

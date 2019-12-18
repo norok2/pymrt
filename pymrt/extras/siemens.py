@@ -17,7 +17,7 @@ import json  # JSON encoder and decoder [JSON: JavaScript Object Notation]
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import pyparsing as pp  # A Python Parsing Module
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 

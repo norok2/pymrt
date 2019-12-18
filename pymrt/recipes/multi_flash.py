@@ -23,7 +23,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.segmentation
 import pymrt.correction

@@ -21,7 +21,7 @@ import multiprocessing  # Process-based parallelism
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 import scipy.integrate  # SciPy: Integration and ODEs
@@ -31,7 +31,7 @@ import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.segmentation
 

@@ -42,7 +42,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import numeral  # Support for various integer-to-numeral (and back) conversion
 import seaborn as sns  # Seaborn: statistical data visualization
-import flyingcircus as fc  # Everything you always wanted to have in Python.*
+import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -59,7 +59,7 @@ import scipy.stats  # SciPy: Statistical functions
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # :: Local Imports
-import pymrt as mrt
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 
 from pymrt import INFO, PATH

@@ -2,7 +2,7 @@
 PyMRT - Python Magnetic Resonance Tools
 =======================================
 
-**PyMRT** - Python Magnetic Resonance Tools
+**PyMRT** - Python Magnetic Resonance Tools: the multi-tool of MRI.
 
 .. code::
 
@@ -17,7 +17,7 @@ Overview
 --------
 This software provides a support Python library and auxiliary console-based
 tools to perform common tasks for Magnetic Resonance Imaging (MRI).
-The aim is to be the Swiss Army knife of MRI.
+The aim is to be the multi-tool of MRI.
 
 At present, the following features are best supported:
 
