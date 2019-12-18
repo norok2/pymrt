@@ -43,7 +43,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import numex.interactive_tk_mpl
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 from pymrt.sequences import mp2rage
 
 from pymrt import INFO, PATH

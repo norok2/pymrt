@@ -30,7 +30,7 @@ import scipy.signal  # SciPy: Signal Processing
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 import pymrt.util
 import pymrt.plot
 

@@ -24,7 +24,7 @@ import scipy.sparse  # SciPy: Sparse Matrices
 import scipy.sparse.linalg  # SciPy: Sparse Matrices - Linear Algebra
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 import pymrt.segmentation
 
 from pymrt.recipes import db0, phs, generic

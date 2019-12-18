@@ -14,7 +14,7 @@ import seaborn as sns
 
 import matplotlib.pyplot as plt
 
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 import pymrt.util
 
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES

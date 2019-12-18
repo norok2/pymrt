@@ -36,7 +36,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.linalg  # Scipy: Linear Algebra
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 import pymrt.util
 import pymrt.segmentation
 

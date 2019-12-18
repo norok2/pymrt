@@ -74,7 +74,7 @@ from numpy import pi, sin, cos, exp, sqrt, sinc
 # from numba import jit
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
 import pymrt.util
 
 # import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
