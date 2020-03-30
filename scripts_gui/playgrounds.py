@@ -136,7 +136,7 @@ def playground_fourier_1d(
 
 
 # ======================================================================
-# : Fourier 1D
+# : Fourier 2D
 TITLE['fourier_2d'] = 'Fourier Transform in 2D'
 PARAMS['fourier_2d'] = collections.OrderedDict(
     [('re_f_x', dict(label='Re[f(x)]', default='a*sin(b*x+c)+d', values=())),
