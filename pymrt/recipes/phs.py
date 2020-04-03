@@ -106,13 +106,13 @@ def phs_to_dphs_multi(
     units_factor = 1
     if isinstance(time_units, str) and 's' in time_units:
         prefix, _ = time_units.split('s', 1)
-        units_factor = fc.base.prefix_to_factor(prefix)
+        units_factor = fc.prefix_to_factor(prefix)
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
         warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
-    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
+    tis = np.array(fc.auto_repeat(tis, 1)) * units_factor
     y_arr = np.array(phs_arr).astype(float)
     x_arr = np.array(tis).astype(float)
 
@@ -180,13 +180,13 @@ def phs_to_dphs(
     units_factor = 1
     if isinstance(time_units, str) and 's' in time_units:
         prefix, _ = time_units.split('s', 1)
-        units_factor = fc.base.prefix_to_factor(prefix)
+        units_factor = fc.prefix_to_factor(prefix)
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
         warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
-    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
+    tis = np.array(fc.auto_repeat(tis, 1)) * units_factor
 
     if unwrapping is not None:
         phs_arr = unwrap(phs_arr, unwrapping, unwrapping_kws)
@@ -238,7 +238,7 @@ def cx2_to_dphs(
     units_factor = 1
     if isinstance(time_units, str) and 's' in time_units:
         prefix, _ = time_units.split('s', 1)
-        units_factor = fc.base.prefix_to_factor(prefix)
+        units_factor = fc.prefix_to_factor(prefix)
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
@@ -279,14 +279,14 @@ def dphs_to_phs(
     units_factor = 1
     if isinstance(time_units, str) and 's' in time_units:
         prefix, _ = time_units.split('s', 1)
-        units_factor = fc.base.prefix_to_factor(prefix)
+        units_factor = fc.prefix_to_factor(prefix)
     elif isinstance(time_units, (int, float)):
         units_factor = time_units
     else:
         warnings.warn(fmtm('Invalid units `{time_units}`. Ignored.'))
 
     shape = dphs_arr.shape
-    tis = np.array(fc.base.auto_repeat(tis, 1)) * units_factor
+    tis = np.array(fc.auto_repeat(tis, 1)) * units_factor
     tis = tis.reshape((1,) * len(shape) + (-1,))
     dphs_arr = dphs_arr.reshape(shape + (1,))
     return dphs_arr * tis + phs0_arr
@@ -1014,7 +1014,7 @@ def unwrap_1d_iter(
                                denoising_kws))
     if axes is None:
         axes = tuple(range(arr.ndim))
-    axes = fc.base.auto_repeat(axes, 1)
+    axes = fc.auto_repeat(axes, 1)
     for i in axes:
         u_arr = np.unwrap(u_arr, axis=i)
     u_arr = fix_congruence(

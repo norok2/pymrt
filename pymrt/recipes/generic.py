@@ -328,7 +328,7 @@ def referencing(
     if ext_refs is not None:
         assert (len(masks) == len(ext_refs))
         num_refs = len(ext_refs)
-        combines = fc.base.auto_repeat(combines, num_refs, True, True)
+        combines = fc.auto_repeat(combines, num_refs, True, True)
         are_mask_arr = [
             isinstance(mask, np.array) and (
                     np.issubdtype(mask.dtype,

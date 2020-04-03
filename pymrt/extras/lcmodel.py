@@ -215,7 +215,7 @@ def read_output(
                             label != item and \
                             label in content['extra'] and \
                             not content['extra'][label] or \
-                            fc.base.is_number(item)
+                            fc.is_number(item)
                         if add_item:
                             content['extra'][label].append(item)
                         else:

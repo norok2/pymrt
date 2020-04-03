@@ -100,7 +100,7 @@ def _test(use_cache=True):
     import os
 
 
-    base_dir = fc.base.realpath('~/hd1/TEMP')
+    base_dir = fc.realpath('~/hd1/TEMP')
     filepath = os.path.join(base_dir, 'tau_arr.npz')
     if os.path.isfile(filepath) and use_cache:
         y = np.load(filepath)['y']

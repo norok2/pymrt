@@ -1013,7 +1013,7 @@ def qsm_preprocess(
     Returns:
 
     """
-    echo_times = np.array(fc.base.auto_repeat(echo_times, 1))
+    echo_times = np.array(fc.auto_repeat(echo_times, 1))
     if len(echo_times) > 1:
         dphs_arr = phs.phs_to_dphs(
             phs_arr, tis=echo_times, tis_mask=echo_times_mask)
@@ -1062,7 +1062,7 @@ def wip():
     msk_arr = mrt.input_output.load(msk_filepath).astype(bool)
 
     uphs_filepath = os.path.join(base_path, 'bai_uphs.nii.gz')
-    if fc.base.check_redo(phs_filepath, uphs_filepath, force):
+    if fc.check_redo(phs_filepath, uphs_filepath, force):
         from pymrt.recipes import phs
 
 
@@ -1072,7 +1072,7 @@ def wip():
         uphs_arr = mrt.input_output.load(uphs_filepath)
 
     dphs_filepath = os.path.join(base_path, 'bai_dphs.nii.gz')
-    if fc.base.check_redo(phs_filepath, dphs_filepath, force):
+    if fc.check_redo(phs_filepath, dphs_filepath, force):
         from pymrt.recipes import phs
 
 
@@ -1082,7 +1082,7 @@ def wip():
         dphs_arr = mrt.input_output.load(dphs_filepath)
 
     db0_filepath = os.path.join(base_path, 'bai_db0.nii.gz')
-    if fc.base.check_redo(dphs_filepath, db0_filepath, force):
+    if fc.check_redo(dphs_filepath, db0_filepath, force):
         from pymrt.recipes import db0
 
 
@@ -1092,7 +1092,7 @@ def wip():
         db0_arr = mrt.input_output.load(db0_filepath)
 
     # milf_filepath = os.path.join(base_path, 'bai_db0i_milf.nii.gz')
-    # if fc.base.check_redo(db0_filepath, milf_filepath, force):
+    # if fc.check_redo(db0_filepath, milf_filepath, force):
     #     from pymrt.recipes import phs
     #
     #     milf_arr = qsm_remove_background_milf(uphs_arr, msk_arr)
@@ -1102,7 +1102,7 @@ def wip():
     #     milf_arr = mrt.input_output.load(milf_filepath)
 
     # sharp_filepath = os.path.join(base_path, 'bai_db0i_sharp.nii.gz')
-    # if fc.base.check_redo(uphs_filepath, sharp_filepath, force):
+    # if fc.check_redo(uphs_filepath, sharp_filepath, force):
     #     from pymrt.recipes import phs
     #     import scipy.ndimage
     #
@@ -1116,7 +1116,7 @@ def wip():
     #     sharp_arr = mrt.input_output.load(sharp_filepath)
 
     chi_filepath = os.path.join(base_path, 'bai_chi_ptfi_minres_i0128.nii.gz')
-    if fc.base.check_redo(db0_filepath, chi_filepath, force):
+    if fc.check_redo(db0_filepath, chi_filepath, force):
         from pymrt.recipes import db0
 
 
@@ -1136,7 +1136,7 @@ def wip():
         chi_arr = mrt.input_output.load(chi_filepath)
 
     # chi_filepath = os.path.join(base_path, 'bai_chi_tfi_lsmr.nii.gz')
-    # if fc.base.check_redo(db0_filepath, chi_filepath, force):
+    # if fc.check_redo(db0_filepath, chi_filepath, force):
     #     from pymrt.recipes import db0
     #
     #     chi_arr = qsm_total_field_inversion(

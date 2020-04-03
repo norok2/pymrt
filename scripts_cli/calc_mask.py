@@ -146,14 +146,14 @@ def main():
     begin_time = datetime.datetime.now()
 
     if not args.output:
-        root, base, ext = fc.base.split_path(args.input)
-        args.output = fc.base.join_path([root, 'mask__' + base, ext])
+        root, base, ext = fc.split_path(args.input)
+        args.output = fc.join_path([root, 'mask__' + base, ext])
 
-    kws = fc.base.set_func_kws(
+    kws = fc.set_func_kws(
         mrt.segmentation.auto_mask, vars(args))
 
     kws['threshold_kws'] = json.loads(args.threshold_opts)
-    kws['threshold'] = fc.base.auto_convert(kws['threshold'])
+    kws['threshold'] = fc.auto_convert(kws['threshold'])
 
     data, meta = mrt.input_output.load(args.input, meta=True)
     data = mrt.segmentation.auto_mask(data, **kws).astype(args.dtype)

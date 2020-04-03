@@ -371,9 +371,9 @@ def calc_ti_to_td(ti, tr_seq, tr_gre, n_gre, center_k=0.5, check=True):
         (0.0, 0.0, 2000.0)
     """
     n_ti = len(ti)
-    tr_gre = np.array(fc.base.auto_repeat(tr_gre, n_ti, check=True))
-    n_gre = np.array(fc.base.auto_repeat(n_gre, n_ti, check=True))
-    center_k = np.array(fc.base.auto_repeat(center_k, n_ti, check=True))
+    tr_gre = np.array(fc.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(fc.auto_repeat(n_gre, n_ti, check=True))
+    center_k = np.array(fc.auto_repeat(center_k, n_ti, check=True))
     tr_block = tr_gre * n_gre
     before_t = tr_block * center_k
     after_t = tr_block * (1 - center_k)
@@ -443,9 +443,9 @@ def calc_td_to_ti(
     """
     raise NotImplementedError
     n_ti = len(ti)
-    tr_gre = np.array(fc.base.auto_repeat(tr_gre, n_ti, check=True))
-    n_gre = np.array(fc.base.auto_repeat(n_gre, n_ti, check=True))
-    k_gre = np.array(fc.base.auto_repeat(k_gre, n_ti, check=True))
+    tr_gre = np.array(fc.auto_repeat(tr_gre, n_ti, check=True))
+    n_gre = np.array(fc.auto_repeat(n_gre, n_ti, check=True))
+    k_gre = np.array(fc.auto_repeat(k_gre, n_ti, check=True))
     tr_block = tr_gre * n_gre
     before_t = tr_block * k_gre
     after_t = tr_block * (1 - k_gre)
@@ -541,7 +541,7 @@ def acq_to_seq_params(
         size_ = (size * part_fourier / grappa)
         refs_ = (refs * (grappa - 1) / grappa)
         n_ = int(size_ + refs_)
-        # n_ = fc.base.align(n_, 2, 'lower')
+        # n_ = fc.align(n_, 2, 'lower')
         k_ = size * k / grappa * (2 * part_fourier - 1) / n_
         # print(n_, k_, size, k, part_fourier, grappa, refs)  # DEBUG
         return n_, k_
@@ -554,18 +554,18 @@ def acq_to_seq_params(
     warnings.warn(text)
 
     if not n_dim:
-        n_dim = fc.base.combine_iter_len(
+        n_dim = fc.combine_iter_len(
             (matrix_sizes, grappa_factors, grappa_refs, part_fourier_factors))
     # check compatibility of given parameters
-    matrix_sizes = fc.base.auto_repeat(
+    matrix_sizes = fc.auto_repeat(
         matrix_sizes, n_dim, check=True)
-    grappa_factors = fc.base.auto_repeat(
+    grappa_factors = fc.auto_repeat(
         grappa_factors, n_dim, check=True)
-    grappa_refs = fc.base.auto_repeat(
+    grappa_refs = fc.auto_repeat(
         grappa_refs, n_dim, check=True)
-    part_fourier_factors = fc.base.auto_repeat(
+    part_fourier_factors = fc.auto_repeat(
         part_fourier_factors, n_dim, check=True)
-    k_lines_fix = fc.base.auto_repeat(
+    k_lines_fix = fc.auto_repeat(
         k_lines_fix, n_dim, check=True)
 
     if n_dim == 3:

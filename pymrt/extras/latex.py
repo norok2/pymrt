@@ -239,7 +239,7 @@ def gen_matrix(
     text = ''
     for i, (x, dx) in enumerate(zip(x_arr.ravel(), dx_arr.ravel())):
         cell = ' {} \pm {} '.format(
-            *fc.base.format_value_error(x, dx, prec))
+            *fc.format_value_error(x, dx, prec))
         ending = c_sep if i % x_arr.shape[1] < x_arr.shape[1] - 1 else r_sep
         text += cell + ending
     columns = 'c' * x_arr.shape[1]

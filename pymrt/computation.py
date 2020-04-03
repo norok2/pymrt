@@ -144,7 +144,7 @@ def ext_qsm_as_legacy(
         # '--field_strength', str(params[b0_label][selected]),
         # '--angles', str(params[th_label][selected]),
         '--units', 'ppb']
-    fc.base.execute(str(' '.join(cmd)))
+    fc.execute(str(' '.join(cmd)))
     # import temp output
     arr_list, meta_list = [], []
     for tmp_filepath in tmp_filepaths[2:]:
@@ -377,18 +377,18 @@ def sources_generic(
     """
     sources_list = []
     params_list = []
-    opts = fc.base.merge_dicts(D_OPTS, opts)
+    opts = fc.join_(D_OPTS, opts)
     if verbose >= VERB_LVL['medium']:
         print('Opts:\t{}'.format(json.dumps(opts)))
     if os.path.isdir(data_dirpath):
         pattern = slice(*opts['pattern'])
         sources, params = [], {}
         last_acq, new_acq = None, None
-        data_filepath_list = fc.base.listdir(
+        data_filepath_list = fc.listdir(
             data_dirpath, opts['data_ext'])[pattern]
         for data_filepath in data_filepath_list:
             info = mrt.naming.parse_filename(
-                fc.base.change_ext(fc.base.os.path.basename(data_filepath), '',
+                fc.change_ext(fc.os.path.basename(data_filepath), '',
                                    mrt.util.EXT['niz']))
             if opts['use_meta']:
                 # import parameters from metadata
@@ -401,7 +401,7 @@ def sources_generic(
                         series_meta = json.load(meta_file)
                     acq_meta_filepath = os.path.join(
                         meta_dirpath, series_meta['_acquisition'] +
-                                      fc.base.add_extsep(opts['meta_ext']))
+                                      fc.add_extsep(opts['meta_ext']))
                     if os.path.isfile(acq_meta_filepath):
                         with open(acq_meta_filepath, 'r') as meta_file:
                             acq_meta = json.load(meta_file)
@@ -507,7 +507,7 @@ def compute_generic(
     """
     # TODO: implement affine_func, affine_args, affine_kws?
     # get the num, name and seq from first source file
-    opts = fc.base.merge_dicts(D_OPTS, opts)
+    opts = fc.join_(D_OPTS, opts)
 
     if params is None:
         params = {}
@@ -523,7 +523,7 @@ def compute_generic(
         targets.append(os.path.join(out_dirpath, mrt.naming.to_filename(info)))
 
     # perform the calculation
-    if fc.base.check_redo(sources, targets, force):
+    if fc.check_redo(sources, targets, force):
         if verbose > VERB_LVL['none']:
             print('{}:\t{}'.format('Object', os.path.basename(info['name'])))
         if verbose >= VERB_LVL['medium']:
@@ -658,9 +658,9 @@ def compute(
             compute_func(
                 sources, out_dirpath, params,
                 *compute_args, **compute_kws)
-            fc.base.elapsed('Time: ')
+            fc.elapsed('Time: ')
             if verbose >= VERB_LVL['medium']:
-                fc.base.report(only_last=True)
+                fc.report(only_last=True)
     else:
         recursive = True
 
@@ -683,4 +683,4 @@ def compute(
 if __name__ == '__main__':
     msg(__doc__.strip())
 
-fc.base.elapsed('pymrt.computation')
+fc.elapsed('pymrt.computation')

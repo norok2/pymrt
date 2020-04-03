@@ -92,7 +92,7 @@ def compress_svde(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `fc.base.optimal_num_components()` for more details.
+            See `fc.optimal_num_components()` for more details.
         coil_axis (int): The coil dimension.
             The dimension of `arr` along which single coil elements are stored.
         verbose (int): Set level of verbosity.
@@ -122,7 +122,7 @@ def compress_svd(
     Args:
         arr (np.ndarray): The input array.
         k_svd (int|float|str): The number of principal components.
-            See `fc.base.optimal_num_components()` for more details.
+            See `fc.optimal_num_components()` for more details.
         orthonormal: Uses the orthonormal approximation.
             Uses the pseudo-inverse, instead of the hermitian conjugate,
             to form the signal compression matrix.
@@ -141,7 +141,7 @@ def compress_svd(
     assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -289,7 +289,7 @@ def sum_of_squares(
           192–225. doi:10.1002/mrm.1910160203
     """
     # combined = np.sqrt(np.abs(np.sum(arr * arr.conj(), axis=coil_axis)))
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     broadcast_shape = [
         d if i != coil_axis else 1 for i, d in enumerate(arr.shape)]
     combined = np.sum(np.abs(arr), axis=coil_axis)
@@ -346,7 +346,7 @@ def adaptive(
     assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -514,7 +514,7 @@ def adaptive_iter(
           in Medicine, ISMRM, Milan, Italy.
     """
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)

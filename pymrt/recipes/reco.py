@@ -169,7 +169,7 @@ def grappa_1d(
     """
     # : ensure coil axis is the last
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -285,7 +285,7 @@ def msense_1d(
     """
     # : ensure coil axis is the last
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis = coil_axis % arr.ndim
+    coil_axis %= arr.ndim
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -437,7 +437,7 @@ def noise(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.base.to_percent(noise_level)
+        noise_std_val = fc.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_std_val
@@ -453,9 +453,9 @@ def noise(
         noise_raw_arr = np.random.normal(0, noise_std_val, raw_arr.shape)
         noised_arr = reco_func(
             raw_arr + noise_raw_arr, *reco_args, **reco_kws)
-        mean_noised_arr, sosd_noised_arr, _ = fc.base.next_mean_and_sosd(
+        mean_noised_arr, sosd_noised_arr, _ = fc.next_mean_and_sosd(
             np.real(noised_arr), mean_noised_arr, sosd_noised_arr, i)
-    noise_arr = fc.base.sosd2stdev(sosd_noised_arr, num)
+    noise_arr = fc.sosd2stdev(sosd_noised_arr, num)
     return noise_arr, reco_arr
 
 
@@ -584,7 +584,7 @@ def gen_pseudo_multi_replica(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.base.to_percent(noise_level)
+        noise_std_val = fc.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_level
@@ -606,16 +606,16 @@ def gen_pseudo_multi_replica(
         noised_optim_arr = optim_func(noise_arr, *optim_args, **optim_kws)
 
         mean_noised_reco_arr, sosd_noised_reco_arr, _ = \
-            fc.base.next_mean_and_sosd(
+            fc.next_mean_and_sosd(
                 np.real(noised_reco_arr),
                 mean_noised_reco_arr, sosd_noised_reco_arr, i)
         mean_noised_optim_arr, sosd_noised_optim_arr, _ = \
-            fc.base.next_mean_and_sosd(
+            fc.next_mean_and_sosd(
                 np.real(noised_optim_arr),
                 mean_noised_optim_arr, sosd_noised_optim_arr, i)
 
-    noise_reco_arr = fc.base.sosd2stdev(sosd_noised_reco_arr, num)
-    noise_optim_arr = fc.base.sosd2stdev(sosd_noised_optim_arr, num)
+    noise_reco_arr = fc.sosd2stdev(sosd_noised_reco_arr, num)
+    noise_optim_arr = fc.sosd2stdev(sosd_noised_optim_arr, num)
 
     snr_arr = np.abs(reco_arr) / noise_reco_arr
     g_factor_arr = g_factor(noise_optim_arr, noise_reco_arr, sampling_ratio)
@@ -704,7 +704,7 @@ def pseudo_multi_replica(
     elif isinstance(noise_level, (int, float)):
         noise_std_val = noise_level
     else:
-        noise_std_val = fc.base.to_percent(noise_level)
+        noise_std_val = fc.to_percent(noise_level)
         if noise_std_val:
             cx_ptp = max(np.ptp(np.real(raw_arr)), np.ptp(np.imag(raw_arr)))
             noise_std_val = cx_ptp * noise_level
@@ -727,16 +727,16 @@ def pseudo_multi_replica(
             noise_arr, None, *reco_args, **reco_kws)
 
         mean_noised_reco_arr, sosd_noised_reco_arr, _ = \
-            fc.base.next_mean_and_sosd(
+            fc.next_mean_and_sosd(
                 np.real(noised_reco_arr),
                 mean_noised_reco_arr, sosd_noised_reco_arr, i)
         mean_noised_optim_arr, sosd_noised_optim_arr, _ = \
-            fc.base.next_mean_and_sosd(
+            fc.next_mean_and_sosd(
                 np.real(noised_optim_arr),
                 mean_noised_optim_arr, sosd_noised_optim_arr, i)
 
-    noise_reco_arr = fc.base.sosd2stdev(sosd_noised_reco_arr, num)
-    noise_optim_arr = fc.base.sosd2stdev(sosd_noised_optim_arr, num)
+    noise_reco_arr = fc.sosd2stdev(sosd_noised_reco_arr, num)
+    noise_optim_arr = fc.sosd2stdev(sosd_noised_optim_arr, num)
 
     snr_arr = np.abs(reco_arr) / noise_reco_arr
     g_factor_arr = g_factor(noise_optim_arr, noise_reco_arr, sampling_ratio)

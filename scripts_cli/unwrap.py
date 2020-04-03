@@ -72,7 +72,7 @@ def unwrap(
     msg(fmtm('Input:  {in_filepath}'))
     msg(fmtm('Output: {out_filepath}'))
     msg(fmtm('Method: {method}'))
-    if fc.base.check_redo([in_filepath], [out_filepath], force):
+    if fc.check_redo([in_filepath], [out_filepath], force):
         if method == 'sorting-path':
             method = phs.unwrap_sorting_path
         elif method == 'laplacian':

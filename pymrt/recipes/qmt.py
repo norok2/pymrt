@@ -220,7 +220,7 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
                 if param is not None and prep[i] is None:
                     prep[i] = param
                 if is_seq:
-                    prep[i] = fc.base.auto_repeat(prep[i], 1, False, False)
+                    prep[i] = fc.auto_repeat(prep[i], 1, False, False)
             assert (all(prep_val is not None for prep_val in prep))
             self.preps.append(prep)
 
@@ -295,7 +295,7 @@ class MultiMtVarMGESS(MultiGradEchoSteadyState):
 
         """
         base_p_ops = self.propagators(spin_model, *_args, **_kws)
-        unique_pre_post_delays = set(fc.base.flatten([
+        unique_pre_post_delays = set(fc.flatten([
             self._pre_post_delays(
                 te, self._get_t_ro(self.duration, tr), self._t_pexc)
             for df, mfa, fa, tr, tes in self.preps for te in tes]))

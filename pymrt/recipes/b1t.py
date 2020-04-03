@@ -357,7 +357,7 @@ def mp2rage_rho(
         mode (str): Select the array combination mode.
             See `pymrt.sequences.mp2rage.rho()` for more info.
         **params_kws: The acquisition parameters.
-            This is filtered through `fc.base.split_func_kws()` for
+            This is filtered through `fc.split_func_kws()` for
             `sequences.mp2rage.acq_to_seq_params()` and the result
             is passed to `sequences.mp2rage.rho()`.
             Its (key, value) pairs must be accepted by either
@@ -386,12 +386,12 @@ def mp2rage_rho(
     """
     # determine the sequence parameters
     try:
-        acq_kws, kws = fc.base.split_func_kws(
+        acq_kws, kws = fc.split_func_kws(
             mp2rage.acq_to_seq_params, params_kws)
         seq_kws, extra_info = mp2rage.acq_to_seq_params(**acq_kws)
         seq_kws.update(kws)
     except TypeError:
-        seq_kws, kws = fc.base.split_func_kws(mp2rage.rho, params_kws)
+        seq_kws, kws = fc.split_func_kws(mp2rage.rho, params_kws)
         if len(kws) > 0:
             warnings.warn('Unrecognized parameters: {}'.format(kws))
 
@@ -424,7 +424,7 @@ def mp2rage_rho(
         # remove non bijective branches
         for i in range(eta_fa_num):
             bijective_slice = fc.extra.bijective_part(rho[:, i])
-            non_bijective_slice = tuple(fc.base.complement(
+            non_bijective_slice = tuple(fc.complement(
                 range(t1_num), bijective_slice))
             rho[non_bijective_slice, i] = -1
         # use griddata for interpolation

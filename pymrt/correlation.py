@@ -152,7 +152,7 @@ def _get_ref_list(
         ref_filepaths (list[str]): List of paths to reference files
         ref_src_filepaths (list[str]): List of paths to reference source files
     """
-    ref_src_filepaths = fc.base.listdir(dirpath, ref_ext)
+    ref_src_filepaths = fc.listdir(dirpath, ref_ext)
     if ref_src_filepaths:
         ref_filepaths = []
         for ref_src in ref_src_filepaths:
@@ -161,14 +161,14 @@ def _get_ref_list(
             if subdir:
                 ref_dirpath = os.path.join(ref_dirpath, subdir)
             # extract filename
-            ref_filename = fc.base.change_ext(
+            ref_filename = fc.change_ext(
                 os.path.basename(ref_src), mrt.util.EXT['niz'], ref_ext)
             ref_filepath = os.path.join(ref_dirpath, ref_filename)
             ref_filepaths.append(ref_filepath)
     elif target_list:
         ref_filepaths = target_list
     else:
-        ref_filepaths = fc.base.listdir(dirpath, mrt.util.EXT['niz'])
+        ref_filepaths = fc.listdir(dirpath, mrt.util.EXT['niz'])
     if not ref_filepaths:
         raise RuntimeError('No reference file(s) found')
     return ref_filepaths, ref_src_filepaths
@@ -205,7 +205,7 @@ def _compute_affine_fsl(
     Returns:
         None.
     """
-    if fc.base.check_redo([in_filepath, ref_filepath], [aff_filepath],
+    if fc.check_redo([in_filepath, ref_filepath], [aff_filepath],
                           force):
         msg('Affine: {}'.format(os.path.basename(aff_filepath)),
             verbose, D_VERB_LVL)
@@ -223,7 +223,7 @@ def _compute_affine_fsl(
                 cmd_args[str(key)] = eval(val)
         cmd = ' '.join(
             [ext_cmd] + ['-{} {}'.format(k, v) for k, v in cmd_args.items()])
-        fc.base.execute(cmd, verbose=verbose)
+        fc.execute(cmd, verbose=verbose)
 
 
 # ======================================================================
@@ -248,7 +248,7 @@ def _apply_affine_fsl(
     Returns:
         None.
     """
-    if fc.base.check_redo(
+    if fc.check_redo(
             [in_filepath, ref_filepath, aff_filepath], [out_filepath],
             force):
         msg('Regstr: {}'.format(os.path.basename(out_filepath)),
@@ -264,7 +264,7 @@ def _apply_affine_fsl(
         cmd = ' '.join(
             [ext_cmd] +
             ['-{} {}'.format(k, v) for k, v in cmd_options.items()])
-        fc.base.execute(cmd, verbose=verbose)
+        fc.execute(cmd, verbose=verbose)
 
 
 def register_ants(
@@ -329,7 +329,7 @@ def register_fsl(
         os.path.dirname(out_filepath),
         mrt.naming.combine_filename(affine_prefix,
                                     (ref_filepath, in_filepath)) +
-        fc.base.add_extsep(mrt.util.EXT['text']))
+        fc.add_extsep(mrt.util.EXT['text']))
     _compute_affine_fsl(
         in_tmp_filepath, ref_tmp_filepath, xfm_filepath,
         ref_mask_filepath, flirt_kws, flirt__kws,
@@ -381,7 +381,7 @@ def register(
         img = sp.ndimage.affine_transform(img, linear, shift)
         return img
 
-    if fc.base.check_redo([in_filepath, ref_filepath], [out_filepath],
+    if fc.check_redo([in_filepath, ref_filepath], [out_filepath],
                           force):
         mrt.input_output.simple_filter_n_1(
             [in_filepath, ref_filepath], out_filepath, _quick_reg,
@@ -422,7 +422,7 @@ def apply_mask(
         img = fc.extra.frame(img, 0.1, 0.0)
         return img
 
-    if fc.base.check_redo(
+    if fc.check_redo(
             [in_filepath, mask_filepath], [out_filepath], force):
         msg('RunMsk: {}'.format(os.path.basename(out_filepath)))
         mrt.input_output.simple_filter_n_1(
@@ -517,19 +517,19 @@ def calc_mask(
         # perform BET extraction
         ext_cmd = EXT_CMD['fsl/5.0/bet']
         bet_tmp_filepath = mrt.naming.change_img_type(out_dirpath, 'BRAIN')
-        if fc.base.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
+        if fc.check_redo([in_tmp_filepath], [bet_tmp_filepath], force):
             msg('TmpMsk: {}'.format(os.path.basename(bet_tmp_filepath)))
             cmd_tokens = [
                 ext_cmd, in_tmp_filepath, bet_tmp_filepath, bet_params]
             cmd = ' '.join(cmd_tokens)
-            ret_code, p_stdout, p_stderr = fc.base.execute(
+            ret_code, p_stdout, p_stderr = fc.execute(
                 cmd, verbose=verbose)
         in_tmp_filepath = bet_tmp_filepath
 
     if threshold_kws is None:
         threshold_kws = {}
     # extract mask using a threshold
-    if fc.base.check_redo([in_tmp_filepath], [out_dirpath], force):
+    if fc.check_redo([in_tmp_filepath], [out_dirpath], force):
         _calc_mask_kws = dict(
             threshold=threshold,
             threshold_kws=dict(threshold_kws),
@@ -568,7 +568,7 @@ def calc_difference(
         None
 
     """
-    if fc.base.check_redo([in1_filepath, in2_filepath], [out_filepath],
+    if fc.check_redo([in1_filepath, in2_filepath], [out_filepath],
                           force):
         msg('DifImg: {}'.format(os.path.basename(out_filepath)))
         mrt.input_output.simple_filter_n_1(
@@ -629,7 +629,7 @@ def calc_correlation(
         in_filepath_list = [in1_filepath, in2_filepath, mask_filepath]
     else:
         in_filepath_list = [in1_filepath, in2_filepath]
-    if fc.base.check_redo(in_filepath_list, [out_filepath], force):
+    if fc.check_redo(in_filepath_list, [out_filepath], force):
         msg('Correl: {}'.format(os.path.basename(out_filepath)))
         img1_nii = nib.load(in1_filepath)
         img2_nii = nib.load(in2_filepath)
@@ -677,12 +677,12 @@ def calc_correlation(
         num_ratio = num / num_tot
         # save results to csv
         filenames = [
-            fc.base.change_ext(
+            fc.change_ext(
                 os.path.basename(path), '', mrt.util.EXT['niz'])
             for path in [in2_filepath, in1_filepath]]
         lbl_len = max(len(name) for name in filenames)
         label_list = ['avg', 'std', 'min', 'max', 'sum']
-        val_filter = (lambda x: fc.base.compact_num_str(x, trunc)) \
+        val_filter = (lambda x: fc.compact_num_str(x, trunc)) \
             if trunc else (lambda x: x)
         d_arr_val = [val_filter(d_dict[key]) for key in label_list]
         e_arr_val = [val_filter(e_dict[key]) for key in label_list]
@@ -706,9 +706,9 @@ def calc_correlation(
              'N_eff', 'N_tot', 'N_ratio']
         with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile,
-                                   delimiter=str(fc.base.CSV_DELIMITER))
-            csvwriter.writerow([fc.base.CSV_COMMENT_TOKEN + in2_filepath])
-            csvwriter.writerow([fc.base.CSV_COMMENT_TOKEN + in1_filepath])
+                                   delimiter=str(fc.CSV_DELIMITER))
+            csvwriter.writerow([fc.CSV_COMMENT_TOKEN + in2_filepath])
+            csvwriter.writerow([fc.CSV_COMMENT_TOKEN + in1_filepath])
             csvwriter.writerow(labels)
             csvwriter.writerow(values)
 
@@ -756,9 +756,9 @@ def combine_correlation(
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile,
-                                   delimiter=str(fc.base.CSV_DELIMITER))
+                                   delimiter=str(fc.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(fc.base.CSV_COMMENT_TOKEN):
+                if row[0].startswith(fc.CSV_COMMENT_TOKEN):
                     base_dir = os.path.dirname(os.path.commonprefix(
                         (base_dir, row[0]))) + os.path.sep \
                         if base_dir else row[0]
@@ -767,9 +767,9 @@ def combine_correlation(
     for filepath in filepath_list:
         with open(filepath, 'r') as csvfile:
             csvreader = csv.reader(csvfile,
-                                   delimiter=str(fc.base.CSV_DELIMITER))
+                                   delimiter=str(fc.CSV_DELIMITER))
             for row in csvreader:
-                if row[0].startswith(fc.base.CSV_COMMENT_TOKEN):
+                if row[0].startswith(fc.CSV_COMMENT_TOKEN):
                     sub_dir = os.path.dirname(row[0][len(base_dir):])
                 elif not labels:
                     labels = ['subdir'] + row if sub_dir else row
@@ -792,11 +792,11 @@ def combine_correlation(
             rows[j][i] = '{: <{size}s}'.format(col, size=max_cols[i])
     # :: write grouped correlation to new file
     out_filepath = os.path.join(
-        out_dirpath, out_filename + fc.base.add_extsep(mrt.util.EXT['tab']))
-    if fc.base.check_redo(filepath_list, [out_filepath], force):
+        out_dirpath, out_filename + fc.add_extsep(mrt.util.EXT['tab']))
+    if fc.check_redo(filepath_list, [out_filepath], force):
         with open(out_filepath, 'w') as csvfile:
             csvwriter = csv.writer(csvfile,
-                                   delimiter=str(fc.base.CSV_DELIMITER))
+                                   delimiter=str(fc.CSV_DELIMITER))
             if not selected_cols:
                 selected_cols = range(len(labels))
             csvwriter.writerow([base_dir])
@@ -852,11 +852,11 @@ def plot_correlation(
     filename = mrt.naming.combine_filename(
         corr_prefix, (img1_filepath, img2_filepath))
     save_filepath = os.path.join(
-        out_dirpath, filename + fc.base.add_extsep(mrt.util.EXT['plot']))
+        out_dirpath, filename + fc.add_extsep(mrt.util.EXT['plot']))
     in_filepath_list = [img1_filepath, img2_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if fc.base.check_redo(in_filepath_list, [save_filepath], force):
+    if fc.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltCor: {}'.format(os.path.basename(save_filepath)))
         img1_label = mrt.naming.filename2label(
             img1_filepath, ext=mrt.util.EXT['niz'], max_length=32)
@@ -920,13 +920,13 @@ def plot_histogram(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        fc.base.change_ext(os.path.basename(img_filepath),
+        fc.change_ext(os.path.basename(img_filepath),
                            mrt.util.EXT['plot'],
                            mrt.util.EXT['niz']))
     in_filepath_list = [img_filepath]
     if mask_filepath:
         in_filepath_list.append(mask_filepath)
-    if fc.base.check_redo(in_filepath_list, [save_filepath], force):
+    if fc.check_redo(in_filepath_list, [save_filepath], force):
         msg('PltHst: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = ''
@@ -985,10 +985,10 @@ def plot_sample(
     save_filepath = os.path.join(
         out_dirpath,
         out_filepath_prefix + INFO_SEP +
-        fc.base.change_ext(os.path.basename(img_filepath),
+        fc.change_ext(os.path.basename(img_filepath),
                            mrt.util.EXT['plot'],
                            mrt.util.EXT['niz']))
-    if fc.base.check_redo([img_filepath], [save_filepath], force):
+    if fc.check_redo([img_filepath], [save_filepath], force):
         msg('PltFig: {}'.format(os.path.basename(save_filepath)))
         if not val_type:
             val_type = 'Image'
@@ -1047,7 +1047,7 @@ def registering(
         ref_filepath = in_filepath_list[0]
     # log the name of the reference image
     log_filepath = os.path.join(out_dirpath, log_filename)
-    if fc.base.check_redo(
+    if fc.check_redo(
             in_filepath_list + [ref_filepath], [log_filepath], force):
         with open(log_filepath, 'w') as log_file:
             log_file.write(ref_filepath)
@@ -1082,7 +1082,7 @@ def registering(
                 # serial
                 register_func(*register_args, **register_kws)
         else:
-            if fc.base.check_redo([in_filepath], [out_filepath], force):
+            if fc.check_redo([in_filepath], [out_filepath], force):
                 msg('Regstr: {}'.format(os.path.basename(out_filepath)))
                 msg('I: copying without registering.')
                 shutil.copy(in_filepath, out_filepath)
@@ -1204,12 +1204,12 @@ def prepare_comparison(
             out_dirpath,
             mrt.naming.combine_filename(diff_prefix,
                                         (ref_filepath, in_filepath)) +
-            fc.base.add_extsep(mrt.util.EXT['niz']))
+            fc.add_extsep(mrt.util.EXT['niz']))
         corr_filepath = os.path.join(
             out_dirpath,
             mrt.naming.combine_filename(corr_prefix,
                                         (ref_filepath, in_filepath)) +
-            fc.base.add_extsep(mrt.util.EXT['tab']))
+            fc.add_extsep(mrt.util.EXT['tab']))
         cmp_list.append(
             (in_filepath, ref_filepath, diff_filepath, corr_filepath))
     return cmp_list
@@ -1374,8 +1374,8 @@ def check_correlation(
     # :: populate a list of images to analyze
     targets, corrs = [], []
     if os.path.exists(dirpath):
-        filepath_list = fc.base.listdir(dirpath, mrt.util.EXT['niz'])
-        sources = [fc.base.realpath(filepath) for filepath in filepath_list
+        filepath_list = fc.listdir(dirpath, mrt.util.EXT['niz'])
+        sources = [fc.realpath(filepath) for filepath in filepath_list
                    if not val_name or
                    mrt.naming.parse_filename(filepath)['type'] == val_name]
         if len(sources) > 0:
@@ -1413,7 +1413,7 @@ def check_correlation(
             if msk_dir:
                 # if mask_filepath was not specified, set up a new name
                 if not mask_filepath:
-                    mask_filepath = fc.base.change_ext(
+                    mask_filepath = fc.change_ext(
                         MASK_FILENAME, mrt.util.EXT['niz'])
                 # add current directory if it was not specified
                 if not os.path.isfile(mask_filepath):
@@ -1425,7 +1425,7 @@ def check_correlation(
                     mask_filepath = calc_mask(
                         ref, tmp_path, verbose=verbose, force=force,
                         **reg_info['calc_mask'])
-                mask_filepath = fc.base.realpath(mask_filepath)
+                mask_filepath = fc.realpath(mask_filepath)
             # else:
             #     mask_filepath = None
             msg('I: {}'.format(mask_filepath), verbose, VERB_LVL['high'])
@@ -1508,7 +1508,7 @@ def check_correlation(
             msg('W: no input file found.', verbose, VERB_LVL['medium'])
             msg('I: descending into subdirectories.', verbose,
                 VERB_LVL['high'])
-            sub_dirpath_list = fc.base.listdir(dirpath, None)
+            sub_dirpath_list = fc.listdir(dirpath, None)
             for sub_dirpath in sub_dirpath_list:
                 tmp_target_list, tmp_corr_list = check_correlation(
                     sub_dirpath,

@@ -185,7 +185,7 @@ def sample2d(
         mrt.plot._more_elements(more_elements, ax)
 
     mov = mpl.animation.ArtistAnimation(fig, plots, blit=False)
-    if save_filepath and fc.base.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kws = {'fps': n_frames / step / duration / MSEC_IN_SEC}
         if save_kws is None:
@@ -275,7 +275,7 @@ def trajectory_2d(
         blit=False, repeat=False, repeat_delay=None,
         interval=duration / n_frames)
 
-    if save_filepath and fc.base.check_redo(None, [save_filepath], force):
+    if save_filepath and fc.check_redo(None, [save_filepath], force):
         fig.tight_layout()
         save_kws = dict(
             fps=n_frames / duration / MSEC_IN_SEC, save_count=n_frames)

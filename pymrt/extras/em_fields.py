@@ -167,13 +167,13 @@ class InfiniteWire(object):
         """
         # : extend 2D to 3D
         if n_dim is None:
-            n_dim = fc.base.combine_iter_len((shape,))
+            n_dim = fc.combine_iter_len((shape,))
         if n_dim == 2:
-            shape = fc.base.auto_repeat(shape, n_dim, check=True) + (1,)
+            shape = fc.auto_repeat(shape, n_dim, check=True) + (1,)
             if np.isclose(np.linalg.norm(self.direction), 0.0):
                 self.direction = np.array([0., 0., 1.])
         elif n_dim == 3:
-            shape = fc.base.auto_repeat(shape, n_dim, check=True)
+            shape = fc.auto_repeat(shape, n_dim, check=True)
         else:
             raise ValueError('The number of dimensions must be either 2 or 3.')
         # : generate coordinates
@@ -307,13 +307,13 @@ class CircularLoop(object):
         """
         # : extend 2D to 3D
         if n_dim is None:
-            n_dim = fc.base.combine_iter_len((shape,))
+            n_dim = fc.combine_iter_len((shape,))
         if n_dim == 2:
-            shape = fc.base.auto_repeat(shape, n_dim, check=True) + (1,)
+            shape = fc.auto_repeat(shape, n_dim, check=True) + (1,)
             if np.isclose(np.linalg.norm(self.normal), 0.0):
                 self.normal = np.array([0., 0., 1.])
         elif n_dim == 3:
-            shape = fc.base.auto_repeat(shape, n_dim, check=True)
+            shape = fc.auto_repeat(shape, n_dim, check=True)
         else:
             raise ValueError('The number of dimensions must be either 2 or 3.')
         # : generate coordinates
@@ -395,7 +395,7 @@ class RectLoop(object):
         """
         self.center = _to_3d(np.array(center))
         self.normal = _to_3d(fc.extra.normalize(normal))
-        self.radius = fc.base.auto_repeat(size, 2, check=True)
+        self.radius = fc.auto_repeat(size, 2, check=True)
         self.current = current
 
 
@@ -593,10 +593,10 @@ def cylinder_with_infinite_wires(
     """
     n_dim = 3
     if n_wires is None:
-        n_wires = fc.base.combine_iter_len((currents,))
-    position = np.array(fc.base.auto_repeat(position, n_dim, check=True))
-    diameters = fc.base.auto_repeat(diameters, 2, check=True)
-    currents = fc.base.auto_repeat(currents, n_wires, check=True)
+        n_wires = fc.combine_iter_len((currents,))
+    position = np.array(fc.auto_repeat(position, n_dim, check=True))
+    diameters = fc.auto_repeat(diameters, 2, check=True)
+    currents = fc.auto_repeat(currents, n_wires, check=True)
     orientation = np.array((0., 0., 1.))
     rot_matrix = np.dot(
         fc.extra.rotation_3d_from_vector(orientation, angle),
@@ -643,13 +643,13 @@ def stacked_circular_loops(
         circ_loops (list[CircularLoop]): The circular loops.
     """
     if n_loops is None:
-        n_loops = fc.base.combine_iter_len(radiuses, positions, currents)
-    radiuses = fc.base.auto_repeat(radiuses, n_loops, check=True)
-    positions = fc.base.auto_repeat(positions, n_loops, check=True)
-    currents = fc.base.auto_repeat(currents, n_loops, check=True)
+        n_loops = fc.combine_iter_len(radiuses, positions, currents)
+    radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
+    positions = fc.auto_repeat(positions, n_loops, check=True)
+    currents = fc.auto_repeat(currents, n_loops, check=True)
     # : compute circular loop centers
     n_dim = 3
-    position = np.array(fc.base.auto_repeat(position, n_dim, check=True))
+    position = np.array(fc.auto_repeat(position, n_dim, check=True))
     normal = np.array(fc.extra.normalize(normal))
     centers = [position + x * normal for x in positions]
     circ_loops = [
@@ -695,14 +695,14 @@ def stacked_circular_loops_alt(
         circ_loops (list[CircularLoop]): The circular loops.
     """
     if n_loops is None:
-        n_loops = fc.base.combine_iter_len((radius_factors, current_factors))
-    radius_factors = fc.base.auto_repeat(
+        n_loops = fc.combine_iter_len((radius_factors, current_factors))
+    radius_factors = fc.auto_repeat(
         radius_factors, n_loops, check=True)
     if distance_factors is None:
         distance_factors = 2 / n_loops
-    distance_factors = fc.base.auto_repeat(
+    distance_factors = fc.auto_repeat(
         distance_factors, n_loops - 1, check=True)
-    current_factors = fc.base.auto_repeat(
+    current_factors = fc.auto_repeat(
         current_factors, n_loops, check=True)
     distances = [k * radius for k in distance_factors]
     positions = fc.extra.distances2displacements(distances)
@@ -748,12 +748,12 @@ def crossing_circular_loops(
         circ_loops (list[CircularLoop]): The circular loops.
     """
     n_dim = 3
-    position = np.array(fc.base.auto_repeat(position, n_dim, check=True))
+    position = np.array(fc.auto_repeat(position, n_dim, check=True))
     if not n_loops:
-        n_loops = fc.base.combine_iter_len((angles, radiuses, currents))
+        n_loops = fc.combine_iter_len((angles, radiuses, currents))
     angles = np.linspace(0.0, 180.0, n_loops, False)
-    radiuses = fc.base.auto_repeat(radiuses, n_loops, check=True)
-    currents = fc.base.auto_repeat(currents, n_loops, check=True)
+    radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
+    currents = fc.auto_repeat(currents, n_loops, check=True)
     orientation = (0., 0., 1.)
     rot_matrix = fc.extra.rotation_3d_from_vectors(orientation, direction)
     normal = np.dot(rot_matrix, (0., 1., 0.))
@@ -844,13 +844,13 @@ def cylinder_with_circular_loops(
         text = 'At least two of `n_loops`, `n_series` and `loops_per_serie` ' \
                'must be larger than 0'
         raise ValueError(text)
-    position = np.array(fc.base.auto_repeat(position, n_dim, check=True))
-    diameters = fc.base.auto_repeat(diameters, 2, check=True)
-    currents = fc.base.auto_repeat(currents, n_loops, check=True)
+    position = np.array(fc.auto_repeat(position, n_dim, check=True))
+    diameters = fc.auto_repeat(diameters, 2, check=True)
+    currents = fc.auto_repeat(currents, n_loops, check=True)
     if not radiuses:
         radiuses = height / loops_per_series / 2
-    radiuses = fc.base.auto_repeat(radiuses, n_loops, check=True)
-    distance_factors = fc.base.auto_repeat(
+    radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
+    distance_factors = fc.auto_repeat(
         distance_factors, loops_per_series - 1)
     distances = tuple(
         k * (r_m1 + r_p1) for k, r_m1, r_p1
@@ -920,9 +920,9 @@ def sphere_with_circular_loops(
         circ_loops (list[CircularLoop]): The circular loops.
     """
     n_dim = 3
-    position = np.array(fc.base.auto_repeat(position, n_dim, check=True))
-    currents = fc.base.auto_repeat(currents, n_loops, check=True)
-    angles = fc.base.auto_repeat(
+    position = np.array(fc.auto_repeat(position, n_dim, check=True))
+    currents = fc.auto_repeat(currents, n_loops, check=True)
+    angles = fc.auto_repeat(
         angles, fc.extra.square_size_to_num_tria(n_dim), check=True)
     rot_matrix = fc.extra.angles2rotation(angles)
     centers = [
@@ -933,7 +933,7 @@ def sphere_with_circular_loops(
         for center in centers]
     if not radiuses:
         radiuses = min(fc.extra.pairwise_distances(centers)) / 2
-    radiuses = fc.base.auto_repeat(radiuses, n_loops, check=True)
+    radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
     circ_loops = [
         CircularLoop(radius, center, normal, current)
         for radius, center, normal, current

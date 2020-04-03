@@ -594,7 +594,7 @@ def simple_filter_1_x(
     """
     arr, meta = load(in_filepath, meta=True)
     results = func(arr, *_args, **_kws)
-    path, base, ext = fc.base.split_path(in_filepath)
+    path, base, ext = fc.split_path(in_filepath)
     for i, (name, arr) in enumerate(results.items()):
         out_filepath = os.path.join(
             out_basepath, fmtm(out_filename_template))
@@ -705,7 +705,7 @@ def split(
     if not out_dirpath or not os.path.exists(out_dirpath):
         out_dirpath = os.path.dirname(in_filepath)
     if not out_basename:
-        out_basename = fc.base.change_ext(
+        out_basename = fc.change_ext(
             os.path.basename(in_filepath), '', mrt.util.EXT['niz'])
     out_filepaths = []
 
@@ -717,7 +717,7 @@ def split(
         i_str = str(i).zfill(len(str(len(arrs))))
         out_filepath = os.path.join(
             out_dirpath,
-            fc.base.change_ext(out_basename + '-' + i_str,
+            fc.change_ext(out_basename + '-' + i_str,
                                mrt.util.EXT['niz'], ''))
         save(out_filepath, image, **meta)
         out_filepaths.append(out_filepath)
@@ -977,7 +977,7 @@ def mask_threshold(
     See Also:
         segmentation.mask_threshold
     """
-    kw_params = fc.base.set_func_kws(
+    kw_params = fc.set_func_kws(
         mrt.segmentation.mask_threshold, locals())
     simple_filter_1_1(
         in_filepath, out_filepath, mrt.segmentation.mask_threshold,

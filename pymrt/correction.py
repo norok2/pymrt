@@ -244,7 +244,7 @@ def sn_split_signals(
     else:
         thresholds = tuple(method)
 
-    thresholds = fc.base.auto_repeat(thresholds, 1)
+    thresholds = fc.auto_repeat(thresholds, 1)
 
     masks = []
     full_mask = np.ones(arr.shape, dtype=bool)
@@ -432,7 +432,7 @@ def sn_split_otsu(
              - signal_arr: The signal array.
              - noise_arr: The noise array.
     """
-    corrections = fc.base.auto_repeat(corrections, 2, check=True)
+    corrections = fc.auto_repeat(corrections, 2, check=True)
     otsu = mrt.segmentation.threshold_otsu(arr)
     signal_mask = arr > otsu * corrections[0]
     noise_mask = arr <= otsu * corrections[1]
@@ -470,7 +470,7 @@ def sn_split_relative(
     See Also:
         segmentation.threshold_relative(),
     """
-    thresholds = fc.base.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_relative(arr, thresholds)
     signal_mask = arr > signal_threshold
@@ -509,7 +509,7 @@ def sn_split_percentile(
     See Also:
         segmentation.threshold_percentile()
     """
-    thresholds = fc.base.auto_repeat(thresholds, 2, check=True)
+    thresholds = fc.auto_repeat(thresholds, 2, check=True)
     signal_threshold, noise_threshold = \
         mrt.segmentation.threshold_percentile(arr, thresholds)
     signal_mask = arr > signal_threshold

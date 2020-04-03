@@ -157,7 +157,7 @@ def _prepare_superlorentz(
 
 
 _SUPERLORENTZ = _prepare_superlorentz()
-fc.base.elapsed('Superlorentz Approx.')
+fc.elapsed('Superlorentz Approx.')
 
 
 # ======================================================================
@@ -402,7 +402,7 @@ def _shape_from_file(
         y (complex): The pulse shape.
     """
     tmp_dirpaths = [
-        fc.base.realpath(dirpath),
+        fc.realpath(dirpath),
         os.path.join(os.path.dirname(__file__), dirpath),
     ]
     for tmp_dirpath in tmp_dirpaths:
@@ -410,7 +410,7 @@ def _shape_from_file(
             dirpath = tmp_dirpath
             break
     filepath = os.path.join(
-        dirpath, filename + fc.base.add_extsep(mrt.util.EXT['tab']))
+        dirpath, filename + fc.add_extsep(mrt.util.EXT['tab']))
     arr = np.loadtxt(filepath)
     if arr.ndim == 1:
         y_re = arr
@@ -906,7 +906,7 @@ class SpinModel(object):
         self.num_pools = len(mc)
         # exchange at equilibrium between each two pools
         self.num_exchange = \
-            fc.base.comb(self.num_pools, 2) if self.num_pools > 1 else 0
+            fc.comb(self.num_pools, 2) if self.num_pools > 1 else 0
         self.approx = approx \
             if approx is not None else [None] * self.num_pools
         self.num_approx = sum(
@@ -1876,7 +1876,7 @@ class MultiGradEchoSteadyState(SteadyState):
         # handle echo times
         if tes is None:
             tes = self.te
-        self.tes = fc.base.auto_repeat(tes, 1, False, False)
+        self.tes = fc.auto_repeat(tes, 1, False, False)
         # ensure compatible echo_times and repetition_time
         if any(t < 0
                for te in self.tes

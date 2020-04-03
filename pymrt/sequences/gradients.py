@@ -458,16 +458,16 @@ def calc_trapz(
     if not duty:
         duty = 0.0
     has_plateau = True if duty > 0.0 else False
-    min_rise_time = fc.base.align(grad / slew_rate, raster)
+    min_rise_time = fc.align(grad / slew_rate, raster)
 
-    if fc.base.align(duration * (1.0 - duty), raster) <= 2 * min_rise_time:
+    if fc.align(duration * (1.0 - duty), raster) <= 2 * min_rise_time:
         max_grad = grad
-        rise_time = fc.base.align(
+        rise_time = fc.align(
             duration * (1.0 - duty) / 2, raster, 'closest')
         if not rise_time:
             rise_time = raster
         duration = (
-                fc.base.align(duration - 2 * rise_time, raster)
+                fc.align(duration - 2 * rise_time, raster)
                 + 2 * rise_time)
         grad = min(rise_time * slew_rate, max_grad)
         msg(
@@ -482,7 +482,7 @@ def calc_trapz(
         moment = 2 * slew_rate * rise_time ** 2
         raster_duration = 2 * rise_time
     else:
-        plateau = fc.base.align(
+        plateau = fc.align(
             duration - 2 * rise_time, raster, 'closest')
         if plateau < 0.0:
             plateau = 0.0

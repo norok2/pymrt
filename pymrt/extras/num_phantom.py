@@ -90,7 +90,7 @@ def shepp_logan_like(
         [['ellipsoid', [0.0230, 0.0115]], [-0.0400, -0.3025], [+000.], 0.5],
         [['ellipsoid', [0.0115, 0.0115]], [+0.0000, -0.3025], [+000.], 0.5],
         [['ellipsoid', [0.0115, 0.0230]], [+0.0300, -0.3025], [+000.], 0.5], ]
-    fc.base.auto_repeat(values, len(geom_shapes), False, True)
+    fc.auto_repeat(values, len(geom_shapes), False, True)
     geom_shapes = [
         ([value] + geom_shape)
         for value, geom_shape in zip(values, geom_shapes)]
@@ -263,7 +263,7 @@ def scaled_random(
     Returns:
         rand_geom_shapes (Iterable): The randomized geometric specifications.
     """
-    rand_geom_shapes = fc.base.deep_filter_map(
+    rand_geom_shapes = fc.deep_filter_map(
         geom_shapes,
         lambda x: fc.extra.scaled_randomizer(x, interval, fallback_interval),
         lambda x: isinstance(x, (int, float)))
@@ -291,7 +291,7 @@ def auto_random(geom_shape):
         geom_shape (tuple): The randomized geometric specification.
             (with the same structure as the input).
     """
-    return fc.base.deep_map(fc.extra.auto_random, geom_shape)
+    return fc.deep_map(fc.extra.auto_random, geom_shape)
 
 
 # ======================================================================

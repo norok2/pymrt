@@ -84,7 +84,7 @@ def threshold_relative(
 
     min_val = np.min(arr)
     max_val = np.max(arr)
-    values = fc.base.auto_repeat(values, 1)
+    values = fc.auto_repeat(values, 1)
     return tuple(
         min_val + (max_val - min_val) * float(value)
         for value in values)
@@ -108,7 +108,7 @@ def threshold_percentile(
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
-    values = fc.base.auto_repeat(values, 1)
+    values = fc.auto_repeat(values, 1)
     values = tuple(100.0 * value for value in values)
     return tuple(np.percentile(arr, values))
 
@@ -139,8 +139,8 @@ def threshold_mean_std(
     std = np.nanstd(arr)
     min_val = np.min(arr)
     max_val = np.max(arr)
-    mean_steps = fc.base.auto_repeat(mean_steps, 1)
-    std_steps = fc.base.auto_repeat(std_steps, 1)
+    mean_steps = fc.auto_repeat(mean_steps, 1)
+    std_steps = fc.auto_repeat(std_steps, 1)
     return tuple(
         mean * mean_step + std * std_step
         for mean_step, std_step in itertools.product(mean_steps, std_steps)
@@ -241,7 +241,7 @@ def threshold_hist_peaks(
     elif bins is None:
         bins = fc.extra.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = fc.base.midval(bin_edges)
+    bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
         depth = fc.extra.auto_bin(arr, depth)
@@ -285,7 +285,7 @@ def threshold_inv_hist_peaks(
     elif bins is None:
         bins = fc.extra.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = fc.base.midval(bin_edges)
+    bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
         depth = fc.extra.auto_bin(arr, depth)
@@ -329,7 +329,7 @@ def threshold_hist_peak_edges(
     elif bins is None:
         bins = fc.extra.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = fc.base.midval(bin_edges)
+    bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
         depth = fc.extra.auto_bin(arr, depth)
@@ -339,7 +339,7 @@ def threshold_hist_peak_edges(
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
         peaks = sp.signal.find_peaks_cwt(hist, widths)
-    peak_edges = fc.base.midval(peaks)
+    peak_edges = fc.midval(peaks)
     return tuple(bin_centers[peak_edges])
 
 
@@ -374,7 +374,7 @@ def threshold_inv_hist_peak_edges(
     elif bins is None:
         bins = fc.extra.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
-    bin_centers = fc.base.midval(bin_edges)
+    bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
         depth = fc.extra.auto_bin(arr, depth)
@@ -384,7 +384,7 @@ def threshold_inv_hist_peak_edges(
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
         inv_peaks = sp.signal.find_peaks_cwt(np.max(hist) - hist, widths)
-    inv_peak_edges = fc.base.midval(inv_peaks)
+    inv_peak_edges = fc.midval(inv_peaks)
     return tuple(bin_centers[inv_peak_edges])
 
 
@@ -593,7 +593,7 @@ def auto_thresholds(
         raise ValueError(
             'valid methods are: {} (given: {})'.format(methods, method))
     # ensures that the result is Iterable
-    thresholds = tuple(fc.base.auto_repeat(thresholds, 1))
+    thresholds = tuple(fc.auto_repeat(thresholds, 1))
     return thresholds
 
 
@@ -749,7 +749,7 @@ def clip_range(
     t1, t2 = interval
     if out_values is None:
         out_values = interval
-    out_values = fc.base.auto_repeat(out_values, 2, check=True)
+    out_values = fc.auto_repeat(out_values, 2, check=True)
     v1, v2 = out_values
     arr[arr < t1] = v1
     arr[arr > t2] = v2

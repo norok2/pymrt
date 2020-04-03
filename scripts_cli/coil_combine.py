@@ -66,7 +66,7 @@ def coil_combine(
     msg('Quality: {}'.format(q_filepath))
     # in_filepaths = [in_mag_filepath, in_phs_filepath]
     # out_filepaths = [out_mag_filepath, out_phs_filepath]
-    if fc.base.check_redo(in_filepaths, out_filepaths, force):
+    if fc.check_redo(in_filepaths, out_filepaths, force):
         mag_coils_arr, meta = mrt.input_output.load(in_mag_filepath, meta=True)
         phs_coils_arr = mrt.input_output.load(in_phs_filepath)
         coils_arr = fc.extra.polar2complex(mag_coils_arr, phs_coils_arr)
@@ -76,10 +76,10 @@ def coil_combine(
             compression=compression, compression_kws=compression_kws,
             coil_axis=coil_axis, split_axis=split_axis,
             verbose=verbose)
-        mag_arr, phs_arr = fc.base.complex2polar(arr)
+        mag_arr, phs_arr = fc.complex2polar(arr)
         mrt.input_output.save(out_mag_filepath, mag_arr, **meta)
         mrt.input_output.save(out_phs_filepath, phs_arr, **meta)
-        if fc.base.check_redo(out_filepaths, q_filepath):
+        if fc.check_redo(out_filepaths, q_filepath):
             q_arr = coils.quality(
                 coils_arr, arr, coil_axis=coil_axis, verbose=verbose)
             mrt.input_output.save(q_filepath, q_arr)
