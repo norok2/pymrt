@@ -169,7 +169,7 @@ def grappa_1d(
     """
     # : ensure coil axis is the last
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -285,7 +285,7 @@ def msense_1d(
     """
     # : ensure coil axis is the last
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)

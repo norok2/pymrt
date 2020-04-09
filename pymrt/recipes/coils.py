@@ -141,7 +141,7 @@ def compress_svd(
     assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -289,7 +289,7 @@ def sum_of_squares(
           192–225. doi:10.1002/mrm.1910160203
     """
     # combined = np.sqrt(np.abs(np.sum(arr * arr.conj(), axis=coil_axis)))
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     broadcast_shape = [
         d if i != coil_axis else 1 for i, d in enumerate(arr.shape)]
     combined = np.sum(np.abs(arr), axis=coil_axis)
@@ -346,7 +346,7 @@ def adaptive(
     assert(-arr.ndim <= coil_axis < arr.ndim)
     shape = arr.shape
     num_coils = shape[coil_axis]
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -514,7 +514,7 @@ def adaptive_iter(
           in Medicine, ISMRM, Milan, Italy.
     """
     assert(-arr.ndim <= coil_axis < arr.ndim)
-    coil_axis %= arr.ndim
+    coil_axis = fc.valid_index(coil_axis, arr.ndim)
     last_axis = -1 % arr.ndim
     if coil_axis != last_axis:
         arr = np.swapaxes(arr, coil_axis, last_axis)
@@ -1079,7 +1079,7 @@ def combine(
     if split_axis is not None:
         assert(-arr.ndim <= coil_axis < arr.ndim)
         assert(-arr.ndim <= split_axis < arr.ndim)
-        coil_axis %= arr.ndim
+        coil_axis = fc.valid_index(coil_axis, arr.ndim)
         shape = arr.shape
         combined = np.zeros(
             tuple(d for i, d in enumerate(shape) if i != coil_axis),
