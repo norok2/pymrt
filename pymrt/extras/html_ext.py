@@ -26,7 +26,7 @@ import PIL as pil  # Python Imaging Library
 import PIL.Image, PIL.ImageChops
 
 # :: Local Imports
-# import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+# import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
 from pymrt import elapsed, report, run_doctests
@@ -69,17 +69,21 @@ templates = {
 
 
 # ======================================================================
-def _trim(filepath):
-    """Trim borders from image contained in filepath."""
-    # : equivalent to:
-    # os.system(fmtm('mogrify "{filepath}" -trim "{filepath}"'))
-    im = pil.Image.open(filepath)
-    bg = pil.Image.new(im.mode, im.size, im.getpixel((0, 0)))
-    diff = pil.ImageChops.difference(im, bg)
-    diff = pil.ImageChops.add(diff, diff, 2.0, -100)
+def _trim(
+        source_filepath,
+        target_filepath=None,
+        background=None):
+    if not target_filepath:
+        target_filepath = source_filepath
+    img = pil.Image.open(source_filepath)
+    if background is None:
+        background = img.getpixel((0, 0))
+    border = pil.Image.new(img.mode, img.size, background)
+    diff = pil.ImageChops.difference(img, border)
+    # diff = pil.ImageChops.add(diff, diff)
     bbox = diff.getbbox()
-    if bbox:
-        im.crop(bbox).save(filepath)
+    img = img.crop(bbox) if bbox else img
+    img.save(target_filepath)
 
 
 # ======================================================================
@@ -147,11 +151,11 @@ def to_image(
     elif method == 'weasyprint':
         html_obj = weasyprint.HTML(string=html_code)
         if img_type.lower() == 'png':
-            html_obj.write_png()
+            html_obj.write_png(save_filepath)
         elif img_type.lower() == 'pdf':
-            html_obj.write_pdf()
+            html_obj.write_pdf(save_filepath)
 
-    if trim:
+    if img_type.lower() == 'png' and trim:
         _trim(save_filepath)
 
 
