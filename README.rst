@@ -50,13 +50,13 @@ The recommended way of installing the software is through
     $ pip install pymrt
 
 Alternatively, you can clone the source repository from
-`Bitbucket <https://bitbucket.org/norok2/pymrt>`_:
+`GitHub <https://github.com/norok2/pymrt>`_:
 
 .. code:: shell
 
     $ mkdir pymrt
     $ cd pymrt
-    $ git clone git@bitbucket.org:norok2/pymrt.git
+    $ git clone git@github.com:norok2/pymrt.git
     $ python setup.py install
 
 For more details see also ``INSTALL.rst``.
