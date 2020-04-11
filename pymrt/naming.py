@@ -22,7 +22,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python*
 
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 
 from pymrt import INFO, PATH

@@ -25,7 +25,7 @@ import scipy.integrate  # SciPy: Integration and ODEs
 import scipy.optimize  # SciPy: Optimization and root finding
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.correction
 
 from pymrt import INFO, PATH

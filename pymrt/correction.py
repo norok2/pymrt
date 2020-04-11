@@ -36,7 +36,7 @@ except ImportError:
         = denoise_tv_bregman = denoise_tv_chambolle = None
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.segmentation
 
 from pymrt import INFO, PATH

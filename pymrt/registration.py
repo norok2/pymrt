@@ -50,7 +50,7 @@ import scipy.optimize  # SciPy: Optimization Algorithms
 import scipy.ndimage  # SciPy: ND-image Manipulation
 
 # :: Internal Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.config
 
 # :: Local Imports

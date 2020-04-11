@@ -34,7 +34,7 @@ except ImportError:
         restoration = None
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.correction
 

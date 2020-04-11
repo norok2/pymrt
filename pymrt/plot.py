@@ -59,7 +59,7 @@ import scipy.stats  # SciPy: Statistical functions
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 
 from pymrt import INFO, PATH

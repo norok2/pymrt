@@ -23,7 +23,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python*
 import scipy.interpolate  # Scipy: Interpolation
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.correction
 

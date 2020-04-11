@@ -17,7 +17,7 @@ from __future__ import (
 # :: External Imports Submodules
 
 # :: Internal Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 
 # :: Local Imports
 from pymrt import INFO, PATH

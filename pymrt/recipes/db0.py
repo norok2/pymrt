@@ -19,7 +19,7 @@ import collections  # Container datatypes
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 # import pymrt.utils
 # import pymrt.computation as pmc
 

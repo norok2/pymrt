@@ -46,7 +46,7 @@ import scipy.ndimage  # SciPy: ND-image Manipulation
 import scipy.stats  # SciPy: Statistical functions
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 import pymrt.naming
 import pymrt.registration

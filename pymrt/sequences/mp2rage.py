@@ -53,7 +53,7 @@ import flyingcircus as fc  # Everything you always wanted to have in Python*
 # import scipy.signal  # SciPy: Signal Processing
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 import pymrt.util
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL, VERB_LVL_NAMES
