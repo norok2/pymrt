@@ -29,7 +29,7 @@ import argparse  # Argument Parsing
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 # import pymrt.utils
 import pymrt.sequences.flash
 # import pymrt.input_output

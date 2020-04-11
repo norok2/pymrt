@@ -30,7 +30,7 @@ import numex.interactive_tk_mpl
 
 
 # :: Local Imports
-import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 from pymrt import INFO, PATH
 from pymrt import VERB_LVL, D_VERB_LVL
 from pymrt import msg, dbg, fmt, fmtm

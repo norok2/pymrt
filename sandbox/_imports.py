@@ -356,7 +356,7 @@ from __future__ import(
 # import sympy.mpmath  # SymPy: Function approximation
 
 # :: Local Imports
-# import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI.
+# import pymrt as mrt  # Python Magnetic Resonance Tools: the multi-tool of MRI
 # import pymrt.utils
 # import pymrt.naming
 # import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
