@@ -306,7 +306,7 @@ def adaptive(
         coil_axis=-1,
         verbose=D_VERB_LVL):
     """
-    Block Adaptive coil combination method.
+    Adaptive coil combination method.
 
     Args:
         arr (np.ndarray): The input array.
@@ -468,10 +468,11 @@ def adaptive_iter(
         coil_axis=-1,
         verbose=D_VERB_LVL):
     """
-    Coil sensitivity for the 'block_adaptive_iter' combination method.
+    Adaptive Iterative coil combination method.
 
     This is an iterative and faster implementation of the algorithm for
-    computing 'block_adaptive' sensitivity, with improved phase accuracy.
+    computing 'adaptive' sensitivity, which allows for a simpler formulation
+    for phase correction.
 
     Args:
         arr (np.ndarray): The input array.
@@ -917,7 +918,7 @@ def sensitivity(
     Estimate the coil sensitivity.
 
     Args:
-        arr: The input array.
+        arr (np.ndarray): The input array.
         method (str): The coil sensitivity method.
             If str, uses the specified method as found in this module.
             Accepted values are:
