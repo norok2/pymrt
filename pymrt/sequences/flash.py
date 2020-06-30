@@ -119,7 +119,7 @@ def signal(
             This is proportional to the coil receive field :math:`B_1^-`.
 
     Returns:
-        s (float|np.ndarray): The signal expression.
+        float|np.ndarray: The signal expression.
     """
     fa = np.deg2rad(fa)
     return eta_m0 * m0 * np.sin(fa * eta_fa) * np.exp(-te / t2s) * \
