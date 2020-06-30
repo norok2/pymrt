@@ -226,12 +226,12 @@ def plot(
     )
     ax = axs[0, 0]
     for j, name in enumerate(COMPARTMENTS):
-        ax.plot(te, ds[j], label=f'{name.title()}', color=colors[name])
-    ax.plot(te, ds_tot, label=f'Total', color='#000000')
+        ax.plot(te, ds[j], label=name.title(), color=colors[name])
+    ax.plot(te, ds_tot, label='Total', color='#000000')
     ax.axvline(x=te[te_i], color='#999999', linestyle='dotted')
     ax.legend()
-    ax.set_title(f'Optimal $T_{{E}}$ = {te[te_i]:.1f} ms')
-    ax.set_ylabel('$\Delta S$ / arb. units')
+    ax.set_title(fmt('Optimal $T_{{E}}$ = {:.1f} ms', te[te_i]))
+    ax.set_ylabel('$\\Delta S$ / arb. units')
     ax.set_xlabel('$T_E$ / ms')
 
 
