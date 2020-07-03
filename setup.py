@@ -154,6 +154,7 @@ setup(
         'pytk',
         'numex',
         'flyingcircus',
+        'flyingcircus_numeric',
         'raster_geometry',
         # 'numba',
     ],
