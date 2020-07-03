@@ -1,7 +1,7 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-PyMRT - Interactive: fMRI experiment -- Echo Time dependence
+PyMRT - Interactive: fMRI experiment -- Echo Time dependence.
 
 Simulate the FLASH signal as a function of TE, including MT effects.
 
@@ -46,6 +46,27 @@ from pymrt import elapsed, report
 
 TITLE = __doc__.strip().split('\n')[0][:-1]
 INTERACTIVES = collections.OrderedDict([
+    ('mode', dict(
+        label='Mode', default='Default', values=('Default', 'Difference'))),
+
+    ('show_arterial', dict(
+        label='Show Arterial', default=True, values=(False, True))),
+    ('show_capillary', dict(
+        label='Show Capillary', default=True, values=(False, True))),
+    ('show_venous', dict(
+        label='Show Venous', default=True, values=(False, True))),
+    ('show_tissue', dict(
+        label='Show Tissue', default=True, values=(False, True))),
+    ('show_total', dict(
+        label='Show Total', default=True, values=(False, True))),
+    ('show_opt', dict(
+        label='Show Optimal', default=True, values=(False, True))),
+
+    ('y_min', dict(
+        label='Min. Y', default=0.0, start=-10, stop=10, step=0.01)),
+    ('y_max', dict(
+        label='Max. Y', default=0.0, start=-10, stop=10, step=0.01)),
+
     ('tr', dict(
         label='TR / ms',
         default=2000, start=0, stop=4000, step=50)),
@@ -61,22 +82,39 @@ INTERACTIVES = collections.OrderedDict([
     ('te_num', dict(
         label='TE_num / #',
         default=256, start=16, stop=1024, step=16)),
-    ('mt_suppression', dict(
-        label='MT suppression / %',
-        default=60, start=0, stop=100, step=1)),
+
+    ('both_blood_wc', dict(
+        label='Water content Blood / #',
+        default=0.87, start=0, stop=1, step=0.005)),
+    ('both_tissue_wc', dict(
+        label='Water content Tissue / #',
+        default=0.89, start=0, stop=1, step=0.005)),
+
+    ('both_arterial_mt', dict(
+        label='MT suppr. Arterial / #',
+        default=0.07, start=0, stop=1, step=0.005)),
+    ('both_capillary_mt', dict(
+        label='MT suppr. Capillary / #',
+        default=0.07, start=0, stop=1, step=0.005)),
+    ('both_venous_mt', dict(
+        label='MT suppr. Venous / #',
+        default=0.07, start=0, stop=1, step=0.005)),
+    ('both_tissue_mt', dict(
+        label='MT suppr. Tissue / #',
+        default=0.60, start=0, stop=1, step=0.005)),
 
     ('rest_arterial_m0', dict(
         label='Rest Arterial M0 / arb.units',
-        default=1.00, start=0, stop=10, step=0.05)),
+        default=1.16, start=0, stop=10, step=0.01)),
     ('rest_capillary_m0', dict(
         label='Rest Capillary M0 / arb.units',
-        default=1.95, start=0, stop=10, step=0.05)),
+        default=1.81, start=0, stop=10, step=0.01)),
     ('rest_venous_m0', dict(
         label='Rest Venous M0 / arb.units',
-        default=2.25, start=0, stop=10, step=0.05)),
-    ('rest_tissue_m0', dict(
-        label='Rest Tissue M0 / arb.units',
-        default=94.8, start=30, stop=100, step=0.05)),
+        default=2.53, start=0, stop=10, step=0.01)),
+    # ('rest_tissue_m0', dict(
+    #     label='Rest Tissue M0 / arb.units',
+    #     default=94.8, start=30, stop=100, step=0.05)),
 
     ('rest_arterial_t1', dict(
         label='Rest Arterial T1 / ms',
@@ -93,13 +131,13 @@ INTERACTIVES = collections.OrderedDict([
 
     ('rest_arterial_t2s', dict(
         label='Rest Arterial T2* / ms',
-        default=96.7, start=0, stop=120, step=0.1)),
+        default=58.1, start=0, stop=120, step=0.1)),
     ('rest_capillary_t2s', dict(
         label='Rest Capillary T2* / ms',
-        default=33.3, start=0, stop=120, step=0.1)),
+        default=32.5, start=0, stop=120, step=0.1)),
     ('rest_venous_t2s', dict(
         label='Rest Venous T2* / ms',
-        default=19.6, start=0, stop=120, step=0.1)),
+        default=22.2, start=0, stop=120, step=0.1)),
     ('rest_tissue_t2s', dict(
         label='Rest Tissue T2* / ms',
         default=65.8, start=0, stop=120, step=0.1)),
@@ -110,16 +148,16 @@ INTERACTIVES = collections.OrderedDict([
 
     ('actv_arterial_m0', dict(
         label='Actv Arterial M0 / arb.units',
-        default=2.00, start=0, stop=10, step=0.05)),
+        default=2.03, start=0, stop=10, step=0.01)),
     ('actv_capillary_m0', dict(
         label='Actv Capillary M0 / arb.units',
-        default=2.35, start=0, stop=10, step=0.05)),
+        default=2.24, start=0, stop=10, step=0.01)),
     ('actv_venous_m0', dict(
         label='Actv Venous M0 / arb.units',
-        default=2.35, start=0, stop=10, step=0.05)),
-    ('actv_tissue_m0', dict(
-        label='Actv Tissue M0 / arb.units',
-        default=93.3, start=30, stop=100, step=0.05)),
+        default=2.88, start=0, stop=10, step=0.01)),
+    # ('actv_tissue_m0', dict(
+    #     label='Actv Tissue M0 / arb.units',
+    #     default=93.3, start=30, stop=100, step=0.05)),
 
     ('actv_arterial_t1', dict(
         label='Actv Arterial T1 / ms',
@@ -132,17 +170,17 @@ INTERACTIVES = collections.OrderedDict([
         default=1650, start=100, stop=4000, step=5)),
     ('actv_tissue_t1', dict(
         label='Actv Tissue T1 / ms',
-        default=1605, start=100, stop=4000, step=5)),
+        default=1600, start=100, stop=4000, step=5)),
 
     ('actv_arterial_t2s', dict(
         label='Actv Arterial T2* / ms',
-        default=96.7, start=0, stop=120, step=0.1)),
+        default=58.1, start=0, stop=120, step=0.1)),
     ('actv_capillary_t2s', dict(
         label='Actv Capillary T2* / ms',
-        default=43.5, start=0, stop=120, step=0.1)),
+        default=47.6, start=0, stop=120, step=0.1)),
     ('actv_venous_t2s', dict(
         label='Actv Venous T2* / ms',
-        default=27.2, start=0, stop=120, step=0.1)),
+        default=32.3, start=0, stop=120, step=0.1)),
     ('actv_tissue_t2s', dict(
         label='Actv Tissue T2* / ms',
         default=67.6, start=0, stop=120, step=0.1)),
@@ -163,13 +201,21 @@ def signals_perfusion(
         fa,
         tr,
         te,
-        mf=0.0,
-        mt=0.0,
+        mf,
+        mt,
+        wc,
         compartments=COMPARTMENTS):
-    m0['arterial'] = m0['arterial']  # unchanged
-    m0['capillary'] = (m0['capillary'] - 0.5 * mf) + 0.5 * mf * (1 - mt)
-    m0['venous'] = (m0['venous'] - 0.5 * mf) + 0.5 * mf * (1 - mt)
-    m0['tissue'] = (m0['tissue'] - mf) * (1 - mt) + mf
+    m0 = m0.copy()
+    m0['arterial'] = wc['blood'] * m0['arterial'] * (1 - mt['arterial'])
+    m0['capillary'] = wc['blood'] * (
+            (m0['capillary'] - 0.5 * mf) * (1 - mt['capillary'])
+            + 0.5 * mf * (1 - mt['tissue']))
+    m0['venous'] = wc['blood'] * (
+            (m0['venous'] - 0.5 * mf) * (1 - mt['venous'])
+            + 0.5 * mf * (1 - mt['tissue']))
+    m0['tissue'] = wc['tissue'] * (
+            (m0['tissue'] - mf) * (1 - mt['tissue']) \
+            + mf * (1 - mt['arterial']))
     result = tuple(
         flash.signal(
             m0[compartment], fa, tr, t1[compartment], te, t2s[compartment])
@@ -198,6 +244,13 @@ def group_params(
 
 
 # ======================================================================
+def _normalize_qty(params, prefix, suffix, value=100):
+    return value - sum(
+        params[x] for x in params
+        if x.startswith(prefix) and x.endswith(suffix))
+
+
+# ======================================================================
 def plot(
         fig,
         params=None,
@@ -205,19 +258,44 @@ def plot(
     axs = fig.subplots(1, 1, squeeze=False, sharex='row', sharey='row')
     te = params['te'] = np.linspace(
         params['te_start'], params['te_stop'], params['te_num'])
+    params['rest_tissue_m0'] = _normalize_qty(params, 'rest_', '_m0')
+    params['actv_tissue_m0'] = _normalize_qty(params, 'actv_', '_m0')
+
     rest = group_params('rest', params)
     actv = group_params('actv', params)
+    both = group_params('both', params)
     ss_rest = signals_perfusion(
         rest['m0'], rest['t1'], rest['t2s'],
         params['fa'], params['tr'], params['te'],
-        rest['perfusion'], params['mt_suppression'] / 100)
+        rest['perfusion'], both['mt'], both['wc'])
     ss_actv = signals_perfusion(
         actv['m0'], actv['t1'], actv['t2s'],
         params['fa'], params['tr'], params['te'],
-        actv['perfusion'], params['mt_suppression'] / 100)
+        actv['perfusion'], both['mt'], both['wc'])
     ds = ss_actv - ss_rest
+    if params['mode'] == 'Difference':
+        mtoff = dict(arterial=0.0, capillary=0.0, venous=0.0, tissue=0.0)
+        ss_rest_mtoff = signals_perfusion(
+            rest['m0'], rest['t1'], rest['t2s'],
+            params['fa'], params['tr'], params['te'],
+            rest['perfusion'], mtoff, both['wc'])
+        ss_actv_mtoff = signals_perfusion(
+            actv['m0'], actv['t1'], actv['t2s'],
+            params['fa'], params['tr'], params['te'],
+            actv['perfusion'], mtoff, both['wc'])
+        ds_mton = ds
+        ds_mtoff = ss_actv_mtoff - ss_rest_mtoff
+        ds = ds_mtoff - ds_mton
     ds_tot = np.sum(ds, axis=0)
-    te_i = np.argmax(ds_tot)
+    if params['mode'] != 'Default':
+        te_i = np.argmin(np.abs(ds_tot))
+        te_name = 'Zero Crossing'
+        title = 'Difference Signal Variation upon Activation'
+    else:
+        te_i = np.argmax(ds_tot)
+        te_name = 'Optimal'
+        title = 'Signal Variation upon Activation'
+
     colors = dict(
         arterial='#cc3333',
         capillary='#cc66cc',
@@ -226,13 +304,21 @@ def plot(
     )
     ax = axs[0, 0]
     for j, name in enumerate(COMPARTMENTS):
-        ax.plot(te, ds[j], label=name.title(), color=colors[name])
-    ax.plot(te, ds_tot, label='Total', color='#000000')
-    ax.axvline(x=te[te_i], color='#999999', linestyle='dotted')
+        if params['show_' + name]:
+            ax.plot(te, ds[j], label=name.title(), color=colors[name])
+    if params['show_total']:
+        ax.plot(te, ds_tot, label='Total', color='#000000')
+    if params['show_opt']:
+        ax.axvline(x=te[te_i], color='#999999', linestyle='dotted')
+        title += fmt(
+            '\n' + te_name + '  $T_{{E}} = {:.1f}\\pm{:.1f}\\;\\mathrm{{ms}}$',
+            te[te_i], te[1] - te[0])
+    ax.set_title(title)
     ax.legend()
-    ax.set_title(fmt('Optimal $T_{{E}}$ = {:.1f} ms', te[te_i]))
     ax.set_ylabel('$\\Delta S$ / arb. units')
     ax.set_xlabel('$T_E$ / ms')
+    if params['y_min'] != params['y_max']:
+        ax.set_ylim([params['y_min'], params['y_max']])
 
 
 # ======================================================================
