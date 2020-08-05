@@ -128,7 +128,7 @@ INTERACTIVES = collections.OrderedDict([
         default=1650, start=100, stop=4000, step=5)),
     ('rest_tissue_t1', dict(
         label='Rest Tissue T1 / ms',
-        default=1605, start=100, stop=4000, step=5)),
+        default=1200, start=100, stop=4000, step=5)),
 
     ('rest_arterial_t2s', dict(
         label='Rest Arterial T2* / ms',
@@ -145,7 +145,7 @@ INTERACTIVES = collections.OrderedDict([
 
     ('rest_perfusion', dict(
         label='Rest Perfusion / arb.units',
-        default=1.0, start=0, stop=10, step=0.05)),
+        default=0.0, start=0, stop=10, step=0.05)),
 
     ('actv_arterial_m0', dict(
         label='Actv Arterial M0 / arb.units',
@@ -171,7 +171,7 @@ INTERACTIVES = collections.OrderedDict([
         default=1650, start=100, stop=4000, step=5)),
     ('actv_tissue_t1', dict(
         label='Actv Tissue T1 / ms',
-        default=1600, start=100, stop=4000, step=5)),
+        default=1200, start=100, stop=4000, step=5)),
 
     ('actv_arterial_t2s', dict(
         label='Actv Arterial T2* / ms',
@@ -188,7 +188,7 @@ INTERACTIVES = collections.OrderedDict([
 
     ('actv_perfusion', dict(
         label='Actv Perfusion / arb.units',
-        default=1.6, start=0, stop=10, step=0.05)),
+        default=0.0, start=0, stop=10, step=0.05)),
 ])
 
 COMPARTMENTS = 'arterial', 'capillary', 'venous', 'tissue'
