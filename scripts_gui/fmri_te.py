@@ -79,10 +79,19 @@ INTERACTIVES = collections.OrderedDict([
         default=0, start=0, stop=250, step=5)),
     ('te_stop', dict(
         label='TE_stop / ms',
-        default=120, start=0, stop=250, step=5)),
+        default=60, start=0, stop=250, step=5)),
     ('te_num', dict(
         label='TE_num / #',
         default=256, start=16, stop=1024, step=16)),
+    ('te1_meas', dict(
+        label='Measured TE_1 / ms',
+        default=6.9, start=0, stop=100, step=0.1)),
+    ('te2_meas', dict(
+        label='Measured TE_2 / ms',
+        default=18.0, start=0, stop=100, step=0.1)),
+    ('te3_meas', dict(
+        label='Measured TE_3 / ms',
+        default=28.0, start=0, stop=100, step=0.1)),
 
     ('both_blood_wc', dict(
         label='Water content Blood / #',
@@ -312,10 +321,13 @@ def plot(
     if params['show_total']:
         ax.plot(te, ds_tot, label='Total', color='#000000')
     if params['show_opt']:
-        ax.axvline(x=te[te_i], color='#999999', linestyle='dotted')
+        ax.axvline(x=te[te_i], color='#999999', linestyle='dashed')
         title += fmt(
             '\n' + te_name + '  $T_{{E}} = {:.1f}\\pm{:.1f}\\;\\mathrm{{ms}}$',
             te[te_i], te[1] - te[0])
+    params['tes_meas'] = [params[f'te{i}_meas'] for i in range(1, 4)]
+    for te_meas in params['tes_meas']:
+        ax.axvline(x=te_meas, color='#cccccc', linestyle='dotted')
     ax.set_title(title)
     ax.legend()
     ax.set_ylabel('$\\Delta S$ / arb. units')
