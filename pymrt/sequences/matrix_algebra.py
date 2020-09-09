@@ -54,6 +54,7 @@ import sympy as sym  # SymPy (symbolic CAS library)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 # import numba  # Numba Just-In-Time compiler for Python / NumPy
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
