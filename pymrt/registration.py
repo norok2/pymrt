@@ -41,6 +41,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -105,7 +106,7 @@ def params_to_affine(
         shift = params[:n_dim]
         params = params[n_dim:]
     if 'rotation' in transform or transform in ['rigid']:
-        linear = fc.extra.angles2rotation(params)
+        linear = fcn.angles2rotation(params)
     elif 'scaling' in transform:
         linear = np.diag(params)
     elif transform == 'affine':
@@ -140,7 +141,7 @@ def set_init_parameters(
     if 'translation' in transform or transform in ['rigid', 'affine']:
         if init_guess_shift == 'weights':
             shift = \
-                fc.extra.weighted_center(moving) - fc.extra.weighted_center(
+                fcn.weighted_center(moving) - fcn.weighted_center(
                     fixed)
         elif init_guess_shift == 'random':
             shift = np.random.rand(moving.ndim) * moving.shape / 2.0
@@ -151,7 +152,7 @@ def set_init_parameters(
     # :: set up other parameters, according to transform
     if 'rotation' in transform or transform in ['rigid']:
         # todo: use inertia for rotation angles?
-        num_angles = fc.extra.num_angles_from_dim(moving.ndim)
+        num_angles = fcn.num_angles_from_dim(moving.ndim)
         if init_guess_other == 'random':
             angles = np.random.rand(num_angles) * np.pi / 2.0
         else:  # 'none' or not known
@@ -170,8 +171,8 @@ def set_init_parameters(
     elif transform == 'affine':
         if init_guess_other == 'weights':
             # todo: improve to find real rotation
-            rot_moving = fc.extra.rotation_axes(moving)
-            rot_fixed = fc.extra.rotation_axes(fixed)
+            rot_moving = fcn.rotation_axes(moving)
+            rot_fixed = fcn.rotation_axes(fixed)
             linear = np.dot(rot_fixed.transpose(), rot_moving)
         elif init_guess_other == 'random':
             linear = np.random.rand(moving.ndim, moving.ndim)
@@ -213,18 +214,18 @@ def _discrete_generator(transform, n_dim):
                 yield linear, shift
     elif transform == 'pi/2_rotation':
         shift = np.zeros((n_dim,))
-        num_angles = fc.extra.num_angles_from_dim(n_dim)
+        num_angles = fcn.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
-            linear = fc.extra.angles2rotation(angles)
+            linear = fcn.angles2rotation(angles)
             yield linear, shift
     elif transform == 'pi/2_rotation+':
         shift = np.zeros((n_dim,))
-        num_angles = fc.extra.num_angles_from_dim(n_dim)
+        num_angles = fcn.num_angles_from_dim(n_dim)
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             for diagonal in itertools.product([-1, 1], repeat=n_dim):
                 linear = np.dot(
                     np.diag(diagonal).astype(np.float),
-                    fc.extra.angles2rotation(angles))
+                    fcn.angles2rotation(angles))
                 yield linear, shift
     else:
         shift = np.zeros(n_dim)

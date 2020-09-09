@@ -26,6 +26,7 @@ import hashlib  # Secure hashes and message digests
 # :: External Imports
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 
@@ -333,7 +334,7 @@ def calc_afi(
     """
     y_arr = np.stack(images, -1).astype(float)
 
-    s_arr = fc.extra.polar2complex(y_arr[..., 0],
+    s_arr = fcn.polar2complex(y_arr[..., 0],
                                    fix_phase_interval(y_arr[..., 1]))
     # s_arr = images[0]
     t_r = params[ti_label]
@@ -404,8 +405,8 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    if not fc.extra.is_in_range(arr, (-np.pi, np.pi)):
-        arr = fc.extra.scale(arr.astype(float), (-np.pi, np.pi))
+    if not fcn.is_in_range(arr, (-np.pi, np.pi)):
+        arr = fcn.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -485,13 +486,13 @@ def rho_mp2rage(
     inv2m_arr = inv2m_arr.astype(float)
     inv1p_arr = fix_phase_interval(inv1p_arr)
     inv2p_arr = fix_phase_interval(inv2p_arr)
-    inv1_arr = fc.extra.polar2complex(inv1m_arr, inv1p_arr)
-    inv2_arr = fc.extra.polar2complex(inv2m_arr, inv2p_arr)
+    inv1_arr = fcn.polar2complex(inv1m_arr, inv1p_arr)
+    inv2_arr = fcn.polar2complex(inv2m_arr, inv2p_arr)
     rho_arr = np.real(inv1_arr.conj() * inv2_arr /
                       (inv1m_arr ** 2 + inv2m_arr ** 2 + regularization))
     if values_interval:
-        values_interval = fc.extra.valid_interval(values_interval)
-        rho_arr = fc.extra.scale(rho_arr, values_interval, (-0.5, 0.5))
+        values_interval = fcn.valid_interval(values_interval)
+        rho_arr = fcn.scale(rho_arr, values_interval, (-0.5, 0.5))
     return rho_arr
 
 
@@ -541,7 +542,7 @@ def rho_to_t1_mp2rage(
         rho = mp2rage.rho(
             t1, **mp2rage.acq_to_seq_params(**acq_params_kws)[0])
         # remove non-bijective branches
-        bijective_slice = fc.extra.bijective_part(rho)
+        bijective_slice = fcn.bijective_part(rho)
         t1 = t1[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:
@@ -553,8 +554,8 @@ def rho_to_t1_mp2rage(
                 'MP2RAGE look-up table was not properly prepared.')
 
         # fix values range for rho
-        if not fc.extra.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
-            rho_arr = fc.extra.scale(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL)
+        if not fcn.is_in_range(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL):
+            rho_arr = fcn.scale(rho_arr, mp2rage.PSEUDO_RATIO_INTERVAL)
 
         t1_arr = np.interp(rho_arr, rho, t1)
     return t1_arr

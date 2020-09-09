@@ -17,6 +17,7 @@ from __future__ import (
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 import raster_geometry  # Create/manipulate N-dim raster geometric shapes.
 
 # :: External Imports Submodules
@@ -106,7 +107,7 @@ def dipole_kernel(
 
     # generate the dipole kernel
     assert (len(shape) == 3)
-    kk = np.array(fc.extra.grid_coord(shape, origin))
+    kk = np.array(fcn.grid_coord(shape, origin))
     if b0_direction is None:
         theta, phi = [np.deg2rad(angle) for angle in (theta, phi)]
         b0_direction = [
@@ -260,7 +261,7 @@ def db0_to_chi(
     chi_k_arr = np.fft.fftn(db0_arr) / dk
 
     # remove singularity of susceptibility
-    chi_k_arr = fc.extra.subst(chi_k_arr)
+    chi_k_arr = fcn.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -309,10 +310,10 @@ def qsm_remove_background_milf(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    db0_arr, mask = fc.extra.padding(db0_arr, pad_width)
-    mask_arr, mask = fc.extra.padding(mask_arr, pad_width)
+    db0_arr, mask = fcn.padding(db0_arr, pad_width)
+    mask_arr, mask = fcn.padding(mask_arr, pad_width)
 
-    kernel_k = np.fft.fftshift(fc.extra.laplace_kernel(db0_arr.shape))
+    kernel_k = np.fft.fftshift(fcn.laplace_kernel(db0_arr.shape))
 
     kernel_mask = np.abs(kernel_k) > threshold
     kernel_k_inv = kernel_mask.astype(complex)
@@ -382,10 +383,10 @@ def qsm_remove_background_sharp(
           outside the region of interest. NMR Biomed. n/a-n/a.
           doi:10.1002/nbm.3604
     """
-    db0_arr, mask = fc.extra.padding(db0_arr, pad_width)
-    mask_arr, mask = fc.extra.padding(mask_arr, pad_width)
+    db0_arr, mask = fcn.padding(db0_arr, pad_width)
+    mask_arr, mask = fcn.padding(mask_arr, pad_width)
 
-    radius = fc.extra.coord(db0_arr.shape, radius, rel_radius, use_int=False)
+    radius = fcn.coord(db0_arr.shape, radius, rel_radius, use_int=False)
 
     # # generate the spherical kernel
     sphere = raster_geometry.sphere(db0_arr.shape, radius).astype(complex)
@@ -498,7 +499,7 @@ def qsm_field2source_tkd(
     chi_k_arr = dk_inv * np.fft.fftn(db0i_arr)
 
     # remove singularity of susceptibility
-    chi_k_arr = fc.extra.subst(chi_k_arr)
+    chi_k_arr = fcn.subst(chi_k_arr)
 
     # perform the inverse Fourier transform
     chi_arr = np.real(np.fft.ifftn(chi_k_arr))
@@ -573,7 +574,7 @@ def qsm_field2source_l2_closed_form(
 
     # compute the gradient operators along all dims
     exp_2_k = sum(
-        fc.extra.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
+        fcn.exp_gradient_kernels(db0i_arr.shape, None, db0i_arr.shape))
     exp_2_k = np.fft.fftshift(exp_2_k)
 
     # perform the inverse Fourier transform
@@ -670,7 +671,7 @@ def qsm_field2source_l2_iter(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = fc.extra.exp_gradient_kernels(
+    exp_ks = fcn.exp_gradient_kernels(
         db0i_arr.shape, None, db0i_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
@@ -863,7 +864,7 @@ def qsm_total_field_inversion(
     dk_inv[dk_mask] = (1.0 / dk[dk_mask])
 
     # compute the gradient operators along all dims
-    exp_ks = fc.extra.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
+    exp_ks = fcn.exp_gradient_kernels(db0_arr.shape, None, db0_arr.shape)
     exp_k_invs = []
     for kernel_k in exp_ks:
         if threshold:

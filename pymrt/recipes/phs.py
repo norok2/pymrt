@@ -19,6 +19,7 @@ import collections  # Container datatypes
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import scipy.ndimage  # SciPy: ND-image Manipulation
@@ -497,7 +498,7 @@ def unwrap_laplacian(
           no. 14 (July 15, 2003): 1194–96.
           https://doi.org/10.1364/OL.28.001194.
     """
-    arr, mask = fc.extra.padding(arr, pad_width)
+    arr, mask = fcn.padding(arr, pad_width)
 
     # from pymrt.base import laplacian, inv_laplacian
     # from numpy import real, sin, cos
@@ -511,10 +512,10 @@ def unwrap_laplacian(
             if denoising_kws is not None else {}
         cos_arr = denoising(cos_arr, **denoising_kws)
         sin_arr = denoising(sin_arr, **denoising_kws)
-    kk2 = fftshift(fc.extra.laplace_kernel(arr.shape, factors=arr.shape))
+    kk2 = fftshift(fcn.laplace_kernel(arr.shape, factors=arr.shape))
     arr = fftn(cos_arr * ifftn(kk2 * fftn(sin_arr)) -
                sin_arr * ifftn(kk2 * fftn(cos_arr)))
-    fc.extra.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
+    fcn.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr *= kk2
     del cos_arr, sin_arr, kk2
     arr = np.real(ifftn(arr))
@@ -593,7 +594,7 @@ def unwrap_gradient(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
-            separately, using `fc.extra.filter_cx()`.
+            separately, using `fcn.filter_cx()`.
         denoising_kws (Mappable|None): Keyword arguments.
             These are passed to the function specified in `denoising`.
             If Iterable, must be convertible to a dictionary.
@@ -607,16 +608,16 @@ def unwrap_gradient(
           Unwrapping in the Presence of Noise.” Optics Letters 28, no. 22
           (November 15, 2003): 2156–58. https://doi.org/10.1364/OL.28.002156.
     """
-    arr, mask = fc.extra.padding(arr, pad_width)
+    arr, mask = fcn.padding(arr, pad_width)
 
     arr = np.exp(1j * arr)
     if callable(denoising):
         denoising_kws = dict(denoising_kws) \
             if denoising_kws is not None else {}
-        arr = fc.extra.filter_cx(arr, denoising, (), denoising_kws)
+        arr = fcn.filter_cx(arr, denoising, (), denoising_kws)
     kks = [
         fftshift(kk)
-        for kk in fc.extra.gradient_kernels(arr.shape, factors=arr.shape)]
+        for kk in fcn.gradient_kernels(arr.shape, factors=arr.shape)]
     grads = np.gradient(arr)
 
     u_arr = np.zeros(arr.shape, dtype=complex)
@@ -624,7 +625,7 @@ def unwrap_gradient(
     for kk, grad in zip(kks, grads):
         u_arr += -1j * kk * fftn(np.real(-1j * grad / arr))
         kk2 += kk ** 2
-    fc.extra.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
+    fcn.apply_at(kk2, lambda x: 1 / x, kk2 != 0, in_place=True)
     arr = np.real(ifftn(kk2 * u_arr)) / (2 * np.pi)
     return arr[mask]
 
@@ -717,7 +718,7 @@ def unwrap_sorting_path(
     reliab_kws = dict(reliab_kws) if reliab_kws is not None else {}
     reliab_arr = reliab(arr, step, **reliab_kws)
     edges_arr, orig_idx_arr, dest_idx_arr = \
-        fc.extra.compute_edge_weights(reliab_arr)
+        fcn.compute_edge_weights(reliab_arr)
     del reliab_arr
     sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
     orig_idx_arr = orig_idx_arr.ravel()
@@ -779,7 +780,7 @@ def unwrap_sorting_path_(
     shape = arr.shape
     reliab_arr = reliab_diff2(arr, step)
     edges_arr, orig_idx_arr, dest_idx_arr = \
-        fc.extra.compute_edge_weights(reliab_arr)
+        fcn.compute_edge_weights(reliab_arr)
     sorted_edges_indices = np.argsort(edges_arr.ravel())[::-1]
     orig_idx_arr = orig_idx_arr.ravel()
     dest_idx_arr = dest_idx_arr.ravel()
@@ -852,7 +853,7 @@ def unwrap_region_merging(
           Algorithm.” Magnetic Resonance in Medicine 49, no. 1
           (January 1, 2003): 193–97. https://doi.org/10.1002/mrm.10354.
     """
-    arr = fc.extra.apply_mask(arr, mask)
+    arr = fcn.apply_mask(arr, mask)
     if not threshold:
         threshold = step / 2
     arr_min, arr_max = arr.min(), arr.max()
@@ -865,8 +866,8 @@ def unwrap_region_merging(
         s_mask = (arr >= split_min) if i == 0 else (arr > split_min)
         s_mask *= (arr <= split_max)
         label_arr, num_label = sp.ndimage.label(
-            fc.extra.apply_mask(s_mask, mask))
-        offset = fc.extra.apply_mask(label_arr > 0, mask) * (num_labels)
+            fcn.apply_mask(s_mask, mask))
+        offset = fcn.apply_mask(label_arr > 0, mask) * (num_labels)
         labels_arr = labels_arr + offset + label_arr
         num_labels += num_label
     u_arr = arr.copy()
@@ -988,7 +989,7 @@ def unwrap_1d_iter(
             If callable, must have the following signature:
             denoising(np.ndarray, ...) -> np.ndarray.
             It is applied to the real and imaginary part of `np.exp(1j * arr)`
-            separately, using `fc.extra.filter_cx()` and then
+            separately, using `fcn.filter_cx()` and then
             converted back to a phase with `np.angle()` before applying the
             unwrapping.
         denoising_kws (Mappable|None): Keyword arguments.
@@ -1010,7 +1011,7 @@ def unwrap_1d_iter(
         denoising_kws = dict(denoising_kws) \
             if denoising_kws is not None else {}
         u_arr = np.angle(
-            fc.extra.filter_cx(np.exp(1j * u_arr), denoising, (),
+            fcn.filter_cx(np.exp(1j * u_arr), denoising, (),
                                denoising_kws))
     if axes is None:
         axes = tuple(range(arr.ndim))

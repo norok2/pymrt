@@ -43,6 +43,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import numeral  # Support for various integer-to-numeral (and back) conversion
 import seaborn as sns  # Seaborn: statistical data visualization
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -145,13 +146,13 @@ def sample2d(
         step = 1
 
     # prepare data
-    sample = fc.extra.ndim_slice(arr, axis, start)
+    sample = fcn.ndim_slice(arr, axis, start)
 
     if title:
         ax.set_title(title)
 
     if array_interval is None:
-        array_interval = fc.extra.minmax(arr)
+        array_interval = fcn.minmax(arr)
 
     if not text_color:
         text_color = 'k'
@@ -164,7 +165,7 @@ def sample2d(
     datas = []
     for i in range(start, stop, step):
         data = mrt.plot._reorient_2d(
-            fc.extra.ndim_slice(arr, axis, i), orientation, flip_ud, flip_lr)
+            fcn.ndim_slice(arr, axis, i), orientation, flip_ud, flip_lr)
         pax = ax.imshow(
             data, cmap=cmap,
             vmin=array_interval[0], vmax=array_interval[1], animated=True)
@@ -225,7 +226,7 @@ def trajectory_2d(
         ax.set_title(title)
     if support_intervals is None:
         support_intervals = (
-            fc.extra.minmax(trajectory[0]), fc.extra.minmax(trajectory[1]))
+            fcn.minmax(trajectory[0]), fcn.minmax(trajectory[1]))
 
     n_frames = int(n_points * (1 + last_frame_duration / duration))
     data = trajectory

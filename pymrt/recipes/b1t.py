@@ -18,6 +18,7 @@ import warnings  # Warning control
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import scipy.interpolate  # Scipy: Interpolation
@@ -401,7 +402,7 @@ def mp2rage_rho(
             eta_fa_values_range[0], eta_fa_values_range[1], t1_num)
         rho = mp2rage.rho(t1=t1_arr, eta_fa=eta_fa, mode=mode, **seq_kws)
         # remove non-bijective branches
-        bijective_slice = fc.extra.bijective_part(rho)
+        bijective_slice = fcn.bijective_part(rho)
         eta_fa = eta_fa[bijective_slice]
         rho = rho[bijective_slice]
         if rho[0] > rho[-1]:
@@ -423,7 +424,7 @@ def mp2rage_rho(
         rho = mp2rage.rho(t1=t1, eta_fa=eta_fa, mode=mode, **seq_kws)
         # remove non bijective branches
         for i in range(eta_fa_num):
-            bijective_slice = fc.extra.bijective_part(rho[:, i])
+            bijective_slice = fcn.bijective_part(rho[:, i])
             non_bijective_slice = tuple(fc.complement(
                 range(t1_num), bijective_slice))
             rho[non_bijective_slice, i] = -1

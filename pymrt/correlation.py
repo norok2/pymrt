@@ -39,6 +39,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import scipy.constants  # SciPy: Mathematal and Physical Constants
@@ -419,7 +420,7 @@ def apply_mask(
         img[~mask.astype(bool)] = mask_val
         if container:
             img = img[container]
-        img = fc.extra.frame(img, 0.1, 0.0)
+        img = fcn.frame(img, 0.1, 0.0)
         return img
 
     if fc.check_redo(
@@ -643,7 +644,7 @@ def calc_correlation(
         else:
             mask = np.ones_like(img1 * img2).astype(bool)
         if val_interval is None:
-            val_interval = fc.extra.minmax(np.stack((img1, img2)))
+            val_interval = fcn.minmax(np.stack((img1, img2)))
         mask *= (img1 > val_interval[0])
         mask *= (img1 < val_interval[1])
         mask *= (img2 > val_interval[0])
@@ -652,10 +653,10 @@ def calc_correlation(
             removes = []
         # calculate stats of difference image
         d_arr = img1[mask] - img2[mask]
-        d_dict = fc.extra.calc_stats(d_arr, removes)
+        d_dict = fcn.calc_stats(d_arr, removes)
         # calculate stats of the absolute difference image
         e_arr = np.abs(d_arr)
-        e_dict = fc.extra.calc_stats(e_arr, removes)
+        e_dict = fcn.calc_stats(e_arr, removes)
         # calculate Pearson's Correlation Coefficient
         pcc_val, pcc_p_val = \
             sp.stats.pearsonr(img1[mask].ravel(), img2[mask].ravel())
@@ -670,7 +671,7 @@ def calc_correlation(
         #            img2[mask].ravel(),
         # img1[mask].ravel())
         # mutual information
-        mi = fc.extra.norm_mutual_information(img1[mask], img2[mask])
+        mi = fcn.norm_mutual_information(img1[mask], img2[mask])
         # voxel counts
         num = np.sum(mask.astype(bool))
         num_tot = np.size(mask)
@@ -1486,7 +1487,7 @@ def check_correlation(
                 if val_interval is None:
                     stats_dict = mrt.input_output.calc_stats(target)
                     val_interval = (stats_dict['min'], stats_dict['max'])
-                diff_interval = fc.extra.combine_interval(
+                diff_interval = fcn.combine_interval(
                     val_interval, val_interval, '-')
                 for in_filepath, ref_filepath, diff_filepath, corr_filepath \
                         in cmp_list:

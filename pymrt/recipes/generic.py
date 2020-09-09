@@ -22,6 +22,7 @@ import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import pywt as pw  # PyWavelets - Wavelet Transforms in Python
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import scipy.integrate  # SciPy: Integration and ODEs
@@ -209,8 +210,8 @@ def cx_div(
     result = arr1 * arr2 / (
             np.abs(arr1) ** 2 + np.abs(arr2) ** 2 + regularization)
     if values_interval:
-        values_interval = fc.extra.valid_interval(values_interval)
-        result = fc.extra.scale(result, values_interval, (-0.5, 0.5))
+        values_interval = fcn.valid_interval(values_interval)
+        result = fcn.scale(result, values_interval, (-0.5, 0.5))
     return result
 
 
@@ -237,8 +238,8 @@ def fix_phase_interval(arr):
         >>> fix_phase_interval(np.array([-10, 10, 1, -3]))
         array([-3.14159265,  3.14159265,  0.31415927, -0.9424778 ])
     """
-    if not fc.extra.is_in_range(arr, (-np.pi, np.pi)):
-        arr = fc.extra.scale(arr.astype(float), (-np.pi, np.pi))
+    if not fcn.is_in_range(arr, (-np.pi, np.pi)):
+        arr = fcn.scale(arr.astype(float), (-np.pi, np.pi))
     return arr
 
 
@@ -269,7 +270,7 @@ def mag_phs_to_complex(mag_arr, phs_arr=None, fix_phase=True):
     if phs_arr is not None:
         if fix_phase:
             phs_arr = fix_phase_interval(phs_arr)
-        cx_arr = fc.extra.polar2complex(
+        cx_arr = fcn.polar2complex(
             mag_arr.astype(float), phs_arr.astype(float))
     else:
         cx_arr = mag_arr.astype(float)
@@ -354,7 +355,7 @@ def referencing(
 # ======================================================================
 def _pre_exp_loglin(arr, exp_factor=0, zero_cutoff=np.spacing(1.0)):
     arr = np.abs(arr)
-    log_arr = fc.extra.apply_at(
+    log_arr = fcn.apply_at(
         arr, lambda x: np.log(x) / np.exp(exp_factor), arr > zero_cutoff)
     return log_arr
 
@@ -1066,8 +1067,8 @@ def mag_phase_2_combine(
     mag2_arr = mag2_arr.astype(float)
     phs1_arr = fix_phase_interval(phs1_arr)
     phs2_arr = fix_phase_interval(phs2_arr)
-    inv1_arr = fc.extra.polar2complex(mag1_arr, phs1_arr)
-    inv2_arr = fc.extra.polar2complex(mag2_arr, phs2_arr)
+    inv1_arr = fcn.polar2complex(mag1_arr, phs1_arr)
+    inv2_arr = fcn.polar2complex(mag2_arr, phs2_arr)
     return cx_2_combine(inv1_arr, inv2_arr, regularization, func)
 
 

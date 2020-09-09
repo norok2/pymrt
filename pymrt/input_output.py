@@ -45,6 +45,7 @@ import nibabel as nib  # NiBabel (NeuroImaging I/O Library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -751,7 +752,7 @@ def frame(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, fc.extra.frame,
+        in_filepath, out_filepath, fcn.frame,
         borders, background, use_longest)
 
 
@@ -778,7 +779,7 @@ def reframe(
         None
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, fc.extra.reframe,
+        in_filepath, out_filepath, fcn.reframe,
         new_shape, background)
 
 
@@ -811,7 +812,7 @@ def multi_reframe(
     """
     simple_filter_n_1(
         in_filepaths, out_filepath,
-        fc.extra.multi_reframe,
+        fcn.multi_reframe,
         new_shape=new_shape, background=background, dtype=dtype)
 
 
@@ -851,7 +852,7 @@ def zoom(
         None.
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, fc.extra.zoom,
+        in_filepath, out_filepath, fcn.zoom,
         factors, window, interp_order, extra_dim, fill_dim)
 
 
@@ -877,7 +878,7 @@ def resample(
         new_shape (tuple[int|None]): New dimensions of the array.
         aspect (callable|Iterable[callable]|None): Zoom shape manipulation.
             Useful for obtaining specific aspect ratio effects.
-            This is passed to `fc.extra.shape2zoom()`.
+            This is passed to `fcn.shape2zoom()`.
         window (int|Iterable[int]|None): Uniform pre-filter window size.
             This is the size of the window for the uniform filter using
             `sp.ndimage.uniform_filter()`.
@@ -893,7 +894,7 @@ def resample(
         None.
     """
     simple_filter_1_1(
-        in_filepath, out_filepath, fc.extra.resample,
+        in_filepath, out_filepath, fcn.resample,
         new_shape, aspect, window, extra_dim, fill_dim, interp_order)
 
 
@@ -940,7 +941,7 @@ def multi_resample(
     """
     simple_filter_n_1(
         in_filepaths, out_filepath,
-        fc.extra.multi_resample,
+        fcn.multi_resample,
         new_shape=new_shape, lossless=lossless, window=window,
         interp_order=interp_order, extra_dim=extra_dim, fill_dim=fill_dim,
         dtype=dtype)
@@ -1049,7 +1050,7 @@ def calc_stats(
     """
     arr = load(arr_filepath)
     mask = load(mask_filepath).astype(bool) if mask_filepath else None
-    return fc.extra.calc_stats(
+    return fcn.calc_stats(
         arr[mask] if mask is None else arr, *_args, **_kws)
 
 

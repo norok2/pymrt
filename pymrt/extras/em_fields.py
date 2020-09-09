@@ -40,6 +40,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -109,7 +110,7 @@ class InfiniteWire(object):
                 Units are not specified.
         """
         self.position = _to_3d(np.array(position))
-        self.direction = _to_3d(fc.extra.normalize(direction))
+        self.direction = _to_3d(fcn.normalize(direction))
         self.current = current
 
     # --------------------------------
@@ -143,12 +144,12 @@ class InfiniteWire(object):
                 parameters, but `shape` must be iterable.
             rel_position (bool|callable): Use positions as relative values.
                 Determine the interpretation of `position` using `shape`.
-                Uses `fc.extra.grid_coord()` internally, see its `is_relative`
+                Uses `fcn.grid_coord()` internally, see its `is_relative`
                 parameter for more details.
             rel_sizes (bool|callable): Use sizes as relative values.
                 Determine the interpretation of sizes using `shape`.
                 This is actually not used for infinite wires.
-                Uses `fc.extra.coord()` internally, see its `is_relative`
+                Uses `fcn.coord()` internally, see its `is_relative`
                 parameter for more details.
             zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -179,14 +180,14 @@ class InfiniteWire(object):
         # : generate coordinates
         direction = np.array([0., 0., 1.])
         # : rotate coordinates ([0, 0, 1] is the standard wire direction)
-        xx = fc.extra.grid_coord(
+        xx = fcn.grid_coord(
             shape, self.position, is_relative=rel_position, use_int=False)
-        rot_matrix = fc.extra.rotation_3d_from_vectors(direction,
+        rot_matrix = fcn.rotation_3d_from_vectors(direction,
                                                        self.direction)
-        irot_matrix = fc.extra.rotation_3d_from_vectors(
+        irot_matrix = fcn.rotation_3d_from_vectors(
             self.direction, direction)
         if not np.all(direction == self.direction):
-            xx = fc.extra.grid_transform(xx, rot_matrix)
+            xx = fcn.grid_transform(xx, rot_matrix)
         # : remove zeros
         if zero_cutoff is not None:
             for i in range(n_dim):
@@ -210,7 +211,7 @@ class InfiniteWire(object):
             b_arr[mask] = setter(b_arr[~mask])
             del mask
         if not np.all(direction == self.direction):
-            b_arr = fc.extra.grid_transform(b_arr, irot_matrix)
+            b_arr = fcn.grid_transform(b_arr, irot_matrix)
         return cc * b_arr
 
 
@@ -243,7 +244,7 @@ class CircularLoop(object):
                 Units are not specified.
         """
         self.center = _to_3d(np.array(center))
-        self.normal = _to_3d(fc.extra.normalize(normal))
+        self.normal = _to_3d(fcn.normalize(normal))
         self.radius = radius
         self.current = current
 
@@ -278,11 +279,11 @@ class CircularLoop(object):
                 parameters, but `shape` must be iterable.
             rel_position (bool|callable): Use positions as relative values.
                 Determine the interpretation of `center` using `shape`.
-                Uses `fc.extra.grid_coord()` internally, see its `is_relative`
+                Uses `fcn.grid_coord()` internally, see its `is_relative`
                 parameter for more details.
             rel_sizes (bool|callable): Use sizes as relative values.
                 Determine the interpretation of `radius` using `shape`.
-                Uses `fc.extra.coord()` internally, see its `is_relative`
+                Uses `fcn.coord()` internally, see its `is_relative`
                 parameter for more details.
             zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -319,19 +320,19 @@ class CircularLoop(object):
         # : generate coordinates
         normal = np.array([0., 0., 1.])
         # : rotate coordinates ([0, 0, 1] is the standard loop normal)
-        xx = fc.extra.grid_coord(
+        xx = fcn.grid_coord(
             shape, self.center, is_relative=rel_position, use_int=False)
-        rot_matrix = fc.extra.rotation_3d_from_vectors(normal, self.normal)
-        irot_matrix = fc.extra.rotation_3d_from_vectors(self.normal, normal)
+        rot_matrix = fcn.rotation_3d_from_vectors(normal, self.normal)
+        irot_matrix = fcn.rotation_3d_from_vectors(self.normal, normal)
         if not np.all(normal == self.normal):
-            xx = fc.extra.grid_transform(xx, rot_matrix)
+            xx = fcn.grid_transform(xx, rot_matrix)
         # : remove zeros
         if zero_cutoff is not None:
             for i in range(n_dim):
                 xx[i][np.abs(xx[i]) < zero_cutoff] = zero_cutoff
         # inline `rr2` for lower memory footprint (but running will be slower)
         rr2 = (xx[0] ** 2 + xx[1] ** 2 + xx[2] ** 2)
-        aa = fc.extra.coord(
+        aa = fcn.coord(
             shape, self.radius, is_relative=rel_sizes, use_int=False)[0]
         cc = self.current * sp.constants.mu_0 / np.pi
         rho2 = (xx[0] ** 2 + xx[1] ** 2)
@@ -359,7 +360,7 @@ class CircularLoop(object):
             b_arr[mask] = setter(b_arr[~mask])
             del mask
         if not np.all(normal == self.normal):
-            b_arr = fc.extra.grid_transform(b_arr, irot_matrix)
+            b_arr = fcn.grid_transform(b_arr, irot_matrix)
         return cc * b_arr
 
 
@@ -394,7 +395,7 @@ class RectLoop(object):
                 Units are not specified.
         """
         self.center = _to_3d(np.array(center))
-        self.normal = _to_3d(fc.extra.normalize(normal))
+        self.normal = _to_3d(fcn.normalize(normal))
         self.radius = fc.auto_repeat(size, 2, check=True)
         self.current = current
 
@@ -441,11 +442,11 @@ def b_fields(
             but `shape` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of position attributes using `shape`.
-            Uses `fc.extra.grid_coord()` internally, see its `is_relative`
+            Uses `fcn.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of size attributes using `shape`.
-            Uses `fc.extra.coord()` internally, see its `is_relative`
+            Uses `fcn.coord()` internally, see its `is_relative`
             parameter for more details.
         zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -484,11 +485,11 @@ def sum_b_fields(
             but `shape` must be iterable.
         rel_position (bool|callable): Interpret positions as relative values.
             Determine the interpretation of position attributes using `shape`.
-            Uses `fc.extra.grid_coord()` internally, see its `is_relative`
+            Uses `fcn.grid_coord()` internally, see its `is_relative`
             parameter for more details.
         rel_sizes (bool|callable): Interpret sizes as relative values.
             Determine the interpretation of size attributes using `shape`.
-            Uses `fc.extra.coord()` internally, see its `is_relative`
+            Uses `fcn.coord()` internally, see its `is_relative`
             parameter for more details.
         zero_cutoff (float|None): The threshold for masking zero values.
                 If None, no cut-off is performed.
@@ -599,13 +600,13 @@ def cylinder_with_infinite_wires(
     currents = fc.auto_repeat(currents, n_wires, check=True)
     orientation = np.array((0., 0., 1.))
     rot_matrix = np.dot(
-        fc.extra.rotation_3d_from_vector(orientation, angle),
-        fc.extra.rotation_3d_from_vectors(orientation, direction))
+        fcn.rotation_3d_from_vector(orientation, angle),
+        fcn.rotation_3d_from_vectors(orientation, direction))
     a, b = [x / 2.0 for x in diameters]
     positions = [
         position + np.dot(
             rot_matrix, np.array([a * np.cos(phi), b * np.sin(phi), 0]))
-        for phi in fc.extra.angles_in_ellipse(
+        for phi in fcn.angles_in_ellipse(
             n_wires, a, b, np.deg2rad(angle_offset))]
     infinite_wires = [
         InfiniteWire(position_, direction, current)
@@ -650,7 +651,7 @@ def stacked_circular_loops(
     # : compute circular loop centers
     n_dim = 3
     position = np.array(fc.auto_repeat(position, n_dim, check=True))
-    normal = np.array(fc.extra.normalize(normal))
+    normal = np.array(fcn.normalize(normal))
     centers = [position + x * normal for x in positions]
     circ_loops = [
         CircularLoop(radius, center, normal, current)
@@ -705,7 +706,7 @@ def stacked_circular_loops_alt(
     current_factors = fc.auto_repeat(
         current_factors, n_loops, check=True)
     distances = [k * radius for k in distance_factors]
-    positions = fc.extra.distances2displacements(distances)
+    positions = fcn.distances2displacements(distances)
     return stacked_circular_loops(
         [k * radius for k in radius_factors],
         positions,
@@ -755,10 +756,10 @@ def crossing_circular_loops(
     radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
     currents = fc.auto_repeat(currents, n_loops, check=True)
     orientation = (0., 0., 1.)
-    rot_matrix = fc.extra.rotation_3d_from_vectors(orientation, direction)
+    rot_matrix = fcn.rotation_3d_from_vectors(orientation, direction)
     normal = np.dot(rot_matrix, (0., 1., 0.))
     normals = [
-        np.dot(fc.extra.rotation_3d_from_vector(orientation, angle), normal)
+        np.dot(fcn.rotation_3d_from_vector(orientation, angle), normal)
         for angle in angles]
     circ_loops = [
         CircularLoop(radius, position, normal, current)
@@ -857,16 +858,16 @@ def cylinder_with_circular_loops(
         in zip(distance_factors, radiuses[:-1], radiuses[1:]))
     orientation = np.array((0., 0., 1.))
     rot_matrix = np.dot(
-        fc.extra.rotation_3d_from_vector(orientation, angle),
-        fc.extra.rotation_3d_from_vectors(orientation, direction))
+        fcn.rotation_3d_from_vector(orientation, angle),
+        fcn.rotation_3d_from_vectors(orientation, direction))
     centers, normals = [], []
     a, b = [x / 2 for x in diameters]
-    for phi in fc.extra.angles_in_ellipse(
+    for phi in fcn.angles_in_ellipse(
             n_series, a, b, np.deg2rad(angle_offset)):
-        for k in fc.extra.distances2displacements(distances):
+        for k in fcn.distances2displacements(distances):
             center = np.array([a * np.cos(phi), b * np.sin(phi), k])
             centers.append(np.dot(rot_matrix, center) + position)
-            normal = fc.extra.normalize(
+            normal = fcn.normalize(
                 np.array([-a * np.cos(phi), -b * np.sin(phi), 0]))
             normals.append(np.dot(rot_matrix, normal))
     circ_loops = [
@@ -884,7 +885,7 @@ def sphere_with_circular_loops(
         n_loops=24,
         radiuses=None,
         currents=1,
-        coord_gen=lambda x: fc.extra.fibonacci_sphere(x).transpose()):
+        coord_gen=lambda x: fcn.fibonacci_sphere(x).transpose()):
     """
     Generate circular loops along the surface of a sphere.
 
@@ -898,8 +899,8 @@ def sphere_with_circular_loops(
             as axes of rotation.
             If float, the value is repeated for all axes.
             Otherwise, it must have size 3 (for more info on the number of
-            angles in 3 dimensions, see `fc.extra.square_size_to_num_tria()`).
-            The rotation is computed using `fc.extra.angles2linear(angles)`.
+            angles in 3 dimensions, see `fcn.square_size_to_num_tria()`).
+            The rotation is computed using `fcn.angles2linear(angles)`.
             See that for more info.
         diameter (int|float): The diameter of the sphere.
         n_loops (int|None): The total number of loops.
@@ -923,16 +924,16 @@ def sphere_with_circular_loops(
     position = np.array(fc.auto_repeat(position, n_dim, check=True))
     currents = fc.auto_repeat(currents, n_loops, check=True)
     angles = fc.auto_repeat(
-        angles, fc.extra.square_size_to_num_tria(n_dim), check=True)
-    rot_matrix = fc.extra.angles2rotation(angles)
+        angles, fcn.square_size_to_num_tria(n_dim), check=True)
+    rot_matrix = fcn.angles2rotation(angles)
     centers = [
         np.dot(rot_matrix, center * diameter / 2) + position
         for center in coord_gen(n_loops)]
     normals = [
-        fc.extra.vectors2direction(center, position)
+        fcn.vectors2direction(center, position)
         for center in centers]
     if not radiuses:
-        radiuses = min(fc.extra.pairwise_distances(centers)) / 2
+        radiuses = min(fcn.pairwise_distances(centers)) / 2
     radiuses = fc.auto_repeat(radiuses, n_loops, check=True)
     circ_loops = [
         CircularLoop(radius, center, normal, current)

@@ -451,7 +451,7 @@ def dynamics_operator(
             [w_c, 0.0, w1x],
             [w1y, -w1x, 0.0]])
         # same as above
-        # bloch_core = fc.extra.to_self_adjoint_matrix(
+        # bloch_core = fcn.to_self_adjoint_matrix(
         #     [-w_c, -w1y, w1x], skew=True)
         if lineshape:
             r_rf = _sat_rate_lineshape(
@@ -516,7 +516,7 @@ def _propagator_sum_order1(
     l_op_sum = sum(l_ops)
     # pseudo-first-order correction
     comms = [
-        fc.extra.commutator(l_ops[i], l_ops[i + 1]) / 2.0
+        fcn.commutator(l_ops[i], l_ops[i + 1]) / 2.0
         for i in range(len(l_ops[:-1]))]
     comm_sum = sum(comms)
     return sp.linalg.expm(-(l_op_sum + comm_sum))
@@ -609,7 +609,7 @@ def _propagator_poly(
             for j in range(spin_model._operator_dim):
                 p_op_arr[:, i, j] = np.polyval(p_arr[i, j, :], _w1_arr)
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(p_ops[::-1])
+        p_op = fcn.mdot(p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples
@@ -660,7 +660,7 @@ def _propagator_poly(
                 p_op_arr[:, i, j] = np.real(
                     np.polyval(p_arr[i, j, :], pulse_exc._w1_arr))
         p_ops = [p_op_arr[j, :, :] for j in range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(p_ops[::-1])
+        p_op = fcn.mdot(p_ops[::-1])
     return p_op
 
 
@@ -707,7 +707,7 @@ def _propagator_interp(
                     method=method, fill_value=0.0)
         p_ops = [p_op_arr[j, :, :] for j in
                  range(pulse_exc.num_steps)]
-        p_op = fc.extra.mdot(p_ops[::-1])
+        p_op = fcn.mdot(p_ops[::-1])
     else:
         # :: calculate samples
         num_extra_samples = num_samples * num_samples

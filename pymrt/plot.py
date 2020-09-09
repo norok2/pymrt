@@ -43,6 +43,7 @@ import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 import numeral  # Support for various integer-to-numeral (and back) conversion
 import seaborn as sns  # Seaborn: statistical data visualization
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -953,7 +954,7 @@ def sample2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = fc.extra.ndim_slice(arr, axis, index)
+        data = fcn.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -971,7 +972,7 @@ def sample2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = fc.extra.minmax(arr)
+        array_interval = fcn.minmax(arr)
     same_sign = fc.is_same_sign(array_interval)
     if not cmap:
         cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
@@ -1048,7 +1049,7 @@ def sample3d_view2d(
                     num_axis=len(axis), num_index=len(index)))
 
     if arr.ndim - len(axis) == data_dim:
-        data = fc.extra.ndim_slice(arr, axis, index)
+        data = fcn.ndim_slice(arr, axis, index)
     elif arr.ndim == data_dim:
         data = arr
     else:
@@ -1074,7 +1075,7 @@ def sample3d_view2d(
 
     views = []
     for view_axis, view_index in zip(view_axes, view_indexes):
-        views.append(fc.extra.ndim_slice(data, view_axis, view_index))
+        views.append(fcn.ndim_slice(data, view_axis, view_index))
 
     views[0] = _reorient_2d(views[0], orientation, False, False)
 
@@ -1139,7 +1140,7 @@ def sample3d_view2d(
     if title:
         ax.set_title(title)
     if array_interval is None:
-        array_interval = fc.extra.minmax(arr)
+        array_interval = fcn.minmax(arr)
     same_sign = fc.is_same_sign(array_interval)
     if not cmap:
         cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
@@ -1285,7 +1286,7 @@ def sample2d_multi(
     for arr, alpha, cmap, array_interval in \
             zip(arrs, alphas, cmaps, array_intervals):
         if arr.ndim - len(axis) == data_dim:
-            data = fc.extra.ndim_slice(arr, axis, index)
+            data = fcn.ndim_slice(arr, axis, index)
         elif arr.ndim == data_dim:
             data = arr
         else:
@@ -1296,7 +1297,7 @@ def sample2d_multi(
         data = _reorient_2d(data, orientation, flip_ud, flip_lr)
 
         if array_interval is None:
-            array_interval = fc.extra.minmax(arr)
+            array_interval = fcn.minmax(arr)
         same_sign = fc.is_same_sign(array_interval)
         if not cmap:
             cmap = mpl.cm.get_cmap('RdBu_r' if not same_sign else 'gray_r')
@@ -1411,7 +1412,7 @@ def histogram1d(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([fc.extra.scale(val, array_interval)
+    hist_interval = tuple([fcn.scale(val, array_interval)
                            for val in hist_interval])
 
     # create histogram
@@ -1536,7 +1537,7 @@ def histogram1d_list(
     if not bins:
         bins = int(np.ptp(array_interval) / bin_size + 1)
     # setup histogram reange
-    hist_interval = tuple([fc.extra.scale(val, array_interval)
+    hist_interval = tuple([fcn.scale(val, array_interval)
                            for val in hist_interval])
 
     # prepare style list
@@ -1734,7 +1735,7 @@ def histogram2d(
         bins = _ensure_all_axis(bins)
     # setup histogram range
     hist_interval = _ensure_all_axis(hist_interval)
-    hist_interval = tuple([[fc.extra.scale(val, array_interval[i])
+    hist_interval = tuple([[fcn.scale(val, array_interval[i])
                             for val in hist_interval[i]] for i in range(2)])
     # calculate histogram
     # prepare histogram
@@ -1791,7 +1792,7 @@ def histogram2d(
         mask *= (arr1 < array_interval[0][1]).astype(bool)
         mask *= (arr2 > array_interval[1][0]).astype(bool)
         mask *= (arr2 < array_interval[1][1]).astype(bool)
-        stats_dict = fc.extra.calc_stats(
+        stats_dict = fcn.calc_stats(
             arr1[mask] - arr2[mask], **dict(stats_kws))
         stats_text = '$\\mu_D = {}$\n$\\sigma_D = {}$'.format(
             *fc.format_value_error(
@@ -2120,7 +2121,7 @@ def subplots(
         if row_label:
             fig.text(
                 label_pads[0] / 2,
-                fc.extra.scale(
+                fcn.scale(
                     1.0 - (i * 2 + 1) / (num_row * 2),
                     out_interval=(0, 1.0 - label_pads[1])),
                 row_label, rotation=90,
@@ -2130,7 +2131,7 @@ def subplots(
     for j, col_label in enumerate(col_labels):
         if col_label:
             fig.text(
-                fc.extra.scale(
+                fcn.scale(
                     (j * 2 + 1) / (num_col * 2),
                     out_interval=(
                         label_pads[0], 1.0 - legend_pad)),

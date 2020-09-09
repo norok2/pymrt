@@ -25,6 +25,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -165,7 +166,7 @@ def compress_svd(
     eigvals, right_eigvects = sp.linalg.eig(square_arr)
     eig_sort = np.argsort(np.abs(eigvals))[::-1]
 
-    k_svd = fc.extra.auto_num_components(
+    k_svd = fcn.auto_num_components(
         k_svd, np.abs(eigvals[eig_sort]) / np.max(np.abs(eigvals)),
         verbose=verbose)
 
@@ -362,7 +363,7 @@ def adaptive(
     if filtering:
         for i in range(num_coils):
             for j in range(num_coils):
-                coil_cov[..., i, j] = fc.extra.filter_cx(
+                coil_cov[..., i, j] = fcn.filter_cx(
                     coil_cov[..., i, j], filtering, (), filtering_kws)
 
     # calculate the principal eigenvector of the coil covariance
@@ -538,7 +539,7 @@ def adaptive_iter(
             last_combined = combined.copy() if threshold > 0 else combined
             sens = arr * combined[..., None].conj()
             if filtering:
-                sens = fc.extra.filter_cx(sens, filtering, (), filtering_kws)
+                sens = fcn.filter_cx(sens, filtering, (), filtering_kws)
             sens /= (
                     np.sqrt(np.sum(sens * sens.conj(), -1))
                     + epsilon)[..., None]

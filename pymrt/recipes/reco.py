@@ -23,6 +23,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import matplotlib as mpl  # Matplotlib (2D/3D plotting library)
 # import sympy as sym  # SymPy (symbolic CAS library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -66,7 +67,7 @@ def k2r_space_cartesian(
     """
     if axes is None:
         axes = tuple(range(min(arr.ndim, 3)))
-    return fc.extra.ft
+    return fcn.ft
 
 
 # ======================================================================
@@ -192,7 +193,7 @@ def grappa_1d(
     n_targets = acceleration - 1
 
     # : define target and calibration matrices
-    calib_padded_arr = fc.extra.nd_windowing(calib_arr, kernel_window)
+    calib_padded_arr = fcn.nd_windowing(calib_arr, kernel_window)
     target_slicing = \
         tuple(slice(None) for _ in calib_arr.shape) \
         + tuple((slice(None) if factor is None else
@@ -216,7 +217,7 @@ def grappa_1d(
 
     # : use weights to compute missing k-space values
     # todo: avoid computing useless lines instead of selecting missing lines
-    source_padded_arr = fc.extra.rolling_window_nd(
+    source_padded_arr = fcn.rolling_window_nd(
         arr, kernel_window, 1, out_mode='same')
     source_mat_arr = source_padded_arr[calib_mat_slicing] \
         .reshape(-1, calib_arr.shape[-1] * kernel_calib_size)

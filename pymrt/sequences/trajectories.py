@@ -24,6 +24,7 @@ import doctest  # Test interactive Python examples
 import numpy as np  # NumPy (multidimensional numerical arrays library)
 import scipy as sp  # SciPy (signal and image processing library)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 import scipy.signal  # SciPy: Signal Processing
@@ -96,7 +97,7 @@ def reframe(
         raise ValueError(text)
     traj = traj.astype(float)
     for i in range(n_dims):
-        traj[i] = fc.extra.scale(traj[i], bounds[i])
+        traj[i] = fcn.scale(traj[i], bounds[i])
     return traj
 
 
@@ -518,7 +519,7 @@ def density(
         n_valid_points = n_points
     else:
         n_valid_points = np.sum(mask)
-    bounds = tuple(fc.extra.minmax(traj[i, mask]) for i in range(n_dims))
+    bounds = tuple(fcn.minmax(traj[i, mask]) for i in range(n_dims))
     bound_sizes = tuple(np.ptp(interval) for interval in bounds)
     return n_valid_points / fc.prod(bound_sizes)
 

@@ -42,6 +42,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 # import nipy  # NiPy (NeuroImaging in Python)
 # import nipype  # NiPype (NiPy Pipelines and Interfaces)
 import flyingcircus as fc  # Everything you always wanted to have in Python*
+import flyingcircus_numeric as fcn  # FlyingCircus with NumPy/SciPy
 
 # :: External Imports Submodules
 # import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
@@ -158,8 +159,8 @@ def threshold_otsu(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `fc.extra.auto_bin()` with `method` set to `bins` if str,
-            and using the default `fc.extra.auto_bin()` method if set to
+            using `fcn.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fcn.auto_bin()` method if set to
             None.
 
     Returns:
@@ -182,7 +183,7 @@ def threshold_otsu(
           62–66. doi:10.1109/TSMC.1979.4310076
     """
     # todo: extend to multiple classes
-    return fc.extra.otsu_threshold(arr, bins=bins)
+    return fcn.otsu_threshold(arr, bins=bins)
 
 
 # ======================================================================
@@ -198,8 +199,8 @@ def threshold_otsu2(
         arr (np.ndrarray): The input array.
         bins (int|str|None): Number of bins used to calculate histogram.
             If str or None, this is automatically calculated from the data
-            using `fc.extra.auto_bin()` with `method` set to `bins` if str,
-            and using the default `fc.extra.auto_bin()` method if set to
+            using `fcn.auto_bin()` with `method` set to `bins` if str,
+            and using the default `fcn.auto_bin()` method if set to
             None.
 
     Returns:
@@ -224,29 +225,29 @@ def threshold_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = fc.extra.auto_bin(arr, bins)
+        bins = fcn.auto_bin(arr, bins)
     elif bins is None:
-        bins = fc.extra.auto_bin(arr)
+        bins = fcn.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = fc.extra.auto_bin(arr, depth)
+        depth = fcn.auto_bin(arr, depth)
     elif bins is None:
-        depth = fc.extra.auto_bin(arr)
+        depth = fcn.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -268,29 +269,29 @@ def threshold_inv_hist_peaks(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = fc.extra.auto_bin(arr, bins)
+        bins = fcn.auto_bin(arr, bins)
     elif bins is None:
-        bins = fc.extra.auto_bin(arr)
+        bins = fcn.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = fc.extra.auto_bin(arr, depth)
+        depth = fcn.auto_bin(arr, depth)
     elif bins is None:
-        depth = fc.extra.auto_bin(arr)
+        depth = fcn.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -312,29 +313,29 @@ def threshold_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = fc.extra.auto_bin(arr, bins)
+        bins = fcn.auto_bin(arr, bins)
     elif bins is None:
-        bins = fc.extra.auto_bin(arr)
+        bins = fcn.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = fc.extra.auto_bin(arr, depth)
+        depth = fcn.auto_bin(arr, depth)
     elif bins is None:
-        depth = fc.extra.auto_bin(arr)
+        depth = fcn.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -357,29 +358,29 @@ def threshold_inv_hist_peak_edges(
     Args:
         arr (np.ndarray): The input array.
         bins (int|str|None): The number of bins for the histogram.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
         depth (int|str|None): The peak finding depth.
             This parameter determines the peak finding rate in rapidly varying
             ("noisy") histograms.
             Smaller values correspond to more peaks being found.
-            If str, this is determined using `fc.extra.auto_bins()`.
-            If None, the default method in `fc.extra.auto_bins()` is used.
+            If str, this is determined using `fcn.auto_bins()`.
+            If None, the default method in `fcn.auto_bins()` is used.
 
     Returns:
         result (tuple[float]): the calculated thresholds.
     """
     if isinstance(bins, str):
-        bins = fc.extra.auto_bin(arr, bins)
+        bins = fcn.auto_bin(arr, bins)
     elif bins is None:
-        bins = fc.extra.auto_bin(arr)
+        bins = fcn.auto_bin(arr)
     hist, bin_edges = np.histogram(arr, bins)
     bin_centers = fc.midval(bin_edges)
     # depth determines the dynamic smoothing of the histogram
     if isinstance(depth, str):
-        depth = fc.extra.auto_bin(arr, depth)
+        depth = fcn.auto_bin(arr, depth)
     elif bins is None:
-        depth = fc.extra.auto_bin(arr)
+        depth = fcn.auto_bin(arr)
     # at least 1 width value is required
     widths = np.arange(1, max(2, depth))
     with np.errstate(divide='ignore', invalid='ignore'):
