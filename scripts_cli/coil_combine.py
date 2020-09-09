@@ -69,7 +69,7 @@ def coil_combine(
     if fc.check_redo(in_filepaths, out_filepaths, force):
         mag_coils_arr, meta = mrt.input_output.load(in_mag_filepath, meta=True)
         phs_coils_arr = mrt.input_output.load(in_phs_filepath)
-        coils_arr = fc.extra.polar2complex(mag_coils_arr, phs_coils_arr)
+        coils_arr = fcn.polar2complex(mag_coils_arr, phs_coils_arr)
         del mag_coils_arr, phs_coils_arr
         arr = coils.combine(
             coils_arr, method=method, method_kws=method_kws,

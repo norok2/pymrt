@@ -265,7 +265,7 @@ def scaled_random(
     """
     rand_geom_shapes = fc.deep_filter_map(
         geom_shapes,
-        lambda x: fc.extra.scaled_randomizer(x, interval, fallback_interval),
+        lambda x: fcn.scaled_randomizer(x, interval, fallback_interval),
         lambda x: isinstance(x, (int, float)))
     return rand_geom_shapes
 
@@ -291,7 +291,7 @@ def auto_random(geom_shape):
         geom_shape (tuple): The randomized geometric specification.
             (with the same structure as the input).
     """
-    return fc.deep_map(fc.extra.auto_random, geom_shape)
+    return fc.deep_map(fcn.auto_random, geom_shape)
 
 
 # ======================================================================

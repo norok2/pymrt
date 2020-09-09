@@ -237,7 +237,7 @@ def _bijective_part(arr, mask_val=np.nan):
         arr (np.ndarray): The larger bijective portion of arr.
             Non-bijective parts are masked.
     """
-    bijective_part = fc.extra.bijective_part(arr)
+    bijective_part = fcn.bijective_part(arr)
     if bijective_part.start:
         arr[:bijective_part.start] = mask_val
     if bijective_part.stop:
