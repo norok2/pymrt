@@ -214,7 +214,7 @@ def compress(
     msg('method={}'.format(method), verbose, VERB_LVL['debug'])
 
     if method in methods:
-        method = eval(method)
+        method = globals()[method]
     method_kws = {} if method_kws is None else dict(method_kws)
 
     if callable(method):
@@ -956,13 +956,13 @@ def sensitivity(
     method_kws = {} if method_kws is None else dict(method_kws)
 
     if method in methods:
-        method = eval(method)
+        method = globals()[method]
     if not callable(method):
         text = (
                 'Unknown method `{}` in `recipes.coils.sensitivity(). ' +
                 'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
-        method = eval(methods[0])
+        method = globals()[methods[0]]
 
     if split_axis is not None:
         shape = arr.shape
@@ -1069,13 +1069,13 @@ def combine(
     has_sens = method in sens_methods
 
     if method in methods:
-        method = eval(method)
+        method = globals()[method]
     if not callable(method):
         text = (
-                'Unknown method `{}` in `recipes.coils.combine(). ' +
-                'Using fallback `{}`.'.format(method, methods[0]))
+            'Unknown method `{}` in `recipes.coils.combine(). ' +
+            'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
-        method = eval(methods[0])
+        method = globals()[methods[0]]
         has_sens = True
 
     if split_axis is not None:

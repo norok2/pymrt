@@ -966,13 +966,13 @@ def fit_exp(
         raise NotImplementedError
 
     if method in methods:
-        method = eval(method)
+        method = globals()[method]
     if not callable(method):
         text = (
                 'Unknown method `{}` in `recipes.generic.fit_exp(). ' +
                 'Using fallback `{}`.'.format(method, methods[0]))
         warnings.warn(text)
-        method = eval(methods[0])
+        method = globals()[methods[0]]
 
     return method(arr, tis, tis_mask, **method_kws)
 
