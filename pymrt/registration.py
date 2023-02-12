@@ -199,18 +199,18 @@ def _discrete_generator(transform, n_dim):
                                           repeat=n_dim * n_dim):
             linear = np.array(elements).reshape((n_dim, n_dim))
             if np.abs(np.linalg.det(linear)) == 1:
-                linear = linear.astype(np.float)
+                linear = linear.astype(np.float_)
                 yield linear, shift
     elif transform == 'reflection_simple':
         shift = np.zeros((n_dim,))
         for diagonal in itertools.product([-1, 1], repeat=n_dim):
-            linear = np.diag(diagonal).astype(np.float)
+            linear = np.diag(diagonal).astype(np.float_)
             yield linear, shift
     elif transform == 'pi_rotation':
         shift = np.zeros((n_dim,))
         for diagonal in itertools.product([-1, 1], repeat=n_dim):
             if np.prod(np.array(diagonal)) == 1:
-                linear = np.diag(diagonal).astype(np.float)
+                linear = np.diag(diagonal).astype(np.float_)
                 yield linear, shift
     elif transform == 'pi/2_rotation':
         shift = np.zeros((n_dim,))
@@ -224,7 +224,7 @@ def _discrete_generator(transform, n_dim):
         for angles in itertools.product([0, 90, 180, 270], repeat=num_angles):
             for diagonal in itertools.product([-1, 1], repeat=n_dim):
                 linear = np.dot(
-                    np.diag(diagonal).astype(np.float),
+                    np.diag(diagonal).astype(np.float_),
                     fcn.angles2rotation(angles))
                 yield linear, shift
     else:
